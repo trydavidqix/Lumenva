@@ -169,13 +169,14 @@ export async function POST(req: NextRequest): Promise<Response> {
     throw err;
   }
 
+  // email_normalized is a GENERATED ALWAYS column (lower(trim(email))).
+  // Postgres rejects explicit INSERT into it, so we omit and let DB compute.
   const insertRow: Record<string, unknown> = {
     organization_id: activeOrg.orgId,
     created_by_user_id: user.id,
     name: input.name ?? null,
     display_name: input.display_name ?? null,
     email: input.email ?? null,
-    email_normalized: input.email ? input.email.trim().toLowerCase() : null,
     phone_number: input.phone_number ?? null,
     birthdate: input.birthdate ?? null,
     tags: input.tags ?? [],
