@@ -24,10 +24,23 @@ exposes_contracts:
   - "ui.<MergeDialog>"
   - "route./app/contacts"
   - "route./app/contacts/[id]"
-status: pending
+status: completed
+completion: partial
 created_at: 2026-04-28
+completed_at: 2026-04-28
 owner: Rafael Melgaço
+deferred:
+  - "S-05.01: CPF at-rest encryption (encrypt_cpf RPC missing) — deferred from Combo-A"
+  - "S-05.01: Cursor HMAC signing — deferred"
+  - "S-05.01: resolveContact dedup pipeline on POST — deferred"
+  - "S-05.07: merge_queue resolve endpoint + full MergeDialog wiring — read-only scaffold delivered, mutation deferred"
 ---
+
+## Wave Completion Log
+
+- **2026-04-28** — Combo-A (waves 1, 2, 8): API CRUD `/api/v1/contacts`, timeline endpoint, LGPD anonymize endpoint shipped (commit 8eb5951). Documented deferrals: CPF encryption, cursor HMAC, resolveContact dedup pipeline.
+- **2026-04-28** — Combo-B (waves 3, 4, 5, 6, 7, 9): UI layer shipped — hooks (`useContactList`, `useContact`, `useTimeline`, `useUpdateContact`, `useCreateContact`, `useAnonymizeContact`), `/app/contacts` list page with search/tag/source filters + cursor pagination, `/app/contacts/[id]` detail with overview/timeline/LGPD tabs, `<TimelineView>` with 5 source_modules + grouped-by-day rendering, `<NewContactDialog>` and `<EditContactDialog>` with Zod validation, `<AnonymizeDialog>` two-step confirmation, `<CustomFieldsEditor>` scaffolded for 10 field types (not wired yet — EPIC-09/10), `<MergeDialog>` read-only scaffold (resolve endpoint deferred), `<AnonymizedBanner>` integrated into detail page header. 5 contacts seeded for QA.
+
 
 # EPIC-05 — Customer 360 + Contacts
 
