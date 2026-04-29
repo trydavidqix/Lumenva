@@ -33,4 +33,9 @@ export type AuditAction =
   | "member.role_changed"
   | "member.revoked"
   | "token.created"
-  | "token.revoked";
+  | "token.revoked"
+  | "profile.updated"
+  | "org.updated"
+  | "pipeline.config_updated"
+  | "mfa.recovery_codes_regenerated"
+  | "notification_prefs.changed";
