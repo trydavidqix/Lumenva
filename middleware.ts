@@ -13,6 +13,9 @@ export async function middleware(request: NextRequest) {
   response.headers.set("x-request-id", requestId);
 
   const { pathname, search } = request.nextUrl;
+  // Expose pathname to Server Components via header (used by onboarding layout).
+  response.headers.set("x-pathname", pathname);
+  request.headers.set("x-pathname", pathname);
 
   if (isPublicPath(pathname)) {
     return response;
