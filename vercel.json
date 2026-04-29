@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/v1/cron/lgpd-sla-watcher",
+      "schedule": "0 12 * * *"
+    }
+  ]
+}
