@@ -57,6 +57,7 @@ const schema = z.object({
   SENTRY_DSN: z.string().optional().default(""),
 
   // Nuvemshop
+  NUVEMSHOP_APP_ID: required("NUVEMSHOP_APP_ID"),
   NUVEMSHOP_CLIENT_ID: required("NUVEMSHOP_CLIENT_ID"),
   NUVEMSHOP_CLIENT_SECRET: required("NUVEMSHOP_CLIENT_SECRET"),
 
