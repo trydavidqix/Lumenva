@@ -76,4 +76,6 @@ export type AuditAction =
   | "lgpd.sla_alarm_triggered"
   | "lgpd.sla_watcher_run"
   | "platform_admin.inbox_listed"
-  | "platform_admin.conversation_viewed";
+  | "platform_admin.conversation_viewed"
+  | "platform_admin.tenants_listed"
+  | "tenant.created_by_platform_admin";
