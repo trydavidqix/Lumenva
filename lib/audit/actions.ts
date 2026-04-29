@@ -87,4 +87,6 @@ export type AuditAction =
   | "tenant.suspended"
   | "tenant.reactivated"
   | "platform_admin.audit_listed"
-  | "platform_admin.audit_entry_viewed";
+  | "platform_admin.audit_entry_viewed"
+  | "platform_admin.lgpd_listed"
+  | "platform_admin.lgpd_request_viewed";
