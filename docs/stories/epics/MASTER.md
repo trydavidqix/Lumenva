@@ -34,7 +34,7 @@ estimated_calendar: 8-12 semanas
 | 2 | EPIC-02 | Tenant Onboarding | 8 | 26 | P0 | pending | `EPIC-02-onboarding.md` |
 | 3 | EPIC-03 | Inbox + Messaging | 15 | 55 | P0 | pending | `EPIC-03-inbox-messaging.md` |
 | 4 | EPIC-04 | Pipeline Kanban | 10 | 34 | P0 | ✅ completed | `EPIC-04-kanban.md` |
-| 5 | EPIC-05 | Customer 360 + Contacts | 9 | 28 | P0 | pending | `EPIC-05-customer-360.md` |
+| 5 | EPIC-05 | Customer 360 + Contacts | 9 | 28 | P0 | ✅ completed (partial: merge resolve + CPF encryption deferred) | `EPIC-05-customer-360.md` |
 | 6 | EPIC-06 | AI Agent + RAG | 12 | 42 | P0 | pending (Phase 3 gated) | `EPIC-06-ai-rag.md` |
 | 7 | EPIC-07 | Nuvemshop Integration | 11 | 36 | P0 | ✅ completed (env-empty-ready) | `EPIC-07-nuvemshop.md` |
 | 8 | EPIC-08 | LGPD Compliance | 8 | 26 | P0 | pending (Phase 3 gated) | `EPIC-08-lgpd.md` |
