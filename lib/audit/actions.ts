@@ -9,4 +9,9 @@ export type AuditAction =
   | "auth.mfa_enrolled"
   | "auth.mfa_success"
   | "auth.mfa_failed"
-  | "auth.recovery_code_used";
+  | "auth.recovery_code_used"
+  | "nuvemshop.connected"
+  | "nuvemshop.disconnected"
+  | "nuvemshop.oauth_failed"
+  | "nuvemshop.webhook_received"
+  | "nuvemshop.webhook_invalid_signature";
