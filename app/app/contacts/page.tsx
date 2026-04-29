@@ -1,13 +1,7 @@
-import { Users } from "@/lib/ui/icons";
+import { ContactsListClient } from "./_client";
 
-export default function ContactsPlaceholderPage() {
-  return (
-    <div className="flex h-full flex-col items-center justify-center text-center">
-      <Users size={48} className="text-muted-foreground" weight="duotone" />
-      <h1 className="mt-4 text-xl font-semibold">Contatos</h1>
-      <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-        Tela em construção. Será entregue no EPIC-02 (Customer 360).
-      </p>
-    </div>
-  );
+export const dynamic = "force-dynamic";
+
+export default function ContactsPage() {
+  return <ContactsListClient />;
 }
