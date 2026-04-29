@@ -57,4 +57,10 @@ export type AuditAction =
   | "ai.handoff_triggered"
   | "ai.reactivated_by_agent"
   | "conversation.usable_for_rag_toggled"
-  | "rag.conversations_batch_run";
+  | "rag.conversations_batch_run"
+  | "lgpd.redact_received"
+  | "lgpd.data_request_received"
+  | "lgpd.export_generated"
+  | "lgpd.redact_executed"
+  | "lgpd.consent_changed"
+  | "webhook.hmac_invalid";
