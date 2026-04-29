@@ -65,5 +65,10 @@ export type AuditAction =
   | "lgpd.export_delivered"
   | "lgpd.export_failed"
   | "lgpd.redact_executed"
+  | "lgpd.redact_skipped_already_anonymized"
+  | "lgpd.redact_no_local_footprint"
+  | "lgpd.redact_completed"
+  | "lgpd.redact_failed"
+  | "lgpd.tenant_redacted"
   | "lgpd.consent_changed"
   | "webhook.hmac_invalid";
