@@ -24,6 +24,8 @@ export {
   ClipboardText,
   Scales,
   Gauge,
+  WifiSlash,
+  Clock,
   // actions
   PaperPlaneTilt,
   Check,
