@@ -7,11 +7,17 @@ import { useBoard } from "@/hooks/kanban/useBoard";
 import { useMoveCard } from "@/hooks/kanban/useMoveCard";
 import { midpoint } from "@/lib/kanban/fractional-indexing";
 import type { Lead } from "@/lib/types/leads";
-import type { Stage } from "@/lib/kanban/types";
+import type { Pipeline, Stage } from "@/lib/kanban/types";
 import { StageColumn } from "./StageColumn";
 
 interface KanbanBoardProps {
   pipelineId: string;
+  /** Optional override: if provided, skips internal useBoard fetch. */
+  stages?: Stage[];
+  leads?: Lead[];
+  pipeline?: Pipeline;
+  selectedIds?: string[];
+  onSelectionChange?: (ids: string[]) => void;
 }
 
 function groupLeadsByStage(stages: Stage[], leads: Lead[]): Map<string, Lead[]> {
@@ -46,27 +52,60 @@ function BoardSkeleton() {
   );
 }
 
-export function KanbanBoard({ pipelineId }: KanbanBoardProps) {
-  const { data, isLoading, isError, error } = useBoard(pipelineId);
+export function KanbanBoard({
+  pipelineId,
+  stages: stagesProp,
+  leads: leadsProp,
+  pipeline: pipelineProp,
+  selectedIds,
+  onSelectionChange,
+}: KanbanBoardProps) {
+  const useExternal = stagesProp !== undefined && leadsProp !== undefined;
+  const queryResult = useBoard(useExternal ? null : pipelineId);
   const moveCard = useMoveCard(pipelineId);
-  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
+
+  const [internalSelected, setInternalSelected] = useState<Set<string>>(new Set());
+  const selectedLeadIds = useMemo(
+    () => (selectedIds ? new Set(selectedIds) : internalSelected),
+    [selectedIds, internalSelected],
+  );
+
+  const data = useExternal
+    ? {
+        pipeline: pipelineProp ?? ({} as Pipeline),
+        stages: stagesProp,
+        leads: leadsProp,
+      }
+    : queryResult.data;
+  const isLoading = useExternal ? false : queryResult.isLoading;
+  const isError = useExternal ? false : queryResult.isError;
+  const error = useExternal ? null : queryResult.error;
 
   const grouped = useMemo(() => {
     if (!data) return null;
     return groupLeadsByStage(data.stages, data.leads);
   }, [data]);
 
-  const handleSelect = useCallback((leadId: string, additive: boolean) => {
-    setSelectedLeadIds((prev) => {
-      const next = new Set(additive ? prev : []);
-      if (additive && prev.has(leadId)) {
-        next.delete(leadId);
+  const handleSelect = useCallback(
+    (leadId: string, additive: boolean) => {
+      const apply = (prev: Set<string>): Set<string> => {
+        const next = new Set(additive ? prev : []);
+        if (additive && prev.has(leadId)) {
+          next.delete(leadId);
+        } else {
+          next.add(leadId);
+        }
+        return next;
+      };
+      if (onSelectionChange) {
+        const nextSet = apply(selectedLeadIds);
+        onSelectionChange(Array.from(nextSet));
       } else {
-        next.add(leadId);
+        setInternalSelected((prev) => apply(prev));
       }
-      return next;
-    });
-  }, []);
+    },
+    [onSelectionChange, selectedLeadIds],
+  );
 
   const handleDragEnd = useCallback(
     (result: DropResult) => {

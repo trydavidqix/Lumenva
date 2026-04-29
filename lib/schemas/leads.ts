@@ -19,6 +19,27 @@ export type MoveLeadInput = z.infer<typeof moveLeadSchema>;
 export const winLeadSchema = z.object({}).passthrough();
 export type WinLeadInput = z.infer<typeof winLeadSchema>;
 
+/**
+ * Canonical lost reasons enforced by DB trigger fn_validate_lost_reason_required.
+ * Pipeline.settings.lost_reasons (jsonb array) can extend this list per-tenant.
+ */
+export const CANONICAL_LOST_REASONS = [
+  "requested_by_customer",
+  "price",
+  "no_response",
+  "product_unavailable",
+  "cancelled_by_store",
+  "cancelled_by_customer",
+  "payment_failed",
+  "other",
+] as const;
+export type CanonicalLostReason = (typeof CANONICAL_LOST_REASONS)[number];
+
+/**
+ * loseLeadSchema accepts canonical reasons OR any string (pipeline-extended).
+ * The server-side DB trigger is the source of truth; we keep the Zod schema
+ * permissive here to not block tenant-specific extensions.
+ */
 export const loseLeadSchema = z.object({
   lost_reason: z.string().min(1, "lost_reason é obrigatório").max(500),
 });
