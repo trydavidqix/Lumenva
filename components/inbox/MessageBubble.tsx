@@ -5,9 +5,15 @@ import { Check, Checks, ImageIcon, MusicNote, FileText, Robot, WarningOctagon } 
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Message } from "@/lib/types/messaging";
+import { CitationButton } from "@/components/ai/CitationButton";
+import {
+  extractCitations,
+  isAiGeneratedMessage,
+} from "@/lib/ai/citations/types";
 
 interface Props {
   message: Message;
+  debugCitations?: boolean;
 }
 
 function MediaPlaceholder({ type }: { type: string }) {
@@ -40,10 +46,14 @@ function AckIndicator({ status }: { status: string }) {
   return null;
 }
 
-export function MessageBubble({ message }: Props) {
+export function MessageBubble({ message, debugCitations }: Props) {
   const isOutbound = message.direction === "outbound";
   const time = format(new Date(message.sent_at), "HH:mm", { locale: ptBR });
   const isFailed = message.status === "failed";
+  const aiGenerated = isAiGeneratedMessage(message.metadata);
+  const citations = extractCitations(message.metadata);
+  const showCitationButton =
+    isOutbound && aiGenerated && (debugCitations ?? false);
   const senderLabel = (() => {
     if (!isOutbound) return null;
     if (message.sent_via === "ai") return "IA";
@@ -83,6 +93,9 @@ export function MessageBubble({ message }: Props) {
           )}
         >
           <span>{time}</span>
+          {showCitationButton && (
+            <CitationButton citations={citations} messageId={message.id} />
+          )}
           {isOutbound && !isFailed && <AckIndicator status={message.status} />}
           {isFailed && (
             <Tooltip>
