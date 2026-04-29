@@ -72,4 +72,6 @@ export type AuditAction =
   | "lgpd.tenant_redacted"
   | "lgpd.consent_changed"
   | "lgpd.manually_approved"
-  | "webhook.hmac_invalid";
+  | "webhook.hmac_invalid"
+  | "lgpd.sla_alarm_triggered"
+  | "lgpd.sla_watcher_run";
