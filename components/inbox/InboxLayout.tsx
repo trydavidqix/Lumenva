@@ -33,7 +33,11 @@ function tabToFilter(tab: InboxFiltersValue["tab"]): Partial<ConversationsFilter
   }
 }
 
-export function InboxLayout() {
+interface InboxLayoutProps {
+  initialSelectedId?: string | null;
+}
+
+export function InboxLayout({ initialSelectedId = null }: InboxLayoutProps = {}) {
   const { activeOrg } = useAuth();
   const orgId = activeOrg?.orgId ?? null;
 
@@ -42,7 +46,7 @@ export function InboxLayout() {
     search: "",
     onlyUnread: false,
   });
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
   const [visibleIds, setVisibleIds] = useState<string[]>([]);
   const [helpOpen, setHelpOpen] = useState(false);
   const composerRef = useRef<ComposerHandle | null>(null);

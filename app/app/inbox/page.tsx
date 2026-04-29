@@ -1,13 +1,24 @@
-import { Inbox } from "@/lib/ui/icons";
+import { redirect } from "next/navigation";
+import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
+import { InboxLayout } from "@/components/inbox/InboxLayout";
 
-export default function InboxPlaceholderPage() {
-  return (
-    <div className="flex h-full flex-col items-center justify-center text-center">
-      <Inbox size={48} className="text-muted-foreground" weight="duotone" />
-      <h1 className="mt-4 text-xl font-semibold">Inbox</h1>
-      <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-        Tela em construção. Será entregue no EPIC-03 (Inbox + Messaging).
-      </p>
-    </div>
-  );
+export const dynamic = "force-dynamic";
+
+export default async function InboxPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ id?: string }>;
+}) {
+  const user = await loadAuthUser();
+  if (!user) redirect("/login");
+  const activeOrg = await resolveActiveOrg(user);
+  if (!activeOrg) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+        Você não tem nenhuma organização ativa. Aceite um convite ou contate o admin.
+      </div>
+    );
+  }
+  const { id } = await searchParams;
+  return <InboxLayout initialSelectedId={id ?? null} />;
 }
