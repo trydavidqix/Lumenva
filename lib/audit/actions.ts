@@ -38,4 +38,12 @@ export type AuditAction =
   | "org.updated"
   | "pipeline.config_updated"
   | "mfa.recovery_codes_regenerated"
-  | "notification_prefs.changed";
+  | "notification_prefs.changed"
+  | "onboarding.welcome_completed"
+  | "onboarding.whatsapp_configured"
+  | "onboarding.whatsapp_skipped"
+  | "onboarding.nuvemshop_skipped"
+  | "onboarding.ai_configured"
+  | "onboarding.team_invited"
+  | "onboarding.completed"
+  | "tenant.onboarded";
