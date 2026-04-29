@@ -27,6 +27,8 @@ import { embedText } from "@/lib/ai/embed";
 import { computeCost } from "@/lib/ai/cost";
 import { logInvocation } from "@/lib/ai/log-invocation";
 import { renderSystemPrompt } from "@/lib/ai/render-system-prompt";
+import { triggerHandoff } from "@/lib/ai/handoff/orchestrator";
+import { checkG1, checkG3, checkG4Legal, checkG4Stage } from "@/lib/ai/handoff/triggers";
 import type {
   BotContext,
   BotResponse,
@@ -86,9 +88,106 @@ export async function processMessageReceived(row: EventRow): Promise<ProcessResu
   }
 
   const ctx = decision.context;
+
+  // ── Synchronous triage (G1, G4) — bypass LLM entirely if a hard handoff
+  //    signal is present in the inbound body or the lead's stage. -----------
+  const leadId = await resolveLeadId(ctx.organization_id, ctx.contact_id);
+
+  if (checkG1(ctx.inbound_body)) {
+    await triggerHandoff({
+      conversationId: ctx.conversation_id,
+      organizationId: ctx.organization_id,
+      reason: "requested_human",
+      leadId,
+      metadata: { message_id: ctx.message_id, source: "g1_regex" },
+    });
+    return { status: "skipped", reason: "handoff_g1_requested_human" };
+  }
+
+  if (checkG4Legal(ctx.inbound_body)) {
+    await triggerHandoff({
+      conversationId: ctx.conversation_id,
+      organizationId: ctx.organization_id,
+      reason: "legal_mention",
+      leadId,
+      metadata: { message_id: ctx.message_id, source: "g4_legal_regex" },
+    });
+    return { status: "skipped", reason: "handoff_g4_legal" };
+  }
+
+  const stageRequiresHuman = await checkG4Stage(leadId, ctx.organization_id);
+  if (stageRequiresHuman) {
+    await triggerHandoff({
+      conversationId: ctx.conversation_id,
+      organizationId: ctx.organization_id,
+      reason: "critical_stage",
+      leadId,
+      metadata: { message_id: ctx.message_id, source: "g4_stage_requires_human" },
+    });
+    return { status: "skipped", reason: "handoff_g4_stage" };
+  }
+
   try {
     const response = await invokeBot(ctx);
     const post = postProcess(response.text);
+
+    // ── G3 — bot's own response signals low confidence / uncertainty.
+    //    Persist the message (may serve as a draft for the human) but DO NOT
+    //    dispatch via WAHA, and trigger handoff. ----------------------------
+    const confidence = response.citations[0]?.similarity ?? 0;
+    const confidenceThreshold =
+      typeof ctx.agent.config?.["confidence_threshold"] === "number"
+        ? (ctx.agent.config["confidence_threshold"] as number)
+        : 0.5;
+    if (
+      checkG3({
+        confidence,
+        outputText: response.text,
+        threshold: confidenceThreshold,
+      })
+    ) {
+      const persisted = await persistAndDispatch(ctx, response, post.text, {
+        skipDispatch: true,
+        handoffReason: "low_confidence",
+      });
+      await triggerHandoff({
+        conversationId: ctx.conversation_id,
+        organizationId: ctx.organization_id,
+        reason: "low_confidence",
+        leadId,
+        metadata: {
+          message_id: ctx.message_id,
+          outbound_message_id: persisted.outbound_message_id,
+          confidence,
+          confidence_threshold: confidenceThreshold,
+          source: "g3_low_confidence",
+        },
+      });
+      logInvocation({
+        organization_id: ctx.organization_id,
+        agent_id: ctx.agent.id,
+        conversation_id: ctx.conversation_id,
+        message_id: persisted.outbound_message_id,
+        invocation_kind: "bot_respond",
+        model: ctx.agent.model,
+        prompt_tokens: response.prompt_tokens,
+        completion_tokens: response.completion_tokens,
+        latency_ms: response.latency_ms,
+        cost_cents: await computeCost({
+          model: ctx.agent.model,
+          promptTokens: response.prompt_tokens,
+          completionTokens: response.completion_tokens,
+        }),
+        finish_reason: response.finish_reason,
+        citations: response.citations as unknown as Array<Record<string, unknown>>,
+      });
+      return {
+        status: "skipped",
+        reason: "handoff_g3_low_confidence",
+        outbound_message_id: persisted.outbound_message_id,
+      };
+    }
+
     const persisted = await persistAndDispatch(ctx, response, post.text);
     logInvocation({
       organization_id: ctx.organization_id,
@@ -286,6 +385,37 @@ function skip(reason: SkipDecision["reason"], detail?: string): SkipDecision {
   return { kind: "skip", reason, detail };
 }
 
+/**
+ * Best-effort lookup of the most recent lead linked to a contact, used by
+ * the handoff orchestrator for stage gating (G4) + timeline activity. Returns
+ * null on missing/error — handoff itself never depends on a lead.
+ */
+async function resolveLeadId(
+  organizationId: string,
+  contactId: string,
+): Promise<string | null> {
+  try {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("crm_leads")
+      .select("id, organization_id, contact_id, created_at")
+      .eq("organization_id", organizationId)
+      .eq("contact_id", contactId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!data) return null;
+    return (data as { id: string }).id;
+  } catch (err) {
+    logger.warn("[ai-response-worker] resolveLeadId failed", {
+      organization_id: organizationId,
+      contact_id: contactId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
+}
+
 interface RetrieveInput {
   organizationId: string;
   kbVersionId: string;
@@ -414,10 +544,18 @@ function postProcess(text: string): { text: string; flags: string[] } {
 // 5. persistAndDispatch
 // ---------------------------------------------------------------------------
 
+interface PersistOptions {
+  /** When true, do NOT emit `message.send_requested` (G3 handoff path). */
+  skipDispatch?: boolean;
+  /** When set, marks the message as blocked by this handoff reason. */
+  handoffReason?: string;
+}
+
 async function persistAndDispatch(
   ctx: BotContext,
   response: BotResponse,
   finalText: string,
+  options: PersistOptions = {},
 ): Promise<{ outbound_message_id: string }> {
   const admin = createAdminClient();
 
@@ -438,6 +576,8 @@ async function persistAndDispatch(
       kb_version_id: ctx.agent.active_kb_version_id,
       finish_reason: response.finish_reason,
       citations: response.citations,
+      ...(options.skipDispatch ? { handoff_blocked: true } : {}),
+      ...(options.handoffReason ? { handoff_reason: options.handoffReason } : {}),
     },
   };
 
@@ -455,23 +595,27 @@ async function persistAndDispatch(
   // event on insert. The plan requires `message.send_requested` as a distinct
   // signal for the WAHA dispatch worker — emit it explicitly so that worker
   // (S-06.x in EPIC-03 land) doesn't have to disambiguate trigger events.
-  const { error: emitErr } = await admin.rpc("emit_event" as never, {
-    p_event_type: "message.send_requested",
-    p_entity_kind: "message",
-    p_entity_id: inserted.id,
-    p_payload: {
-      message_id: inserted.id,
-      conversation_id: ctx.conversation_id,
-      ai_generated: true,
-    },
-    p_metadata: { source: "ai-response-worker" },
-    p_organization_id: ctx.organization_id,
-  } as never);
-  if (emitErr) {
-    logger.warn("[ai-response-worker] message.send_requested emit failed", {
-      error: emitErr.message,
-      message_id: inserted.id,
-    });
+  // EXCEPTION (S-06.03 wave 3): when handoff was triggered (G3 low confidence),
+  // we persist the bot's draft for the human to reuse but MUST NOT dispatch.
+  if (!options.skipDispatch) {
+    const { error: emitErr } = await admin.rpc("emit_event" as never, {
+      p_event_type: "message.send_requested",
+      p_entity_kind: "message",
+      p_entity_id: inserted.id,
+      p_payload: {
+        message_id: inserted.id,
+        conversation_id: ctx.conversation_id,
+        ai_generated: true,
+      },
+      p_metadata: { source: "ai-response-worker" },
+      p_organization_id: ctx.organization_id,
+    } as never);
+    if (emitErr) {
+      logger.warn("[ai-response-worker] message.send_requested emit failed", {
+        error: emitErr.message,
+        message_id: inserted.id,
+      });
+    }
   }
 
   // Domain event for downstream consumers (UI realtime, audit).

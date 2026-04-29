@@ -7,6 +7,7 @@
 
 import { aiResponseHandler } from "@/workers/ai-response-worker.handler";
 import { aiSentimentHandler } from "@/workers/ai-sentiment-worker.handler";
+import { aiHandoffFromSentimentHandler } from "@/workers/ai-handoff-from-sentiment.handler";
 import { registerHandler } from "@/lib/event-log/dispatcher";
 
 let _registered = false;
@@ -15,5 +16,6 @@ export function ensureHandlersRegistered(): void {
   if (_registered) return;
   registerHandler(aiResponseHandler);
   registerHandler(aiSentimentHandler);
+  registerHandler(aiHandoffFromSentimentHandler);
   _registered = true;
 }
