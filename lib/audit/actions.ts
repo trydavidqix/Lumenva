@@ -53,4 +53,6 @@ export type AuditAction =
   | "conversation.closed"
   | "message.sent"
   | "message.received"
-  | "contact.blocked";
+  | "contact.blocked"
+  | "ai.handoff_triggered"
+  | "ai.reactivated_by_agent";

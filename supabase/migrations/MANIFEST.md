@@ -16,6 +16,7 @@ Migrations applied to Supabase project `rrydmwnporysaiysiztn` (sa-east-1, Postgr
 | `20260429013958` | `0008_tenant_onboarding_state` | onboarding state machine columns + transitions on organizations |
 | `20260429021857` | `0009_expand_messaging_constraints` | extra check constraints + indexes on conversations/messages for inbox perf |
 | `20260429032132` | `0010_ai_rag_handoff_columns_and_rpcs` | EPIC-06 wave 1: contacts.force_human + conversations.bot_silenced_until/last_handoff_at + RPC retrieve_top_k_chunks (security definer + programmatic org filter) + RPC activate_kb_version + ai_pricing seed corrections (haiku 100/500, embedding-3-small 20) |
+| `20260429040000` | `0011_handoff_reason_column` | EPIC-06 wave 3: conversations.last_handoff_reason (diagnostic) + crm_stages.requires_human (gate G4 — bypass bot when lead enters critical stage) |
 
 ## Reproducibility
 
