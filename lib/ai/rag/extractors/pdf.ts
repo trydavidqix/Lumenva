@@ -37,8 +37,10 @@ export async function extractPdfText(buffer: Buffer): Promise<string> {
     const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js") as typeof import("pdfjs-dist");
 
     // Disable the worker for server-side Node usage
-    // @ts-expect-error — GlobalWorkerOptions exists at runtime but typing may differ
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+    // Disable the worker for server-side Node usage (no DOM/worker thread)
+    if (pdfjsLib.GlobalWorkerOptions) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+    }
 
     const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer) });
     const pdfDocument = await loadingTask.promise;
