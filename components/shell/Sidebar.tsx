@@ -2,15 +2,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTransition } from "react";
-import { Kanban, Users, UsersThree, Gear, CaretDoubleLeft, CaretDoubleRight, Inbox } from "@/lib/ui/icons";
+import { Kanban, Users, UsersThree, Gear, CaretDoubleLeft, CaretDoubleRight, Inbox, ScalesSimple } from "@/lib/ui/icons";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { toggleSidebar } from "@/app/actions/shell/toggleSidebar";
+import { usePermission } from "@/hooks/auth/AuthProvider";
 
 interface NavItem {
   href: string;
   label: string;
   icon: PhosphorIcon;
+  permission?: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -18,12 +20,14 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/app/kanban", label: "Kanban", icon: Kanban },
   { href: "/app/contacts", label: "Contatos", icon: Users },
   { href: "/app/team", label: "Equipe", icon: UsersThree },
+  { href: "/app/lgpd/requests", label: "LGPD", icon: ScalesSimple, permission: "lgpd.execute_redact" },
   { href: "/app/settings", label: "Configurações", icon: Gear },
 ];
 
 export function Sidebar({ collapsed }: { collapsed: boolean }) {
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
+  const canLgpd = usePermission("lgpd.execute_redact");
 
   return (
     <aside
@@ -37,7 +41,10 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
         {collapsed && <span aria-hidden className="text-lg font-bold text-primary">D</span>}
       </div>
       <nav className="flex-1 space-y-1 p-2" aria-label="Navegação principal">
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.filter((item) => {
+          if (item.permission === "lgpd.execute_redact") return canLgpd;
+          return true;
+        }).map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           const Icon = item.icon;
           return (

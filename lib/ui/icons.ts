@@ -29,9 +29,12 @@ export {
   MagnifyingGlass,
   // feedback
   CheckCircle,
+  Warning,
   WarningOctagon,
   Info,
   CircleNotch,
+  // lgpd
+  Scales as ScalesSimple,
   // theme
   Sun,
   Moon,
