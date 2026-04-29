@@ -1,6 +1,23 @@
 "use client";
 import { useState } from "react";
 import { useBoard } from "@/hooks/kanban/useBoard";
+
+function formatError(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === "object") {
+    const obj = err as { message?: unknown; code?: unknown; details?: unknown; hint?: unknown };
+    if (typeof obj.message === "string") {
+      const code = typeof obj.code === "string" ? ` [${obj.code}]` : "";
+      return `${obj.message}${code}`;
+    }
+    try {
+      return JSON.stringify(err);
+    } catch {
+      return "Erro desconhecido";
+    }
+  }
+  return String(err);
+}
 import { KanbanBoard } from "@/components/kanban/KanbanBoard";
 import { FilterBar } from "@/components/kanban/FilterBar";
 import { BulkActionBar } from "@/components/kanban/BulkActionBar";
@@ -31,7 +48,7 @@ export function PipelinePageClient({
       {error ? (
         <div className="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm">
           Erro ao carregar pipeline:{" "}
-          {error instanceof Error ? error.message : String(error)}
+          {formatError(error)}
         </div>
       ) : isLoading || !data ? (
         <div className="flex flex-1 animate-pulse items-center justify-center text-muted-foreground">
