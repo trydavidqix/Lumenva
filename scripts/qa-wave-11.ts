@@ -4,7 +4,10 @@
  * Run: npx tsx scripts/qa-wave-11.ts
  */
 import { chromium, type BrowserContext } from "@playwright/test";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SB = SupabaseClient<any, any, any>;
 import * as fs from "fs";
 import * as path from "path";
 
@@ -75,7 +78,7 @@ function todayUtcDay(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-async function seedBudget(sb: ReturnType<typeof createClient>, overrides: Record<string, unknown> = {}) {
+async function seedBudget(sb: SB, overrides: Record<string, unknown> = {}) {
   const base = {
     organization_id: ORG_ID,
     monthly_limit_cents: 5000,
@@ -95,7 +98,7 @@ async function seedBudget(sb: ReturnType<typeof createClient>, overrides: Record
   if (error) throw new Error(`seedBudget failed: ${error.message}`);
 }
 
-async function readBudget(sb: ReturnType<typeof createClient>) {
+async function readBudget(sb: SB) {
   const { data, error } = await sb
     .from("ai_budgets")
     .select("*")
