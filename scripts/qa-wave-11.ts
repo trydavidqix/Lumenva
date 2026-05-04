@@ -14,8 +14,8 @@ import * as path from "path";
   if (fs.existsSync(envPath)) {
     for (const line of fs.readFileSync(envPath, "utf8").split("\n")) {
       const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
-      if (m && !process.env[m[1]]) {
-        let v = m[2];
+      if (m && m[1] && !process.env[m[1]]) {
+        let v = m[2] ?? "";
         if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
           v = v.slice(1, -1);
         }
