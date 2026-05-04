@@ -4,7 +4,7 @@
  * Run: npx tsx scripts/qa-wave-12.ts
  */
 import { chromium, type BrowserContext, type Page } from "@playwright/test";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -69,7 +69,8 @@ async function login(context: BrowserContext, email: string): Promise<void> {
   await page.close();
 }
 
-type SB = ReturnType<typeof createClient>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SB = SupabaseClient<any, any, any>;
 
 async function ensureChannelSession(sb: SB): Promise<string> {
   const existing = await sb
