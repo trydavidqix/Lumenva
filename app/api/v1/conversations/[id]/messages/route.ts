@@ -7,6 +7,7 @@ import { type NextRequest } from "next/server";
 
 import { ApiError } from "@/lib/api/types";
 import { fail, ok } from "@/lib/api/wrappers";
+import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import { listMessagesQuerySchema } from "@/lib/schemas";
 import { createClient } from "@/lib/supabase/server";
 
@@ -31,6 +32,12 @@ export async function GET(req: NextRequest, ctx: RouteCtx): Promise<Response> {
     return fail("unauthenticated", "Auth required.", 401, { requestId });
   }
 
+  const authUser = await loadAuthUser();
+  const activeOrg = authUser ? await resolveActiveOrg(authUser) : null;
+  if (!activeOrg) {
+    return fail("no_active_org", "No active organization.", 403, { requestId });
+  }
+
   const url = new URL(req.url);
   const qsParsed = listMessagesQuerySchema.safeParse({
     cursor: url.searchParams.get("cursor") ?? undefined,
@@ -47,7 +54,7 @@ export async function GET(req: NextRequest, ctx: RouteCtx): Promise<Response> {
     const { messages, cursor, has_more } = await listMessagesHandler(
       supabase,
       {
-        organization_id: "",
+        organization_id: activeOrg.orgId,
         actor: { type: "user", id: user.id },
         requestId,
       },

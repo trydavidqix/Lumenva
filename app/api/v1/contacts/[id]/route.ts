@@ -9,6 +9,7 @@ import { type NextRequest } from "next/server";
 
 import { ApiError } from "@/lib/api/types";
 import { ok, fail } from "@/lib/api/wrappers";
+import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import { contactPatchSchema, validateRequest } from "@/lib/schemas";
 import { createClient } from "@/lib/supabase/server";
 
@@ -32,13 +33,19 @@ export async function GET(
     return fail("unauthenticated", "Auth required.", 401, { requestId });
   }
 
+  const authUser = await loadAuthUser();
+  const activeOrg = authUser ? await resolveActiveOrg(authUser) : null;
+  if (!activeOrg) {
+    return fail("no_active_org", "No active organization.", 403, { requestId });
+  }
+
   const decryptPurpose = req.headers.get("x-decrypt-purpose");
 
   try {
     const result = await getContactHandler(
       supabase,
       {
-        organization_id: "",
+        organization_id: activeOrg.orgId,
         actor: { type: "user", id: user.id },
         requestId,
       },
@@ -69,6 +76,12 @@ export async function PATCH(
     return fail("unauthenticated", "Auth required.", 401, { requestId });
   }
 
+  const authUser = await loadAuthUser();
+  const activeOrg = authUser ? await resolveActiveOrg(authUser) : null;
+  if (!activeOrg) {
+    return fail("no_active_org", "No active organization.", 403, { requestId });
+  }
+
   let input;
   try {
     input = await validateRequest(contactPatchSchema, req);
@@ -86,7 +99,7 @@ export async function PATCH(
     const contact = await patchContactHandler(
       supabase,
       {
-        organization_id: "",
+        organization_id: activeOrg.orgId,
         actor: { type: "user", id: user.id },
         requestId,
       },
