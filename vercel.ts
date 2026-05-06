@@ -19,6 +19,10 @@ import type { VercelConfig } from "@vercel/config/v1";
 const config: VercelConfig = {
   crons: [
     { path: "/api/v1/cron/lgpd-sla-watcher", schedule: "0 12 * * *" },
+    // EPIC-13 S-13.07: drains ai_agent.dispatch_requested events. Vercel cron
+    // cannot go sub-minute; per-minute batch of 100 events is sized for the
+    // MVP target tenant (~300 inbound/day, headroom ~6k/hour).
+    { path: "/api/v1/cron/agent-dispatcher", schedule: "*/1 * * * *" },
   ],
 };
 
