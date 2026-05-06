@@ -74,7 +74,7 @@ async function handle(req: NextRequest): Promise<Response> {
       outcomes: summary.outcomes,
       errors: summary.errors,
     },
-    { requestId },
+    { requestId, meta: { requestId } },
   );
 }
 
