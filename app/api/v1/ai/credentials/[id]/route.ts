@@ -54,7 +54,9 @@ export async function DELETE(
   // Está referenciada por alguma versão que é published_version_id de agent ativo?
   const { data: linked, error: linkErr } = await admin
     .from("ai_agent_versions")
-    .select("id, agent_id, ai_agents!inner(id, archived_at, published_version_id)")
+    .select(
+      "id, agent_id, ai_agents!ai_agent_versions_agent_id_fkey!inner(id, archived_at, published_version_id)",
+    )
     .eq("credential_id", id)
     .eq("organization_id", activeOrg.orgId);
 
