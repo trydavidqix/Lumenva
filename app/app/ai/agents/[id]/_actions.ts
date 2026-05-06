@@ -409,6 +409,14 @@ export async function revertToVersionAction(
     versionId: createdId,
   });
   if (!result.ok) {
+    // Rollback: remove draft órfã para não deixar lixo (a draft só existe
+    // como veículo do publish; sem publish, não tem razão de ser).
+    await admin
+      .from("ai_agent_versions")
+      .delete()
+      .eq("id", createdId)
+      .eq("organization_id", activeOrg.orgId)
+      .eq("status", "draft");
     if (PUBLISH_ERROR_CODES.has(result.code as string)) {
       return { ok: false, error: result.code };
     }
