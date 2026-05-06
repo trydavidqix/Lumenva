@@ -111,12 +111,12 @@ export function TestPanel({ agent, draft, published, readOnly }: Props) {
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Versão alvo
           </p>
-          <p className="text-sm">
-            <Badge variant="outline" className="mr-2">{versionLabel}</Badge>
+          <div className="flex items-center gap-2 text-sm">
+            <Badge variant="outline">{versionLabel}</Badge>
             <span className="font-mono text-xs">
               {target.provider} / {target.model}
             </span>
-          </p>
+          </div>
         </div>
 
         <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-xs">
