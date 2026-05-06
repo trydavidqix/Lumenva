@@ -97,4 +97,7 @@ export type AuditAction =
   | "platform_admin.users_listed"
   | "platform_admin.user_viewed"
   | "platform_admin.platform_admins_listed"
-  | "mcp.tool_called";
+  | "mcp.tool_called"
+  | "ai.credential_created"
+  | "ai.credential_deleted"
+  | "ai.credential_revalidated";
