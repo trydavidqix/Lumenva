@@ -309,8 +309,6 @@ export async function createMcpAgentAction(
       priority: parsed.data.priority,
       is_active: false,
       is_default: false,
-      config: {},
-      guardrails: null,
       created_by: authUser.id,
     })
     .select("id")
