@@ -11,7 +11,7 @@
 #
 set -euo pipefail
 
-REPO_URL="${REPO_URL:-https://github.com/deskcommcrm/deskcommcrm.git}"
+REPO_URL="${REPO_URL:-https://github.com/melgarafael/DeskcommCRM.git}"
 REPO_DIR="${REPO_DIR:-deskcommcrm}"
 COMPOSE="docker-compose.prod.yml"
 NONINTERACTIVE=0
@@ -78,7 +78,7 @@ if [ -f .env ]; then set -a; . ./.env; set +a; c_grn "✓ .env existente carrega
 
 ask DOMAIN            "Domínio do CRM (ex: crm.suaempresa.com.br)"
 ask ACME_EMAIL        "Seu e-mail (avisos de SSL)"
-ask APP_IMAGE         "Imagem Docker do app" "ghcr.io/deskcommcrm/deskcommcrm:latest"
+ask APP_IMAGE         "Imagem Docker do app" "ghcr.io/melgarafael/deskcommcrm:latest"
 ask NEXT_PUBLIC_SUPABASE_URL   "Supabase Project URL (Settings > API)"
 ask NEXT_PUBLIC_SUPABASE_ANON_KEY "Supabase anon key"
 ask SUPABASE_SERVICE_ROLE_KEY  "Supabase service_role key" "" secret
