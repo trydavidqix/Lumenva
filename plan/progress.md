@@ -101,3 +101,12 @@
 - gov-verifier: PASS, hash-check OK.
 - Próximo: G1-06 é human_input (única pendente da fase) → sessão seguinte abre
   o item de inbox com as 5 perguntas e emite checkpoint G1 INCOMPLETO (§5).
+
+## 2026-07-16 — sessão 7 do loop (core) — checkpoint G1
+
+- G1-06 é human_input (única pendente da fase): INB-02 aberto na inbox com as
+  5 perguntas (a)-(e), opções e recomendação do loop em cada uma.
+- Checkpoint G1 emitido: loop/checkpoints/G1-report.md, Status INCOMPLETO —
+  bloqueado (aguarda respostas INB-02/INB-01 + G1.approved do dono).
+- Loop PARADO aguardando aprovação (guarda de entrada nº 2 segura as próximas
+  sessões). Próximo passo é do dono: responder inbox e aprovar/recusar o checkpoint.
