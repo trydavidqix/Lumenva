@@ -46,7 +46,7 @@ rename for arriscado, mas TODO SQL usa os nomes canônicos. Novos códigos usam 
 - `lib/agent-engine/` é auto-contido (sem imports de `@/lib/...` do app), EXCETO a borda
   `crm/` que pode importar handlers do app (ex.: `sendMessageHandler`) e `edge/llm/` que
   reusa `@/lib/crypto/aes_gcm` para o BYOK.
-- Migrations: `supabase/migrations/<YYYYMMDDHHMMSS>_0038_agent_harness.sql`, idempotente,
+- Migrations: `supabase/migrations/<YYYYMMDDHHMMSS>_0050_agent_harness.sql`, idempotente,
   sem BEGIN/COMMIT, RLS `tenant_isolation_<tabela>_all` via `fn_user_org_ids()` em toda tabela
   org-scoped, + apêndice em `supabase/baseline.sql` + linha no `MANIFEST.md`.
 
