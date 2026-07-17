@@ -321,3 +321,30 @@
 - 60 invariantes + 155 unit verdes. INB-07 e INB-09 fechados (status closed).
 - Próxima sessão: G4-01 (visibility_mode RLS — o CORAÇÃO do épico, decisão
   G1-06a default own_and_unassigned).
+
+## 2026-07-17 — sessão 19 do loop (core) — G4-01 (o CORAÇÃO do épico)
+
+- G4-01 (visibility_mode RLS): migration 0035 tripla. fn_can_view_conversation
+  (STABLE SECURITY DEFINER, recebe campos da row — zero subquery por-row; role
+  via auth.uid; anon/public revogados). conversations_select role+visibility-aware
+  (só agent restrito; viewer/manager/admin org-wide); messages_select herda via
+  EXISTS na conversa-mãe. Default own_and_unassigned (G1-06a).
+- 2 descobertas de causa raiz do implementer: (1) rejeitou scalar-subquery de
+  assigned_to (sob RLS daria NULL→tratado como fila→VAZAMENTO); usou EXISTS.
+  (2) fn_conversation_assign virou DEFINER: com SELECT visibility-aware, o
+  UPDATE...RETURNING numa transferência re-aplicava a policy à nova linha (novo
+  dono invisível ao autor)→RLS violation quebrava transfer/release EM PRODUÇÃO.
+  Fix: DEFINER + guard re-afirmando autz (caller agent+ same-org; INB-06a
+  preservado). E: write-policies FOR ALL re-expressas por-comando (o USING de
+  FOR ALL permissivo também governa SELECT via OR — anularia o visibility).
+- Verifier: PASS 1ª rodada, 7 vetores de vazamento provados (cross-org 0,
+  cross-atendente 0, fila por modo, manager org-wide, msg herda escopo, fn anon
+  negada, transfer legítimo ok). pg_policy enumerado: conversations tem
+  EXATAMENTE 1 policy SELECT (visibility-aware), ZERO FOR ALL. Hash OK. 65
+  invariantes + 155 unit. Flip do eixo 5.
+- Nota do verifier (não-defeito): UPDATE/DELETE direto de agent agora limitado às
+  linhas visíveis (Postgres lê a row-alvo sob a SELECT policy) — endurecimento
+  coerente; cross-owner via fn DEFINER, ingestão via service_role. Registrar
+  pra G4-02/03 (a UI/queries do agent precisam contar com isso).
+- Próxima sessão: G4-02 (inbox com escopo minhas/fila/todas) ou G4-03 (escopo no
+  kanban) — ambas dep G4-01. Menor priority ⇒ G4-02 (prio 20).

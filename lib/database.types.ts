@@ -2737,6 +2737,10 @@ export type Database = {
         };
         Returns: string;
       };
+      fn_can_view_conversation: {
+        Args: { p_assigned_to_user_id: string; p_org: string };
+        Returns: boolean;
+      };
       fn_conversation_assign: {
         Args: {
           p_conversation_id: string;
