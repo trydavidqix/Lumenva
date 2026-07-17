@@ -421,3 +421,17 @@
   gov/G5 criada. INB-03/04/05/08/10 seguem open (re-apresentar no checkpoint G5;
   INB-10 é pré-condição da G6).
 - Próximo: Arquiteto abre G5-01 (routing config + availability). Teto 10/12 hoje.
+
+## 2026-07-17 — incidente de infra + trombada de checkouts (watchdog/Maestro)
+
+- 16:55: G5-01 blocked — disco 100% (1.5Gi livre) + untracked da fusão Vendaval
+  (lib/agent-engine, migration 0038 colidente) quebrando o smoke no checkout.
+- Watchdog liberou 6.5Gi (caches npm/uv/puppeteer/pnpm) → 8Gi livres.
+- 17:11: Terminal B criou loop/STOP alegando git clean ~17h apagando trabalho
+  da fusão. Apuração: gov-loop usa stash (não clean); trabalho confirmado salvo
+  no worktree ../DeskcommCRM-vendaval. Principal chegou a ser trocado pra
+  fusion/vendaval por engano e foi revertido pelo Maestro do Vendaval.
+- Acordo de convivência: fusão vive no worktree (branch vendaval-fusion);
+  NNNN 0038-0049 reservados pro gov-loop, fusão renumera 0050+.
+- 17:5x: principal de volta em gov/G5, limpo, typecheck OK. STOP removido pelo
+  watchdog com autorização do time que o criou. Loop retomando na G5-01.
