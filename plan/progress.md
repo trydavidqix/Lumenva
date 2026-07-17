@@ -171,3 +171,21 @@
 - INB-05 aberto (proposal): spec 13 §4 nota 8 prevê api_audit_log SELECT
   manager+ "aplicada em G2", mas nenhuma feature G2 cobre — decisão do dono.
 - Próxima sessão: G2-04 (e2e Playwright de papéis) fecha a fase → checkpoint G2.
+
+## 2026-07-16 — sessão 12 do loop (core) — G2-04 (fase G2 completa)
+
+- G2-04 (e2e de papéis): rbac-roles.spec.ts com 4 testes (agent 403 em
+  api-tokens/billing; admin entra com login MFA TOTP REAL — utils/totp.ts RFC
+  6238 sem dependência nova; agent vê inbox/kanban; viewer 403 forbidden_role
+  no POST de mensagem). Seed estendido: +viewer +ensureAdminTotp idempotente.
+- Desvio aprovado pelo verifier: billing/page.tsx ganhou gate admin-only de 6
+  linhas (espelho de api-tokens) — página não tinha gate NENHUM e o acceptance
+  seria falso sem ele.
+- e2e: 12 passed / 1 failed — o vermelho é error-pages "/500", PRÉ-EXISTENTE
+  (rota app/500 nunca existiu, vem do EPIC-12; provado independente do diff).
+  Candidato a forward-fix fora do épico. Axe zerado nas telas tocadas (exclusão
+  única documentada: tablist do InboxFilters, violação pré-existente).
+- gov-verifier: PASS 1ª rodada, hash-check OK. 123 unit verdes.
+- Incidente sem perda registrado: implementer consumiu stash órfão 18:54
+  (AGENTS/GEMINI idênticos aos do disco); órfão 18:43 intacto.
+- FASE G2 COMPLETA (4/4 passes:true) → checkpoint G2 na sequência, loop PARA.
