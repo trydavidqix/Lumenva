@@ -12,6 +12,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
+import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createLeadHandler } from "@/app/api/v1/leads/_handler";
 import type { CreateLeadInput } from "@/lib/schemas";
@@ -132,18 +133,24 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
   }
 
   // Contato: upsert por telefone (se houver) — reusa a coluna E.164 canônica.
+  // is_merged_into null: contato mesclado não deve ser reaproveitado (o índice
+  // único uniq_contacts_org_phone só cobre a linha ativa por telefone).
   let contactId: string | undefined;
   if (mapped.phone) {
-    const { data: existing } = await admin
-      .from("contacts")
-      .select("id")
-      .eq("organization_id", source.organization_id)
-      .eq("phone_number", mapped.phone)
-      .maybeSingle();
+    const selectActiveByPhone = () =>
+      admin
+        .from("contacts")
+        .select("id")
+        .eq("organization_id", source.organization_id)
+        .eq("phone_number", mapped.phone)
+        .is("is_merged_into", null)
+        .maybeSingle();
+
+    const { data: existing } = await selectActiveByPhone();
     if (existing) {
       contactId = existing.id as string;
     } else {
-      const { data: created } = await admin
+      const { data: created, error: insertErr } = await admin
         .from("contacts")
         .insert({
           organization_id: source.organization_id,
@@ -155,7 +162,24 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
         })
         .select("id")
         .maybeSingle();
-      contactId = (created?.id as string | undefined) ?? undefined;
+      if (insertErr) {
+        if (insertErr.code === "23505") {
+          // Corrida: outro POST concorrente com o mesmo telefone novo já
+          // criou o contato entre o select e o insert. Re-seleciona o
+          // vencedor em vez de deixar o lead órfão.
+          const { data: winner } = await selectActiveByPhone();
+          contactId = (winner?.id as string | undefined) ?? undefined;
+        } else {
+          logger.error("[webhooks.inbound] contact insert failed", {
+            webhookSourceId: source.id,
+            organizationId: source.organization_id,
+            errorCode: insertErr.code,
+            errorMessage: insertErr.message,
+          });
+        }
+      } else {
+        contactId = (created?.id as string | undefined) ?? undefined;
+      }
     }
   }
 
