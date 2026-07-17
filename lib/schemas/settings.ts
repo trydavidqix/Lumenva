@@ -8,7 +8,22 @@
  */
 import { z } from "zod";
 
+import { conversationTagSchema } from "./messaging";
+
 const LOCALES = ["pt-BR", "en-US"] as const;
+
+/**
+ * G3-05: vocabulário canônico de tags de conversa, persistido em
+ * organizations.settings.canonical_conversation_tags (spec 13 §3.3 — org-scoped,
+ * não pipeline-scoped). Schema declarativo; usado para validar o que o inbox lê
+ * como sugestões.
+ */
+export const canonicalConversationTagsSchema = z
+  .array(conversationTagSchema)
+  .max(50)
+  .transform((tags) => Array.from(new Set(tags)))
+  .catch([]);
+export type CanonicalConversationTags = z.infer<typeof canonicalConversationTagsSchema>;
 export type Locale = (typeof LOCALES)[number];
 
 export const profileSchema = z.object({

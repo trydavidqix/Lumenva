@@ -273,3 +273,17 @@
   vs org do UPDATE resolvida do 1º lead — ator em 2 orgs poderia cruzar (não
   vaza, RLS segura; padrão pré-existente da rota).
 - Fase G3: 4/5. Falta só G3-05 (tags de conversa, prio 50) → fecha a fase.
+
+## 2026-07-17 — sessão 17 do loop (core) — G3-05 (fase G3 COMPLETA)
+
+- G3-05 (tags de conversa): migration 0033 tripla — conversations.tags text[]
+  +GIN + seed idempotente do vocabulário canônico em
+  organizations.settings.canonical_conversation_tags (não sobrescreve tenant).
+  PATCH de conversa estendido (patchConversationSchema, status e/ou tags) com
+  Zod normalizador (trim/lowercase/dedup, ≤20, ≤40) + audit conversation.tags_changed.
+  UI: ConversationTagsEditor (chips + sugestões canônicas) no side panel + filtro
+  por tag no inbox. Vocabulário via server route (cookie HttpOnly — browser client
+  não autentica, mesmo motivo do board). types à mão (precedente G3-02).
+- Flip do it.fails do eixo 7 + invariante de filtro org-scoped (org1=1, org2=1,
+  global≥2, não vaza). gov-verifier PASS 1ª rodada, hash OK. 154 unit + 48 invariantes.
+- FASE G3 COMPLETA (5/5 passes:true) → checkpoint G3 na sequência, loop PARA no gate.
