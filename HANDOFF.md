@@ -30,8 +30,9 @@
 | — fix T4 (controller) | ✅ | `0a38b34`; T4 (haiku) reportou typecheck limpo FALSAMENTE (6× TS2339); controller corrigiu narrowing em 3 handlers; tsc limpo + 26/26 provado pelo controller. REGRA: controller roda typecheck após TODO implementer |
 | BE-T6 rota inbound pública | ✅ completa (review ok pós-fix) | `581ce70`+`5317786`; 74 PASS + 1 skip; fix: 23505 do insert de contato re-seleciona (race não órfã lead), lookup ignora merged; reviewer confirmou zero assertions afrouxadas |
 | BE-T7 avaliador de condições | ✅ completa (review ok, zero issues) | `126b938`; 11/11 unit; contrato congelado p/ engine |
-| BE-T8 engine do motor | ⏳ em implementação | inclui filtro entity_kind (mata duplicata do trigger legado) |
-| BE-T9 a T13 | pendente | — |
+| BE-T8 engine do motor | ✅ completa (review ok + fix org-filter) | `955bb9a`+`1134e01`; 80 PASS + 1 skip (6 casos novos: ordem c/ erro no meio, anti-loop 2 variantes, postpone all-or-nothing, unknown action, entity_kind mismatch); fix controller: buildContext filtra organization_id (anti-pattern #10) |
+| BE-T9 ações CRUD | ⏳ em implementação | — |
+| BE-T10 a T13 | pendente | — |
 | UI T1-T6 | pendente | — |
 
 ## Última atualização
