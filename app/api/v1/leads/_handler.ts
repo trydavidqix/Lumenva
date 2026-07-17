@@ -262,7 +262,7 @@ export async function updateLeadHandler(
 ): Promise<Record<string, unknown>> {
   const { data: existing, error: selErr } = await supabase
     .from("crm_leads")
-    .select("id, organization_id")
+    .select("id, organization_id, tags")
     .eq("id", leadId)
     .maybeSingle();
 
@@ -319,6 +319,25 @@ export async function updateLeadHandler(
     .then(({ error }) => {
       if (error) console.error("[lead.update] emit_event failed", error.message);
     });
+
+  if (input.tags !== undefined) {
+    const prevTags: string[] = (existing as { tags?: string[] }).tags ?? [];
+    const addedTags = input.tags.filter((t) => !prevTags.includes(t));
+    if (addedTags.length) {
+      await supabase
+        .rpc("emit_event", {
+          p_event_type: "lead.tag_added",
+          p_entity_kind: "crm_lead",
+          p_entity_id: leadId,
+          p_payload: { added_tags: addedTags, tags: input.tags },
+          p_metadata: { request_id: ctx.requestId, ...a.metadataActor },
+          p_organization_id: existing.organization_id,
+        })
+        .then(({ error }) => {
+          if (error) console.error("[lead.update] emit_event failed", error.message);
+        });
+    }
+  }
 
   await audit({
     action: "lead.updated",
@@ -436,6 +455,7 @@ export async function moveLeadHandler(
       p_entity_kind: "crm_lead",
       p_entity_id: leadId,
       p_payload: {
+        pipeline_id: lead.pipeline_id,
         from_stage_id: lead.stage_id,
         to_stage_id: input.to_stage_id,
         position_in_stage: position,
