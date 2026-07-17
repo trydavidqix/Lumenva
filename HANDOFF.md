@@ -28,8 +28,10 @@
 | BE-T4 actor webhook_source | ✅ completa (review ok) | `852ce19`; typecheck limpo, 11/11 schema tests; 17 call sites auditados e re-verificados pelo reviewer |
 | BE-T5 parser inbound | ✅ completa (review ok) | `c442f47`; 15/15 unit PASS (E.164 BR, field_map, HMAC timingSafeEqual) |
 | — fix T4 (controller) | ✅ | `0a38b34`; T4 (haiku) reportou typecheck limpo FALSAMENTE (6× TS2339); controller corrigiu narrowing em 3 handlers; tsc limpo + 26/26 provado pelo controller. REGRA: controller roda typecheck após TODO implementer |
-| BE-T6 rota inbound pública | ⏳ implementada (`581ce70`), em review | 73 PASS + 1 skip intencional (15 arquivos); typecheck limpo re-verificado pelo controller |
-| BE-T7 a T13 | pendente | — |
+| BE-T6 rota inbound pública | ✅ completa (review ok pós-fix) | `581ce70`+`5317786`; 74 PASS + 1 skip; fix: 23505 do insert de contato re-seleciona (race não órfã lead), lookup ignora merged; reviewer confirmou zero assertions afrouxadas |
+| BE-T7 avaliador de condições | ✅ completa (review ok, zero issues) | `126b938`; 11/11 unit; contrato congelado p/ engine |
+| BE-T8 engine do motor | ⏳ em implementação | inclui filtro entity_kind (mata duplicata do trigger legado) |
+| BE-T9 a T13 | pendente | — |
 | UI T1-T6 | pendente | — |
 
 ## Última atualização
