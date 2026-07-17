@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useUser } from "@/hooks/auth/AuthProvider";
+import { useAssignableMembers } from "@/hooks/inbox/useAssignableMembers";
 import type { Lead } from "@/lib/types/leads";
 import type { LeadFilters } from "@/lib/kanban/filters";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,7 @@ const STATUS_OPTIONS: Array<{ value: NonNullable<LeadFilters["status"]>; label: 
 
 export function FilterBar({ filters, onChange, leads }: FilterBarProps) {
   const user = useUser();
+  const { data: members } = useAssignableMembers(true);
   const [searchInput, setSearchInput] = useState(filters.search ?? "");
 
   // Debounce search 250ms
@@ -52,9 +54,12 @@ export function FilterBar({ filters, onChange, leads }: FilterBarProps) {
   const ownerLabel =
     filters.ownerUserId === "unassigned"
       ? "Sem responsável"
-      : filters.ownerUserId === user.id
-        ? "Eu"
-        : "Todos";
+      : !filters.ownerUserId || filters.ownerUserId === "any"
+        ? "Todos"
+        : filters.ownerUserId === user.id
+          ? "Eu"
+          : (members?.find((m) => m.user_id === filters.ownerUserId)?.full_name ??
+            "Responsável");
 
   const statusLabel =
     STATUS_OPTIONS.find((o) => o.value === (filters.status ?? "all"))?.label ?? "Todos";
@@ -87,6 +92,21 @@ export function FilterBar({ filters, onChange, leads }: FilterBarProps) {
           <DropdownMenuItem onClick={() => onChange({ ...filters, ownerUserId: user.id })}>
             Eu
           </DropdownMenuItem>
+          {members && members.filter((m) => m.user_id !== user.id).length > 0 && (
+            <>
+              <DropdownMenuSeparator />
+              {members
+                .filter((m) => m.user_id !== user.id)
+                .map((m) => (
+                  <DropdownMenuItem
+                    key={m.user_id}
+                    onClick={() => onChange({ ...filters, ownerUserId: m.user_id })}
+                  >
+                    {m.full_name ?? "Sem nome"}
+                  </DropdownMenuItem>
+                ))}
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 

@@ -240,3 +240,19 @@
   fn_audit_log_row, fn_mark_conversation_message) — gap do baseline, não da
   G3-02. Os helpers RLS caller-scoped (fn_user_*) NÃO vazam (probe: anon → null).
 - Próxima sessão: G3-03 (dono do lead no kanban, prio 30) — elegível.
+
+## 2026-07-17 — sessão 15 do loop (core) — G3-03
+
+- G3-03 (dono do lead na superfície): OwnerBadge novo (nome real + iniciais do
+  NOME, badge tracejada "Sem responsável"; tokens do design, zero hardcode).
+  Filtro por owner migrou pra query param (deep-link ?owner=…); reatribuir pelo
+  card via submenu → useEditLead → PATCH /api/v1/leads/[id]. Reuso: nome do owner
+  e seletor vêm de useAssignableMembers (/team/assignable da G3-01); realtime é o
+  useRealtimeChannel que o board JÁ tinha (nada novo). Sem migration (owner_user_id
+  já existia). 139 unit + 1 e2e do filtro verdes. gov-verifier PASS 1ª rodada, hash OK.
+- Achado registrado (não é gap de código): NÃO existe view de "lista de leads"
+  separada — o kanban é a única superfície de leads. O acceptance 2 fala em
+  "coluna na lista" mas não há lista; atendido só pelo board por ausência de
+  superfície (verifier confirmou buscando). Se o dono quiser a lista, é feature nova.
+- Próxima sessão: G3-04 (bulk assign, prio 40) destravou; ou G3-05 (tags, prio 50).
+  Menor priority ⇒ G3-04.
