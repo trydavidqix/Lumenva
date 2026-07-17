@@ -4522,3 +4522,27 @@ update public.organizations
             )
           )
  where not (coalesce(settings, '{}'::jsonb) ? 'canonical_conversation_tags');
+
+
+-- ---- revoke anon EXECUTE em SECURITY DEFINER de escrita (migration 0034) ----
+-- G4-00 (gov-loop): defesa em profundidade (INB-07). Duas origens de EXECUTE a
+-- anon: (A) grant DIRETO do ALTER DEFAULT PRIVILEGES ... TO anon acima (funções
+-- criadas depois dele, já sem grant a PUBLIC) → revoke anon; (B) grant via
+-- PUBLIC (funções criadas ANTES do ALTER e nunca revogadas de public) → revoke
+-- public + re-afirma authenticated/service_role (call sites legítimos). Nenhum
+-- fluxo anônimo depende delas. Idempotente/auto-curativo.
+revoke execute on function public.fn_upsert_wa_contact(uuid, text, text, text, text, text) from anon;
+revoke execute on function public.fn_upsert_wa_conversation(uuid, uuid, uuid) from anon;
+revoke execute on function public.fn_mark_conversation_message(uuid, text, text, timestamptz) from anon;
+
+revoke execute on function public.emit_event(text, text, uuid, jsonb, jsonb, uuid) from public;
+revoke execute on function public.emit_event(text, text, uuid, jsonb, jsonb, uuid) from anon;
+grant execute on function public.emit_event(text, text, uuid, jsonb, jsonb, uuid) to authenticated, service_role;
+
+revoke execute on function public.fn_log_event(uuid, text, jsonb) from public;
+revoke execute on function public.fn_log_event(uuid, text, jsonb) from anon;
+grant execute on function public.fn_log_event(uuid, text, jsonb) to authenticated, service_role;
+
+revoke execute on function public.fn_audit_log_row() from public;
+revoke execute on function public.fn_audit_log_row() from anon;
+grant execute on function public.fn_audit_log_row() to service_role;

@@ -403,8 +403,14 @@
       "priority": 5,
       "lane": "core",
       "kind": "build",
-      "passes": false,
-      "verification": null
+      "passes": true,
+      "verification": {
+        "verdict": "PASS",
+        "by": "gov-verifier",
+        "at": "2026-07-17T10:56:30-0300",
+        "commit": "self",
+        "note": "verifier re-spawned after API timeout; fresh verdict, hash unchanged"
+      }
     },
     {
       "id": "G4-01",
