@@ -17,4 +17,12 @@ describe("assertSafeOutboundUrl", () => {
   });
   it("esquema não-http nega", () => expect(() => assertSafeOutboundUrl("file:///etc/passwd")).toThrow(/unsafe_url/));
   it("url inválida nega", () => expect(() => assertSafeOutboundUrl("not a url")).toThrow(/unsafe_url/));
+
+  it("literal IPv6 nega — inclusive formas que escondem IP privado", () => {
+    expect(() => assertSafeOutboundUrl("https://[::1]/x")).toThrow(/unsafe_url:ipv6_literal/);
+    expect(() => assertSafeOutboundUrl("https://[::ffff:127.0.0.1]/x")).toThrow(/unsafe_url:ipv6_literal/);
+    expect(() => assertSafeOutboundUrl("https://[::ffff:169.254.169.254]/x")).toThrow(/unsafe_url:ipv6_literal/);
+    expect(() => assertSafeOutboundUrl("https://[fc00::1]/x")).toThrow(/unsafe_url:ipv6_literal/);
+    expect(() => assertSafeOutboundUrl("https://[fe80::1]/x")).toThrow(/unsafe_url:ipv6_literal/);
+  });
 });

@@ -12,6 +12,46 @@ import { assertSafeOutboundUrl } from "@/lib/automation/outbound-url";
 const TIMEOUT_MS = 10_000;
 const RETRY_DELAYS_MS = [1_000, 5_000]; // total 3 tentativas
 
+// Projeções públicas do envelope — NUNCA repassar a row inteira do DB (vaza
+// organization_id, cpf_*, consent, source_metadata, owner_user_id etc. pra
+// endpoint externo do tenant). Só inclui as chaves presentes na row.
+const LEAD_PUBLIC_FIELDS = [
+  "id",
+  "title",
+  "status",
+  "pipeline_id",
+  "stage_id",
+  "value_cents",
+  "currency",
+  "tags",
+  "custom_fields",
+  "source",
+  "created_at",
+] as const;
+
+const CONTACT_PUBLIC_FIELDS = [
+  "id",
+  "name",
+  "display_name",
+  "email",
+  "phone_number",
+  "tags",
+  "created_at",
+] as const;
+
+function projectPublicFields(
+  row: unknown,
+  fields: readonly string[],
+): Record<string, unknown> | undefined {
+  if (!row || typeof row !== "object") return undefined;
+  const source = row as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const key of fields) {
+    if (key in source) out[key] = source[key];
+  }
+  return out;
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -31,13 +71,15 @@ export async function executeCallWebhook(
     }
   }
 
+  const leadPublic = projectPublicFields(ctx.context.lead, LEAD_PUBLIC_FIELDS);
+  const contactPublic = projectPublicFields(ctx.context.contact, CONTACT_PUBLIC_FIELDS);
   const body = JSON.stringify({
     event: ctx.event.event_type,
     occurred_at: new Date().toISOString(),
     data: {
       ...ctx.event.payload,
-      ...(ctx.context.lead ? { lead: ctx.context.lead } : {}),
-      ...(ctx.context.contact ? { contact: ctx.context.contact } : {}),
+      ...(leadPublic ? { lead: leadPublic } : {}),
+      ...(contactPublic ? { contact: contactPublic } : {}),
     },
   });
   const headers: Record<string, string> = {
@@ -54,17 +96,22 @@ export async function executeCallWebhook(
   let lastStatus: number | null = null;
   for (let attempt = 1; attempt <= retryDelaysMs.length + 1; attempt++) {
     try {
+      // redirect: "manual" — nunca seguir 3xx automaticamente. fetch por padrão
+      // segue redirect, e uma URL de tenant que passou no guard anti-SSRF pode
+      // 302 pra um endpoint interno (ex.: http://169.254.169.254/...). Um 3xx
+      // vira falha comum (conta pro retry), nunca é seguido.
       const res = await fetch(url, {
         method: "POST",
         headers,
         body,
+        redirect: "manual",
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
       lastStatus = res.status;
       if (res.ok) {
         return { type: "call_webhook", status: "success", detail: { response_status: res.status, attempt } };
       }
-      lastError = `http_${res.status}`;
+      lastError = res.status >= 300 && res.status < 400 ? "redirect_not_followed" : `http_${res.status}`;
     } catch (err) {
       lastError = err instanceof Error ? err.message : String(err);
     }
