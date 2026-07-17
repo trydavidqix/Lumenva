@@ -31,8 +31,9 @@
 | BE-T6 rota inbound pública | ✅ completa (review ok pós-fix) | `581ce70`+`5317786`; 74 PASS + 1 skip; fix: 23505 do insert de contato re-seleciona (race não órfã lead), lookup ignora merged; reviewer confirmou zero assertions afrouxadas |
 | BE-T7 avaliador de condições | ✅ completa (review ok, zero issues) | `126b938`; 11/11 unit; contrato congelado p/ engine |
 | BE-T8 engine do motor | ✅ completa (review ok + fix org-filter) | `955bb9a`+`1134e01`; 80 PASS + 1 skip (6 casos novos: ordem c/ erro no meio, anti-loop 2 variantes, postpone all-or-nothing, unknown action, entity_kind mismatch); fix controller: buildContext filtra organization_id (anti-pattern #10) |
-| BE-T9 ações CRUD | ⏳ em implementação | — |
-| BE-T10 a T13 | pendente | — |
+| BE-T9 ações CRUD | ✅ completa (review ok + fix título) | `f19e9d3`+`df1c627`; 88 PASS + 1 skip; catches reais: user_organizations+revoked_at, display_name; fix controller: contact.name primeiro no título |
+| BE-T10 call_webhook + SSRF | ⏳ implementada (`6facb83`), em review adversarial | 12/12 unit (7 SSRF + 5 executor) verificados pelo controller; typecheck limpo; retryDelaysMs injetável p/ testes rápidos |
+| BE-T11 a T13 | pendente | — |
 | UI T1-T6 | pendente | — |
 
 ## Última atualização
