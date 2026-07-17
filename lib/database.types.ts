@@ -1287,6 +1287,7 @@ export type Database = {
           rag_review_status: string | null;
           status: string;
           status_changed_at: string;
+          tags: string[];
           unread_count_for_assignee: number;
           updated_at: string;
           usable_for_rag: boolean;
@@ -1316,6 +1317,7 @@ export type Database = {
           rag_review_status?: string | null;
           status?: string;
           status_changed_at?: string;
+          tags?: string[];
           unread_count_for_assignee?: number;
           updated_at?: string;
           usable_for_rag?: boolean;
@@ -1345,6 +1347,7 @@ export type Database = {
           rag_review_status?: string | null;
           status?: string;
           status_changed_at?: string;
+          tags?: string[];
           unread_count_for_assignee?: number;
           updated_at?: string;
           usable_for_rag?: boolean;

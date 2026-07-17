@@ -13,6 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useChannelSessions } from "@/hooks/channels/useChannelSessions";
+import { useAuth } from "@/hooks/auth/AuthProvider";
+import { useConversationTagVocabulary } from "@/hooks/inbox/useConversationTags";
 
 export type InboxTab = "unassigned" | "mine" | "all" | "closed" | "ai";
 
@@ -21,6 +23,7 @@ export interface InboxFiltersValue {
   search: string;
   onlyUnread: boolean;
   channel_session_id?: string;
+  tag?: string;
 }
 
 interface Props {
@@ -31,6 +34,8 @@ interface Props {
 export function InboxFilters({ value, onChange }: Props) {
   const [searchInput, setSearchInput] = useState(value.search);
   const { data: channels } = useChannelSessions({ refetchInterval: 30_000 });
+  const { activeOrg } = useAuth();
+  const { data: tagVocabulary } = useConversationTagVocabulary(activeOrg?.orgId ?? null);
   // Alternador só aparece com 2+ números — com um só não há o que alternar.
   const showChannelSwitch = (channels?.length ?? 0) >= 2;
 
@@ -78,6 +83,25 @@ export function InboxFilters({ value, onChange }: Props) {
             {channels?.map((c) => (
               <SelectItem key={c.id} value={c.id}>
                 {c.display_name || c.phone_number || c.waha_session_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+
+      {(tagVocabulary?.length ?? 0) > 0 && (
+        <Select
+          value={value.tag ?? "all"}
+          onValueChange={(v) => onChange({ ...value, tag: v === "all" ? undefined : v })}
+        >
+          <SelectTrigger className="h-8 text-sm" aria-label="Filtrar por tag">
+            <SelectValue placeholder="Todas as tags" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as tags</SelectItem>
+            {tagVocabulary?.map((t) => (
+              <SelectItem key={t} value={t}>
+                {t}
               </SelectItem>
             ))}
           </SelectContent>

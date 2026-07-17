@@ -4499,3 +4499,26 @@ $$;
 revoke all on function public.fn_conversation_assign(uuid, uuid, uuid, text, uuid, boolean) from public;
 grant execute on function public.fn_conversation_assign(uuid, uuid, uuid, text, uuid, boolean)
   to authenticated, service_role;
+
+
+-- ---- conversation tags (migration 0033) ----
+-- G3-05 (gov-loop): eixo 7 — tags de conversa (spec 13 §3.3). Mesmo shape de
+-- contacts.tags/crm_leads.tags (text[] + GIN). Vocabulário canônico em
+-- organizations.settings.canonical_conversation_tags (org-scoped), semeado só
+-- onde ausente. Idempotente/auto-curativo.
+alter table public.conversations
+  add column if not exists tags text[] not null default '{}';
+
+create index if not exists idx_conversations_tags_gin
+  on public.conversations using gin (tags);
+
+update public.organizations
+   set settings = coalesce(settings, '{}'::jsonb)
+       || jsonb_build_object(
+            'canonical_conversation_tags',
+            jsonb_build_array(
+              'dúvida', 'reclamação', 'troca', 'devolução',
+              'elogio', 'orçamento', 'pós-venda', 'urgente'
+            )
+          )
+ where not (coalesce(settings, '{}'::jsonb) ? 'canonical_conversation_tags');
