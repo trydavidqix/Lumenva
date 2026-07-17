@@ -302,3 +302,22 @@
   0030/0032/0033 aplicadas via supabase db push --include-all. 0031 já estava.
 - INB-03/04/05/08 seguem open (decisões menores do dono).
 - Próximo: Arquiteto abre G4-00 (prio 5), depois G4-01 (visibility_mode RLS).
+
+## 2026-07-17 — sessão 18 do loop (core) — G4-00 (fase G4 aberta)
+
+- G4-00 (hardening INB-07/09): migration 0034 tripla — revoke de anon nas 6
+  SECURITY DEFINER de escrita. DESCOBERTA do implementer: 2 origens distintas de
+  anon-EXECUTE — Grupo A (fn_upsert_wa_contact/conversation, mark_message) grant
+  direto → revoke from anon; Grupo B (emit_event, fn_log_event, fn_audit_log_row)
+  herdava via PUBLIC → revoke from public + re-grant explícito a authenticated/
+  service_role. Invariante gov-hardening-anon-definer (12 probes) prova as 6 →
+  permission denied SOB anon real + service_role positivo. types intocado.
+- INB-09 fechado na mesma feature (acceptance 4): nota 1 fail-closed
+  (owner_validation_unavailable 422 se service role ausente); nota 2 org do authz
+  + .eq organization_id no SELECT do bulk (não mais org do 1º lead).
+- INCIDENTE de infra: gov-verifier morreu por API timeout (stream idle) no meio
+  da 1ª verificação — tree conferido intacto por hash (verifier não tem Write),
+  re-despachado FRESCO; PASS na 2ª. Registro pro caso de recorrer.
+- 60 invariantes + 155 unit verdes. INB-07 e INB-09 fechados (status closed).
+- Próxima sessão: G4-01 (visibility_mode RLS — o CORAÇÃO do épico, decisão
+  G1-06a default own_and_unassigned).
