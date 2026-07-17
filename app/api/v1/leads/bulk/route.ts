@@ -10,12 +10,13 @@
  */
 import { randomUUID } from "node:crypto";
 import { type NextRequest } from "next/server";
-import { audit } from "@/lib/audit";
+import { audit, isServiceRoleConfigured } from "@/lib/audit";
 import { ApiError } from "@/lib/api/types";
 import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { bulkLeadActionSchema, validateRequest } from "@/lib/schemas";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,39 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   if (input.lead_ids.length > MAX_BULK) {
     return fail("bulk_too_large", `Máximo ${MAX_BULK} leads por bulk.`, 422, { requestId });
+  }
+
+  // G3-04: assign é reatribuição de dono em lote → piso ≥manager (spec 04 §6.5,
+  // INB-03). Gate por-action: move/tag/delete continuam agent+ (piso acima);
+  // só o assign exige manager. Reusa o helper (nada de ROLE_RANK na mão).
+  if (input.action === "assign") {
+    const mgr = await requireRole("manager", { requestId, resource: "crm_leads" });
+    if (!mgr.ok) return mgr.response;
+
+    // Novo dono tem que ser membro ativo agent+ da MESMA org (org de fonte
+    // confiável = authz, nunca body). owner_user_id null = desatribuir (válido).
+    // A RLS de user_organizations só mostra o próprio membership a um manager,
+    // por isso o admin client filtrado pela org resolvida.
+    const ownerId = input.params.owner_user_id;
+    if (ownerId !== null && isServiceRoleConfigured()) {
+      const admin = createAdminClient();
+      const { data: member, error: memberErr } = await admin
+        .from("user_organizations")
+        .select("role")
+        .eq("organization_id", authz.org.orgId)
+        .eq("user_id", ownerId)
+        .is("revoked_at", null)
+        .maybeSingle();
+      if (memberErr) return fail("internal_error", memberErr.message, 500, { requestId });
+      if (!member || member.role === "viewer") {
+        return fail(
+          "invalid_owner",
+          "Responsável não é um atendente ativo desta organização.",
+          422,
+          { requestId },
+        );
+      }
+    }
   }
 
   // Resolve organization_id from the first lead the caller can see (RLS-scoped).
@@ -158,8 +192,10 @@ export async function POST(req: NextRequest): Promise<Response> {
       if (error) console.error("[lead.bulk] emit_event failed", error.message);
     });
 
+  // Assign audita com action agregada dedicada (spec 04 §6.5); as demais ações
+  // mantêm o code genérico. Uma única entrada por chamada, com a contagem.
   await audit({
-    action: "lead.bulk_action",
+    action: input.action === "assign" ? "leads.bulk_assigned" : "lead.bulk_action",
     actorUserId: user.id,
     organizationId,
     resourceType: "crm_lead",
@@ -168,7 +204,9 @@ export async function POST(req: NextRequest): Promise<Response> {
     metadata: {
       action: input.action,
       lead_ids: visibleIds,
+      count: updatedCount,
       updated_count: updatedCount,
+      ...(input.action === "assign" ? { owner_user_id: input.params.owner_user_id } : {}),
       params: "params" in input ? input.params : {},
     },
   });

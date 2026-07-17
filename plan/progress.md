@@ -256,3 +256,20 @@
   superfície (verifier confirmou buscando). Se o dono quiser a lista, é feature nova.
 - Próxima sessão: G3-04 (bulk assign, prio 40) destravou; ou G3-05 (tags, prio 50).
   Menor priority ⇒ G3-04.
+
+## 2026-07-17 — sessão 16 do loop (core) — G3-04
+
+- G3-04 (bulk assign): diff cirúrgico só no path assign da rota /leads/bulk
+  (já existia move/assign/tag/delete). Gate ≥manager POR-ACTION (2º requireRole
+  só se action=assign → authz.denied automático; move/tag/delete de agent
+  intactos); validação de owner membro agent+ da org → 422 invalid_owner
+  (código novo em errors.ts; mesma classe do INB-06a); audit agregada
+  leads.bulk_assigned (append no union); toast com contagem. Limite mantido em
+  50 (AT-06 compartilhado; Maestro aprovou não subir). Sem migration.
+- 145 unit (6 novos) verdes; gov-verifier PASS 1ª rodada, hash OK.
+- INB-09 aberto (2 notas não-vetantes do verifier): (1) validação de owner
+  gateada por isServiceRoleConfigured() — se service role ausente, pula (bypass
+  condicional; prod sempre tem); (2) edge multi-org: owner validado na org ativa
+  vs org do UPDATE resolvida do 1º lead — ator em 2 orgs poderia cruzar (não
+  vaza, RLS segura; padrão pré-existente da rota).
+- Fase G3: 4/5. Falta só G3-05 (tags de conversa, prio 50) → fecha a fase.
