@@ -33,8 +33,9 @@
 | BE-T8 engine do motor | ✅ completa (review ok + fix org-filter) | `955bb9a`+`1134e01`; 80 PASS + 1 skip (6 casos novos: ordem c/ erro no meio, anti-loop 2 variantes, postpone all-or-nothing, unknown action, entity_kind mismatch); fix controller: buildContext filtra organization_id (anti-pattern #10) |
 | BE-T9 ações CRUD | ✅ completa (review ok + fix título) | `f19e9d3`+`df1c627`; 88 PASS + 1 skip; catches reais: user_organizations+revoked_at, display_name; fix controller: contact.name primeiro no título |
 | BE-T10 call_webhook + SSRF | ✅ completa (review adversarial ok pós-fix de segurança) | `6facb83`+`92cf410`; 15/15 unit; fixes: envelope com projeção allowlist (org_id/cpf/owner nunca saem — teste de não-contenção no body cru), redirect:"manual" (302 = falha, alvo com ZERO hits provado), IPv6 literal bloqueado. Reviewer + security-hook convergiram nos mesmos 3 achados |
-| BE-T11 send_whatsapp + throttle | ⏳ em implementação | decisão frozen: sent_via='ai' p/ automação (TTFR humano da 0037 intacto) |
-| BE-T12 a T13 | pendente | — |
+| BE-T11 send_whatsapp + throttle | ✅ completa (review ok, zero fixes) | `5bc2237`; 93 PASS + 1 skip; anti-loop rastreado fim-a-fim; sent_via='ai' provado seguro; 2 tickets follow-up no ledger |
+| BE-T12 APIs de gestão | ⏳ implementada (`bcf22a9`), em review | 12/12 schema tests + typecheck verificados pelo controller; curl deferido p/ T13 (banco remoto sem 0038) |
+| BE-T13 verificação final | pendente | BLOQUEIO EXTERNO: OAuth Supabase MCP pendente (Rafael) p/ aplicar 0038 no remoto antes do curl E2E |
 | UI T1-T6 | pendente | — |
 
 ## Última atualização
