@@ -119,4 +119,5 @@ export type AuditAction =
   | "channel.connected"
   | "channel.reconnected"
   | "authz.denied"
-  | "team.role_changed";
+  | "team.role_changed"
+  | "leads.bulk_assigned";
