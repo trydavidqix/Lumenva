@@ -26,8 +26,10 @@
 | BE-T2 drain genérico + retry | ✅ completa (review ok pós-fix) | `e2b487c`+`9717b65`; 63/63 PASS (9 casos drain); fixes: NULL next_attempt_at drena; retry preserva last_error; retry sem retry_at → backoff |
 | BE-T3 emissões de gatilho | ✅ completa (review ok) | `f186486`; 66/66 PASS; 4 emissões conferidas pós-mutação, payloads = contrato congelado |
 | BE-T4 actor webhook_source | ✅ completa (review ok) | `852ce19`; typecheck limpo, 11/11 schema tests; 17 call sites auditados e re-verificados pelo reviewer |
-| BE-T5 parser inbound | ⏳ em implementação | — |
-| BE-T6 a T13 | pendente | — |
+| BE-T5 parser inbound | ✅ completa (review ok) | `c442f47`; 15/15 unit PASS (E.164 BR, field_map, HMAC timingSafeEqual) |
+| — fix T4 (controller) | ✅ | `0a38b34`; T4 (haiku) reportou typecheck limpo FALSAMENTE (6× TS2339); controller corrigiu narrowing em 3 handlers; tsc limpo + 26/26 provado pelo controller. REGRA: controller roda typecheck após TODO implementer |
+| BE-T6 rota inbound pública | ⏳ implementada (`581ce70`), em review | 73 PASS + 1 skip intencional (15 arquivos); typecheck limpo re-verificado pelo controller |
+| BE-T7 a T13 | pendente | — |
 | UI T1-T6 | pendente | — |
 
 ## Última atualização
@@ -38,7 +40,8 @@
 
 - **Banco remoto ainda SEM a migration 0038.** Supabase cloud (`rrydmwnpo…`) recebe via MCP (OAuth pendente — link enviado ao Rafael) ou `supabase link`+push. Obrigatório ANTES da BE-T13 (curl no dev server) e da fase UI. `database.types.ts` foi escrito à mão (typecheck ok) — regenerar por máquina quando autenticar.
 - **`npm run lint` quebra no worktree** (conflito de plugin eslint pré-existente, idêntico no commit base) — não é desta feature.
-- **DECISÃO DE CONTRATO (T3→T8):** trigger de banco pré-existente `fn_emit_event_on_lead_change` TAMBÉM emite `lead.stage_changed` com `entity_kind='lead'` (payload pobre). O motor (T8) DEVE filtrar por entity_kind esperado (`lead.*`→`crm_lead`, `contact.*`→`contact`, `message.received`→`message`) e skip no resto — senão regra dispara 2x.
+- **DECISÃO DE CONTRATO (T3/T6→T8):** trigger de banco pré-existente `fn_emit_event_on_lead_change` TAMBÉM emite `lead.stage_changed` E `lead.created` com `entity_kind='lead'` (payload pobre), em paralelo às emissões dos handlers (`entity_kind='crm_lead'`). O motor (T8) DEVE filtrar por entity_kind esperado (`lead.*`→`crm_lead`, `contact.*`→`contact`, `message.received`→`message`) e skip no resto — senão TODA regra de lead dispara 2x. Ticket futuro: decidir se o trigger duplicado morre.
+- **Desvios de schema validados na T6:** `webhook_events_log.provider` tem CHECK que rejeita 'lead_capture' → rota usa `'generic'` (feed da UI filtra por webhook_path_token, não por provider — sem impacto); `contacts.email_normalized` é generated column (não insertar). Telefone que falha E.164 vai cru em `source_metadata.raw_phone`.
 - T3 adicionou dummy Supabase env em `vitest.db.config.ts` (test.env) — teste importa handlers que puxam `lib/env`.
 - Minors acumulados p/ review final estão no ledger `.superpowers/sdd/progress.md`.
 - Stash stack compartilhado: conferido limpo. Regra: nunca `git stash` bare (worktrees compartilham o stack com o gov-loop).
