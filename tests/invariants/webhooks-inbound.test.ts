@@ -40,10 +40,10 @@ function sqlLiteral(v: unknown): string {
   return sqlString(String(v));
 }
 
-type QResult = { data: unknown; error: { message: string } | null };
-type RowResult = { data: Record<string, unknown> | null; error: { message: string } | null };
+type QResult = { data: unknown; error: { message: string; code?: string } | null };
+type RowResult = { data: Record<string, unknown> | null; error: { message: string; code?: string } | null };
 
-type FilterOp = "eq";
+type FilterOp = "eq" | "is";
 interface Filter {
   op: FilterOp;
   col: string;
@@ -96,6 +96,11 @@ class FakeQuery implements PromiseLike<QResult> {
     return this;
   }
 
+  is(col: string, val: unknown): this {
+    this.filters.push({ op: "is", col, val });
+    return this;
+  }
+
   order(col: string, opts: { ascending: boolean }): this {
     this.orderCol = col;
     this.orderAsc = opts.ascending;
@@ -109,7 +114,9 @@ class FakeQuery implements PromiseLike<QResult> {
 
   private buildWhere(): string {
     if (!this.filters.length) return "";
-    const clauses = this.filters.map((f) => `${f.col} = ${sqlLiteral(f.val)}`);
+    const clauses = this.filters.map((f) =>
+      f.op === "is" ? `${f.col} is ${f.val === null ? "null" : sqlLiteral(f.val)}` : `${f.col} = ${sqlLiteral(f.val)}`,
+    );
     return ` where ${clauses.join(" and ")}`;
   }
 
@@ -154,7 +161,9 @@ class FakeQuery implements PromiseLike<QResult> {
       sql(`${this.toSql()};`);
       return { data: null, error: null };
     } catch (err) {
-      return { data: null, error: { message: (err as Error).message } };
+      const stderr = (err as { stderr?: string }).stderr ?? (err as Error).message;
+      const code = stderr.includes("duplicate key value violates unique constraint") ? "23505" : undefined;
+      return { data: null, error: { message: stderr, code } };
     }
   }
 
@@ -399,6 +408,38 @@ describe("POST /api/v1/webhooks/in/[token] (Task 6)", () => {
     expect(leadRows.length).toBe(1);
     expect((leadRows[0]!.source_metadata as Record<string, unknown>).raw_phone).toBe("abc-invalid");
     expect(leadRows[0]!.contact_id).toBeNull();
+  });
+
+  it("caso 7 — telefone já tem contato ativo: reusa o contato existente, não duplica", async () => {
+    const preexistingId = "dddddddd-6666-4000-8000-000000000001";
+    const phone = "+5511977776666";
+    sql(`
+      insert into public.contacts (id, organization_id, name, phone_number, source)
+      values ('${preexistingId}', '${GOV_ORG}', 'Duda Preexistente', '${phone}', 'manual')
+      on conflict do nothing;
+    `);
+
+    const res = await POST(jsonReq(TOKEN_JSON, { nome: "Duda", telefone: "11977776666" }), reqCtx(TOKEN_JSON));
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as { data: { lead_id: string } };
+
+    const leadRows = rows(`select * from public.crm_leads where id = '${json.data.lead_id}'`);
+    expect(leadRows.length).toBe(1);
+    expect(leadRows[0]!.contact_id).toBe(preexistingId);
+
+    const contactCount = Number(
+      rows(
+        `select count(*) as n from public.contacts where organization_id = '${GOV_ORG}' and phone_number = '${phone}'`,
+      )[0]!.n,
+    );
+    expect(contactCount).toBe(1);
+
+    // ponytail: uma corrida de verdade (dois POSTs concorrentes batendo no
+    // 23505 do insert) não é reproduzível neste harness — não há duas
+    // conexões/transações concorrentes disponíveis via docker-exec-psql
+    // síncrono. Este caso cobre a mesma lógica de re-seleção
+    // (selectActiveByPhone) que o branch do catch usa; o branch do catch em
+    // si (insertErr.code === "23505") fica sem cobertura direta de teste.
   });
 
   // ponytail: rate limit cai no fallback in-memory sem Upstash (sem env
