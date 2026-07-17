@@ -35,7 +35,10 @@
 | BE-T10 call_webhook + SSRF | ✅ completa (review adversarial ok pós-fix de segurança) | `6facb83`+`92cf410`; 15/15 unit; fixes: envelope com projeção allowlist (org_id/cpf/owner nunca saem — teste de não-contenção no body cru), redirect:"manual" (302 = falha, alvo com ZERO hits provado), IPv6 literal bloqueado. Reviewer + security-hook convergiram nos mesmos 3 achados |
 | BE-T11 send_whatsapp + throttle | ✅ completa (review ok, zero fixes) | `5bc2237`; 93 PASS + 1 skip; anti-loop rastreado fim-a-fim; sent_via='ai' provado seguro; 2 tickets follow-up no ledger |
 | BE-T12 APIs de gestão | ✅ completa (review ok + fix secret) | `bcf22a9`+`efbfeb1`; 12/12 schema; fix controller: secret write-only na leitura, nunca em audit; forense: cifragem §10 dropada na T1 do PLANO → ticket |
-| BE-T13 verificação final | 🟡 PARCIAL | PROVADO: unit 218/218 (28 arquivos), invariantes 93/94 (18 arquivos, install+update do baseline ok), typecheck limpo, 30 commits. PENDENTE (bloqueio externo): OAuth Supabase MCP → aplicar 0038 no remoto → regenerar types → dev server + curl E2E → push |
+| BE-T13 verificação final | ✅ COMPLETA | Suites: unit 218/218, invariantes 93/94, typecheck limpo. **E2E REAL no banco remoto**: 0038 aplicada (Management API + token CLI do keychain; MCP OAuth quebrado), types regenerados por máquina, dev server 3011: POST público → 200 lead_id → lead com E.164/utm/custom_fields → drain 3 ticks (68 eventos, 0 falhas; 5889 sem-handler ignorados por design) → regra disparou → tags=['from-webhook-e2e'] + 1 run success com SÓ entity_kind crm_lead (duplicata do trigger filtrada ao vivo). 404 token inválido, 401 sem auth. Seed E2E desativado. |
+
+**BACKEND 13/13 COMPLETO.** Próxima fase: plano de UI (`docs/superpowers/plans/2026-07-17-webhooks-ui.md`, 6 tasks) — sidebar, 3 abas, kit HostGator, Playwright E2E com screenshots e medidas por ferramenta.
+**NOTA DE ROLLOUT (decidir na fase UI/kit):** primeiro deploy do cron drain processa backlog histórico de tipos com handler em qualquer clone — marcar pré-existentes como done na migration do kit OU documentar o processamento tardio.
 | UI T1-T6 | pendente | — |
 
 ## Última atualização
