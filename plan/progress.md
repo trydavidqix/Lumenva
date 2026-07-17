@@ -290,3 +290,15 @@
 - Checkpoint G3 emitido (loop/checkpoints/G3-report.md, COMPLETO 5/5), loop
   PARADO aguardando aprovação do dono (G3.approved) ou recusa (.rejected).
   7 INB abertos (03-09, todos proposal/não-vetantes) copiados no §3 do report.
+
+## 2026-07-17 — pós-checkpoint G3 (watchdog/Maestro)
+
+- G3 aprovada pelo dono via chat; gov/G3 mergeada em main e pushada (bff9bae);
+  gov/G4 criada.
+- INB-07 aprovado → feature G4-00 (hardening SECURITY DEFINER anon) criada no
+  plano com DESKCOMM_GOV_PLAN_EDIT=1 (ca36202); agrupa INB-09.
+- INB-06b executado: banco dev (rrydmwnporysaiysiztn) reconciliado — histórico
+  supabase reparado (16 versões MCP revertidas, 17 locais applied) e migrations
+  0030/0032/0033 aplicadas via supabase db push --include-all. 0031 já estava.
+- INB-03/04/05/08 seguem open (decisões menores do dono).
+- Próximo: Arquiteto abre G4-00 (prio 5), depois G4-01 (visibility_mode RLS).
