@@ -260,6 +260,27 @@ Notas:
 Enforcement em **duas camadas obrigatórias**: RLS (fronteira) + helper único de
 rota (`require-role`, G2-01) — nunca só UI (anti-padrão 3).
 
+**DIRC — escopo `own` de `crm_leads` via RLS, não filtro server-side (G4-03).**
+O escopo `own` do agent (linha 220 da matriz) é aplicado na **RLS** por
+`fn_can_view_lead(p_org, p_owner_user_id)` (migration 0036), espelho exato de
+`fn_can_view_conversation` (G4-01): mesma lógica (role via `fn_user_role_in_org`
++ `visibility_mode` + campo-dono da row), `STABLE SECURITY DEFINER`, `search_path`
+blindado, `EXECUTE` só para `authenticated`/`service_role`. O "dono" do lead é
+`crm_leads.owner_user_id` (não `assigned_to_user_id` — isso é conversa), e o knob
+é o **mesmo** `organizations.settings.visibility_mode` (§3.5) — a matriz diz
+"mesmo escopo da G1-06a", logo é reuse do botão, não um novo. *Por que RLS e não
+filtro server-side*: (**D**uplicar/**I**ntegrar) o predicado de visibilidade já
+vive no banco para conversations — repeti-lo em cada caller (board, MCP,
+`listLeadsHandler`, bulk, move) seria N cópias a manter em sincronia, e a primeira
+que alguém esquecer vira vazamento cross-atendente (anti-padrão 10: "select sem
+where"). A RLS é a fronteira única que **todo** caller cookie/JWT atravessa
+(defesa em profundidade no banco, consistente com o precedente G4-01) → **Reuse**
+da fn-pattern na RLS. A escrita é re-expressa por-comando (a `FOR ALL` org-flat
+governaria o SELECT junto, anulando o escopo): agent = own-scope pela **mesma**
+fn (por isso o drag-and-drop de lead próprio e a puxada da fila não-atribuída no
+modo `own_and_unassigned` continuam UPDATE-áveis pelo agent — espelho das
+conversas), manager+ = org-wide (bulk assign G3-04 intacto), viewer = none.
+
 ### 4.1 Auditoria de policies RLS por role (G2-03)
 
 Auditoria mecânica do `supabase/baseline.sql` (gov/G2, 2026-07-16): tabela →

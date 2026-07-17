@@ -480,8 +480,13 @@
       "priority": 30,
       "lane": "core",
       "kind": "build",
-      "passes": false,
-      "verification": null
+      "passes": true,
+      "verification": {
+        "verdict": "PASS",
+        "by": "gov-verifier",
+        "at": "2026-07-17T13:37:13-0300",
+        "commit": "self"
+      }
     },
     {
       "id": "G4-04",
