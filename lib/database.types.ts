@@ -985,6 +985,114 @@ export type Database = {
           },
         ];
       };
+      automation_rule_runs: {
+        Row: {
+          actions_result: Json;
+          created_at: string;
+          error: string | null;
+          event_id: string | null;
+          id: string;
+          organization_id: string;
+          rule_id: string;
+          status: string;
+        };
+        Insert: {
+          actions_result?: Json;
+          created_at?: string;
+          error?: string | null;
+          event_id?: string | null;
+          id?: string;
+          organization_id: string;
+          rule_id: string;
+          status: string;
+        };
+        Update: {
+          actions_result?: Json;
+          created_at?: string;
+          error?: string | null;
+          event_id?: string | null;
+          id?: string;
+          organization_id?: string;
+          rule_id?: string;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "automation_rule_runs_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "event_log";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "automation_rule_runs_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "automation_rule_runs_rule_id_fkey";
+            columns: ["rule_id"];
+            isOneToOne: false;
+            referencedRelation: "automation_rules";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      automation_rules: {
+        Row: {
+          actions: Json;
+          conditions: Json;
+          created_at: string;
+          created_by_user_id: string | null;
+          id: string;
+          is_active: boolean;
+          last_run_at: string | null;
+          name: string;
+          organization_id: string;
+          run_count: number;
+          trigger_event: string;
+          updated_at: string;
+        };
+        Insert: {
+          actions?: Json;
+          conditions?: Json;
+          created_at?: string;
+          created_by_user_id?: string | null;
+          id?: string;
+          is_active?: boolean;
+          last_run_at?: string | null;
+          name: string;
+          organization_id: string;
+          run_count?: number;
+          trigger_event: string;
+          updated_at?: string;
+        };
+        Update: {
+          actions?: Json;
+          conditions?: Json;
+          created_at?: string;
+          created_by_user_id?: string | null;
+          id?: string;
+          is_active?: boolean;
+          last_run_at?: string | null;
+          name?: string;
+          organization_id?: string;
+          run_count?: number;
+          trigger_event?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "automation_rules_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       channel_session_warmup: {
         Row: {
           channel_session_id: string;
@@ -2661,6 +2769,82 @@ export type Database = {
             columns: ["channel_session_id"];
             isOneToOne: false;
             referencedRelation: "channel_sessions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      webhook_sources: {
+        Row: {
+          created_at: string;
+          created_by_user_id: string | null;
+          default_pipeline_id: string;
+          default_stage_id: string;
+          field_map: Json;
+          id: string;
+          is_active: boolean;
+          kind: string;
+          last_received_at: string | null;
+          name: string;
+          organization_id: string;
+          path_token: string;
+          redirect_to: string | null;
+          secret: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by_user_id?: string | null;
+          default_pipeline_id: string;
+          default_stage_id: string;
+          field_map?: Json;
+          id?: string;
+          is_active?: boolean;
+          kind?: string;
+          last_received_at?: string | null;
+          name: string;
+          organization_id: string;
+          path_token: string;
+          redirect_to?: string | null;
+          secret?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by_user_id?: string | null;
+          default_pipeline_id?: string;
+          default_stage_id?: string;
+          field_map?: Json;
+          id?: string;
+          is_active?: boolean;
+          kind?: string;
+          last_received_at?: string | null;
+          name?: string;
+          organization_id?: string;
+          path_token?: string;
+          redirect_to?: string | null;
+          secret?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "webhook_sources_default_pipeline_id_fkey";
+            columns: ["default_pipeline_id"];
+            isOneToOne: false;
+            referencedRelation: "crm_pipelines";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "webhook_sources_default_stage_id_fkey";
+            columns: ["default_stage_id"];
+            isOneToOne: false;
+            referencedRelation: "crm_stages";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "webhook_sources_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
             referencedColumns: ["id"];
           },
         ];
