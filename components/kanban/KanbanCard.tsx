@@ -5,11 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Lead } from "@/lib/types/leads";
 import { KanbanCardActions } from "./KanbanCardActions";
+import { OwnerBadge } from "./OwnerBadge";
 
 interface KanbanCardProps {
   lead: Lead;
   index: number;
   pipelineId: string;
+  /** Nome do responsável, resolvido no board via useAssignableMembers. */
+  ownerName?: string | null;
   isSelected?: boolean;
   onSelect?: (leadId: string, additive: boolean) => void;
 }
@@ -28,15 +31,11 @@ function formatBRL(cents: number | null, currency: string | null): string | null
   }
 }
 
-function ownerInitials(ownerId: string | null): string {
-  if (!ownerId) return "—";
-  return ownerId.slice(0, 2).toUpperCase();
-}
-
 export function KanbanCard({
   lead,
   index,
   pipelineId,
+  ownerName,
   isSelected,
   onSelect,
 }: KanbanCardProps) {
@@ -92,12 +91,10 @@ export function KanbanCard({
           )}
 
           <div className="mt-3 flex items-center justify-between">
-            <div
-              aria-label={lead.owner_user_id ? `Dono ${lead.owner_user_id}` : "Sem dono"}
-              className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-muted text-[10px] font-medium text-text-muted"
-            >
-              {ownerInitials(lead.owner_user_id)}
-            </div>
+            <OwnerBadge
+              ownerUserId={lead.owner_user_id}
+              ownerName={ownerName ?? null}
+            />
           </div>
         </div>
       )}

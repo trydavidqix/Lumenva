@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useBoard } from "@/hooks/kanban/useBoard";
 
 function formatError(err: unknown): string {
@@ -25,7 +26,7 @@ import { NewLeadDialog } from "@/components/kanban/NewLeadDialog";
 import { Button } from "@/components/ui/button";
 import { Plus } from "@/lib/ui/icons";
 import type { LeadFilters } from "@/lib/kanban/filters";
-import { applyFilters } from "@/lib/kanban/filters";
+import { applyFilters, filtersFromParams, filtersToParams } from "@/lib/kanban/filters";
 
 export function PipelinePageClient({
   pipelineId,
@@ -35,7 +36,17 @@ export function PipelinePageClient({
   initialName: string;
 }) {
   const { data, isLoading, error } = useBoard(pipelineId);
-  const [filters, setFilters] = useState<LeadFilters>({ status: "all" });
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const filters = useMemo(() => filtersFromParams(searchParams), [searchParams]);
+  const setFilters = useCallback(
+    (next: LeadFilters) => {
+      const qs = filtersToParams(next);
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [router, pathname],
+  );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [newOpen, setNewOpen] = useState(false);
 
