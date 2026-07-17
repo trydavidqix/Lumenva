@@ -22,6 +22,12 @@ function actorAuditPayload(actor: Actor): {
   if (actor.type === "user") {
     return { actorUserId: actor.id, metadataActor: { actor_type: "user" } };
   }
+  if (actor.type === "webhook_source") {
+    return {
+      actorUserId: null,
+      metadataActor: { actor_type: "webhook_source", actor_id: actor.id },
+    };
+  }
   return {
     actorUserId: null,
     metadataActor: {
@@ -141,7 +147,10 @@ export async function getLeadHandler(
 export async function createLeadHandler(
   supabase: SB,
   ctx: HandlerCtx,
-  input: CreateLeadInput,
+  input: CreateLeadInput & {
+    custom_fields?: Record<string, unknown>;
+    source_metadata?: Record<string, unknown>;
+  },
 ): Promise<Record<string, unknown>> {
   // Validate stage belongs to pipeline within active org.
   const { data: stage, error: stageErr } = await supabase
@@ -195,8 +204,8 @@ export async function createLeadHandler(
       expected_close_date: input.expected_close_date ?? null,
       tags: input.tags ?? [],
       source: input.source,
-      source_metadata: {},
-      custom_fields: {},
+      source_metadata: input.source_metadata ?? {},
+      custom_fields: input.custom_fields ?? {},
       status: "open",
       position_in_stage: nextPos,
       created_by_user_id: ctx.actor.type === "user" ? ctx.actor.id : null,
