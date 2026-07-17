@@ -5,6 +5,11 @@
  * path_token NÃO é segredo forte (é a identidade pública da URL, como o
  * webhook_path_token do WAHA) — diferente de api_tokens, ele volta no corpo
  * de GET/POST pra UI montar a URL de captação.
+ *
+ * `secret` é write-only na leitura: GET devolve só `has_secret` (padrão
+ * api-tokens — o plaintext aparece apenas na resposta do POST/PATCH que o
+ * definiu). Cifragem at-rest (spec §10) é follow-up junto com os secrets de
+ * config de regra.
  */
 import { randomBytes, randomUUID } from "node:crypto";
 import type { NextRequest } from "next/server";
@@ -30,7 +35,11 @@ export async function GET(): Promise<Response> {
     .eq("organization_id", activeOrg.orgId)
     .order("created_at", { ascending: false });
   if (error) return fail("internal_error", error.message, 500, { requestId });
-  return ok(data ?? [], { requestId });
+  const masked = (data ?? []).map(({ secret, ...rest }) => ({
+    ...rest,
+    has_secret: secret !== null,
+  }));
+  return ok(masked, { requestId });
 }
 
 export async function POST(req: NextRequest): Promise<Response> {

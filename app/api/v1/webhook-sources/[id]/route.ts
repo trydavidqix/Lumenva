@@ -56,6 +56,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
     .single();
   if (updErr) return fail("internal_error", updErr.message, 500, { requestId });
 
+  const { secret: patchedSecret, ...auditableFields } = parsed.data;
   void audit({
     action: "webhook.source_updated",
     actorUserId: user.id,
@@ -63,9 +64,15 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
     resourceType: "webhook_source",
     resourceId: id,
     requestId,
-    metadata: parsed.data,
+    // Nunca gravar o valor do secret no audit log — só o fato da troca.
+    metadata: { ...auditableFields, ...(patchedSecret !== undefined ? { secret_changed: true } : {}) },
   });
 
+  // secret é write-only na leitura: só volta no response se ESTE patch o definiu.
+  if (parsed.data.secret === undefined && updated && typeof updated === "object" && "secret" in updated) {
+    const { secret, ...rest } = updated as Record<string, unknown>;
+    return ok({ ...rest, has_secret: secret !== null }, { requestId });
+  }
   return ok(updated, { requestId });
 }
 
