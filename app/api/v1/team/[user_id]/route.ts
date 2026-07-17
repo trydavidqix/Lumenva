@@ -1,10 +1,10 @@
 /**
- * PATCH /api/v1/team/[user_id]/role — alias for the canonical
- * PATCH /api/v1/team/[user_id] (kept for EPIC-09 callers; logic in ../_shared.ts).
+ * PATCH /api/v1/team/[user_id] — change a member's role (canonical, G2-02).
+ * Logic lives in ./_shared.ts (shared with the /role alias from EPIC-09).
  */
 import type { NextRequest } from "next/server";
 
-import { changeMemberRole } from "../_shared";
+import { changeMemberRole } from "./_shared";
 
 export const dynamic = "force-dynamic";
 

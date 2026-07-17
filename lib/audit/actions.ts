@@ -117,4 +117,5 @@ export type AuditAction =
   | "ai_agent.run_failed"
   | "channel.connected"
   | "channel.reconnected"
-  | "authz.denied";
+  | "authz.denied"
+  | "team.role_changed";
