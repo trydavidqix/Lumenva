@@ -10,7 +10,7 @@ import type { Actor, HandlerCtx } from "@/lib/api/handlers/types";
 import { audit } from "@/lib/audit";
 import type {
   ListConversationsQuery,
-  UpdateConversationStatusInput,
+  PatchConversationInput,
 } from "@/lib/schemas";
 import type { Conversation } from "@/lib/types/messaging";
 
@@ -20,7 +20,7 @@ const SELECT_COLS = `
   id, organization_id, contact_id, channel_session_id, channel, status,
   status_changed_at, assigned_to_user_id, assigned_at, last_inbound_at,
   last_outbound_at, last_message_at, last_message_preview,
-  unread_count_for_assignee, is_group, group_chat_id, metadata,
+  unread_count_for_assignee, is_group, group_chat_id, tags, metadata,
   created_at, updated_at,
   contacts:contact_id (id, display_name, name, phone_number, is_anonymized, tags, is_blocked)
 `;
@@ -86,6 +86,7 @@ export async function listConversationsHandler(
 
   if (q.status) query = query.eq("status", q.status);
   if (q.channel_session_id) query = query.eq("channel_session_id", q.channel_session_id);
+  if (q.tag) query = query.contains("tags", [q.tag]); // tags @> array[tag] (GIN)
 
   if (q.assigned_to === "me") {
     if (ctx.actor.type !== "user") {
@@ -169,26 +170,33 @@ export async function getConversationHandler(
 // update status (claim/close/release)
 // ---------------------------------------------------------------------------
 
-export async function updateConversationStatusHandler(
+export async function patchConversationHandler(
   supabase: SB,
   ctx: HandlerCtx,
   conversationId: string,
-  input: UpdateConversationStatusInput,
+  input: PatchConversationInput,
 ): Promise<Conversation> {
-  const update: Record<string, unknown> = {
-    status: input.status,
-    status_changed_at: new Date().toISOString(),
-  };
-  // Atalho: status='claimed' assume o atendimento se ator for usuário humano.
-  if (input.status === "claimed" && ctx.actor.type === "user") {
-    update.assigned_to_user_id = ctx.actor.id;
-    update.assigned_at = new Date().toISOString();
+  const now = new Date().toISOString();
+  const update: Record<string, unknown> = {};
+
+  if (input.status !== undefined) {
+    update.status = input.status;
+    update.status_changed_at = now;
+    // Atalho: status='claimed' assume o atendimento se ator for usuário humano.
+    if (input.status === "claimed" && ctx.actor.type === "user") {
+      update.assigned_to_user_id = ctx.actor.id;
+      update.assigned_at = now;
+    }
+  }
+  if (input.tags !== undefined) {
+    update.tags = input.tags;
   }
 
   const { data, error } = await supabase
     .from("conversations")
     .update(update)
     .eq("id", conversationId)
+    .eq("organization_id", ctx.organization_id)
     .select(SELECT_COLS)
     .maybeSingle();
 
@@ -200,23 +208,36 @@ export async function updateConversationStatusHandler(
   }
 
   const conv = data as unknown as Conversation;
-  const action =
-    input.status === "claimed"
-      ? "conversation.claimed"
-      : input.status === "closed"
-        ? "conversation.closed"
-        : "conversation.released";
-
   const a = actorAuditPayload(ctx.actor);
-  await audit({
-    action,
-    actorUserId: a.actorUserId,
-    organizationId: conv.organization_id,
-    resourceType: "conversation",
-    resourceId: conv.id,
-    requestId: ctx.requestId,
-    metadata: { ...a.metadataActor, status: input.status },
-  });
+
+  if (input.status !== undefined) {
+    const action =
+      input.status === "claimed"
+        ? "conversation.claimed"
+        : input.status === "closed"
+          ? "conversation.closed"
+          : "conversation.released";
+    await audit({
+      action,
+      actorUserId: a.actorUserId,
+      organizationId: conv.organization_id,
+      resourceType: "conversation",
+      resourceId: conv.id,
+      requestId: ctx.requestId,
+      metadata: { ...a.metadataActor, status: input.status },
+    });
+  }
+  if (input.tags !== undefined) {
+    await audit({
+      action: "conversation.tags_changed",
+      actorUserId: a.actorUserId,
+      organizationId: conv.organization_id,
+      resourceType: "conversation",
+      resourceId: conv.id,
+      requestId: ctx.requestId,
+      metadata: { ...a.metadataActor, tags: input.tags },
+    });
+  }
 
   return conv;
 }

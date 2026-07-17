@@ -278,8 +278,13 @@
       "priority": 10,
       "lane": "core",
       "kind": "build",
-      "passes": false,
-      "verification": null
+      "passes": true,
+      "verification": {
+        "verdict": "PASS",
+        "by": "gov-verifier",
+        "at": "2026-07-17T07:48:02-0300",
+        "commit": "self"
+      }
     },
     {
       "id": "G3-02",
@@ -298,8 +303,14 @@
       "priority": 20,
       "lane": "core",
       "kind": "build",
-      "passes": false,
-      "verification": null
+      "passes": true,
+      "verification": {
+        "verdict": "PASS",
+        "by": "gov-verifier",
+        "at": "2026-07-17T08:38:44-0300",
+        "commit": "self",
+        "note": "repaired-1-round: anon leak on fn_member_role_in_org closed, re-verified fresh"
+      }
     },
     {
       "id": "G3-03",
@@ -318,8 +329,13 @@
       "priority": 30,
       "lane": "core",
       "kind": "build",
-      "passes": false,
-      "verification": null
+      "passes": true,
+      "verification": {
+        "verdict": "PASS",
+        "by": "gov-verifier",
+        "at": "2026-07-17T09:02:12-0300",
+        "commit": "self"
+      }
     },
     {
       "id": "G3-04",
@@ -338,8 +354,13 @@
       "priority": 40,
       "lane": "core",
       "kind": "build",
-      "passes": false,
-      "verification": null
+      "passes": true,
+      "verification": {
+        "verdict": "PASS",
+        "by": "gov-verifier",
+        "at": "2026-07-17T09:22:40-0300",
+        "commit": "self"
+      }
     },
     {
       "id": "G3-05",
@@ -358,8 +379,13 @@
       "priority": 50,
       "lane": "core",
       "kind": "build",
-      "passes": false,
-      "verification": null
+      "passes": true,
+      "verification": {
+        "verdict": "PASS",
+        "by": "gov-verifier",
+        "at": "2026-07-17T10:10:21-0300",
+        "commit": "self"
+      }
     },
     {
       "id": "G4-01",

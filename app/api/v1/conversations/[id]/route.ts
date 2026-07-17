@@ -1,6 +1,6 @@
 /**
  * GET   /api/v1/conversations/[id] — single conversation (handler em ../_handler.ts)
- * PATCH /api/v1/conversations/[id] — update status (handler em ../_handler.ts)
+ * PATCH /api/v1/conversations/[id] — update status e/ou tags (handler em ../_handler.ts)
  */
 import { randomUUID } from "node:crypto";
 import { type NextRequest } from "next/server";
@@ -9,10 +9,10 @@ import { ApiError } from "@/lib/api/types";
 import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
-import { updateConversationStatusSchema, validateRequest } from "@/lib/schemas";
+import { patchConversationSchema, validateRequest } from "@/lib/schemas";
 import { createClient } from "@/lib/supabase/server";
 
-import { getConversationHandler, updateConversationStatusHandler } from "../_handler";
+import { getConversationHandler, patchConversationHandler } from "../_handler";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +71,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
 
   let input;
   try {
-    input = await validateRequest(updateConversationStatusSchema, req);
+    input = await validateRequest(patchConversationSchema, req);
   } catch (err) {
     if (err instanceof ApiError) {
       return fail(err.code, err.message, err.status, {
@@ -83,7 +83,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<Response> 
   }
 
   try {
-    const conv = await updateConversationStatusHandler(
+    const conv = await patchConversationHandler(
       supabase,
       {
         organization_id: activeOrg.orgId,
