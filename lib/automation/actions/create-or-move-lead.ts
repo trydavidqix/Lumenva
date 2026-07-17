@@ -27,7 +27,7 @@ async function execute(ctx: ActionCtx, config: Record<string, unknown>): Promise
   };
   const lead = ctx.context.lead as { id: string; pipeline_id: string } | undefined;
   const contact = ctx.context.contact as
-    | { id: string; display_name?: string | null; phone_number?: string | null }
+    | { id: string; name?: string | null; display_name?: string | null; phone_number?: string | null }
     | undefined;
 
   try {
@@ -42,7 +42,7 @@ async function execute(ctx: ActionCtx, config: Record<string, unknown>): Promise
       const created = await createLeadHandler(ctx.admin, handlerCtx, {
         pipeline_id: pipelineId,
         stage_id: stageId,
-        title: contact.display_name ?? contact.phone_number ?? "Lead da automação",
+        title: contact.name ?? contact.display_name ?? contact.phone_number ?? "Lead da automação",
         contact_id: contact.id,
         source: "automation",
       } as Parameters<typeof createLeadHandler>[2]);
