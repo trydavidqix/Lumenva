@@ -25,8 +25,9 @@
 | BE-T1 migration 0038 + RLS | ✅ completa (review ok) | `d908636`; 54/54 invariantes PASS incl. 6 novos de RLS 2-tenants |
 | BE-T2 drain genérico + retry | ✅ completa (review ok pós-fix) | `e2b487c`+`9717b65`; 63/63 PASS (9 casos drain); fixes: NULL next_attempt_at drena; retry preserva last_error; retry sem retry_at → backoff |
 | BE-T3 emissões de gatilho | ✅ completa (review ok) | `f186486`; 66/66 PASS; 4 emissões conferidas pós-mutação, payloads = contrato congelado |
-| BE-T4 actor webhook_source | ⏳ implementada (`852ce19`, typecheck+11/11 schema), em review | checklist de 17 call sites de actor.type no report |
-| BE-T5 a T13 | pendente | — |
+| BE-T4 actor webhook_source | ✅ completa (review ok) | `852ce19`; typecheck limpo, 11/11 schema tests; 17 call sites auditados e re-verificados pelo reviewer |
+| BE-T5 parser inbound | ⏳ em implementação | — |
+| BE-T6 a T13 | pendente | — |
 | UI T1-T6 | pendente | — |
 
 ## Última atualização
