@@ -129,3 +129,72 @@
   confirmada 2x pelo dono via AskUserQuestion). Branch gov/G2 criada de main.
 - Loop segue na fase G2; primeira elegível: G2-01 (matriz role×endpoint
   server-side). CI do GitHub agora tem o ci.yml — primeira execução real no push.
+
+## 2026-07-16 — sessão 9 do loop (core) — G2-01 (fase G2 aberta)
+
+- Virada G1→main executada (merge 6ddc08f + push, opção A do dono); gov/G2 criada.
+- G2-01 (matriz role×endpoint server-side): helper único lib/auth/require-role.ts
+  (getUser + fn_user_role_in_org + fail 403 + audit authz.denied), ~47 rotas
+  gateadas conforme matriz spec 13 §4; 21 testes novos (115 unit no total).
+- Rodada 1 do verifier: FAIL (lgpd/anonymize checava role na mão, sem audit).
+  Reparo: helper ganhou opt organizationId (role na org do RECURSO, fail-closed);
+  rota migrada. Rodada 2: PASS, hash-check OK.
+- Invariantes GAP(G2) de gov-1-rbac NÃO flipados (são de RLS — G2-03 fecha);
+  decisão validada pelos 2 verifiers.
+- INB-03 aberto (follow-ups: onboarding/whatsapp/session sem gate de role;
+  nota pro bulk-assign ≥manager na G3-04).
+- Handoff: próximas sessões (G2-02+) delegadas ao terminal Arquiteto e Executor
+  (cooperação A2A retomada pelo dono); Maestro-DeskcommCRM vira watchdog.
+
+## 2026-07-16 — sessão 10 do loop (core) — G2-02
+
+- G2-02 (role editável): lógica única em team/[user_id]/_shared.ts; PATCH
+  canônico novo em [user_id]/route.ts; /role virou alias fino (export PATCH
+  preservado — invariante gov-1-rbac o checa). Audit: team.role_changed
+  APPENDADO ao union (member.role_changed fica sem emissor, doutrina append-only).
+- UI: Select inline por membro (admin only, nunca na própria linha), otimismo
+  react-query com rollback + toast; dialog antigo removido. Screenshot em
+  loop/checkpoints/evidence/G2/G2-02-team-role-selector.png.
+- vitest.config.ts: esbuild jsx automatic (primeiro teste de componente .tsx).
+- gov-verifier: PASS 1ª rodada, hash-check OK. 123 unit + 29 invariantes verdes.
+  Nota não-veto registrada: guard de último admin é check-then-write sem lock
+  (pré-existente do EPIC-09, race de ms entre 2 admins) — candidata a inbox se
+  o dono quiser fechar com constraint/trigger.
+- Próxima sessão: G2-03 (RLS por role nas tabelas de config — migration tripla).
+
+## 2026-07-16 — sessão 11 do loop (core) — G2-03
+
+- G2-03 (RLS por role): migration 0030 em tripla (migrations/ + apêndice
+  baseline + MANIFEST; types.ts intocado — policies não mudam contrato).
+  crm_pipelines/crm_stages: SELECT org-flat + write manager+; conversations:
+  SELECT byte-idêntico ao antigo (leitura NÃO estreitada — own-scope é G4-01)
+  + write agent+ (viewer read-only). Policies ALL antigas dropadas (sem OR órfão).
+- Flip da catraca: 2 it.fails GAP(G2) de gov-1-rbac viraram testes normais
+  (única mudança no arquivo; commit com DESKCOMM_GOV_INVARIANTS_EDIT=1).
+  Novo invariante gov-1-rbac-config-write.test.ts (positivos+negativos).
+- Auditoria de policies registrada como spec 13 §4.1; Apêndice A: 2 GAP G2 → passa.
+- gov-verifier: PASS 1ª rodada, hash-check OK. test:db install+update verdes,
+  35/35 invariantes pós-update, 123 unit.
+- INB-05 aberto (proposal): spec 13 §4 nota 8 prevê api_audit_log SELECT
+  manager+ "aplicada em G2", mas nenhuma feature G2 cobre — decisão do dono.
+- Próxima sessão: G2-04 (e2e Playwright de papéis) fecha a fase → checkpoint G2.
+
+## 2026-07-16 — sessão 12 do loop (core) — G2-04 (fase G2 completa)
+
+- G2-04 (e2e de papéis): rbac-roles.spec.ts com 4 testes (agent 403 em
+  api-tokens/billing; admin entra com login MFA TOTP REAL — utils/totp.ts RFC
+  6238 sem dependência nova; agent vê inbox/kanban; viewer 403 forbidden_role
+  no POST de mensagem). Seed estendido: +viewer +ensureAdminTotp idempotente.
+- Desvio aprovado pelo verifier: billing/page.tsx ganhou gate admin-only de 6
+  linhas (espelho de api-tokens) — página não tinha gate NENHUM e o acceptance
+  seria falso sem ele.
+- e2e: 12 passed / 1 failed — o vermelho é error-pages "/500", PRÉ-EXISTENTE
+  (rota app/500 nunca existiu, vem do EPIC-12; provado independente do diff).
+  Candidato a forward-fix fora do épico. Axe zerado nas telas tocadas (exclusão
+  única documentada: tablist do InboxFilters, violação pré-existente).
+- gov-verifier: PASS 1ª rodada, hash-check OK. 123 unit verdes.
+- Incidente sem perda registrado: implementer consumiu stash órfão 18:54
+  (AGENTS/GEMINI idênticos aos do disco); órfão 18:43 intacto.
+- FASE G2 COMPLETA (4/4 passes:true) → checkpoint G2 na sequência, loop PARA.
+- Checkpoint G2 emitido (loop/checkpoints/G2-report.md, COMPLETO), loop PARADO
+  aguardando aprovação do dono (G2.approved) ou recusa (.rejected).

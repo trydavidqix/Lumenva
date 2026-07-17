@@ -49,9 +49,7 @@ export function TeamMembersClient({ currentUserId, canManage }: Props) {
   const changeRole = useChangeRole();
   const revoke = useRevokeMember();
 
-  const [roleDialog, setRoleDialog] = useState<TeamMember | null>(null);
   const [revokeDialog, setRevokeDialog] = useState<TeamMember | null>(null);
-  const [pendingRole, setPendingRole] = useState<Role>("agent");
 
   if (isLoading) {
     return <p className="text-sm text-muted-foreground">Carregando…</p>;
@@ -87,7 +85,30 @@ export function TeamMembersClient({ currentUserId, canManage }: Props) {
                   ) : null}
                 </TableCell>
                 <TableCell>
-                  <Badge variant="secondary">{m.role}</Badge>
+                  {canManage && m.user_id !== currentUserId ? (
+                    <Select
+                      value={m.role}
+                      onValueChange={(v) =>
+                        changeRole.mutate({ userId: m.user_id, role: v as Role })
+                      }
+                    >
+                      <SelectTrigger
+                        className="w-[130px]"
+                        aria-label={`Papel de ${m.full_name ?? m.email ?? m.user_id}`}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ROLES.map((r) => (
+                          <SelectItem key={r} value={r}>
+                            {r}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Badge variant="secondary">{m.role}</Badge>
+                  )}
                 </TableCell>
                 <TableCell>
                   {m.accepted_at ? (
@@ -112,14 +133,6 @@ export function TeamMembersClient({ currentUserId, canManage }: Props) {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={() => {
-                              setPendingRole(m.role as Role);
-                              setRoleDialog(m);
-                            }}
-                          >
-                            Mudar role
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
                             onClick={() => setRevokeDialog(m)}
                           >
@@ -137,49 +150,6 @@ export function TeamMembersClient({ currentUserId, canManage }: Props) {
           </TableBody>
         </Table>
       </div>
-
-      <Dialog open={!!roleDialog} onOpenChange={(o) => !o && setRoleDialog(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Mudar role</DialogTitle>
-            <DialogDescription>
-              {roleDialog?.email ?? roleDialog?.user_id} — selecione a nova role.
-            </DialogDescription>
-          </DialogHeader>
-          <Select value={pendingRole} onValueChange={(v) => setPendingRole(v as Role)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ROLES.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {r}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setRoleDialog(null)}>
-              Cancelar
-            </Button>
-            <Button
-              disabled={changeRole.isPending}
-              onClick={async () => {
-                if (!roleDialog) return;
-                try {
-                  await changeRole.mutateAsync({ userId: roleDialog.user_id, role: pendingRole });
-                  toast.success("Role atualizada.");
-                  setRoleDialog(null);
-                } catch {
-                  /* showApiError already triggered */
-                }
-              }}
-            >
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={!!revokeDialog} onOpenChange={(o) => !o && setRevokeDialog(null)}>
         <DialogContent>
@@ -204,7 +174,7 @@ export function TeamMembersClient({ currentUserId, canManage }: Props) {
                   toast.success("Acesso revogado.");
                   setRevokeDialog(null);
                 } catch {
-                  /* noop */
+                  /* showApiError already triggered by the hook */
                 }
               }}
             >
