@@ -18,7 +18,7 @@ version: "3.9"
 
 services:
   waha:
-    image: devlikeapro/waha-plus:latest
+    image: devlikeapro/waha:noweb
     platform: linux/amd64
     container_name: deskcomm-waha
     restart: unless-stopped
@@ -40,7 +40,8 @@ services:
       - waha-data:/app/.sessions
       - waha-media:/app/.media
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      # imagem Core não tem wget; curl existe. 127.0.0.1: localhost resolve p/ ::1 no container.
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/api/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -61,7 +62,8 @@ services:
     ports:
       - "8787:8787"
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8787/healthz"]
+      # 127.0.0.1 explícito: localhost resolve p/ ::1 e o healthz escuta só IPv4.
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:8787/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3
