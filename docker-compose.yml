@@ -28,7 +28,9 @@ services:
       # Hash SHA512 hex da api key (NÃO plaintext). Cliente envia plaintext em X-Api-Key.
       WAHA_API_KEY: ${WAHA_API_KEY_SHA512}
       # Webhook base URL — precisa ser pública (use ngrok/cloudflared em dev).
-      WHATSAPP_HOOK_URL: ${WAHA_WEBHOOK_BASE_URL}/api/v1/webhooks/waha
+      # host.docker.internal: o app Next roda no HOST em dev — localhost dentro do
+      # container seria o próprio WAHA e o webhook nunca chegaria.
+      WHATSAPP_HOOK_URL: ${WAHA_HOOK_BASE_URL:-http://host.docker.internal:3001}/api/v1/webhooks/waha
       WHATSAPP_HOOK_EVENTS: "message,message.any,message.ack,session.status,state.change"
       # HMAC SHA512 do payload, validado server-side via crypto.timingSafeEqual.
       WHATSAPP_HOOK_HMAC: ${WAHA_HMAC_SECRET}
@@ -36,12 +38,14 @@ services:
       WAHA_DEFAULT_ENGINE: NOWEB
       # Storage de mídia: Supabase Storage via Backend (NÃO inline base64).
       WAHA_DASHBOARD_ENABLED: "true"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - waha-data:/app/.sessions
       - waha-media:/app/.media
     healthcheck:
-      # imagem Core não tem wget; curl existe. 127.0.0.1: localhost resolve p/ ::1 no container.
-      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/api/health"]
+      # /ping é o único endpoint sem auth desta build (api/health = 401/404).
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/ping"]
       interval: 30s
       timeout: 5s
       retries: 3
