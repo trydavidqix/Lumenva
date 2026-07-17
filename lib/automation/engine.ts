@@ -40,22 +40,45 @@ interface RuleRow {
 /** Hidrata o contexto avaliado pelas condições/ações a partir do entity do evento. */
 async function buildContext(admin: SupabaseClient, row: EventRow): Promise<Record<string, unknown>> {
   const context: Record<string, unknown> = { event: row.payload };
+  // Admin client bypassa RLS — todo lookup filtra organization_id do evento
+  // (doutrina multi-tenant; um FK cross-org corrompido nunca vaza pro contexto).
+  const org = row.organization_id;
   if (row.entity_kind === "crm_lead" && row.entity_id) {
-    const { data: lead } = await admin.from("crm_leads").select("*").eq("id", row.entity_id).maybeSingle();
+    const { data: lead } = await admin
+      .from("crm_leads")
+      .select("*")
+      .eq("id", row.entity_id)
+      .eq("organization_id", org)
+      .maybeSingle();
     if (lead) {
       context.lead = lead;
       if (lead.contact_id) {
-        const { data: contact } = await admin.from("contacts").select("*").eq("id", lead.contact_id).maybeSingle();
+        const { data: contact } = await admin
+          .from("contacts")
+          .select("*")
+          .eq("id", lead.contact_id)
+          .eq("organization_id", org)
+          .maybeSingle();
         if (contact) context.contact = contact;
       }
     }
   } else if (row.entity_kind === "contact" && row.entity_id) {
-    const { data: contact } = await admin.from("contacts").select("*").eq("id", row.entity_id).maybeSingle();
+    const { data: contact } = await admin
+      .from("contacts")
+      .select("*")
+      .eq("id", row.entity_id)
+      .eq("organization_id", org)
+      .maybeSingle();
     if (contact) context.contact = contact;
   } else if (row.entity_kind === "message" && row.entity_id) {
     const contactId = row.payload.contact_id as string | undefined;
     if (contactId) {
-      const { data: contact } = await admin.from("contacts").select("*").eq("id", contactId).maybeSingle();
+      const { data: contact } = await admin
+        .from("contacts")
+        .select("*")
+        .eq("id", contactId)
+        .eq("organization_id", org)
+        .maybeSingle();
       if (contact) context.contact = contact;
     }
   }
