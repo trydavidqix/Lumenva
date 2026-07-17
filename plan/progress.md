@@ -138,3 +138,19 @@
   nota pro bulk-assign ≥manager na G3-04).
 - Handoff: próximas sessões (G2-02+) delegadas ao terminal Arquiteto e Executor
   (cooperação A2A retomada pelo dono); Maestro-DeskcommCRM vira watchdog.
+
+## 2026-07-16 — sessão 10 do loop (core) — G2-02
+
+- G2-02 (role editável): lógica única em team/[user_id]/_shared.ts; PATCH
+  canônico novo em [user_id]/route.ts; /role virou alias fino (export PATCH
+  preservado — invariante gov-1-rbac o checa). Audit: team.role_changed
+  APPENDADO ao union (member.role_changed fica sem emissor, doutrina append-only).
+- UI: Select inline por membro (admin only, nunca na própria linha), otimismo
+  react-query com rollback + toast; dialog antigo removido. Screenshot em
+  loop/checkpoints/evidence/G2/G2-02-team-role-selector.png.
+- vitest.config.ts: esbuild jsx automatic (primeiro teste de componente .tsx).
+- gov-verifier: PASS 1ª rodada, hash-check OK. 123 unit + 29 invariantes verdes.
+  Nota não-veto registrada: guard de último admin é check-then-write sem lock
+  (pré-existente do EPIC-09, race de ms entre 2 admins) — candidata a inbox se
+  o dono quiser fechar com constraint/trigger.
+- Próxima sessão: G2-03 (RLS por role nas tabelas de config — migration tripla).
