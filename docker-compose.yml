@@ -63,6 +63,10 @@ services:
     env_file:
       - .env
       - .env.local
+    environment:
+      # dentro do container, localhost é o próprio worker — o WAHA está na rede
+      # do compose (serviço waha, porta interna 3000). Sobrepõe o .env.local.
+      WAHA_API_BASE_URL: http://waha:3000
     ports:
       - "8787:8787"
     healthcheck:
