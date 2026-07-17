@@ -4728,3 +4728,86 @@ revoke all on function public.fn_conversation_assign(uuid, uuid, uuid, text, uui
 revoke execute on function public.fn_conversation_assign(uuid, uuid, uuid, text, uuid, boolean) from anon;
 grant execute on function public.fn_conversation_assign(uuid, uuid, uuid, text, uuid, boolean)
   to authenticated, service_role;
+
+-- ---- visibility_mode: RLS de crm_leads (kanban) por atendente (migration 0036) ----
+-- G4-03 (gov-loop): eixo 5 (spec 13 §4 linha 220). Espelha a G4-01 (conversations,
+-- 0035) para crm_leads — "dono" do lead = owner_user_id (não assigned_to). REUSE do
+-- mesmo organizations.settings.visibility_mode ('all'|'own_and_unassigned'|'own',
+-- default 'own_and_unassigned' — G1-06a; a matriz diz "mesmo escopo"). Só o role
+-- agent é restrito; viewer/manager/admin org-wide read; platform_admin tudo.
+-- fn_can_view_lead recebe os campos da ROW (sem lookup/recursão); DEFINER +
+-- search_path blindado + revoke anon/public (lição G4-00). A FOR ALL org-flat
+-- `tenant_isolation_crm_leads_all` governava SELECT junto (USING OR-ado) — dropada e
+-- re-expressa por-comando: SELECT visibility-aware + escrita por-role (agent=own-scope
+-- via a mesma fn, manager+=org-wide, viewer=none via piso 'agent'). Drag-and-drop de
+-- lead próprio (UPDATE de stage/position sem mudar owner) passa; lead de outro agent
+-- bloqueado; bulk assign (G3-04, ≥manager) intacto. Idempotente, auto-curativo.
+
+create or replace function public.fn_can_view_lead(
+  p_org uuid,
+  p_owner_user_id uuid
+) returns boolean
+language sql stable security definer
+set search_path = public
+as $$
+  select case
+    when public.fn_is_platform_admin() then true
+    when public.fn_user_role_in_org(p_org) is null then false
+    when public.fn_user_role_in_org(p_org) in ('viewer','manager','admin') then true
+    when p_owner_user_id = auth.uid() then true
+    else case coalesce(
+           (select settings->>'visibility_mode' from public.organizations where id = p_org),
+           'own_and_unassigned')
+         when 'all' then true
+         when 'own_and_unassigned' then p_owner_user_id is null
+         else false
+       end
+  end;
+$$;
+
+revoke all on function public.fn_can_view_lead(uuid, uuid) from public;
+revoke execute on function public.fn_can_view_lead(uuid, uuid) from anon;
+grant execute on function public.fn_can_view_lead(uuid, uuid)
+  to authenticated, service_role;
+
+drop policy if exists "tenant_isolation_crm_leads_all" on public.crm_leads;
+drop policy if exists "crm_leads_select" on public.crm_leads;
+drop policy if exists "crm_leads_insert" on public.crm_leads;
+drop policy if exists "crm_leads_update" on public.crm_leads;
+drop policy if exists "crm_leads_delete" on public.crm_leads;
+
+create policy "crm_leads_select" on public.crm_leads
+  for select using (
+    public.fn_can_view_lead(organization_id, owner_user_id)
+  );
+
+create policy "crm_leads_insert" on public.crm_leads
+  for insert with check (
+    public.fn_is_platform_admin()
+    or ((organization_id in (select public.fn_user_org_ids()))
+        and public.fn_role_at_least(organization_id, 'agent')
+        and (public.fn_role_at_least(organization_id, 'manager')
+             or public.fn_can_view_lead(organization_id, owner_user_id)))
+  );
+create policy "crm_leads_update" on public.crm_leads
+  for update using (
+    public.fn_is_platform_admin()
+    or ((organization_id in (select public.fn_user_org_ids()))
+        and public.fn_role_at_least(organization_id, 'agent')
+        and (public.fn_role_at_least(organization_id, 'manager')
+             or public.fn_can_view_lead(organization_id, owner_user_id)))
+  ) with check (
+    public.fn_is_platform_admin()
+    or ((organization_id in (select public.fn_user_org_ids()))
+        and public.fn_role_at_least(organization_id, 'agent')
+        and (public.fn_role_at_least(organization_id, 'manager')
+             or public.fn_can_view_lead(organization_id, owner_user_id)))
+  );
+create policy "crm_leads_delete" on public.crm_leads
+  for delete using (
+    public.fn_is_platform_admin()
+    or ((organization_id in (select public.fn_user_org_ids()))
+        and public.fn_role_at_least(organization_id, 'agent')
+        and (public.fn_role_at_least(organization_id, 'manager')
+             or public.fn_can_view_lead(organization_id, owner_user_id)))
+  );

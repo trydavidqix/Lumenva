@@ -365,3 +365,25 @@
   SendMessage do reforço RESUMIU automaticamente do ponto — concluiu na 2ª.
 - gov-verifier PASS 1ª rodada, hash OK. 165 unit + 71 invariantes (gov-5b 6/6).
 - Próxima: G4-03 (escopo no kanban/leads pra agent) — dep G4-01, prio 30.
+
+## 2026-07-17 — sessão 21 do loop (core) — G4-03
+
+- G4-03 (escopo de leads): migration 0036 tripla. fn_can_view_lead espelha
+  fn_can_view_conversation (owner_user_id, mesmo visibility_mode). crm_leads:
+  FOR ALL org-flat DROPADA, re-expressa por-comando (a armadilha da G4-01);
+  SELECT visibility-aware; escrita own pro agent (drag-and-drop do lead próprio
+  passa, de outro agent = 0 rows, WITH CHECK bloqueia criar pra outro),
+  manager+ org-wide (bulk assign G3-04 intacto). DIRC RLS-vs-server-side na spec.
+- Cuidado do Maestro (lead sem dono) provado — 4 números espelho das conversas:
+  own_and_unassigned vê=1/move=1; own vê=0/move=0. Board sem código novo (já
+  user-scoped, RLS filtra; contadores coerentes).
+- Incidente: implementer morreu 1x por API error mid-stream; trabalho parcial
+  intacto no tree (migration+fn feitas), resumido via SendMessage do ponto exato
+  — completou DIRC+invariante. gov-verifier PASS 1ª rodada, hash OK. 84 test:db,
+  165 unit, gov-5c 13/13.
+- Screenshot: verifier julgou INAPLICÁVEL (diff não toca UI — zero componente/
+  hook/página; board pré-existente; prova é o teste no Postgres descartável que
+  o acceptance 2 pede). Não vetou.
+- INB-10 aberto: crm_lead_activities/crm_lead_links seguem FOR ALL org-flat —
+  timeline/vínculos de lead invisível vazam por query direta. Gap pré-existente.
+- Próxima: G4-04 (métricas por responsável) — fecha a fase G4.
