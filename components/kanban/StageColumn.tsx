@@ -10,6 +10,8 @@ interface StageColumnProps {
   stage: Stage;
   leads: Lead[];
   pipelineId: string;
+  /** owner_user_id → nome, resolvido no board. */
+  ownerNames?: Map<string, string | null>;
   selectedLeadIds?: Set<string>;
   onSelect?: (leadId: string, additive: boolean) => void;
 }
@@ -30,6 +32,7 @@ export function StageColumn({
   stage,
   leads,
   pipelineId,
+  ownerNames,
   selectedLeadIds,
   onSelect,
 }: StageColumnProps) {
@@ -79,6 +82,11 @@ export function StageColumn({
                 lead={lead}
                 index={idx}
                 pipelineId={pipelineId}
+                ownerName={
+                  lead.owner_user_id
+                    ? ownerNames?.get(lead.owner_user_id) ?? null
+                    : null
+                }
                 isSelected={selectedLeadIds?.has(lead.id)}
                 onSelect={onSelect}
               />

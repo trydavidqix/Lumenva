@@ -198,3 +198,95 @@
 - FASE G2 COMPLETA (4/4 passes:true) → checkpoint G2 na sequência, loop PARA.
 - Checkpoint G2 emitido (loop/checkpoints/G2-report.md, COMPLETO), loop PARADO
   aguardando aprovação do dono (G2.approved) ou recusa (.rejected).
+
+## 2026-07-17 — sessão 13 do loop (core) — G3-01 (fase G3 aberta)
+
+- G3-01 (assignment events): migration 0031 em tripla cria
+  conversation_assignment_events (append-only, RLS org) + fn_conversation_assign
+  (SECURITY INVOKER, FOR UPDATE + UPDATE condicional + INSERT no mesmo corpo —
+  atomicidade real; changed_by=auth.uid() anti-spoof). claim/release migrados
+  pro rpc preservando 409; transfer novo (imediato, G1-06d) + ReassignDialog
+  (screenshot em evidence/G3/). database.types.ts regenerado DE VERDADE (estava
+  defasado desde ~0021; regen trouxe ai_* de carona — typecheck 0).
+- Desvio aprovado pelo verifier: GET /api/v1/team/assignable (agent lista
+  destinos, só user_id/nome/role, sem PII) — sem isso não há dialog.
+- Flip: único it.fails GAP(G3) de gov-3-transfer ("tabela existe") → verde.
+  +5 invariantes novos (gov-3-assignment-events), +7 unit. 40 invariantes,
+  130 unit, tudo verde. gov-verifier: PASS 1ª rodada, hash OK.
+- INB-06 aberto: (a) fn aceita p_to_user_id sem validar membership (rota valida;
+  banco não — probe H8); (b) banco live do dev sem 0030 aplicada
+  (schema_migrations parou na 0027; 0031 aplicada só pro screenshot).
+- Próxima sessão: G3-02 (assignee_kind) destravou; G3-03 também elegível — a
+  regra manda menor priority ⇒ G3-02 (prio 20).
+
+## 2026-07-17 — sessão 14 do loop (core) — G3-02 (1 rodada de reparo)
+
+- G3-02 (assignee_kind): migration 0032 em tripla — coluna assignee_kind +
+  CHECK de coerência (forma de implicação, verbatim do acceptance) + backfill
+  antes da constraint. Handoff grava evento reason=handoff (kind ai→user com
+  elegível / fila sem elegível). Veto determinístico do bot no ai-response-worker
+  (kind='user' ⇒ skip 'assigned_to_human'). Forward-fix INB-06a: guard de
+  membership dentro de fn_conversation_assign via helper fn_member_role_in_org.
+- FAIL na 1ª verificação: fn_member_role_in_org (SECURITY DEFINER) executável
+  por anon (grant herdado de ALTER DEFAULT PRIVILEGES do baseline) + ramo
+  auth.uid() null respondia a request anônimo → enumeração de role cross-tenant
+  sem autenticar. Reparo (1 rodada): revoke execute from anon explícito nas 2
+  cópias (migration+baseline) + invariante que prova permission denied SOB role
+  anon real + service_role ainda servido. Re-verificação FRESCA: PASS, hash OK.
+- 47 invariantes + 135 unit verdes. database.types.ts editado à mão (gen do
+  container poluiria Functions com extensões).
+- INB-07 aberto: varredura do verifier achou 6 SECURITY DEFINER de ESCRITA
+  anon-executáveis pré-existentes (fn_upsert_wa_*, emit_event, fn_log_event,
+  fn_audit_log_row, fn_mark_conversation_message) — gap do baseline, não da
+  G3-02. Os helpers RLS caller-scoped (fn_user_*) NÃO vazam (probe: anon → null).
+- Próxima sessão: G3-03 (dono do lead no kanban, prio 30) — elegível.
+
+## 2026-07-17 — sessão 15 do loop (core) — G3-03
+
+- G3-03 (dono do lead na superfície): OwnerBadge novo (nome real + iniciais do
+  NOME, badge tracejada "Sem responsável"; tokens do design, zero hardcode).
+  Filtro por owner migrou pra query param (deep-link ?owner=…); reatribuir pelo
+  card via submenu → useEditLead → PATCH /api/v1/leads/[id]. Reuso: nome do owner
+  e seletor vêm de useAssignableMembers (/team/assignable da G3-01); realtime é o
+  useRealtimeChannel que o board JÁ tinha (nada novo). Sem migration (owner_user_id
+  já existia). 139 unit + 1 e2e do filtro verdes. gov-verifier PASS 1ª rodada, hash OK.
+- Achado registrado (não é gap de código): NÃO existe view de "lista de leads"
+  separada — o kanban é a única superfície de leads. O acceptance 2 fala em
+  "coluna na lista" mas não há lista; atendido só pelo board por ausência de
+  superfície (verifier confirmou buscando). Se o dono quiser a lista, é feature nova.
+- Próxima sessão: G3-04 (bulk assign, prio 40) destravou; ou G3-05 (tags, prio 50).
+  Menor priority ⇒ G3-04.
+
+## 2026-07-17 — sessão 16 do loop (core) — G3-04
+
+- G3-04 (bulk assign): diff cirúrgico só no path assign da rota /leads/bulk
+  (já existia move/assign/tag/delete). Gate ≥manager POR-ACTION (2º requireRole
+  só se action=assign → authz.denied automático; move/tag/delete de agent
+  intactos); validação de owner membro agent+ da org → 422 invalid_owner
+  (código novo em errors.ts; mesma classe do INB-06a); audit agregada
+  leads.bulk_assigned (append no union); toast com contagem. Limite mantido em
+  50 (AT-06 compartilhado; Maestro aprovou não subir). Sem migration.
+- 145 unit (6 novos) verdes; gov-verifier PASS 1ª rodada, hash OK.
+- INB-09 aberto (2 notas não-vetantes do verifier): (1) validação de owner
+  gateada por isServiceRoleConfigured() — se service role ausente, pula (bypass
+  condicional; prod sempre tem); (2) edge multi-org: owner validado na org ativa
+  vs org do UPDATE resolvida do 1º lead — ator em 2 orgs poderia cruzar (não
+  vaza, RLS segura; padrão pré-existente da rota).
+- Fase G3: 4/5. Falta só G3-05 (tags de conversa, prio 50) → fecha a fase.
+
+## 2026-07-17 — sessão 17 do loop (core) — G3-05 (fase G3 COMPLETA)
+
+- G3-05 (tags de conversa): migration 0033 tripla — conversations.tags text[]
+  +GIN + seed idempotente do vocabulário canônico em
+  organizations.settings.canonical_conversation_tags (não sobrescreve tenant).
+  PATCH de conversa estendido (patchConversationSchema, status e/ou tags) com
+  Zod normalizador (trim/lowercase/dedup, ≤20, ≤40) + audit conversation.tags_changed.
+  UI: ConversationTagsEditor (chips + sugestões canônicas) no side panel + filtro
+  por tag no inbox. Vocabulário via server route (cookie HttpOnly — browser client
+  não autentica, mesmo motivo do board). types à mão (precedente G3-02).
+- Flip do it.fails do eixo 7 + invariante de filtro org-scoped (org1=1, org2=1,
+  global≥2, não vaza). gov-verifier PASS 1ª rodada, hash OK. 154 unit + 48 invariantes.
+- FASE G3 COMPLETA (5/5 passes:true) → checkpoint G3 na sequência, loop PARA no gate.
+- Checkpoint G3 emitido (loop/checkpoints/G3-report.md, COMPLETO 5/5), loop
+  PARADO aguardando aprovação do dono (G3.approved) ou recusa (.rejected).
+  7 INB abertos (03-09, todos proposal/não-vetantes) copiados no §3 do report.

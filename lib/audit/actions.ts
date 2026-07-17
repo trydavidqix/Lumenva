@@ -49,8 +49,10 @@ export type AuditAction =
   | "tenant.onboarded"
   | "conversation.created"
   | "conversation.claimed"
+  | "conversation.transferred"
   | "conversation.released"
   | "conversation.closed"
+  | "conversation.tags_changed"
   | "message.sent"
   | "message.received"
   | "contact.blocked"
@@ -118,4 +120,5 @@ export type AuditAction =
   | "channel.connected"
   | "channel.reconnected"
   | "authz.denied"
-  | "team.role_changed";
+  | "team.role_changed"
+  | "leads.bulk_assigned";

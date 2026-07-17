@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBoard } from "@/hooks/kanban/useBoard";
 import { useMoveCard } from "@/hooks/kanban/useMoveCard";
+import { useAssignableMembers } from "@/hooks/inbox/useAssignableMembers";
 import { midpoint } from "@/lib/kanban/fractional-indexing";
 import type { Lead } from "@/lib/types/leads";
 import type { Pipeline, Stage } from "@/lib/kanban/types";
@@ -63,6 +64,11 @@ export function KanbanBoard({
   const useExternal = stagesProp !== undefined && leadsProp !== undefined;
   const queryResult = useBoard(useExternal ? null : pipelineId);
   const moveCard = useMoveCard(pipelineId);
+  const { data: members } = useAssignableMembers(true);
+  const ownerNames = useMemo(
+    () => new Map((members ?? []).map((m) => [m.user_id, m.full_name])),
+    [members],
+  );
 
   const [internalSelected, setInternalSelected] = useState<Set<string>>(new Set());
   const selectedLeadIds = useMemo(
@@ -185,6 +191,7 @@ export function KanbanBoard({
             stage={stage}
             leads={grouped.get(stage.id) ?? []}
             pipelineId={pipelineId}
+            ownerNames={ownerNames}
             selectedLeadIds={selectedLeadIds}
             onSelect={handleSelect}
           />

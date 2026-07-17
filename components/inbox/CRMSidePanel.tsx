@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tag, Receipt, Users, ArrowRight } from "@/lib/ui/icons";
 import { createClient } from "@/lib/supabase/browser";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
+import { ConversationTagsEditor } from "./ConversationTagsEditor";
 
 interface Props {
   conversation: ConversationWithContact | null;
@@ -173,6 +174,14 @@ export function CRMSidePanel({ conversation }: Props) {
           </div>
         </Card>
       </section>
+
+      <Separator />
+
+      <ConversationTagsEditor
+        conversationId={conversation.id}
+        orgId={conversation.organization_id}
+        tags={conversation.tags ?? []}
+      />
 
       <Separator />
 

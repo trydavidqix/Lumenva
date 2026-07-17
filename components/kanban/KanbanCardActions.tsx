@@ -4,11 +4,16 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { DotsThree, PencilSimple } from "@/lib/ui/icons";
-import { useWinLead } from "@/hooks/kanban/useUpdateLead";
+import { DotsThree, PencilSimple, Users } from "@/lib/ui/icons";
+import { useWinLead, useEditLead } from "@/hooks/kanban/useUpdateLead";
+import { useAssignableMembers } from "@/hooks/inbox/useAssignableMembers";
 import { LoseLeadDialog } from "./LoseLeadDialog";
 import { EditLeadDialog } from "./EditLeadDialog";
 import type { Lead } from "@/lib/types/leads";
@@ -22,6 +27,13 @@ export function KanbanCardActions({ lead, pipelineId }: KanbanCardActionsProps) 
   const [loseOpen, setLoseOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const winMutation = useWinLead(pipelineId);
+  const editMutation = useEditLead(pipelineId);
+  const { data: members } = useAssignableMembers(true);
+
+  const reassign = (ownerUserId: string | null) => {
+    if (ownerUserId === lead.owner_user_id) return;
+    editMutation.mutate({ leadId: lead.id, patch: { owner_user_id: ownerUserId } });
+  };
 
   return (
     <>
@@ -48,6 +60,29 @@ export function KanbanCardActions({ lead, pipelineId }: KanbanCardActionsProps) 
           >
             <PencilSimple size={14} className="mr-2" /> Editar
           </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Users size={14} className="mr-2" /> Responsável
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuItem
+                disabled={editMutation.isPending || lead.owner_user_id === null}
+                onSelect={() => reassign(null)}
+              >
+                Sem responsável
+              </DropdownMenuItem>
+              {(members ?? []).length > 0 && <DropdownMenuSeparator />}
+              {(members ?? []).map((m) => (
+                <DropdownMenuItem
+                  key={m.user_id}
+                  disabled={editMutation.isPending || m.user_id === lead.owner_user_id}
+                  onSelect={() => reassign(m.user_id)}
+                >
+                  {m.full_name ?? "Sem nome"}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
           <DropdownMenuItem
             disabled={winMutation.isPending}
             onSelect={() => {
