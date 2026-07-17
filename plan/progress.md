@@ -122,3 +122,10 @@
   célula), hash-check OK. INB-01/02 fechados.
 - Dono autorizou (AskUserQuestion): criar G1.approved em nome dele + virada de
   fase por merge+push direto (opção A). Executando na sequência.
+
+## 2026-07-16 — virada de fase G1 → main (21:52)
+
+- gov/G1 mergeada em main (--no-ff, 6ddc08f) e pushada para origin (opção A,
+  confirmada 2x pelo dono via AskUserQuestion). Branch gov/G2 criada de main.
+- Loop segue na fase G2; primeira elegível: G2-01 (matriz role×endpoint
+  server-side). CI do GitHub agora tem o ci.yml — primeira execução real no push.
