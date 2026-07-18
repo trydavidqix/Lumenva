@@ -33,6 +33,10 @@ Edite o `.env` e preencha (mínimo):
 - **Banco direto** (Settings → Database → connection string): `SUPABASE_DB_URL`
 - **Domínio**: `DOMAIN`, `NEXT_PUBLIC_APP_URL=https://SEU_DOMINIO`,
   `WAHA_WEBHOOK_BASE_URL=https://SEU_DOMINIO`
+  > Rodando SEM TLS (ex.: `http://IP:PORTA`, sem o Caddy)? Basta o
+  > `NEXT_PUBLIC_APP_URL` começar com `http://` — o cookie de sessão deixa de
+  > ser `Secure` automaticamente e o login funciona. Com `https://`, `Secure`
+  > sempre ligado.
 - **Segredos** (gere com `openssl rand -base64 32` cada): `INTERNAL_SECRET`,
   `INTERNAL_CRON_SECRET`, `CPF_ENCRYPTION_KEY`, `AI_CRED_AES_KEY`,
   `WAHA_BYO_ENCRYPTION_KEY`, `IMPERSONATE_COOKIE_SECRET`, `LGPD_SIGNING_KEY`, `SRH_TOKEN`
@@ -45,6 +49,11 @@ Edite o `.env` e preencha (mínimo):
 
 ```bash
 # uma vez, do seu computador ou da VPS (precisa do psql):
+# projeto Supabase NOVO: habilite antes as extensões que o schema usa
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -c \
+  'create extension if not exists vector with schema public;
+   create extension if not exists citext with schema public;
+   create extension if not exists pg_trgm with schema public;'
 psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/baseline.sql
 ```
 
