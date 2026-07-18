@@ -53,6 +53,8 @@ export type AuditAction =
   | "conversation.released"
   | "conversation.closed"
   | "conversation.tags_changed"
+  | "contact.tags_changed"
+  | "lead.tags_changed"
   | "message.sent"
   | "message.received"
   | "contact.blocked"

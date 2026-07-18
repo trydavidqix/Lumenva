@@ -708,8 +708,14 @@
       "priority": 10,
       "lane": "core",
       "kind": "build",
-      "passes": false,
-      "verification": null
+      "passes": true,
+      "verification": {
+        "verdict": "PASS",
+        "by": "gov-verifier",
+        "at": "2026-07-18T20:33:57-0300",
+        "commit": "self",
+        "note": "re-verified after hash false-positive (external AGENTS/GEMINI regen); Maestro added .git/info/exclude"
+      }
     },
     {
       "id": "G6-02",

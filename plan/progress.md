@@ -611,3 +611,24 @@
   round-robins do INB-12) → G6-02 → G6-03 → G6-04 (spec 14) → checkpoint G6 =
   gatilho da FG do Vendaval.
 - Próxima: G6-01 (MCP tools de governança).
+
+## 2026-07-18 — sessão 20 do loop (core) — G6-01 (core MCP)
+
+- G6-01 (MCP tools de governança): 3 tools novas (crm_assign_conversation via
+  fn_conversation_assign com optimistic-lock p_enforce_expected — idempotência
+  sob CORRIDA prova evento=1, não só replay; crm_manage_tags conv|contact|lead
+  com normalizador G3-05; crm_get_queue_status read-only {queue_size,avg_wait,
+  online_eligible} documentado) + handoff v2 (roteamento G5, target opcional,
+  fallback fila+posição, retorno estruturado assigned_to|queued). Todas no
+  catalog.ts (sanity 16 tools 1:1) + audit em toda escrita. Sem migration.
+- INB-12 FECHADO (unificação): pickRoundRobinAssignee removido; loadEligibleAttendants
+  extraído pra eligibles.ts, consumido por worker+handoff+queue — um algoritmo só.
+- Cuidados do Maestro provados: idempotência sob corrida (não clobbera transfer
+  concorrente → assignment_conflict); force_human/is_blocked não removidos (o
+  antigo não os tinha no path de atribuição; bot_silenced_until mantido).
+- INCIDENTE: 2º falso-positivo de hash (AGENTS/GEMINI regeneraram na verificação).
+  Prova: stash dos 2 → hash voltou ao BEFORE exato. §3 aplicado (re-verify fresco,
+  não racionalizei). Maestro RESOLVEU na raiz: .git/info/exclude p/ AGENTS/GEMINI/
+  graphify-out/.lina — git status limpo, hash estável daqui pra frente.
+  Re-verify PASS, hash OK contra baseline pós-exclude. 273 unit + 174 test:db.
+- Próxima: G6-02 (ai_dispatch_mode).
