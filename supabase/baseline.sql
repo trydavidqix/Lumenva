@@ -5059,3 +5059,37 @@ create policy "attendant_availability_delete" on public.attendant_availability
         and (user_id = auth.uid()
              or public.fn_role_at_least(organization_id, 'manager')))
   );
+
+
+-- ---- roteamento: emissão de conversation.routing_requested (migration 0040) ----
+-- AT-03: a ENTRADA de uma conversa na fila emite o evento; o worker (cron TS
+-- lib/routing/worker.ts) consome e distribui. Trigger NUNCA faz HTTP — só
+-- emit_event. ANTI-ECO: AFTER INSERT APENAS + WHEN sem-dono numa fila aberta;
+-- não há trigger de UPDATE, então o UPDATE de atribuição do worker NUNCA re-emite
+-- (sem isso ⇒ loop infinito). Idempotente (create or replace + drop if exists).
+create or replace function public.fn_emit_conversation_routing() returns trigger
+  language plpgsql
+  security definer
+  set search_path = public
+as $$
+begin
+  perform public.emit_event(
+    'conversation.routing_requested',
+    'conversation',
+    new.id,
+    jsonb_build_object('conversation_id', new.id, 'organization_id', new.organization_id),
+    '{}'::jsonb,
+    new.organization_id
+  );
+  return null;
+end;
+$$;
+
+alter function public.fn_emit_conversation_routing() owner to postgres;
+
+drop trigger if exists trg_conversation_routing_requested on public.conversations;
+create trigger trg_conversation_routing_requested
+  after insert on public.conversations
+  for each row
+  when (new.assigned_to_user_id is null and new.status in ('open', 'pending'))
+  execute function public.fn_emit_conversation_routing();

@@ -475,3 +475,29 @@
   4936+4999, mesmo SQL, headers diferentes) — inócuo (idempotente, install+update
   verdes) mas ruído; dedup num forward-fix.
 - Próxima: G5-02 (worker de roteamento via event_log) — consome a elegibilidade daqui.
+
+## 2026-07-18 — sessão 14 do loop (core) — G5-02
+
+- G5-02 (worker de roteamento): trigger AFTER INSERT (migration 0040) emite
+  conversation.routing_requested só quando conversa NASCE sem dono (WHEN
+  assigned_to_user_id IS NULL AND status IN open/pending) — ZERO trigger de
+  UPDATE ⇒ o assign do worker NÃO re-emite (anti-eco físico, não convenção).
+  worker (lib/routing/worker.ts): dreno com claim CAS pending→processing→done/
+  dead (status VÁLIDOS do event_log_status_check, não os processed/failed que o
+  agent-dispatcher usa errado), atribui via fn_conversation_assign(reason=routing)
+  atômico; decide.ts é lógica PURA (round_robin/manual/backoff/dead).
+- Cuidado do Maestro provado: anti-eco count=1 após 2 assigns (não 2/3);
+  idempotência (2º assign expected=null → 0 rows, 1 evento); sem elegível →
+  backoff da CONFIG (next_attempt_at=now+backoff_seconds, attempts++, dead após
+  max_retries); manual → no-op; load inalcançável (schema) → branch defensivo.
+- gov-verifier PASS 1ª rodada SEM findings, hash OK. 188 unit + 107 invariantes
+  (gov-4b 7/7). Sem flip (não havia it.fails de worker; gov-4b é adição).
+- INB-12 aberto: 2 round-robins divergentes (decide.ts selectRoundRobin vs
+  handoff pickRoundRobinAssignee) — dívida de duplicação, extrair pra lib comum.
+- INB-13 aberto: BUG pré-existente do agent-dispatcher (lib/ai/dispatcher/index.ts
+  :403/456 grava status processed/failed, inválido no event_log_status_check →
+  UPDATE viola constraint em runtime). NÃO é da G5-02.
+- MITIGAÇÃO DE INFRA: docker volume prune recuperou 28.34GB (volumes dangling
+  dos test:db acumulados) — disco 193Mi→15Gi. Rodar prune periódico evita o
+  aperto que travou o loop.
+- Próxima: G5-03 (fila visível + notificação).
