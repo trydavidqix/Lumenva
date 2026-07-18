@@ -70,6 +70,7 @@ import {
 } from './stage-classifier';
 import { loadPlaybook } from './playbook';
 import { loadPublishedAgentConfig, matchesHandoffKeyword } from './agent-config';
+import { buildMcpTurnTools } from '../edge/crm/mcp-tools';
 import { cancelPendingCronsForLead } from '../cron/scheduler';
 import {
   latestInboundSignal,
@@ -1021,6 +1022,29 @@ export async function runAgentTurn(
     delete rawTools.request_human_handoff;
   }
 
+  // 2B-tools: tools do catálogo MCP habilitadas NA TELA entram no run (audit +
+  // role/scope da ponte nativa; envio e handoff do catálogo são bloqueados —
+  // ver edge/crm/mcp-tools.ts). As 7 tools do engine têm precedência de nome.
+  let mcpCleanup: (() => Promise<void>) | null = null;
+  if (agentConfig !== null && agentConfig.toolIds.length > 0) {
+    try {
+      const mcp = await buildMcpTurnTools(deps.crmCfg, { organizationId: tenantId, jobId: job.id }, agentConfig, runLog);
+      if (mcp !== null) {
+        mcpCleanup = mcp.cleanup;
+        for (const [name, mcpTool] of Object.entries(mcp.tools)) {
+          if (!(name in rawTools)) rawTools[name] = mcpTool;
+        }
+        runLog.info('tools MCP da tela montadas no turno', { mcp_tool_ids: mcp.toolIds });
+      }
+    } catch (err) {
+      // Tool extra é privilégio, não invariante: falha no mint/montagem NÃO
+      // derruba o turno — o run segue com as tools do engine e o humano vê o log.
+      runLog.error('tools MCP da tela não montadas — turno segue sem elas', {
+        error: (err instanceof Error ? err.message : String(err)).slice(0, 200),
+      });
+    }
+  }
+
   // Circuit breaker de tools (F2-15): estado no closure DESTA invocação — zera
   // entre runs por construção (mesma garantia de isolamento do resto do run).
   const tools = wrapToolsWithBreaker(rawTools, {
@@ -1231,6 +1255,8 @@ export async function runAgentTurn(
       'turno encerrado com veto do sink (is_blocked) — job cancelado em definitivo, checkpoint gravado',
     );
   }
+
+  await mcpCleanup?.();
 
   runLog.info('turno do agente concluído', {
     kind: job.kind,
