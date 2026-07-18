@@ -30,6 +30,16 @@ const envSchema = z.object({
   QUEUE_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(250),
   QUEUE_REAPER_INTERVAL_MS: z.coerce.number().int().positive().default(60_000),
   SHUTDOWN_GRACE_MS: z.coerce.number().int().positive().default(30_000),
+  // Watchdog de sessão (Fase 4A-2) — o ÚNICO ponto do engine que fala com o
+  // WAHA direto (admin-plane, regra dura nº 4): reconcilia o espelho
+  // channel_sessions com o status real e reenvia mensagens AI presas em queued.
+  // Opcionais no boot: sem WAHA_API_BASE_URL/KEY o watchdog fica OFF (warn).
+  WAHA_API_BASE_URL: z.string().url().optional(),
+  WAHA_API_KEY: z.string().min(1).optional(),
+  WATCHDOG_INTERVAL_MS: z.coerce.number().int().positive().default(60_000),
+  WATCHDOG_REDRIVE_MIN_AGE_MS: z.coerce.number().int().positive().default(30_000),
+  WATCHDOG_REDRIVE_BATCH_SIZE: z.coerce.number().int().positive().default(10),
+  WATCHDOG_REDRIVE_SPACING_MS: z.coerce.number().int().positive().default(4_000),
   // Dono ÚNICO dos eventos ai_agent.dispatch_requested (mesma chave do app):
   // 'engine' (default) = o drain deste worker consome; 'native' = o dispatcher
   // EPIC-13 consome e o drain daqui NÃO liga. Nunca os dois.

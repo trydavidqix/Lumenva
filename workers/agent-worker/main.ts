@@ -30,6 +30,7 @@ import { createPool } from '@/lib/agent-engine/db/pool';
 import { runDrainLoop } from '@/lib/agent-engine/edge/crm/drain';
 import { crmEdgeConfigFromEnv } from '@/lib/agent-engine/edge/crm/mcp-client';
 import { enforceHolds, sessionHealthMetrics } from '@/lib/agent-engine/edge/crm/session-watchdog';
+import { runSessionWatchdogLoop } from '@/lib/agent-engine/edge/crm/session-reconciler';
 import { runHealthLoop } from '@/lib/agent-engine/health/circuit';
 import { llmEdgeConfigFromEnv } from '@/lib/agent-engine/edge/llm/run-model-call';
 import { loadEnv, type Env } from '@/lib/agent-engine/env';
@@ -190,6 +191,26 @@ export async function startWorker(
       : (log.warn('drain DESLIGADO — AGENT_DISPATCH_CONSUMER=native (dispatcher EPIC-13 é o dono)', {}),
         Promise.resolve());
 
+  // Watchdog de sessão (4A-2): reconcilia channel_sessions×WAHA + redrive de
+  // queued. Liga só com as credenciais do WAHA no env (sem elas: warn + off).
+  const sessionWatchdogLoop =
+    env.WAHA_API_BASE_URL !== undefined && env.WAHA_API_KEY !== undefined
+      ? runSessionWatchdogLoop(
+          pool,
+          {
+            wahaBaseUrl: env.WAHA_API_BASE_URL,
+            wahaApiKey: env.WAHA_API_KEY,
+            intervalMs: env.WATCHDOG_INTERVAL_MS,
+            redriveMinAgeMs: env.WATCHDOG_REDRIVE_MIN_AGE_MS,
+            redriveBatchSize: env.WATCHDOG_REDRIVE_BATCH_SIZE,
+            redriveSpacingMs: env.WATCHDOG_REDRIVE_SPACING_MS,
+          },
+          log,
+          loopsAbort.signal,
+        )
+      : (log.warn('watchdog de sessão OFF — WAHA_API_BASE_URL/WAHA_API_KEY ausentes no env', {}),
+        Promise.resolve());
+
   // Circuito de saúde do número (block/response rate → hold).
   const healthLoop = runHealthLoop(
     pool,
@@ -283,7 +304,7 @@ export async function startWorker(
     server.close();
     server.closeIdleConnections();
     loopsAbort.abort();
-    await Promise.all([drainLoop, healthLoop, cronLoop]);
+    await Promise.all([drainLoop, healthLoop, cronLoop, sessionWatchdogLoop]);
     await workerLoop;
     let graceTimer: NodeJS.Timeout | undefined;
     const grace = new Promise<'grace'>((resolve) => {
