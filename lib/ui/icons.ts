@@ -44,6 +44,7 @@ export {
   MagnifyingGlass,
   Pause,
   Play,
+  SkipForward,
   Copy,
   Archive,
   // feedback
