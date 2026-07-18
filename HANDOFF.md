@@ -60,7 +60,13 @@ NOTA operacional: `NUVEMSHOP_OAUTH_ENCRYPTION_KEY` do .env.local agora está see
 
 ✅ **TICKET 2 — Idempotência external_id (commit `1c12180`):** descoberta-chave: o índice único `uniq_crm_leads_org_source_external` JÁ existia no schema — zero migration; só rota (fast-path 200 + catch 23505 re-select) + passthrough no handler. external_id não vaza pra custom_fields. PROVAS: 25/25 invariantes (152, incl. 4 novos do índice); curl: 3 retries sequenciais → mesmo lead_id, 4 POSTs PARALELOS → mesmo lead_id (corrida real vencida); SQL: 7 POSTs = 2 leads; Playwright: 1 card de cada no Kanban (screenshot em .superpowers/evidence/webhooks-idempotency-kanban.png).
 
-**TICKETS RESTANTES:** uniq_conversations_1to1 vs conversa closed; aposentar trigger legado fn_emit_event_on_lead_change; INTERNAL_CRON_SECRET no install.sh (+ seed da chave de cifra no kit — mesma natureza); assign_owner sem checagem role≥agent.
+✅ **TICKETS 3-6 — hardening (commit `fda47df`):**
+- `assign_owner` rejeita viewer (`invalid_owner`, régua G3-04).
+- `ensureConversation` REABRE conversa fechada (índice 1:1 sem filtro de status travava envio automatizado pra sempre) + catch 23505 de corrida.
+- **Migration 0043**: trigger de leads não duplica mais `lead.created`/`stage_changed` (cirurgia — `won/lost/reopened/assigned` preservados, são únicos; trigger virou AFTER UPDATE; backlog duplicado marcado done). PROVADO no remoto: antes `{lead:3, crm_lead:3}` pendentes → depois `{crm_lead:3}`; INSERT vivo não emite nada; `won` ainda emite `lead.won`. NNNN 0043 (0042 tomado pela gov/G6 no meio do trabalho).
+- **Kit HostGator**: install gera `INTERNAL_CRON_SECRET` + `NUVEMSHOP_OAUTH_ENCRYPTION_KEY`; `ensure_encryption_key()` (install+update) semeia `private.app_secrets` — idempotência provada em harness (2 runs → 1 linha no .env, chave estável, warn gracioso sem banco).
+
+**TODOS OS 6 TICKETS DE FOLLOW-UP FECHADOS.** Suítes: 25/25 invariantes (152+1), 229/229 unit, typecheck limpo. Branch `fix/webhooks-secret-encryption` pronto p/ PR (contém: cifragem 0041 + idempotência external_id + hardening 0043 + kit).
 
 Screenshots de evidência: `.superpowers/evidence/*.png`.
 **NOTA DE ROLLOUT (decidir na fase UI/kit):** primeiro deploy do cron drain processa backlog histórico de tipos com handler em qualquer clone — marcar pré-existentes como done na migration do kit OU documentar o processamento tardio.
