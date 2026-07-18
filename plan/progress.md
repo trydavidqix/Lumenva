@@ -592,3 +592,22 @@
   paralelas entre terminais colidem (docker rm cruzado mata container no meio).
   Candidato a INB: sufixo por PID na porta/nome. INB-13 fechado.
 - Próxima: G6-06 (prio 6, RLS de user_organizations SELECT org-wide manager+, INB-14).
+
+## 2026-07-18 — sessão 19 do loop (core) — G6-06 (3 mini-features pré COMPLETAS)
+
+- G6-06 (INB-14): migration 0044 — user_orgs_select 'admin'→'manager' (só SELECT;
+  self-read preservado pra todos; write insert/update/delete INALTERADO em admin).
+  Recursão descartada (cuidado do Maestro): fn_role_at_least é STABLE SECURITY
+  DEFINER, bypassa RLS internamente — e a policy já a chamava, prova viva.
+- gov-1b (invariante novo): manager lê todas=5, agent=1 (self-read), cross-org=0
+  (manager A não lê org B — threshold é por-org). team-list-roster: GET /team
+  volta o roster completo pro manager (era 1). Workaround /attendants G5-04
+  (admin client) intacto. gov-verifier PASS 1ª rodada SEM findings, hash OK.
+  258 unit + 174 test:db. INB-14 fechado.
+- test:db usou TEST_DB_PORT próprio (workaround do INB-15 — colisão de porta
+  entre terminais; funcionou).
+- 3 MINI-FEATURES PRÉ COMPLETAS (G6-00/05/06 — INB-10/13/14 fechados). Agora as
+  features MCP core: G6-01 (tools assign/tags/queue + handoff v2 unifica os 2
+  round-robins do INB-12) → G6-02 → G6-03 → G6-04 (spec 14) → checkpoint G6 =
+  gatilho da FG do Vendaval.
+- Próxima: G6-01 (MCP tools de governança).
