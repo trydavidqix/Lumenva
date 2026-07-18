@@ -15,6 +15,11 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 export interface CrmEdgeConfig {
   /** admin client (service role) — usado só pelas bordas que chamam handlers do app. */
   supabase: SupabaseClient;
+  /**
+   * ai_agents.id do agente PUBLICADO deste turno (Fase 2B) — vira o actor.id do
+   * envio (audit/metadata do CRM). Ausente = id genérico do engine.
+   */
+  agentActorId?: string;
 }
 
 /** Falha de transporte da borda (Supabase/WAHA fora) — transiente, o job re-tenta. */

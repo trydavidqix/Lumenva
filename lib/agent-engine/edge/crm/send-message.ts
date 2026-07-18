@@ -72,7 +72,7 @@ export interface SendMessageInput {
   body: string;
 }
 
-/** Id do ator ai_agent nas linhas/audit do CRM. Fase 2 liga isto a um ai_agents.id real. */
+/** Fallback do ator ai_agent quando não há agente publicado (cfg.agentActorId). */
 export const AGENT_ACTOR_ID = 'agent-engine';
 
 /**
@@ -113,7 +113,7 @@ export async function sendTurnMessage(
       cfg.supabase,
       {
         organization_id: input.tenantId,
-        actor: { type: 'ai_agent', id: AGENT_ACTOR_ID, role: 'manager' },
+        actor: { type: 'ai_agent', id: cfg.agentActorId ?? AGENT_ACTOR_ID, role: 'manager' },
         requestId: idempotencyKey,
       },
       {

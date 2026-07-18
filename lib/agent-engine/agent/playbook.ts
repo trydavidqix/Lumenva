@@ -113,7 +113,19 @@ export async function setPlaybookPointer(
  * versão nova com o daemon vivo (blueprint 8.8).
  * Plataforma é obrigatória (compliance); tenant/campanha entram se apontadas.
  */
-export async function loadPlaybook(db: pg.Pool, tenantId: string): Promise<LoadedPlaybook> {
+export async function loadPlaybook(
+  db: pg.Pool,
+  tenantId: string,
+  opts?: {
+    /**
+     * Fase 2B: system_prompt da versão PUBLICADA do agente (tela ai/agents)
+     * SUBSTITUI a camada tenant do playbook — a tela é a fonte de verdade da
+     * persona da org; a camada platform (compliance) continua obrigatória e
+     * sempre à frente.
+     */
+    agentLayer?: string;
+  },
+): Promise<LoadedPlaybook> {
   const { rows } = await db.query<{ layer: PlaybookLayer; version_id: string; content: string }>(
     `select v.layer, v.id as version_id, v.content
      from playbook_pointers p
@@ -133,9 +145,13 @@ export async function loadPlaybook(db: pg.Pool, tenantId: string): Promise<Loade
       versionIds[layer] = row.version_id;
     }
   }
+  const agentLayer = opts?.agentLayer;
   return {
     prompt: composePlaybook(
       LAYER_ORDER.flatMap((layer) => {
+        if (layer === 'tenant' && agentLayer !== undefined) {
+          return [{ layer, content: agentLayer }];
+        }
         const row = byLayer.get(layer);
         return row ? [{ layer, content: row.content }] : [];
       }),
