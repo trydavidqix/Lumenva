@@ -574,3 +574,21 @@
   colega na main agora). gov-verifier PASS 1ª rodada SEM findings, hash OK.
   gov-5e 8/8 (cross-atendente 0, próprio 1, manager todos, service role escreve).
 - INB-10 fechado. Próxima: G6-05 (prio 4, forward-fix agent-dispatcher status inválido).
+
+## 2026-07-18 — sessão 18 do loop (core) — G6-05
+
+- G6-05 (INB-13, bug de runtime): dispatcher gravava status 'processed'/'failed'
+  que violam event_log_status_check (só pending|processing|done|dead) — UPDATE
+  falhava em runtime e o evento ficava preso em pending (reprocessamento latente).
+  Fix cirúrgico: :403 processed→done, :456 failed→dead + doc-comment. SEM migration
+  (constraint certa, código errado). Espelha o routing-worker da G5-02.
+- Cuidado do Maestro provado: :456 é o ÚNICO ramo terminal (catch de dispatchAgents);
+  o retry já é função SEPARADA (requeueEvent :279, pending+backoff) — NÃO colapsei
+  retry em dead. Zero leitor downstream de 'processed'/'failed' (todos filtram 'pending').
+- Invariante dispatcher-event-status: prova a violação com os valores antigos (psql
+  ERROR real) + ciclo pending→processing→done/dead. gov-verifier PASS 1ª rodada
+  SEM findings, hash OK. 256 unit + 171 test:db.
+- Achado de infra (não-código): scripts/test-db.sh usa porta/nome fixos → rodadas
+  paralelas entre terminais colidem (docker rm cruzado mata container no meio).
+  Candidato a INB: sufixo por PID na porta/nome. INB-13 fechado.
+- Próxima: G6-06 (prio 6, RLS de user_organizations SELECT org-wide manager+, INB-14).
