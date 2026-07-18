@@ -23,6 +23,8 @@ const config: VercelConfig = {
     // cannot go sub-minute; per-minute batch of 100 events is sized for the
     // MVP target tenant (~300 inbound/day, headroom ~6k/hour).
     { path: "/api/v1/cron/agent-dispatcher", schedule: "*/1 * * * *" },
+    // Webhooks/automação: drain genérico do event_log (spec 2026-07-17).
+    { path: "/api/v1/cron/event-log-drain", schedule: "*/1 * * * *" },
   ],
   functions: {
     // EPIC-13 S-13.08: ToolLoopAgent runtime can issue multiple tool calls per
