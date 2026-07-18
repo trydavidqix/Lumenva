@@ -16,12 +16,36 @@
 create schema if not exists extensions;
 create extension if not exists pgcrypto with schema extensions;
 
+-- Fonte da chave: Supabase cloud NÃO permite ALTER DATABASE/ROLE SET de GUC
+-- custom (42501) — GUC-only nunca funcionaria lá. A chave vive em
+-- private.app_secrets (schema sem grants; só as SECURITY DEFINER leem);
+-- a GUC, quando setada (VPS/psql/testes), tem precedência como override.
+create schema if not exists private;
+create table if not exists private.app_secrets (
+  name text primary key,
+  value text not null,
+  updated_at timestamptz not null default now()
+);
+revoke all on schema private from public;
+revoke all on all tables in schema private from public;
+
+create or replace function private.fn_oauth_key() returns text
+    language sql security definer
+    set search_path to 'private', 'pg_temp'
+    as $$
+  select coalesce(
+    nullif(current_setting('app.nuvemshop_oauth_key', true), ''),
+    (select value from private.app_secrets where name = 'nuvemshop_oauth_key')
+  );
+$$;
+revoke all on function private.fn_oauth_key() from public;
+
 create or replace function public.fn_encrypt_oauth(plaintext text) returns bytea
     language plpgsql security definer
-    set search_path to 'public', 'extensions', 'pg_temp'
+    set search_path to 'public', 'private', 'extensions', 'pg_temp'
     as $$
 declare
-  k text := current_setting('app.nuvemshop_oauth_key', true);
+  k text := private.fn_oauth_key();
 begin
   if k is null or length(k) < 32 then
     raise exception 'NUVEMSHOP_OAUTH_ENCRYPTION_KEY ausente';
@@ -31,10 +55,10 @@ end$$;
 
 create or replace function public.fn_decrypt_oauth(ciphertext bytea) returns text
     language plpgsql security definer
-    set search_path to 'public', 'extensions', 'pg_temp'
+    set search_path to 'public', 'private', 'extensions', 'pg_temp'
     as $$
 declare
-  k text := current_setting('app.nuvemshop_oauth_key', true);
+  k text := private.fn_oauth_key();
 begin
   return pgp_sym_decrypt(ciphertext, k);
 end$$;
