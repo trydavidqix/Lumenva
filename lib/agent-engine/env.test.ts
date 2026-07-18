@@ -7,7 +7,8 @@ import { loadEnv } from "./env";
  * e o README promete BYOK com a chave vazia). Regressão aqui = worker crasha
  * no boot de todo self-host que seguir o README.
  */
-const REQUIRED = {
+const REQUIRED: NodeJS.ProcessEnv = {
+  NODE_ENV: "test",
   SUPABASE_DB_URL: "postgresql://u:p@localhost:5432/db",
   NEXT_PUBLIC_SUPABASE_URL: "https://x.supabase.co",
   SUPABASE_SERVICE_ROLE_KEY: "service-key",
@@ -15,25 +16,25 @@ const REQUIRED = {
 
 describe("loadEnv — vazio é ausente (contrato BYOK do README)", () => {
   it("ANTHROPIC_API_KEY= (vazia) é tratada como ausente — worker sobe", () => {
-    const env = loadEnv({ ...REQUIRED, ANTHROPIC_API_KEY: "" } as NodeJS.ProcessEnv);
+    const env = loadEnv({ ...REQUIRED, ANTHROPIC_API_KEY: "" });
     expect(env.ANTHROPIC_API_KEY).toBeUndefined();
   });
 
   it("opcional ausente = ok; default aplica em knob vazio", () => {
-    const env = loadEnv({ ...REQUIRED, AGENT_MAX_STEPS: "" } as NodeJS.ProcessEnv);
+    const env = loadEnv({ ...REQUIRED, AGENT_MAX_STEPS: "" });
     expect(env.ANTHROPIC_API_KEY).toBeUndefined();
     expect(env.AGENT_MAX_STEPS).toBe(8); // default, não NaN de coerce('')
     expect(env.AGENT_DISPATCH_CONSUMER).toBe("engine");
   });
 
   it("obrigatória VAZIA = erro claro nomeando a var (fail-fast preservado)", () => {
-    expect(() => loadEnv({ ...REQUIRED, SUPABASE_DB_URL: "" } as NodeJS.ProcessEnv)).toThrowError(
+    expect(() => loadEnv({ ...REQUIRED, SUPABASE_DB_URL: "" })).toThrowError(
       /SUPABASE_DB_URL/,
     );
   });
 
   it("obrigatória ausente = mesmo erro claro", () => {
     const { SUPABASE_DB_URL: _omit, ...rest } = REQUIRED;
-    expect(() => loadEnv(rest as NodeJS.ProcessEnv)).toThrowError(/SUPABASE_DB_URL/);
+    expect(() => loadEnv(rest)).toThrowError(/SUPABASE_DB_URL/);
   });
 });
