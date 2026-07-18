@@ -59,3 +59,46 @@ export function useDeleteAutomationRule() {
     onSuccess: () => qc.invalidateQueries({ queryKey: RULES_KEY }),
   });
 }
+
+export interface AutomationRuleRunActionResult {
+  type: string;
+  status: "success" | "failed" | "skipped" | "postponed";
+  error?: string;
+  detail?: Record<string, unknown>;
+}
+
+export interface AutomationRuleRunRow {
+  id: string;
+  organization_id: string;
+  rule_id: string;
+  event_id: string | null;
+  status: "success" | "failed" | "partial";
+  actions_result: AutomationRuleRunActionResult[];
+  error: string | null;
+  created_at: string;
+  automation_rules: { name: string } | null;
+}
+
+const RUNS_KEY = ["automation-rule-runs"];
+
+export function useAutomationRuns() {
+  return useQuery({
+    queryKey: RUNS_KEY,
+    queryFn: async () =>
+      apiClient.get<{ data: AutomationRuleRunRow[] }>("/api/v1/automation-rules/runs?limit=50"),
+    staleTime: 15_000,
+  });
+}
+
+export function useResendAutomationRun() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (runId: string) =>
+      apiClient.post<{ data: AutomationRuleRunRow }>(
+        `/api/v1/automation-rules/runs/${runId}/resend`,
+        undefined,
+      ),
+    onError: showApiError,
+    onSuccess: () => qc.invalidateQueries({ queryKey: RUNS_KEY }),
+  });
+}
