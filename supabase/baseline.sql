@@ -5272,3 +5272,17 @@ create policy "crm_lead_links_delete" on public.crm_lead_links
     (organization_id in (select public.fn_user_org_ids()))
     or public.fn_is_platform_admin()
   );
+
+
+-- ---- user_organizations SELECT org-wide para manager+ (migration 0044) ----
+-- G6-06 (INB-14): manager passa a ler todo o roster da org (matriz spec 13 §4:
+-- team=org:read a manager). Antes: só admin org-wide, manager caía no self-read
+-- e GET /api/v1/team devolvia 1 linha. Self-read preservado p/ todos; WRITE
+-- inalterado (insert/update/delete = admin). Idempotente e auto-curativo.
+drop policy if exists "user_orgs_select" on public.user_organizations;
+create policy "user_orgs_select" on public.user_organizations
+  for select using (
+    (user_id = auth.uid())
+    or public.fn_role_at_least(organization_id, 'manager')
+    or public.fn_is_platform_admin()
+  );
