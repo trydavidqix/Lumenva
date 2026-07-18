@@ -76,6 +76,7 @@ export {
   // misc
   DotsThree,
   CaretDown,
+  CaretUp,
   CaretDoubleLeft,
   CaretDoubleRight,
   CaretLeft,
