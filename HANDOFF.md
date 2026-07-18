@@ -44,8 +44,11 @@
 | UI-T1 sidebar + shell | ✅ | `8b738b3`+`0dbb446`; screenshot + medidas (ritmo 40px, gap 24px, h-9, Sage, Atkinson); zero console errors (fix hydration Tabs SSR); gate agent testado ao vivo |
 | UI-T2 aba Receber dados | ✅ | `d34af99`+`303c46f`; fluxo leigo completo no browser: fonte criada, lead de teste REAL no banco (SQL provado), feed "há 2s"; fix: teste usa URL relativa |
 | UI-T3 builder de automações | ✅ | `c26470c`+`57fe887`; regra 100% via UI rodou com controle positivo/negativo (instagram→tag, google→sem); fixes: default curado; PATH DO PLANO ERRADO utm→source_metadata corrigido |
-| UI-T4 aba Atividade | ⏳ em implementação | — |
-| UI-T5 kit HostGator / UI-T6 E2E+DoD | pendente | — |
+| UI-T4 aba Atividade | ✅ | `dd20248`+`9e8946c`; timeline com runs reais; falha provocada + Reenviar TESTADO (fix: insert do run via admin client — RLS select-only causava 500) |
+| UI-T5 kit HostGator | ✅ | `c59bb59`; bash -n ok, função chamada em install+update (verificado), idempotência provada, backfill one-time de pendentes >7d no primeiro enable |
+| UI-T6 E2E + DoD | ✅ | `794dc3b`; Playwright 9 passos verde 4x (1x pelo controller: 51s); DoD integral: typecheck limpo, 218/218 unit, 93/94 invariantes, 0 console.log, 0 env novas, 44 commits |
+
+**FEATURE COMPLETA (19/19 tasks).** Review final de branch inteiro em andamento (seams, doutrina, triple-consistency da migration, triage de minors). Depois: decisão de merge/push com o Rafael (push bloqueado por hook do gov-loop — precisa de autorização explícita ou push manual dele).
 
 Screenshots de evidência: `.superpowers/evidence/*.png`.
 **NOTA DE ROLLOUT (decidir na fase UI/kit):** primeiro deploy do cron drain processa backlog histórico de tipos com handler em qualquer clone — marcar pré-existentes como done na migration do kit OU documentar o processamento tardio.
