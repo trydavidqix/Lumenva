@@ -11,10 +11,11 @@
  * payload, never user input.
  *
  * Schema mapping note: the spec talks about `processed_at`, but `event_log`
- * uses `status` + `consumed_by[]`. We mark a successfully-handled event as
- * `status='processed'` and stamp `metadata.outcome`. Requeue (rate-limit) sets
- * `next_attempt_at = now()+5s` and keeps `status='pending'` so the next batch
- * picks it up.
+ * uses `status` + `consumed_by[]` (status ∈ pending|processing|done|dead, per
+ * event_log_status_check). We mark a successfully-handled event as
+ * `status='done'` and stamp `metadata.outcome`; a terminal failure as
+ * `status='dead'`. Requeue (rate-limit) sets `next_attempt_at = now()+5s` and
+ * keeps `status='pending'` so the next batch picks it up.
  */
 
 import { randomUUID } from "node:crypto";
@@ -400,7 +401,7 @@ async function markEventProcessed(
   const { error } = await admin
     .from("event_log")
     .update({
-      status: "processed",
+      status: "done",
       metadata,
       consumed_by: consumed,
       updated_at: new Date().toISOString(),
@@ -453,7 +454,7 @@ async function markEventFailed(event: EventRow, detail: string): Promise<void> {
   const { error } = await admin
     .from("event_log")
     .update({
-      status: "failed",
+      status: "dead",
       last_error: detail.slice(0, 500),
       metadata,
       updated_at: new Date().toISOString(),
