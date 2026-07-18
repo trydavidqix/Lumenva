@@ -23,7 +23,7 @@
 
 ```bash
 git clone https://github.com/deskcommcrm/deskcommcrm.git && cd deskcommcrm
-cp .env.example .env
+cp .env.hostgator.example .env   # o template de produção (o .env.example é o de dev)
 ```
 
 Edite o `.env` e preencha (mínimo):
@@ -69,6 +69,10 @@ E aponte `SUPABASE_DB_URL` do `.env` para ela.
 ```bash
 docker compose -f docker-compose.prod.yml up -d
 ```
+
+> A imagem do app vem pronta do GHCR (`APP_IMAGE` no .env). Para buildar
+> localmente (fork/sem registry): adicione `-f docker-compose.build.yml` e
+> rode `... build` antes do `up` (precisa de ≥4 GB RAM; ~15-25 min).
 
 Sobe: `caddy` (HTTPS automático via Let's Encrypt) → `app` (CRM) → `worker`
 (agente 24/7) → `waha` (WhatsApp) → `redis`/`srh` → `scheduler` (crons).
