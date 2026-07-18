@@ -85,10 +85,21 @@ const llmSettingsSchema = z
  * aes_gcm). Sem BYOK → fallback cfg.anthropicApiKey (só anthropic). Sem nada →
  * LlmNotConfiguredError. Chamada a cada run — troca de config vale no run seguinte.
  */
+/**
+ * Override por-turno vindo da versão PUBLICADA do agente (Fase 2B): a tela
+ * escolhe provider e credencial ESPECÍFICA; sem override, vale a config da org
+ * (settings.llm + credencial mais recente do provider).
+ */
+export interface LlmResolveOverride {
+  provider?: string;
+  credentialId?: string | null;
+}
+
 export async function resolveOrgLlmConfig(
   db: pg.Pool,
   cfg: LlmEdgeConfig,
   organizationId: string,
+  override?: LlmResolveOverride,
 ): Promise<OrgLlmConfig> {
   const { rows } = await db.query<{ llm: unknown }>(
     `select settings->'llm' as llm from organizations where id = $1`,
@@ -98,20 +109,37 @@ export async function resolveOrgLlmConfig(
     throw new Error('organização inexistente ao resolver config LLM');
   }
   const settings = llmSettingsSchema.parse(rows[0]?.llm ?? {});
+  const provider = override?.provider ?? settings.provider;
 
-  const { rows: credRows } = await db.query<{
-    api_key_encrypted: unknown;
-    api_key_iv: unknown;
-    api_key_tag: unknown;
-  }>(
-    `select api_key_encrypted, api_key_iv, api_key_tag
-     from ai_provider_credentials
-     where organization_id = $1 and provider = $2
-       and is_active and validated_at is not null
-     order by created_at desc
-     limit 1`,
-    [organizationId, settings.provider],
-  );
+  // Credencial: a ESCOLHIDA na versão publicada quando houver (ainda exigindo
+  // ativa+validada — publish valida, mas a credencial pode ser revogada depois);
+  // senão a mais recente ativa/validada do provider. Sempre escopada pela org.
+  const { rows: credRows } = override?.credentialId
+    ? await db.query<{
+        api_key_encrypted: unknown;
+        api_key_iv: unknown;
+        api_key_tag: unknown;
+      }>(
+        `select api_key_encrypted, api_key_iv, api_key_tag
+         from ai_provider_credentials
+         where organization_id = $1 and id = $2
+           and is_active and validated_at is not null
+         limit 1`,
+        [organizationId, override.credentialId],
+      )
+    : await db.query<{
+        api_key_encrypted: unknown;
+        api_key_iv: unknown;
+        api_key_tag: unknown;
+      }>(
+        `select api_key_encrypted, api_key_iv, api_key_tag
+         from ai_provider_credentials
+         where organization_id = $1 and provider = $2
+           and is_active and validated_at is not null
+         order by created_at desc
+         limit 1`,
+        [organizationId, provider],
+      );
 
   let apiKey: string;
   const cred = credRows[0];
@@ -121,14 +149,14 @@ export async function resolveOrgLlmConfig(
       iv: byteaToBuffer(cred.api_key_iv),
       tag: byteaToBuffer(cred.api_key_tag),
     });
-  } else if (settings.provider === 'anthropic' && cfg.anthropicApiKey) {
+  } else if (provider === 'anthropic' && cfg.anthropicApiKey) {
     apiKey = cfg.anthropicApiKey;
   } else {
     throw new LlmNotConfiguredError();
   }
 
   return {
-    provider: settings.provider,
+    provider,
     apiKey,
     defaultModel: settings.default_model ?? null,
     params: settings.params,

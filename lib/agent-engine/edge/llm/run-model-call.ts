@@ -89,6 +89,11 @@ export interface RunModelCallInput {
    * agente), nunca constante.
    */
   maxSteps?: number;
+  /**
+   * Override de provider/credencial vindo da versão PUBLICADA do agente (Fase
+   * 2B) — resolvido no seam, nunca no call site. Sem ele, config da org.
+   */
+  llmOverride?: import('./credentials').LlmResolveOverride;
 }
 
 export interface RunModelCallDeps {
@@ -134,7 +139,7 @@ async function assertBudget(db: pg.Pool, organizationId: string, budgetCents: nu
 
 export async function runModelCall(db: pg.Pool, cfg: LlmEdgeConfig, input: RunModelCallInput, deps: RunModelCallDeps = {}) {
   const registry = deps.registry ?? createDefaultRegistry();
-  const config = await resolveOrgLlmConfig(db, cfg, input.tenantId);
+  const config = await resolveOrgLlmConfig(db, cfg, input.tenantId, input.llmOverride);
 
   await assertBudget(db, input.tenantId, config.monthlyBudgetCents);
 

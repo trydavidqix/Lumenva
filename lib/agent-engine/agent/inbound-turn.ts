@@ -69,6 +69,7 @@ import {
   type StageClassifierKnobs,
 } from './stage-classifier';
 import { loadPlaybook } from './playbook';
+import { loadPublishedAgentConfig, matchesHandoffKeyword } from './agent-config';
 import { cancelPendingCronsForLead } from '../cron/scheduler';
 import {
   latestInboundSignal,
@@ -513,8 +514,32 @@ export async function runAgentTurn(
     return;
   }
 
+  // Fase 2B: config do agente por PONTEIRO PUBLICADO (tela ai/agents) — lida a
+  // cada turno, zero cache; org/sessão da row do job (fonte confiável). null =
+  // sem agente publicado p/ esta sessão → fallback (playbook + settings + env).
+  const agentConfig = await loadPublishedAgentConfig(pool, tenantId, input.channelSessionId);
+  if (agentConfig !== null) {
+    runLog.info('config do agente publicada em uso', {
+      agent_id: agentConfig.agentId,
+      agent_version_id: agentConfig.versionId,
+      model: agentConfig.model,
+    });
+  }
+  // Knobs por-turno: a versão publicada vence o env; sem ela, env (main.ts).
+  const maxSteps = agentConfig?.maxSteps ?? deps.knobs.maxSteps;
+  const turnContextKnobs =
+    agentConfig !== null
+      ? { historyLimit: agentConfig.historyMessageWindow, maxTokens: deps.knobs.maxContextTokens }
+      : contextKnobs;
+
   // Ritual de abertura: playbook por ponteiro + checkpoint + contexto curado.
-  const playbook = await loadPlaybook(pool, tenantId);
+  // Com agente publicado, o system_prompt DELE é a camada tenant (platform de
+  // compliance continua à frente, sempre).
+  const playbook = await loadPlaybook(
+    pool,
+    tenantId,
+    agentConfig !== null ? { agentLayer: agentConfig.systemPrompt } : undefined,
+  );
   // Skills situacionais (F3-09): índice (name+description) SEMPRE residente — vai junto do
   // system do playbook, no prefixo estável org-wide (disclosure progressivo; cacheável F2-17).
   // O CORPO só carrega no match, no sufixo por-lead (mais abaixo). loadSkills resolve os
@@ -531,7 +556,7 @@ export async function runAgentTurn(
     pool,
     deps.crmCfg,
     { tenantId, leadId, conversationId: input.conversationId },
-    contextKnobs,
+    turnContextKnobs,
   );
   if (!openingContext.ok) {
     // Sem contexto não há turno: transiente (CRM fora) OU permanente (lead
@@ -543,7 +568,11 @@ export async function runAgentTurn(
   // de atendimento humano na última mensagem do lead. Handoff é cidadão de 1ª classe (exigência
   // Meta fiscalizada, blueprint 5.5) — dispara ANTES do modelo: o bot silencia sem gastar LLM,
   // sem enviar. A ação (CRM force_human + cache + cancela crons + inbox) é idempotente.
-  if (detectHumanHandoffRequest(latestInboundSignal(openingContext.context.messages))) {
+  const inboundSignal = latestInboundSignal(openingContext.context.messages);
+  if (
+    detectHumanHandoffRequest(inboundSignal) ||
+    (agentConfig !== null && matchesHandoffKeyword(inboundSignal, agentConfig.handoffKeywords))
+  ) {
     await performHumanHandoff(
       pool,
       { tenantId, leadId, conversationId: input.conversationId },
@@ -633,7 +662,11 @@ export async function runAgentTurn(
   // Seam de canal (F2-25): o envio vai SÓ pela interface ChannelAdapter — o
   // default WAHA-via-CRM envolve o sink F2-06. Instanciado por job (o pool é
   // per-job neste codebase); trocar o adapter não muda nada abaixo.
-  const channel = (deps.channel ?? ((p: pg.Pool) => new WahaChannelAdapter(p, deps.crmCfg)))(pool);
+  // Fase 2B: o envio carrega o ai_agents.id REAL como ator (audit/metadata do
+  // CRM apontam o agente publicado, não um id genérico).
+  const turnCrmCfg =
+    agentConfig !== null ? { ...deps.crmCfg, agentActorId: agentConfig.agentId } : deps.crmCfg;
+  const channel = (deps.channel ?? ((p: pg.Pool) => new WahaChannelAdapter(p, turnCrmCfg)))(pool);
   const clock = deps.clock ?? ((): Date => new Date());
   // STOP lido no turno (fonte: CRM via get_lead_context) — combinado com o cache
   // durável leads.is_opted_out no gate 1 da cadeia (F2-13).
@@ -693,7 +726,7 @@ export async function runAgentTurn(
             pool,
             deps.crmCfg,
             { tenantId, leadId, conversationId: input.conversationId },
-            contextKnobs,
+            turnContextKnobs,
           );
         } catch (err) {
           // bug de programação: ensina o modelo a encerrar E derruba o job no fim
@@ -968,6 +1001,12 @@ export async function runAgentTurn(
     });
   }
 
+  // Fase 2B: a tela pode DESLIGAR a tool de handoff do modelo (a detecção
+  // determinística de pedido de humano continua ativa — guardrail nunca sai).
+  if (agentConfig !== null && !agentConfig.handoffToolEnabled) {
+    delete rawTools.request_human_handoff;
+  }
+
   // Circuit breaker de tools (F2-15): estado no closure DESTA invocação — zera
   // entre runs por construção (mesma garantia de isolamento do resto do run).
   const tools = wrapToolsWithBreaker(rawTools, {
@@ -1070,7 +1109,13 @@ export async function runAgentTurn(
       system,
       messages: openingMessages,
       tools,
-      maxSteps: deps.knobs.maxSteps,
+      maxSteps,
+      ...(agentConfig !== null
+        ? {
+            model: agentConfig.model,
+            llmOverride: { provider: agentConfig.provider, credentialId: agentConfig.credentialId },
+          }
+        : {}),
     },
     { registry: deps.registry, log: runLog },
   );
@@ -1117,6 +1162,12 @@ export async function runAgentTurn(
       leadId,
       jobId: job.id,
       purpose: 'checkpoint',
+      ...(agentConfig !== null
+        ? {
+            model: agentConfig.model,
+            llmOverride: { provider: agentConfig.provider, credentialId: agentConfig.credentialId },
+          }
+        : {}),
       system,
       messages: [
         ...openingMessages,
