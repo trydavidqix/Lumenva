@@ -136,7 +136,13 @@ export type Env = z.infer<typeof envSchema>;
  * (SUPABASE_DB_URL carrega credencial; credencial fora de log).
  */
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
-  const parsed = envSchema.safeParse(source);
+  // Var VAZIA = ausente (padrão de env files): o template gera `CHAVE=` e o
+  // README promete "deixe vazio e cadastre depois na tela" (BYOK) — sem isto,
+  // ANTHROPIC_API_KEY= derrubava o worker no boot (bug pego pela prova limpa).
+  const cleaned = Object.fromEntries(
+    Object.entries(source).filter(([, v]) => v !== ''),
+  ) as NodeJS.ProcessEnv;
+  const parsed = envSchema.safeParse(cleaned);
   if (!parsed.success) {
     const names = [...new Set(parsed.error.issues.map((issue) => issue.path.join('.')))];
     throw new Error(`env inválido — verifique no .env: ${names.join(', ')}`);
