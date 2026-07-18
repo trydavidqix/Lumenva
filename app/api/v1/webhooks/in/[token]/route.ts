@@ -17,6 +17,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createLeadHandler } from "@/app/api/v1/leads/_handler";
 import type { CreateLeadInput } from "@/lib/schemas";
 import { mapInboundPayload, verifyInboundSignature, type FieldMap } from "@/lib/webhooks/inbound";
+import { decryptWebhookSecret } from "@/lib/webhooks/secrets";
 import { ApiError } from "@/lib/api/types";
 
 export const dynamic = "force-dynamic";
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
   const admin = createAdminClient();
   const { data: source, error: srcErr } = await admin
     .from("webhook_sources")
-    .select("id, organization_id, secret, default_pipeline_id, default_stage_id, field_map, redirect_to, is_active")
+    .select("id, organization_id, secret_encrypted, default_pipeline_id, default_stage_id, field_map, redirect_to, is_active")
     .eq("path_token", token)
     .maybeSingle();
   if (srcErr) return fail("internal_error", srcErr.message, 500, { requestId });
@@ -88,8 +89,17 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
   }
 
   const sigHeader = req.headers.get("x-deskcomm-signature");
-  const validSignature = source.secret ? verifyInboundSignature(rawBody, sigHeader, source.secret) : null;
-  if (source.secret && !validSignature) {
+  // secret cifrado at-rest (migration 0041). Decrypt falhou (chave da GUC
+  // ausente/trocada)? Precedente WAHA: pula a validação em vez de derrubar a
+  // captação — secret aqui é defesa opcional, não gate de disponibilidade.
+  let sourceSecret: string | null = null;
+  let hmacSkipped = false;
+  if (source.secret_encrypted) {
+    sourceSecret = await decryptWebhookSecret(admin, source.secret_encrypted as unknown as string);
+    if (sourceSecret === null) hmacSkipped = true;
+  }
+  const validSignature = sourceSecret ? verifyInboundSignature(rawBody, sigHeader, sourceSecret) : null;
+  if (sourceSecret && !validSignature) {
     await audit({
       action: "webhook.inbound_invalid_signature",
       organizationId: source.organization_id,
@@ -115,8 +125,10 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
     raw_body: rawBody,
     payload_parsed: payload,
     signature_header: sigHeader ?? null,
+    // hmacSkipped (decrypt indisponível) conta como "não validado mas aceito",
+    // igual ao webhook WAHA — o feed da UI não pinta de vermelho.
     valid_signature: validSignature ?? true,
-    event_type: "lead_capture.received",
+    event_type: hmacSkipped ? "lead_capture.received_hmac_skipped" : "lead_capture.received",
     external_id: null,
     status: "received",
     attempts: 0,
