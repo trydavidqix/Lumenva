@@ -12,6 +12,10 @@ export default defineConfig({
     // Seed + queries via docker exec são lentos o suficiente pro default de 5s.
     testTimeout: 30_000,
     hookTimeout: 60_000,
+    // O ponteiro platform do playbook é estado GLOBAL (org null) compartilhado
+    // entre arquivos (playbook-seed deleta/recria; agent-no-credential depende
+    // dele) — arquivos em paralelo criariam flakiness real.
+    fileParallelism: false,
   },
   resolve: { alias: { "@": path.resolve(__dirname, ".") } },
 });

@@ -25,6 +25,7 @@ import {
   type InboundTurnDeps,
 } from '@/lib/agent-engine/agent/inbound-turn';
 import { createFollowupTurnHandler } from '@/lib/agent-engine/agent/followup-turn';
+import { seedPlatformPlaybook } from '@/lib/agent-engine/agent/playbook-seed';
 import { runCronLoop } from '@/lib/agent-engine/cron/scheduler';
 import { createPool } from '@/lib/agent-engine/db/pool';
 import { runDrainLoop } from '@/lib/agent-engine/edge/crm/drain';
@@ -132,6 +133,14 @@ export async function startWorker(
   const workerId = `agent-engine-${hostname()}-${process.pid}`;
 
   await assertHarnessSchema(pool);
+
+  // Self-host limpo: sem ponteiro platform, TODO inbound_turn morre. O seed só
+  // age quando não existe ponteiro nenhum (regra dura nº 10 — nunca move
+  // ponteiro existente) e é concorrência-safe (advisory lock).
+  const playbookSeed = await seedPlatformPlaybook(pool);
+  if (playbookSeed === 'seeded') {
+    log.info('playbook platform seedado no boot (primeiro boot do self-host)');
+  }
 
   const bootReap = await reapExpiredJobs(pool, {
     visibilityTimeoutMs: env.QUEUE_VISIBILITY_TIMEOUT_MS,
