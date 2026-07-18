@@ -4203,7 +4203,7 @@ export type Database = {
           organization_id: string
           path_token: string
           redirect_to: string | null
-          secret: string | null
+          secret_encrypted: string | null
           updated_at: string
         }
         Insert: {
@@ -4220,7 +4220,7 @@ export type Database = {
           organization_id: string
           path_token: string
           redirect_to?: string | null
-          secret?: string | null
+          secret_encrypted?: string | null
           updated_at?: string
         }
         Update: {
@@ -4237,7 +4237,7 @@ export type Database = {
           organization_id?: string
           path_token?: string
           redirect_to?: string | null
-          secret?: string | null
+          secret_encrypted?: string | null
           updated_at?: string
         }
         Relationships: [
