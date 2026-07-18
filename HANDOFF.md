@@ -48,7 +48,13 @@
 | UI-T5 kit HostGator | ✅ | `c59bb59`; bash -n ok, função chamada em install+update (verificado), idempotência provada, backfill one-time de pendentes >7d no primeiro enable |
 | UI-T6 E2E + DoD | ✅ | `794dc3b`; Playwright 9 passos verde 4x (1x pelo controller: 51s); DoD integral: typecheck limpo, 218/218 unit, 93/94 invariantes, 0 console.log, 0 env novas, 44 commits |
 
-**FEATURE COMPLETA (19/19 tasks).** Review final de branch inteiro em andamento (seams, doutrina, triple-consistency da migration, triage de minors). Depois: decisão de merge/push com o Rafael (push bloqueado por hook do gov-loop — precisa de autorização explícita ou push manual dele).
+**FEATURE ENCERRADA — MERGE-READY.** Review final whole-branch: YES (seams das 4 camadas alinhados, doutrina limpa, migration triple consistente). Fix final aplicado e verificado (`57ad069`): bulk move/tag emite eventos por lead (automação dispara em multi-select) + audit `automation.rule_executed` em runs falhos. Estado final: **45 commits, typecheck limpo, 218/218 unit, 96/97 invariantes (19 arquivos), E2E Playwright 9 passos verde.**
+
+**PENDÊNCIAS DE DECISÃO (Rafael):**
+1. **Push/merge** — hook pre-push do gov-loop bloqueia; opções: (a) autorizar `--no-verify` explícito, (b) push manual dele, (c) esperar ritual do gov-loop.
+2. Nota de merge: MANIFEST pula 0033→0038 (0034-37 vivem no gov/*) — conflito trivial quando ambos chegarem na main.
+
+**TICKETS DE FOLLOW-UP (documentados no ledger `.superpowers/sdd/progress.md`):** cifragem at-rest do secret (spec §10, dropada na T1 do plano); idempotência por external_id no inbound (spec §5 não implementada); uniq_conversations_1to1 vs conversa closed; aposentar trigger legado fn_emit_event_on_lead_change; INTERNAL_CRON_SECRET não populada pelo install.sh; assign_owner sem checagem role≥agent.
 
 Screenshots de evidência: `.superpowers/evidence/*.png`.
 **NOTA DE ROLLOUT (decidir na fase UI/kit):** primeiro deploy do cron drain processa backlog histórico de tipos com handler em qualquer clone — marcar pré-existentes como done na migration do kit OU documentar o processamento tardio.
