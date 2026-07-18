@@ -67,7 +67,9 @@ export async function loadPublishedAgentConfig(
      join ai_agent_versions v on v.id = a.published_version_id
      where a.organization_id = $1
        and a.archived_at is null
-       and a.is_active
+       -- is_active é semântica do rag_bot legado; para mcp_agent "ativo" =
+       -- published_version_id preenchido + não arquivado (mesmo critério do
+       -- dispatcher nativo do CRM — pausar = despublicar).
        and v.status = 'published'
        and v.channel_session_id = $2
      order by a.priority desc, a.created_at asc
