@@ -4935,6 +4935,10 @@ grant execute on function public.fn_attendant_metrics(uuid, timestamptz, timesta
 
 
 -- ============================================================================
+-- Dumps do Supabase zeram o search_path (set_config('search_path','',false));
+-- os apêndices da fusão criam objetos NÃO-qualificados — restaura o público.
+select pg_catalog.set_config('search_path', 'public, extensions', false);
+
 -- APÊNDICE 0050_agent_harness (fusão Vendaval) — idempotente, espelho exato da
 -- migration 20260719000000 (kit self-host aplica via install.sh/update.sh).
 -- ============================================================================
