@@ -80,3 +80,6 @@ loop/logs/
 loop/locks/
 loop/STOP
 loop/run-session.sh
+
+# graphify (análise local de knowledge graph)
+graphify-out/
