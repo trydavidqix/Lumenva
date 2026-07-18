@@ -28,6 +28,11 @@ export interface PublishedAgentConfig {
   historyTokenWindow: number;
   handoffKeywords: string[];
   handoffToolEnabled: boolean;
+  /** tool_ids do catálogo MCP habilitadas na tela (2B-tools). */
+  toolIds: string[];
+  /** criadores (p/ mint do token efêmero de audit — padrão do runtime nativo). */
+  versionCreatedBy: string | null;
+  agentCreatedBy: string | null;
 }
 
 interface Row {
@@ -43,6 +48,9 @@ interface Row {
   history_token_window: number;
   handoff_keywords: string[] | null;
   handoff_tool_enabled: boolean;
+  tool_ids: string[] | null;
+  version_created_by: string | null;
+  agent_created_by: string | null;
 }
 
 export async function loadPublishedAgentConfig(
@@ -62,7 +70,10 @@ export async function loadPublishedAgentConfig(
             v.history_message_window,
             v.history_token_window,
             v.handoff_keywords,
-            v.handoff_tool_enabled
+            v.handoff_tool_enabled,
+            v.tool_ids,
+            v.created_by as version_created_by,
+            a.created_by as agent_created_by
      from ai_agents a
      join ai_agent_versions v on v.id = a.published_version_id
      where a.organization_id = $1
@@ -91,6 +102,9 @@ export async function loadPublishedAgentConfig(
     historyTokenWindow: r.history_token_window,
     handoffKeywords: (r.handoff_keywords ?? []).map((k) => k.toLowerCase().trim()).filter((k) => k !== ''),
     handoffToolEnabled: r.handoff_tool_enabled,
+    toolIds: r.tool_ids ?? [],
+    versionCreatedBy: r.version_created_by,
+    agentCreatedBy: r.agent_created_by,
   };
 }
 
