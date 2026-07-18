@@ -15,25 +15,25 @@ const REQUIRED = {
 
 describe("loadEnv — vazio é ausente (contrato BYOK do README)", () => {
   it("ANTHROPIC_API_KEY= (vazia) é tratada como ausente — worker sobe", () => {
-    const env = loadEnv({ ...REQUIRED, ANTHROPIC_API_KEY: "" });
+    const env = loadEnv({ ...REQUIRED, ANTHROPIC_API_KEY: "" } as NodeJS.ProcessEnv);
     expect(env.ANTHROPIC_API_KEY).toBeUndefined();
   });
 
   it("opcional ausente = ok; default aplica em knob vazio", () => {
-    const env = loadEnv({ ...REQUIRED, AGENT_MAX_STEPS: "" });
+    const env = loadEnv({ ...REQUIRED, AGENT_MAX_STEPS: "" } as NodeJS.ProcessEnv);
     expect(env.ANTHROPIC_API_KEY).toBeUndefined();
     expect(env.AGENT_MAX_STEPS).toBe(8); // default, não NaN de coerce('')
     expect(env.AGENT_DISPATCH_CONSUMER).toBe("engine");
   });
 
   it("obrigatória VAZIA = erro claro nomeando a var (fail-fast preservado)", () => {
-    expect(() => loadEnv({ ...REQUIRED, SUPABASE_DB_URL: "" })).toThrowError(
+    expect(() => loadEnv({ ...REQUIRED, SUPABASE_DB_URL: "" } as NodeJS.ProcessEnv)).toThrowError(
       /SUPABASE_DB_URL/,
     );
   });
 
   it("obrigatória ausente = mesmo erro claro", () => {
     const { SUPABASE_DB_URL: _omit, ...rest } = REQUIRED;
-    expect(() => loadEnv(rest)).toThrowError(/SUPABASE_DB_URL/);
+    expect(() => loadEnv(rest as NodeJS.ProcessEnv)).toThrowError(/SUPABASE_DB_URL/);
   });
 });
