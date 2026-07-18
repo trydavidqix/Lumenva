@@ -49,7 +49,12 @@ psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/baseline.sql
 ```
 
 O `baseline.sql` é idempotente — cria o CRM inteiro + as tabelas do agente
-(migrations 0001→atual). Para ATUALIZAR uma instalação existente, rode o mesmo
+(migrations 0001→atual).
+
+> **Usando Postgres próprio em vez de Supabase?** Aplique ANTES o
+> `scripts/selfhost-prelude.sql` (roles/schemas/extensões que o dump supõe).
+> Limite: auth/storage viram stubs — o login do app exige Supabase real; o
+> worker/agente funcionam integralmente. Para ATUALIZAR uma instalação existente, rode o mesmo
 comando de novo (sem a flag `ON_ERROR_STOP`): só o que falta é aplicado.
 
 Crie também a role dedicada do worker (mais seguro que usar o superusuário):
