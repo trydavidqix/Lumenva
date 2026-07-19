@@ -621,6 +621,74 @@
       }
     },
     {
+      "id": "G6-00",
+      "phase": "G6",
+      "title": "Pré-G6: RLS por role em crm_lead_activities/crm_lead_links (INB-10)",
+      "description": "Aprovada pelo dono 2026-07-18 (INB-10). Timeline/vínculos de lead seguem org-flat: agent em escopo own não vê o lead mas lê activities/links por query direta. Pré-condição da exposição MCP (G6-03).",
+      "acceptance": [
+        "Migration em tripla completa: SELECT de crm_lead_activities e crm_lead_links passa a exigir visibilidade do lead pai (mesma fn_can_view_lead da G4-03); write segue a matriz; policies por-comando (sem FOR ALL).",
+        "Teste no Postgres descartável: agent em modo own não lê activities/links de lead de outro agent (0 rows); controle positivo do próprio; manager org-wide.",
+        "Invariante novo em tests/invariants/ cobrindo o fechamento; pnpm test:db install+update verdes.",
+        "Nenhuma regressão: timeline no painel do lead continua funcionando para quem vê o lead (teste ou evidência)."
+      ],
+      "depends_on": [],
+      "priority": 2,
+      "lane": "core",
+      "kind": "build",
+      "passes": true,
+      "verification": {
+        "verdict": "PASS",
+        "by": "gov-verifier",
+        "at": "2026-07-18T19:07:30-0300",
+        "commit": "self"
+      }
+    },
+    {
+      "id": "G6-05",
+      "phase": "G6",
+      "title": "Forward-fix: agent-dispatcher grava status inválido no event_log (INB-13)",
+      "description": "Aprovada pelo dono 2026-07-18 (INB-13). Bug REAL de runtime: dispatcher usa status processed/failed que violam event_log_status_check — UPDATE falha em runtime.",
+      "acceptance": [
+        "Auditoria: reproduzir/provar o caminho do bug (teste que demonstra o UPDATE violando a constraint com os valores atuais).",
+        "Fix TS: dispatcher passa a usar somente os status válidos do event_log_status_check (padrão do routing-worker da G5-02); sem migration (a constraint está certa; o código estava errado).",
+        "Teste unit prova o ciclo completo pending→processing→done/dead sem violação; regressão do dispatcher verde."
+      ],
+      "depends_on": [],
+      "priority": 4,
+      "lane": "core",
+      "kind": "build",
+      "passes": true,
+      "verification": {
+        "verdict": "PASS",
+        "by": "gov-verifier",
+        "at": "2026-07-18T19:30:19-0300",
+        "commit": "self"
+      }
+    },
+    {
+      "id": "G6-06",
+      "phase": "G6",
+      "title": "RLS de user_organizations: SELECT org-wide para manager+ (INB-14)",
+      "description": "Aprovada pelo dono 2026-07-18 (INB-14). RLS atual limita manager à própria linha — GET /team devolve 1 membro pro manager (aba Membros quebrada). Matriz §4: team=org:read a manager.",
+      "acceptance": [
+        "Migration em tripla completa: SELECT de user_organizations org-wide para manager+ via fn_role_at_least (padrão do repo), mantendo self-read para todos; write inalterado.",
+        "Teste no Postgres descartável: manager lê todas as linhas da org; agent segue lendo só a própria; cross-org 0 rows.",
+        "GET /api/v1/team volta a listar o time completo para manager (teste de rota); workaround do /attendants/availability da G5-04 permanece funcional.",
+        "Invariante coberto; pnpm test:db install+update verdes."
+      ],
+      "depends_on": [],
+      "priority": 6,
+      "lane": "core",
+      "kind": "build",
+      "passes": true,
+      "verification": {
+        "verdict": "PASS",
+        "by": "gov-verifier",
+        "at": "2026-07-18T19:54:05-0300",
+        "commit": "self"
+      }
+    },
+    {
       "id": "G6-01",
       "phase": "G6",
       "title": "MCP tools de governança (assign/tags/queue + handoff v2)",
@@ -640,8 +708,14 @@
       "priority": 10,
       "lane": "core",
       "kind": "build",
-      "passes": false,
-      "verification": null
+      "passes": true,
+      "verification": {
+        "verdict": "PASS",
+        "by": "gov-verifier",
+        "at": "2026-07-18T20:33:57-0300",
+        "commit": "self",
+        "note": "re-verified after hash false-positive (external AGENTS/GEMINI regen); Maestro added .git/info/exclude"
+      }
     },
     {
       "id": "G6-02",
@@ -658,8 +732,13 @@
       "priority": 20,
       "lane": "core",
       "kind": "build",
-      "passes": false,
-      "verification": null
+      "passes": true,
+      "verification": {
+        "verdict": "PASS",
+        "by": "gov-verifier",
+        "at": "2026-07-18T21:19:20-0300",
+        "commit": "self"
+      }
     },
     {
       "id": "G6-03",
@@ -673,13 +752,19 @@
         "Zero credencial/PII extra vazada (payload revisado contra doutrina LGPD do repo)."
       ],
       "depends_on": [
-        "G6-01"
+        "G6-01",
+        "G6-00"
       ],
       "priority": 30,
       "lane": "core",
       "kind": "build",
-      "passes": false,
-      "verification": null
+      "passes": true,
+      "verification": {
+        "verdict": "PASS",
+        "by": "gov-verifier",
+        "at": "2026-07-18T21:40:09-0300",
+        "commit": "self"
+      }
     },
     {
       "id": "G6-04",
@@ -700,8 +785,13 @@
       "priority": 40,
       "lane": "core",
       "kind": "build",
-      "passes": false,
-      "verification": null
+      "passes": true,
+      "verification": {
+        "verdict": "PASS",
+        "by": "gov-verifier",
+        "at": "2026-07-18T21:53:23-0300",
+        "commit": "self"
+      }
     }
   ]
 }
