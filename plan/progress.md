@@ -632,3 +632,18 @@
   graphify-out/.lina — git status limpo, hash estável daqui pra frente.
   Re-verify PASS, hash OK contra baseline pós-exclude. 273 unit + 174 test:db.
 - Próxima: G6-02 (ai_dispatch_mode).
+
+## 2026-07-18 — sessão 21 do loop (core) — G6-02
+
+- G6-02 (ai_dispatch_mode): AUDITORIA provou flag AUSENTE em código (só docs/plano;
+  cadeia vendaval não trouxe) → implementação completa, não no-op. Flag em
+  organizations.settings jsonb (chave nova, Zod enum native|external .catch(native)
+  fail-safe) — SEM migration de schema. Dispatcher pula org 'external' ANTES do
+  claim (continue puro: sem claimEvent, sem markEventProcessed, sem tocar
+  consumed_by) → evento fica pending intacto pro Vendaval pegar. Contador
+  skipped_external_dispatch (único skipped_* NÃO-consumido). Regressão native
+  inalterada. loadDispatchModes resolve por org do evento (1 query batch, org-scoped).
+- gov-verifier PASS 1ª rodada SEM findings, hash OK (exclude do Maestro segurou —
+  git status limpo, só meus 3 arquivos). 275 unit. Sem migration.
+- Hash-check estável (0 falso-positivo — o .git/info/exclude resolveu a raiz).
+- Próxima: G6-03 (tools de leitura expõem governança, dep G6-00+G6-01 — ambas feitas).

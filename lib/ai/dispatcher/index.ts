@@ -23,6 +23,7 @@ import { randomUUID } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { aiDispatchModeSchema } from "@/lib/schemas/settings";
 import { checkTenantBudget } from "./budget";
 import { checkRateLimit } from "./rate-limit";
 import {
@@ -48,6 +49,7 @@ export type DispatchOutcome =
   | "rate_limited"
   | "skipped_invalid_payload"
   | "skipped_missing_message"
+  | "skipped_external_dispatch"
   | "error";
 
 export interface DispatchSummary {
@@ -91,6 +93,7 @@ const EMPTY_OUTCOMES = (): Record<DispatchOutcome, number> => ({
   rate_limited: 0,
   skipped_invalid_payload: 0,
   skipped_missing_message: 0,
+  skipped_external_dispatch: 0,
   error: 0,
 });
 
@@ -130,9 +133,23 @@ export async function dispatchAgents(opts: DispatchOptions = {}): Promise<Dispat
   const candidateEvents = (rawEvents ?? []) as EventRow[];
   if (candidateEvents.length === 0) return summary;
 
+  // 1b. Resolve organizations.settings.ai_dispatch_mode for the batch's orgs in
+  //     one query (G6-02). 'external' orgs delegate dispatch to the Vendaval
+  //     runtime; the native dispatcher must leave their events untouched.
+  const dispatchModeByOrg = await loadDispatchModes(candidateEvents);
+
   // 2. Claim each event optimistically (CAS on status='pending'). Skip when
   //    another worker already processed/claimed it in this tick.
   for (const event of candidateEvents) {
+    // G6-02: skip BEFORE claim. Unlike the skipped_* outcomes below (which mark
+    // the event 'done' via markEventProcessed), an 'external' org's event is
+    // NOT consumed here — no claim, no status change, consumed_by intact — so
+    // the external dispatcher (Vendaval) still picks it up as pending.
+    if (dispatchModeByOrg.get(event.organization_id) === "external") {
+      summary.outcomes.skipped_external_dispatch += 1;
+      continue;
+    }
+
     const claimed = await claimEvent(event.id);
     if (!claimed) continue;
     summary.batch_size += 1;
@@ -320,6 +337,37 @@ async function processEvent(event: EventRow): Promise<DispatchOutcome> {
     agent_version_id: matched.version.id,
   });
   return "dispatched";
+}
+
+// ---------------------------------------------------------------------------
+// Dispatch-mode resolution (G6-02)
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve organizations.settings.ai_dispatch_mode for every org present in the
+ * batch, in a single query. Orgs absent from the result (or with an
+ * absent/invalid key) resolve to the default 'native' via the schema's
+ * `.catch("native")`, i.e. they are processed as today.
+ */
+async function loadDispatchModes(events: EventRow[]): Promise<Map<string, string>> {
+  const modes = new Map<string, string>();
+  const orgIds = [...new Set(events.map((e) => e.organization_id))];
+  if (orgIds.length === 0) return modes;
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.from("organizations").select("id, settings").in("id", orgIds);
+  if (error) {
+    logger.warn("[agent-dispatcher] loadDispatchModes failed — defaulting to native", {
+      error: error.message,
+    });
+    return modes;
+  }
+
+  for (const row of (data ?? []) as Array<{ id: string; settings: Record<string, unknown> | null }>) {
+    const raw = row.settings?.ai_dispatch_mode;
+    modes.set(row.id, aiDispatchModeSchema.parse(raw));
+  }
+  return modes;
 }
 
 // ---------------------------------------------------------------------------
