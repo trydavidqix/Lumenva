@@ -666,3 +666,21 @@
   ao .git/info/exclude — hash estável.
 - PENÚLTIMA do épico. Próxima: G6-04 (spec 14 = contrato do Vendaval) → checkpoint
   G6 = GATILHO da FG. Só falta 1.
+
+## 2026-07-18 — sessão 23 do loop (core) — G6-04 (ÉPICO COMPLETO)
+
+- G6-04 (spec 14): docs/specs/14-contrato-governanca-agentes-externos.md — o
+  contrato que a fase FG do Vendaval consome. Estilo edge-contract, cabeçalho
+  "Verificado em 2026-07-18 contra gov/G6 @ ddcc511". §3 as 8 tools de governança
+  com I/O exatos dos schemas Zod reais; §3.7 assignee_kind; §3.4 handoff v2; §4
+  visibility_mode + o que o agente lê; §5 ai_dispatch_mode (external→pending
+  intacto); §6 proibições (cross-org, is_blocked, force_human, bot_silenced_until
+  — 4 mecanismos distintos, corrigindo a simplificação do briefing); §7 mudanças
+  requeridas em consumidores (insumo FG-01); Apêndice A refs.
+- Cobertura BIDIRECIONAL (cuidado do Maestro) provada: TOOL_CATALOG=16, as 8 de
+  governança TODAS na spec, nenhuma omitida; não-governança justificadas. ~20
+  refs arquivo:linha abertas e CORRETAS (verifier conferiu 1 a 1) — sha bate.
+- gov-verifier PASS 1ª rodada SEM findings, hash OK. INB-16 aberto (console.error
+  pré-existente em messages.ts:110).
+- *** FASE G6 COMPLETA (7/7) → checkpoint G6 na sequência = GATILHO da FG do
+  Vendaval. O ÉPICO DE GOVERNANÇA DE ATENDIMENTO FECHA AQUI (G1-G6). ***
