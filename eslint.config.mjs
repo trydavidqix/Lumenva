@@ -7,7 +7,11 @@ import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
 export default defineConfig([
-  globalIgnores([".next/", "node_modules/", "dist/", "supabase/", "next-env.d.ts"]),
+  // `.claude/worktrees/` são checkouts locais de outros agentes (com `.next/` e
+  // `node_modules/` próprios) — nunca fonte deste repo; lintá-los explode o eslint
+  // com dezenas de milhares de falsos positivos em JS gerado. (Na CI, checkout
+  // limpo, o diretório nem existe.)
+  globalIgnores([".next/", "node_modules/", "dist/", "supabase/", "next-env.d.ts", ".claude/worktrees/"]),
   nextPlugin.configs["core-web-vitals"],
   reactHooks.configs.flat.recommended,
   ...tseslint.configs.recommended,
