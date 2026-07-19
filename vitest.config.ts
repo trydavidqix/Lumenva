@@ -2,8 +2,8 @@ import { defineConfig } from "vitest/config";
 import path from "node:path";
 
 export default defineConfig({
-  // JSX runtime automático (como o Next) — necessário p/ testes de componente.
-  esbuild: { jsx: "automatic" },
+  // JSX automático já é o default do transform esbuild no Vite 7+ (vitest 4);
+  // a opção `esbuild.jsx` saiu do tipo — provado pelos testes de componente.
   test: {
     environment: "jsdom",
     setupFiles: ["./tests/setup/vitest.setup.ts"],
