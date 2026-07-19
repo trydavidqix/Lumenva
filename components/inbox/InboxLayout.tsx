@@ -15,6 +15,7 @@ import { InboxFilters, type InboxFiltersValue, type InboxTab } from "./InboxFilt
 import { ChatThread } from "./ChatThread";
 import { Composer, type ComposerHandle } from "./Composer";
 import { ConversationHeader } from "./ConversationHeader";
+import { RetentionNotice } from "./RetentionNotice";
 import { CRMSidePanel } from "./CRMSidePanel";
 import { InboxKeyboardShortcuts } from "./InboxKeyboardShortcuts";
 import { ShortcutsHelpDialog } from "./ShortcutsHelpDialog";
@@ -164,6 +165,7 @@ export function InboxLayout({ initialSelectedId = null }: InboxLayoutProps = {})
             <div className="min-h-0 flex-1 overflow-hidden">
               <ChatThread conversationId={selectedConversation.id} />
             </div>
+            <RetentionNotice conversationId={selectedConversation.id} />
             <Composer
               ref={composerRef}
               conversationId={selectedConversation.id}
