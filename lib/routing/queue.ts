@@ -58,6 +58,32 @@ export async function getQueueStatus(
 }
 
 /**
+ * Mapa id→posição (1-based) da fila de atendimento, na MESMA fonte e ordenação
+ * que o inbox vê (G5-03 / gov-5d): sem dono ∧ status='open', ordenado por
+ * last_inbound_at ASC (nulls last), tiebreak id ASC. O número que a tool MCP
+ * devolve é EXATAMENTE o índice desta lista — bate com a posição da fila do
+ * atendente. Uma query só (a fila é limitada) — evita N+1 numa listagem.
+ */
+export async function getQueuePositions(
+  supabase: SupabaseClient,
+  organizationId: string,
+): Promise<Map<string, number>> {
+  const { data } = await supabase
+    .from("conversations")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .is("assigned_to_user_id", null)
+    .eq("status", "open")
+    .order("last_inbound_at", { ascending: true, nullsFirst: false })
+    .order("id", { ascending: true });
+
+  const rows = (data ?? []) as Array<{ id: string }>;
+  const map = new Map<string, number>();
+  rows.forEach((r, i) => map.set(r.id, i + 1));
+  return map;
+}
+
+/**
  * Posição de uma conversa na fila de espera humana (handoff v2 fallback).
  * Conta as conversas sem dono aguardando (status open|pending) cujo
  * last_inbound_at é ≤ ao da conversa alvo — 1-based, incluindo ela mesma
