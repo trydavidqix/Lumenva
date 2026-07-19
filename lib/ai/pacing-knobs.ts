@@ -63,6 +63,8 @@ export interface ChannelKnobsRow {
   allow_sunday: boolean | null;
   timezone: string | null;
   warmup_daily_caps: unknown;
+  /** idade do número p/ warm-up (linha ausente = engine trata como idade 0). */
+  number_activated_at?: string | null;
 }
 
 /**
