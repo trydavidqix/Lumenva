@@ -25,9 +25,9 @@
     "gov:verify": "pnpm typecheck && pnpm lint && pnpm test:unit"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^3.0.94",
-    "@ai-sdk/google": "^3.0.89",
-    "@ai-sdk/openai": "^3.0.53",
+    "@ai-sdk/anthropic": "^4.0.16",
+    "@ai-sdk/google": "^4.0.18",
+    "@ai-sdk/openai": "^4.0.16",
     "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^3.9.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
@@ -53,7 +53,7 @@
     "@tanstack/react-query-devtools": "^5.101.2",
     "@tanstack/react-virtual": "^3.14.6",
     "@upstash/redis": "^1.38.0",
-    "ai": "^6",
+    "ai": "^7.0.31",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
