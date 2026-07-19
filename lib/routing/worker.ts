@@ -14,9 +14,9 @@
  */
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
-import { isAttendantEligible, OPEN_LOAD_STATUSES } from "@/lib/routing/eligibility";
-import { decideRouting, type RoutingCandidate } from "@/lib/routing/decide";
-import { routingConfigSchema, availabilityScheduleSchema } from "@/lib/schemas/routing";
+import { decideRouting } from "@/lib/routing/decide";
+import { loadEligibleAttendants } from "@/lib/routing/eligibles";
+import { routingConfigSchema } from "@/lib/schemas/routing";
 
 export const ROUTING_WORKER_KEY = "worker.routing.v1";
 export const ROUTING_EVENT_TYPE = "conversation.routing_requested";
@@ -151,7 +151,7 @@ async function processEvent(event: EventRow, now: Date): Promise<RoutingOutcome>
   const alreadyAssigned = Boolean(conv.assigned_to_user_id);
   const eligibles =
     !alreadyAssigned && config.mode === "round_robin"
-      ? await loadEligibles(orgId, now)
+      ? await loadEligibleAttendants(createAdminClient(), orgId, now)
       : [];
 
   const action = decideRouting({
@@ -209,68 +209,6 @@ async function processEvent(event: EventRow, now: Date): Promise<RoutingOutcome>
       return "dead_no_eligible";
     }
   }
-}
-
-/** Elegíveis = disponíveis ∧ dentro do horário ∧ com folga (carga < capacidade). */
-async function loadEligibles(orgId: string, now: Date): Promise<RoutingCandidate[]> {
-  const admin = createAdminClient();
-
-  const { data: avail } = await admin
-    .from("attendant_availability")
-    .select("user_id, capacity, schedule")
-    .eq("organization_id", orgId)
-    .eq("is_available", true);
-
-  const rows = (avail ?? []) as Array<{ user_id: string; capacity: number; schedule: unknown }>;
-  if (rows.length === 0) return [];
-
-  const userIds = rows.map((r) => r.user_id);
-
-  // Carga atual: conversas abertas atribuídas, contadas por dono (1 query).
-  const { data: openConvs } = await admin
-    .from("conversations")
-    .select("assigned_to_user_id")
-    .eq("organization_id", orgId)
-    .in("assigned_to_user_id", userIds)
-    .in("status", OPEN_LOAD_STATUSES as unknown as string[]);
-  const loadByUser = new Map<string, number>();
-  for (const c of (openConvs ?? []) as Array<{ assigned_to_user_id: string | null }>) {
-    if (c.assigned_to_user_id) {
-      loadByUser.set(c.assigned_to_user_id, (loadByUser.get(c.assigned_to_user_id) ?? 0) + 1);
-    }
-  }
-
-  // Última atribuição recebida (rodízio real, sem coluna de estado).
-  const { data: assignEvents } = await admin
-    .from("conversation_assignment_events")
-    .select("to_user_id, created_at")
-    .eq("organization_id", orgId)
-    .in("to_user_id", userIds)
-    .order("created_at", { ascending: false });
-  const lastAssignedByUser = new Map<string, number>();
-  for (const e of (assignEvents ?? []) as Array<{ to_user_id: string | null; created_at: string }>) {
-    if (e.to_user_id && !lastAssignedByUser.has(e.to_user_id)) {
-      lastAssignedByUser.set(e.to_user_id, new Date(e.created_at).getTime());
-    }
-  }
-
-  const candidates: RoutingCandidate[] = [];
-  for (const r of rows) {
-    const currentLoad = loadByUser.get(r.user_id) ?? 0;
-    const schedule = availabilityScheduleSchema.parse(r.schedule ?? {});
-    const eligible = isAttendantEligible(
-      { isAvailable: true, capacity: r.capacity, currentLoad, schedule },
-      now,
-    );
-    if (eligible) {
-      candidates.push({
-        userId: r.user_id,
-        currentLoad,
-        lastAssignedAt: lastAssignedByUser.get(r.user_id) ?? null,
-      });
-    }
-  }
-  return candidates;
 }
 
 // --- event lifecycle (mesma mecânica do agent-dispatcher; status ∈ pending|processing|done|dead) ---

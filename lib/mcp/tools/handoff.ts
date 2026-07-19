@@ -1,23 +1,28 @@
 /**
- * MCP special tool — crm_request_human_handoff (Spec 11 §3.3).
+ * MCP special tool — crm_request_human_handoff v2 (Spec 11 §3.3 + G6-01).
  *
  * Side effects (todos via `triggerHandoff` orchestrator + assignment best-effort):
  *   - conversations.status='pending', bot_silenced_until='infinity'
  *   - crm_lead_activities INSERT (type='handoff_triggered') quando há lead vinculado
  *   - event_log INSERT event_type='ai.handoff_triggered'
  *   - Realtime broadcast `org:<org>:queue` event=handoff_pending
- *   - api_audit_log action='ai.handoff_triggered'
- *   - G3-02: handoff é reassignment auditado — com elegível (round-robin agent+),
- *     fn_conversation_assign move kind ai→'user' + evento reason='handoff' na
- *     MESMA transação; sem elegível, conversa vai à fila (assigned null, kind
- *     null) e o evento reason='handoff' é gravado do mesmo jeito.
+ *   - api_audit_log action='ai.handoff_triggered' (+ mcp.tool_called no server core)
  *
- * Nenhum mirror REST. Wave 4 introduz como tool MCP only.
+ * v2 (G6-01 / INB-12): a ESCOLHA do destino usa o roteamento G5 — UM algoritmo:
+ *   - `target_user_id` opcional: se passado E elegível agora (disponível ∧ horário
+ *     ∧ folga), atribui a ele;
+ *   - senão, rodízio real `selectRoundRobin` sobre os elegíveis (mesma lógica do
+ *     worker de roteamento — o antigo pickRoundRobinAssignee random foi removido);
+ *   - sem ninguém elegível → fila (fallback), retornando a posição.
+ *   Retorno estruturado: { assigned_to } OU { queued: true, position }.
+ *   Efeitos auditados (assignment event reason='handoff') preservados nos dois casos.
  */
 import { z } from "zod";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { triggerHandoff } from "@/lib/ai/handoff/orchestrator";
+import { loadEligibleAttendants } from "@/lib/routing/eligibles";
+import { selectRoundRobin } from "@/lib/routing/decide";
+import { getQueuePosition } from "@/lib/routing/queue";
 import { logger } from "@/lib/logger";
 import type { McpToolDefinition } from "../types";
 
@@ -25,42 +30,19 @@ const inputShape = {
   conversation_id: z.string().uuid(),
   reason: z.string().min(1).max(500).default("requested_human"),
   urgency: z.enum(["low", "normal", "high"]).default("normal"),
-  suggested_assignee_role: z
-    .enum(["agent", "manager", "admin"])
-    .optional()
-    .default("agent"),
+  /** Atendente alvo opcional: só atribui se elegível agora; senão cai no rodízio G5. */
+  target_user_id: z.string().uuid().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 };
-
-const ELIGIBLE_ROLES_BY_MIN: Record<string, string[]> = {
-  agent: ["agent", "manager", "admin"],
-  manager: ["manager", "admin"],
-  admin: ["admin"],
-};
-
-async function pickRoundRobinAssignee(
-  supabase: SupabaseClient,
-  organizationId: string,
-  minRole: string,
-): Promise<string | null> {
-  const eligibleRoles = ELIGIBLE_ROLES_BY_MIN[minRole] ?? ["agent", "manager", "admin"];
-  const { data, error } = await supabase
-    .from("user_organizations")
-    .select("user_id, role")
-    .eq("organization_id", organizationId)
-    .is("revoked_at", null)
-    .in("role", eligibleRoles);
-
-  if (error || !data || data.length === 0) return null;
-  const idx = Math.floor(Math.random() * data.length);
-  const picked = data[idx] as { user_id: string };
-  return picked?.user_id ?? null;
-}
 
 export const crmRequestHumanHandoff: McpToolDefinition<typeof inputShape> = {
   name: "crm_request_human_handoff",
   description:
-    "Aciona handoff bot→humano. Marca a conversa como pending, silencia o bot, atribui round-robin a um agente disponível, registra activity + event_log + audit. Use quando o cliente pedir atendente humano ou o agente identificar limite da automação.",
+    "Aciona handoff bot→humano. Marca a conversa como pending, silencia o bot e escolhe o " +
+    "destino pelo roteamento G5: atende o target_user_id se elegível agora, senão rodízio " +
+    "entre os disponíveis; sem ninguém elegível vai para a fila. Registra activity + " +
+    "event_log + audit. Retorna assigned_to OU queued+position. Use quando o cliente pedir " +
+    "atendente humano ou o agente identificar limite da automação.",
   inputSchema: inputShape,
   category: "handoff",
   requiresRole: "agent",
@@ -69,7 +51,7 @@ export const crmRequestHumanHandoff: McpToolDefinition<typeof inputShape> = {
     // Conversation must belong to org (defense in depth — service role bypassa RLS).
     const { data: conv, error: convErr } = await ctx.supabase
       .from("conversations")
-      .select("id, organization_id, contact_id")
+      .select("id, organization_id, contact_id, last_inbound_at")
       .eq("id", input.conversation_id)
       .maybeSingle();
     if (convErr) throw new Error(convErr.message);
@@ -106,26 +88,28 @@ export const crmRequestHumanHandoff: McpToolDefinition<typeof inputShape> = {
     });
 
     let assignedUserId: string | null = null;
+    let queued = false;
+    let position: number | null = null;
+
     if (result.triggered) {
-      const picked = await pickRoundRobinAssignee(
-        ctx.supabase,
-        ctx.organizationId,
-        input.suggested_assignee_role ?? "agent",
-      );
+      const now = new Date();
+      // INB-12: mesmos elegíveis do worker de roteamento (G5) — um algoritmo só.
+      const eligibles = await loadEligibleAttendants(ctx.supabase, ctx.organizationId, now);
+      const picked =
+        input.target_user_id && eligibles.some((e) => e.userId === input.target_user_id)
+          ? input.target_user_id
+          : selectRoundRobin(eligibles);
+
       if (picked) {
         // G3-02: reassignment auditado — UPDATE (kind ai→'user') + evento
         // reason='handoff' na MESMA transação (fn_conversation_assign, 0031/0032).
-        // Service role: auth.uid() null → changed_by null (sistema).
-        const { data: rows, error: assignErr } = await ctx.supabase.rpc(
-          "fn_conversation_assign",
-          {
-            p_organization_id: ctx.organizationId,
-            p_conversation_id: input.conversation_id,
-            p_to_user_id: picked,
-            p_reason: "handoff",
-            p_enforce_expected: false,
-          },
-        );
+        const { data: rows, error: assignErr } = await ctx.supabase.rpc("fn_conversation_assign", {
+          p_organization_id: ctx.organizationId,
+          p_conversation_id: input.conversation_id,
+          p_to_user_id: picked,
+          p_reason: "handoff",
+          p_enforce_expected: false,
+        });
         if (assignErr || !Array.isArray(rows) || rows.length === 0) {
           logger.warn("[mcp.handoff] assignment failed", {
             conversation_id: input.conversation_id,
@@ -135,9 +119,10 @@ export const crmRequestHumanHandoff: McpToolDefinition<typeof inputShape> = {
           assignedUserId = picked;
         }
       }
+
       if (!assignedUserId) {
-        // Fila (roteamento vigente sem elegível): sem dono, kind sai de 'ai' →
-        // null; o handoff continua auditado (evento reason='handoff', from/to null).
+        // Fila (roteamento G5 sem elegível): sem dono, kind sai de 'ai' → null; o
+        // handoff continua auditado (evento reason='handoff', from/to null).
         const { error: kindErr } = await ctx.supabase
           .from("conversations")
           .update({ assignee_kind: null })
@@ -165,12 +150,24 @@ export const crmRequestHumanHandoff: McpToolDefinition<typeof inputShape> = {
             error: eventErr.message,
           });
         }
+        queued = true;
+        position = await getQueuePosition(
+          ctx.supabase,
+          ctx.organizationId,
+          conv.last_inbound_at ?? null,
+          now,
+        );
       }
     }
 
     return {
       handoff_recorded: result.triggered,
       conversation_id: input.conversation_id,
+      // Retorno estruturado v2: um destes dois lados é populado.
+      assigned_to: assignedUserId,
+      queued,
+      position,
+      // Compat com o contrato anterior (callers que liam assigned_to_user_id).
       assigned_to_user_id: assignedUserId,
       idempotent: !result.triggered && result.reason === "idempotent_5s",
       next_action:

@@ -547,3 +547,143 @@
 - Checkpoint G5 emitido (loop/checkpoints/G5-report.md, COMPLETO 4/4), loop
   PARADO aguardando aprovação do dono (G5.approved). 9 INB abertos no §3.
   INB-10 é pré-condição da G6 (o dono já concordou).
+
+## 2026-07-18 — virada de fase G5 → main + integração origin (watchdog/Maestro)
+
+- G5 aprovada pelo dono; gov/G5 mergeada em main. Surpresa: origin/main tinha 55
+  commits novos (PRs #7 redirect, #8 webhooks-automation com migration 0038,
+  #9 oss-hygiene). Integração com 5 conflitos aditivos resolvidos keep-both
+  (schemas, vercel crons, audit unions, database.types costurado, baseline
+  0038→0039→0040). typecheck zerado, 256 unit verdes (1 flake de webhook na 1ª
+  rodada, verde na 2ª). Push d8a7880; gov/G6 criada.
+- Decisões do dono: INB-10 → G6-00 (prio 2, pré-condição G6-03); INB-13 → G6-05;
+  INB-14 → G6-06. G6-03 agora depende de G6-00. INBs marcados answered.
+- G6 = última fase do épico (7 features: 00/05/06/01/02/03/04).
+
+## 2026-07-18 — sessão 17 do loop (core) — G6-00 (fase G6 aberta)
+
+- G6-00 (INB-10, pré-condição da G6-03): migration 0042 tripla. SELECT de
+  crm_lead_activities/crm_lead_links via EXISTS no lead-pai (fn_can_view_lead da
+  G4-03 reusada, NÃO scalar-subquery — lição G4-01). crm_lead_links FOR ALL
+  DROPADA e re-expressa por-comando (a armadilha). Write ORG-SCOPE preservado
+  byte-idêntico (cuidado do Maestro: timeline polimórfica escrita por service
+  role/IA/painel NÃO pode quebrar) — teste positivo service-role-insert=1 +
+  agent-insert-próprio=1.
+- NNNN: 0041 já tomado por fix/webhooks-secret-encryption (colega) → usei 0042.
+- Load destravou (57→9, dono fechou abas do Chrome). Smoke 256/256 (webhooks do
+  colega na main agora). gov-verifier PASS 1ª rodada SEM findings, hash OK.
+  gov-5e 8/8 (cross-atendente 0, próprio 1, manager todos, service role escreve).
+- INB-10 fechado. Próxima: G6-05 (prio 4, forward-fix agent-dispatcher status inválido).
+
+## 2026-07-18 — sessão 18 do loop (core) — G6-05
+
+- G6-05 (INB-13, bug de runtime): dispatcher gravava status 'processed'/'failed'
+  que violam event_log_status_check (só pending|processing|done|dead) — UPDATE
+  falhava em runtime e o evento ficava preso em pending (reprocessamento latente).
+  Fix cirúrgico: :403 processed→done, :456 failed→dead + doc-comment. SEM migration
+  (constraint certa, código errado). Espelha o routing-worker da G5-02.
+- Cuidado do Maestro provado: :456 é o ÚNICO ramo terminal (catch de dispatchAgents);
+  o retry já é função SEPARADA (requeueEvent :279, pending+backoff) — NÃO colapsei
+  retry em dead. Zero leitor downstream de 'processed'/'failed' (todos filtram 'pending').
+- Invariante dispatcher-event-status: prova a violação com os valores antigos (psql
+  ERROR real) + ciclo pending→processing→done/dead. gov-verifier PASS 1ª rodada
+  SEM findings, hash OK. 256 unit + 171 test:db.
+- Achado de infra (não-código): scripts/test-db.sh usa porta/nome fixos → rodadas
+  paralelas entre terminais colidem (docker rm cruzado mata container no meio).
+  Candidato a INB: sufixo por PID na porta/nome. INB-13 fechado.
+- Próxima: G6-06 (prio 6, RLS de user_organizations SELECT org-wide manager+, INB-14).
+
+## 2026-07-18 — sessão 19 do loop (core) — G6-06 (3 mini-features pré COMPLETAS)
+
+- G6-06 (INB-14): migration 0044 — user_orgs_select 'admin'→'manager' (só SELECT;
+  self-read preservado pra todos; write insert/update/delete INALTERADO em admin).
+  Recursão descartada (cuidado do Maestro): fn_role_at_least é STABLE SECURITY
+  DEFINER, bypassa RLS internamente — e a policy já a chamava, prova viva.
+- gov-1b (invariante novo): manager lê todas=5, agent=1 (self-read), cross-org=0
+  (manager A não lê org B — threshold é por-org). team-list-roster: GET /team
+  volta o roster completo pro manager (era 1). Workaround /attendants G5-04
+  (admin client) intacto. gov-verifier PASS 1ª rodada SEM findings, hash OK.
+  258 unit + 174 test:db. INB-14 fechado.
+- test:db usou TEST_DB_PORT próprio (workaround do INB-15 — colisão de porta
+  entre terminais; funcionou).
+- 3 MINI-FEATURES PRÉ COMPLETAS (G6-00/05/06 — INB-10/13/14 fechados). Agora as
+  features MCP core: G6-01 (tools assign/tags/queue + handoff v2 unifica os 2
+  round-robins do INB-12) → G6-02 → G6-03 → G6-04 (spec 14) → checkpoint G6 =
+  gatilho da FG do Vendaval.
+- Próxima: G6-01 (MCP tools de governança).
+
+## 2026-07-18 — sessão 20 do loop (core) — G6-01 (core MCP)
+
+- G6-01 (MCP tools de governança): 3 tools novas (crm_assign_conversation via
+  fn_conversation_assign com optimistic-lock p_enforce_expected — idempotência
+  sob CORRIDA prova evento=1, não só replay; crm_manage_tags conv|contact|lead
+  com normalizador G3-05; crm_get_queue_status read-only {queue_size,avg_wait,
+  online_eligible} documentado) + handoff v2 (roteamento G5, target opcional,
+  fallback fila+posição, retorno estruturado assigned_to|queued). Todas no
+  catalog.ts (sanity 16 tools 1:1) + audit em toda escrita. Sem migration.
+- INB-12 FECHADO (unificação): pickRoundRobinAssignee removido; loadEligibleAttendants
+  extraído pra eligibles.ts, consumido por worker+handoff+queue — um algoritmo só.
+- Cuidados do Maestro provados: idempotência sob corrida (não clobbera transfer
+  concorrente → assignment_conflict); force_human/is_blocked não removidos (o
+  antigo não os tinha no path de atribuição; bot_silenced_until mantido).
+- INCIDENTE: 2º falso-positivo de hash (AGENTS/GEMINI regeneraram na verificação).
+  Prova: stash dos 2 → hash voltou ao BEFORE exato. §3 aplicado (re-verify fresco,
+  não racionalizei). Maestro RESOLVEU na raiz: .git/info/exclude p/ AGENTS/GEMINI/
+  graphify-out/.lina — git status limpo, hash estável daqui pra frente.
+  Re-verify PASS, hash OK contra baseline pós-exclude. 273 unit + 174 test:db.
+- Próxima: G6-02 (ai_dispatch_mode).
+
+## 2026-07-18 — sessão 21 do loop (core) — G6-02
+
+- G6-02 (ai_dispatch_mode): AUDITORIA provou flag AUSENTE em código (só docs/plano;
+  cadeia vendaval não trouxe) → implementação completa, não no-op. Flag em
+  organizations.settings jsonb (chave nova, Zod enum native|external .catch(native)
+  fail-safe) — SEM migration de schema. Dispatcher pula org 'external' ANTES do
+  claim (continue puro: sem claimEvent, sem markEventProcessed, sem tocar
+  consumed_by) → evento fica pending intacto pro Vendaval pegar. Contador
+  skipped_external_dispatch (único skipped_* NÃO-consumido). Regressão native
+  inalterada. loadDispatchModes resolve por org do evento (1 query batch, org-scoped).
+- gov-verifier PASS 1ª rodada SEM findings, hash OK (exclude do Maestro segurou —
+  git status limpo, só meus 3 arquivos). 275 unit. Sem migration.
+- Hash-check estável (0 falso-positivo — o .git/info/exclude resolveu a raiz).
+- Próxima: G6-03 (tools de leitura expõem governança, dep G6-00+G6-01 — ambas feitas).
+
+## 2026-07-18 — sessão 22 do loop (core) — G6-03
+
+- G6-03 (tools de leitura expõem governança): as 4 read tools ganham campos
+  ADITIVOS — conversation: assignee_kind, assigned_to_user_name, tags,
+  queue_position; lead: owner_user_name, stage {id,name}, tags. Só superfície
+  (RLS já fechada G6-00/G4). Sem migration.
+- Cuidado do Maestro (coerência queue_position↔inbox) provado: getQueuePositions
+  NOVO (batch, last_inbound_at ASC nulls last + id ASC) = MESMA ordem da G5-03
+  (verifier conferiu contra commit 14b4ebd, não a afirmação). Teste de coerência:
+  3 conversas 30/10/2min → tool pos 1/2/3 = inbox. NÃO reusou o getQueuePosition
+  antigo (count-based, sem tiebreak) que divergiria — decisão certa.
+- LGPD: payload expõe só id+full_name; teste asserta email/phone/user_metadata
+  AUSENTES. N+1 resolvido (nomes dedupe batch, queue 1 query, stages 1 query).
+- Fixtures 3 estados (atribuída/fila/IA). gov-verifier PASS 1ª rodada SEM
+  findings, hash OK. 282 unit. Adicionei prova-clipboard-token-http.png (externo)
+  ao .git/info/exclude — hash estável.
+- PENÚLTIMA do épico. Próxima: G6-04 (spec 14 = contrato do Vendaval) → checkpoint
+  G6 = GATILHO da FG. Só falta 1.
+
+## 2026-07-18 — sessão 23 do loop (core) — G6-04 (ÉPICO COMPLETO)
+
+- G6-04 (spec 14): docs/specs/14-contrato-governanca-agentes-externos.md — o
+  contrato que a fase FG do Vendaval consome. Estilo edge-contract, cabeçalho
+  "Verificado em 2026-07-18 contra gov/G6 @ ddcc511". §3 as 8 tools de governança
+  com I/O exatos dos schemas Zod reais; §3.7 assignee_kind; §3.4 handoff v2; §4
+  visibility_mode + o que o agente lê; §5 ai_dispatch_mode (external→pending
+  intacto); §6 proibições (cross-org, is_blocked, force_human, bot_silenced_until
+  — 4 mecanismos distintos, corrigindo a simplificação do briefing); §7 mudanças
+  requeridas em consumidores (insumo FG-01); Apêndice A refs.
+- Cobertura BIDIRECIONAL (cuidado do Maestro) provada: TOOL_CATALOG=16, as 8 de
+  governança TODAS na spec, nenhuma omitida; não-governança justificadas. ~20
+  refs arquivo:linha abertas e CORRETAS (verifier conferiu 1 a 1) — sha bate.
+- gov-verifier PASS 1ª rodada SEM findings, hash OK. INB-16 aberto (console.error
+  pré-existente em messages.ts:110).
+- *** FASE G6 COMPLETA (7/7) → checkpoint G6 na sequência = GATILHO da FG do
+  Vendaval. O ÉPICO DE GOVERNANÇA DE ATENDIMENTO FECHA AQUI (G1-G6). ***
+- Checkpoint G6 emitido (loop/checkpoints/G6-report.md, COMPLETO 7/7), loop
+  PARADO aguardando aprovação do dono (G6.approved = GATILHO da FG do Vendaval).
+  7 INB abertos no §3. O ÉPICO DE GOVERNANÇA (G1-G6) FECHA na aprovação.
