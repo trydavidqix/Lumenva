@@ -48,8 +48,14 @@ function check(cond: boolean, label: string): void {
   console.log(`✓ ${label}`);
 }
 
-// Prefixo estável LONGO e determinístico (~6k tokens): precisa ultrapassar o
-// mínimo cacheável do modelo. Zero conteúdo volátil (regra do stable-prefix).
+// Prefixo LONGO (~18k tokens de request): precisa ultrapassar o mínimo
+// cacheável do modelo. SALT por execução: força cache FRIO a cada run do smoke
+// (sem ele, o prefixo do run anterior ainda vivo no TTL de 1h faz a chamada 1
+// LER em vez de ESCREVER e o assert de write quebra). Dentro do MESMO run o
+// salt é constante — a byte-identidade entre as 2 chamadas (o que a doutrina
+// exige em produção) continua sendo exatamente o que se afere.
+const RUN_SALT = process.env.SMOKE_SALT ?? `run-${Date.now()}`;
+
 function bigSystem(): string {
   const bloco = [
     'Você é o assistente de vendas da organização de teste do smoke.',
@@ -58,7 +64,10 @@ function bigSystem(): string {
     'Se o cliente pedir atendimento humano, confirme que a transferência será feita pelo sistema.',
     'Produtos do catálogo de teste: parafuso M3 (R$ 1), porca M3 (R$ 0,50), arruela lisa (R$ 0,25).',
   ].join(' ');
-  return Array.from({ length: 120 }, (_, i) => `[secao ${String(i + 1).padStart(3, '0')}] ${bloco}`).join('\n');
+  return [
+    `[smoke ${RUN_SALT}]`,
+    ...Array.from({ length: 120 }, (_, i) => `[secao ${String(i + 1).padStart(3, '0')}] ${bloco}`),
+  ].join('\n');
 }
 
 async function main(): Promise<void> {
