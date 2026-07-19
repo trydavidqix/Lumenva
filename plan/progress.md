@@ -647,3 +647,22 @@
   git status limpo, só meus 3 arquivos). 275 unit. Sem migration.
 - Hash-check estável (0 falso-positivo — o .git/info/exclude resolveu a raiz).
 - Próxima: G6-03 (tools de leitura expõem governança, dep G6-00+G6-01 — ambas feitas).
+
+## 2026-07-18 — sessão 22 do loop (core) — G6-03
+
+- G6-03 (tools de leitura expõem governança): as 4 read tools ganham campos
+  ADITIVOS — conversation: assignee_kind, assigned_to_user_name, tags,
+  queue_position; lead: owner_user_name, stage {id,name}, tags. Só superfície
+  (RLS já fechada G6-00/G4). Sem migration.
+- Cuidado do Maestro (coerência queue_position↔inbox) provado: getQueuePositions
+  NOVO (batch, last_inbound_at ASC nulls last + id ASC) = MESMA ordem da G5-03
+  (verifier conferiu contra commit 14b4ebd, não a afirmação). Teste de coerência:
+  3 conversas 30/10/2min → tool pos 1/2/3 = inbox. NÃO reusou o getQueuePosition
+  antigo (count-based, sem tiebreak) que divergiria — decisão certa.
+- LGPD: payload expõe só id+full_name; teste asserta email/phone/user_metadata
+  AUSENTES. N+1 resolvido (nomes dedupe batch, queue 1 query, stages 1 query).
+- Fixtures 3 estados (atribuída/fila/IA). gov-verifier PASS 1ª rodada SEM
+  findings, hash OK. 282 unit. Adicionei prova-clipboard-token-http.png (externo)
+  ao .git/info/exclude — hash estável.
+- PENÚLTIMA do épico. Próxima: G6-04 (spec 14 = contrato do Vendaval) → checkpoint
+  G6 = GATILHO da FG. Só falta 1.
