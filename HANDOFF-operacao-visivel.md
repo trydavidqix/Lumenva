@@ -24,6 +24,12 @@
 | F1 central de avisos | ✅ local | GET `/api/v1/ai/inbox` (+open_count) e PATCH `/api/v1/ai/inbox/[id]` (agent+, audit `ai.inbox_item_updated`); página `/app/ai/inbox` (abas Abertos/Resolvidos, badge severidade, marcar resolvido/reabrir); sino `AlertsBell` no TopBar com contador. Playwright localhost: `.superpowers/evidence/operacao-visivel-f1-localhost.png` (3 avisos seedados → resolve 1 → sino 3→2 ao vivo). Falta: prova VPS. |
 | F3 propostas flywheel | ✅ local | backend do B (GET `/api/v1/ai/agents/[id]/proposals` + POST apply, migration 0053 aplicada no remoto via Management API); UI = aba "Propostas" no AgentTabs (`ProposalsPanel`: badge pendente/aplicada, botão admin "Aplicar como versão nova"). Playwright localhost: apply → versão 4 published, ponteiro movido, proposta com applied_version_id (SQL provado). Caminho de veto TESTADO: sessão offline → 422 `channel_session_offline`, proposta segue pendente. Evidência `operacao-visivel-f3-localhost.png`. Falta: prova VPS. |
 
+## Paridade VPS (2ª prova — em curso)
+
+- VPS = http://129.121.45.100:18080, compose `deskcomm-fusion`, banco Supabase cloud `cnbzyadxiwrfrylywejj` (role `agent_worker` no `.env`).
+- Branch `feat/operacao-visivel` (commit 551ca1f) publicada por git bundle + `git reset --hard`; rebuild da imagem `app` em curso (VPS tinha 7.6G RAM sem swap → o `tsc` do build estourava e derrubava a conexão; criei swapfile 4G, build voltou a passar do tsc).
+- **Bloqueio F3 na VPS:** migration 0053 (colunas `applied_*` em `flywheel_distiller_proposals`) não está no banco da VPS (`applied_cols=0`) e o `agent_worker` não é dono da tabela; projeto está fora do meu token de Management API. Delegado ao Terminal B (dono das credenciais do deploy) aplicar o ALTER idempotente. F1/F2i/F2ii não dependem da 0053.
+
 ## Decisões e problemas
 
 - Tradução dos vetos é módulo puro (`lib/inbox/retention-copy.ts`): 3 famílias — proteção (pacing/spinning, tom âmbar), conformidade (stop/LGPD, tom destructive), qualidade (promise/disclosure, tom neutro; o assistente corrige sozinho).
