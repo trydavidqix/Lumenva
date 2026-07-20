@@ -203,17 +203,8 @@ Pra **vulnerabilidades de segurança**, **NÃO abra issue pública** — use o [
 - **LGPD** — export e redact via workers, anonimização em cascata, consentimento auditado.
 - **Self-host** — `hostgator-setup-kit` (app + WAHA + banco com 1 comando), `baseline.sql` auto-curativo, runbook de produção.
 - **Webhooks & automação** — gatilhos de eventos do CRM pra sistemas externos.
-
-### ✅ Concluído — Governança de Atendimento
-
-Épico guiado por invariantes (suíte de 100+ testes como eval), fase a fase:
-
-- ✅ **G1** — provas & fundação (invariantes dos 7 eixos de dor, CI consolidado)
-- ✅ **G2** — RBAC server-side em toda a API (matriz papel×endpoint)
-- ✅ **G3** — atribuição & transferência auditadas; IA como assignee de 1ª classe; tags
-- ✅ **G4** — escopo de visualização por papel (RLS) + métricas por atendente
-- ✅ **G5** — roteamento automático, fila com posição e painel de gestão
-- ✅ **G6** — contrato de governança pra agentes de IA externos (MCP tools públicas) — [`docs/specs/14-contrato-governanca-agentes-externos.md`](docs/specs/14-contrato-governanca-agentes-externos.md)
+- **Governança de atendimento** — RBAC server-side em toda a API, atribuição e transferência auditadas (IA como assignee de 1ª classe), visualização por papel (RLS) + métricas por atendente, roteamento automático com fila e painel de gestão, e contrato de governança pra agentes de IA externos ([`docs/specs/14`](docs/specs/14-contrato-governanca-agentes-externos.md)). Épico guiado por 100+ invariantes (G1–G6).
+- **Operação visível** — telas pro operador entender o agente: motivo da retenção anti-ban traduzido na conversa, central de avisos com severidade, controle de proteção de envio (janela/ritmo/teto) e propostas do flywheel aplicáveis como versão nova (com gate humano).
 
 ### 🔮 Próximo
 
