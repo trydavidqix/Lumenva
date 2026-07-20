@@ -204,7 +204,7 @@ Pra **vulnerabilidades de segurança**, **NÃO abra issue pública** — use o [
 - **Self-host** — `hostgator-setup-kit` (app + WAHA + banco com 1 comando), `baseline.sql` auto-curativo, runbook de produção.
 - **Webhooks & automação** — gatilhos de eventos do CRM pra sistemas externos.
 
-### 🔄 Em andamento — Governança de Atendimento
+### ✅ Concluído — Governança de Atendimento
 
 Épico guiado por invariantes (suíte de 100+ testes como eval), fase a fase:
 
@@ -212,10 +212,12 @@ Pra **vulnerabilidades de segurança**, **NÃO abra issue pública** — use o [
 - ✅ **G2** — RBAC server-side em toda a API (matriz papel×endpoint)
 - ✅ **G3** — atribuição & transferência auditadas; IA como assignee de 1ª classe; tags
 - ✅ **G4** — escopo de visualização por papel (RLS) + métricas por atendente
-- 🔄 **G5** — roteamento automático, fila com posição e painel de gestão *(fechando)*
-- 🔜 **G6** — contrato de governança pra agentes de IA externos (MCP tools públicas)
+- ✅ **G5** — roteamento automático, fila com posição e painel de gestão
+- ✅ **G6** — contrato de governança pra agentes de IA externos (MCP tools públicas) — [`docs/specs/14-contrato-governanca-agentes-externos.md`](docs/specs/14-contrato-governanca-agentes-externos.md)
 
 ### 🔮 Próximo
+
+- **Fase FG** — agente Vendaval consome a governança via `ai_dispatch_mode=external` 🔜 *(aguardando priorização do dono)*
 
 - **MCP público** — capabilities do CRM expostas pro ecossistema de agentes.
 - **Integrações** — VTEX e Shopify via adapter pattern (Nuvemshop já entregue).
