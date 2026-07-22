@@ -1,7 +1,8 @@
 # DeskcommCRM self-hosted — instalação em VPS (com agente de IA)
 
-> CRM operacional para e-commerce com agente SDR de IA integrado (WhatsApp via
-> WAHA). Este guia sobe TUDO numa VPS com `docker compose`: app web, worker do
+> Sistema operacional de vendas open source com agente SDR de IA integrado
+> (WhatsApp via WAHA) — pra qualquer negócio que vende conversando.
+> Este guia sobe TUDO numa VPS com `docker compose`: app web, worker do
 > agente, WAHA e proxy com HTTPS automático. Tempo estimado: ~30 min.
 
 ## O que você precisa antes
