@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { demoCta, navigation, shellContent } from "@/content/site";
 import { Button } from "@/components/ui/Button";
@@ -17,30 +18,77 @@ export function MobileNavigation({
   const dialogId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const modalRootRef = useRef<HTMLDivElement>(null);
+  const shouldRestoreFocusRef = useRef(false);
 
   const close = useCallback(() => {
+    shouldRestoreFocusRef.current = true;
     setIsOpen(false);
-    triggerRef.current?.focus();
   }, []);
 
   useEffect(() => {
     if (!isOpen) return;
 
-    dialogRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    const dialog = dialogRef.current;
+    const modalRoot = modalRootRef.current;
+    if (!dialog || !modalRoot) return;
+
+    dialog.querySelector<HTMLButtonElement>("button")?.focus();
     const previousOverflow = document.body.style.overflow;
+    const outsideRoots = Array.from(document.body.children).filter(
+      (element) => element !== modalRoot,
+    );
+    const previousInert = outsideRoots.map((element) => ({
+      element,
+      hadInert: element.hasAttribute("inert"),
+    }));
+
     document.body.style.overflow = "hidden";
+    outsideRoots.forEach((element) => element.setAttribute("inert", ""));
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") close();
+      if (event.key === "Escape") {
+        event.preventDefault();
+        close();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>("a[href], button:not([disabled])"),
+      );
+      const first = focusable[0];
+      const last = focusable.at(-1);
+
+      if (!first || !last) return;
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
 
     document.addEventListener("keydown", onKeyDown);
 
     return () => {
       document.body.style.overflow = previousOverflow;
+      previousInert.forEach(({ element, hadInert }) => {
+        if (!hadInert) element.removeAttribute("inert");
+      });
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [close, isOpen]);
+
+  useEffect(() => {
+    if (isOpen || !shouldRestoreFocusRef.current) return;
+
+    triggerRef.current?.focus();
+    shouldRestoreFocusRef.current = false;
+  }, [isOpen]);
 
   return (
     <>
@@ -55,10 +103,11 @@ export function MobileNavigation({
       >
         <span aria-hidden="true" className={styles.menuIcon} />
       </button>
-      {isOpen ? (
-        <>
+      {isOpen
+        ? createPortal(
+            <div ref={modalRootRef}>
           <button
-            aria-label={shellContent.closeMenuLabel}
+            aria-label={shellContent.closeMenuBackdropLabel}
             className={styles.backdrop}
             onClick={close}
             type="button"
@@ -76,8 +125,8 @@ export function MobileNavigation({
                 {shellContent.mobileNavigationLabel}
               </p>
               <Button
-                className={styles.closeButton}
-                onClick={close}
+              className={styles.closeButton}
+              onClick={close}
                 variant="secondary"
               >
                 {shellContent.closeMenuLabel}
@@ -94,8 +143,10 @@ export function MobileNavigation({
               {demoCta.label}
             </Button>
           </div>
-        </>
-      ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

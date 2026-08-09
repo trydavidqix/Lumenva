@@ -20,6 +20,8 @@
 
 All commands exit 0.
 
+Remediation commit: `fix(website): contain mobile navigation dialog`.
+
 ## Commit
 
 `feat(website): add marketing layout and navigation`
@@ -36,4 +38,17 @@ All commands exit 0.
 
 ## Concerns
 
-The navigation targets are the planned public Next routes and remain intentionally unimplemented until Task 7; Task 5 does not add placeholder pages or fabricated content.
+Dedicated Task 7 route templates can replace the shared minimal route entry without changing public URLs or navigation data.
+
+## Remediation
+
+- Added red regression coverage for dialog Tab and Shift+Tab containment, Escape closing with focus restoration, and an inert outside render root.
+- Added red regression coverage that every registered navigation destination and the demo CTA target render through the public route entry.
+- Green implementation portals the dialog to `body`, makes every non-modal body root inert while open, contains Tab focus, restores trigger focus after close, and preserves Escape and backdrop closing.
+- Added a single static `[slug]` route entry backed by the typed public-route registry. It provides factual, minimal landing content only; dedicated Task 7 routes can replace it without changing navigation targets.
+
+Remediation verification:
+
+`pnpm --dir website test tests/components/header.test.tsx tests/components/public-routes.test.tsx && pnpm --dir website typecheck && pnpm --dir website lint`
+
+All commands exit 0.
