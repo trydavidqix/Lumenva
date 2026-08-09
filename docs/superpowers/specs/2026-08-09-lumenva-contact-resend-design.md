@@ -29,6 +29,8 @@ Deliver contact-form submissions from the Lumenva website to `contato@lumenva.pt
 
 ## Infrastructure
 
+- Create a dedicated Vercel project named `lumenva-website`, rooted at `website/` and connected to `feat/lumenva-website`.
+- Keep the CRM deployment separate from the institutional website deployment.
 - Verify `lumenva.pt` in Resend with the records supplied by Resend, managed in Cloudflare.
 - Set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` in Vercel Production and Preview.
 - Deploy the `feat/lumenva-website` branch after verification.
