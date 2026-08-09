@@ -1,0 +1,58 @@
+.backdrop {
+  background: color-mix(in srgb, var(--color-ink) 22%, transparent);
+  inset: 0;
+  position: fixed;
+  z-index: var(--z-menu);
+}
+
+.dialog {
+  background: var(--color-white);
+  border-left: 1px solid var(--color-border);
+  box-shadow: var(--shadow-panel);
+  display: grid;
+  gap: var(--space-6);
+  inset: 0 0 0 auto;
+  max-width: min(100%, 24rem);
+  padding: var(--space-5);
+  position: fixed;
+  width: min(100%, 24rem);
+  z-index: var(--z-modal);
+}
+
+.dialogHeader {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.dialogTitle {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.closeButton {
+  min-width: 2.75rem;
+}
+
+.links {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+}
+
+.link {
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  font-weight: 700;
+  min-height: 2.75rem;
+  text-decoration: none;
+}
+
+.link:hover {
+  color: var(--color-accent);
+}
+
+.cta {
+  align-self: end;
+}

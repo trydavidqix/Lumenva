@@ -80,6 +80,21 @@ p {
   outline-offset: 0.1875rem;
 }
 
+.skip-link {
+  background: var(--color-white);
+  color: var(--color-ink);
+  left: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  position: fixed;
+  top: var(--space-4);
+  transform: translateY(-200%);
+  z-index: var(--z-modal);
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
 ::selection {
   background: color-mix(in srgb, var(--color-accent) 20%, var(--color-white));
 }
