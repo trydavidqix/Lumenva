@@ -1,4 +1,5 @@
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
+import { ContactForm } from "@/components/sections/ContactForm";
 import { ProseFAQ } from "@/components/sections/ProseFAQ";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { JsonLd } from "@/components/ui/JsonLd";
@@ -45,7 +46,7 @@ export default function ContactPage() {
       <Breadcrumbs items={breadcrumbs} />
       <ServiceHero
         eyebrow="Demonstração"
-        title="Veja a Lumenva aplicada à sua operação."
+        title="Vamos conversar sobre a sua operação."
         description={description}
         capabilities={[
           "Agentes de IA",
@@ -59,71 +60,13 @@ export default function ContactPage() {
         <div className="site-shell">
           <div className={styles.contactShell}>
             <h2 className={styles.sectionTitle} id="demo-shell-title">
-              Solicitação de demonstração
+              Entre em contato
             </h2>
             <p className={styles.sectionCopy}>
-              Conte um pouco sobre a operação. O envio será habilitado quando a
-              integração segura de demonstrações estiver configurada.
+              Conte o que você está buscando. Nossa equipe retorna para entender
+              o contexto e apresentar a melhor forma de aplicar a Lumenva.
             </p>
-            <form
-              className={styles.form}
-              aria-labelledby="demo-shell-title"
-              aria-describedby="demo-form-status"
-            >
-              <div className={styles.fieldGrid}>
-                <label className={styles.field}>
-                  <span className={styles.label}>Nome</span>
-                  <input
-                    className={styles.input}
-                    name="name"
-                    type="text"
-                    autoComplete="name"
-                    required
-                  />
-                </label>
-                <label className={styles.field}>
-                  <span className={styles.label}>Empresa</span>
-                  <input
-                    className={styles.input}
-                    name="company"
-                    type="text"
-                    autoComplete="organization"
-                    required
-                  />
-                </label>
-                <label className={styles.field}>
-                  <span className={styles.label}>E-mail</span>
-                  <input
-                    className={styles.input}
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                  />
-                </label>
-                <label className={styles.field}>
-                  <span className={styles.label}>WhatsApp</span>
-                  <input
-                    className={styles.input}
-                    name="whatsapp"
-                    type="tel"
-                    autoComplete="tel"
-                    required
-                  />
-                </label>
-              </div>
-              <label className={styles.consent}>
-                <input name="consent" type="checkbox" required />
-                <span>Autorizo o contato da equipe sobre a demonstração solicitada.</span>
-              </label>
-              <button className={styles.submit} type="submit" disabled>
-                Solicitar demonstração
-              </button>
-              <p className={`${styles.sectionCopy} ${styles.formNote}`} id="demo-form-status">
-                Envio temporariamente indisponível. Nenhum dado preenchido é coletado
-                por esta versão.
-              </p>
-            </form>
+            <ContactForm />
           </div>
         </div>
       </section>
