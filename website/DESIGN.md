@@ -77,3 +77,7 @@ Create a mobile-first web landing page for Lumenva, the public brand for an open
 5. Final CTA and factual footer.
 
 Do not use a centered hero, Inter, serifs, neon or purple glow, gradients on headings, fabricated metrics, testimonials, customer logos, cases, contact data, prices, unsupported integrations, filler scroll cues, or overlapping elements.
+
+## 9. Local Implementation Contract
+
+`styles/tokens.css` is the local source of truth for the semantic color palette, typography, spacing, radius, elevation, z-index, layout, and motion tokens. `app/globals.css` imports the shared token, layout, and motion layers; future component and section styles consume those semantic properties rather than introducing local palette hex values. Manrope is loaded once by `app/layout.tsx` and exposed as `--font-manrope` for the typography layer.
