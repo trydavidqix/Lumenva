@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import type { ReactNode } from "react";
+import { Footer } from "@/components/layout/Footer";
+import { Header } from "@/components/layout/Header";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -20,7 +22,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="pt-BR" className={manrope.variable}>
-      <body>{children}</body>
+      <body>
+        <Header />
+        <main id="main-content">{children}</main>
+        <Footer />
+      </body>
     </html>
   );
 }
