@@ -7,7 +7,10 @@ import { type ReactNode, useRef } from "react";
 import { useReducedMotion } from "./ReducedMotionProvider";
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(useGSAP, ScrollTrigger);
+  gsap.registerPlugin(useGSAP);
+  if (typeof window.matchMedia === "function") {
+    gsap.registerPlugin(ScrollTrigger);
+  }
 }
 
 type RevealProps = {
@@ -24,6 +27,11 @@ export function Reveal({ children, className, delay = 0 }: RevealProps) {
     () => {
       const root = rootRef.current;
       if (!root) return;
+
+      if (typeof window.matchMedia !== "function") {
+        gsap.set(root, { autoAlpha: 1, y: 0 });
+        return;
+      }
 
       const prefersReducedMotion =
         reducedMotion ||
