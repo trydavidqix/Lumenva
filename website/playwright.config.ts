@@ -10,7 +10,7 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:3100",
   },
   webServer: {
-    command: "pnpm dev -- --port 3100",
+    command: "pnpm dev --port 3100",
     cwd: directory,
     port: 3100,
     reuseExistingServer: !process.env.CI,
