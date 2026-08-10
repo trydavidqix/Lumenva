@@ -3,7 +3,7 @@ name: ci
 on:
   pull_request:
   push:
-    branches: [main, gpt-harness-convergence]
+    branches: [main]
 
 jobs:
   verify:
