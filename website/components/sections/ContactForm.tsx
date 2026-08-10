@@ -52,7 +52,9 @@ export function ContactForm() {
       ? "Recebemos sua solicitação. Retornaremos em breve."
       : state === "error"
         ? "Não foi possível enviar agora. Tente novamente em alguns minutos."
-        : "Seus dados serão usados somente para responder a este contato.";
+        : isValid
+          ? "Seus dados serão usados somente para responder a este contato."
+          : "Preencha todos os campos para habilitar o envio.";
 
   return (
     <form
@@ -102,6 +104,7 @@ export function ContactForm() {
             className={styles.input}
             name="whatsapp"
             type="tel"
+            inputMode="tel"
             autoComplete="tel"
             placeholder="(00) 00000-0000"
             required
@@ -113,6 +116,7 @@ export function ContactForm() {
         <span>Autorizo o contato da equipe sobre esta solicitação.</span>
       </label>
       <button
+        aria-describedby="demo-form-status"
         className={styles.submit}
         disabled={!isValid || state === "pending"}
         type="submit"
