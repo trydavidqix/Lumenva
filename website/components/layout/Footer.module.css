@@ -62,8 +62,11 @@
 }
 
 .link {
+  align-items: center;
+  display: inline-flex;
   font-size: var(--font-size-label);
   font-weight: 700;
+  min-height: 2.75rem;
   text-decoration: none;
 }
 

@@ -34,9 +34,12 @@
 }
 
 .navigationLink {
+  align-items: center;
   color: var(--color-text-muted);
+  display: inline-flex;
   font-size: var(--font-size-label);
   font-weight: 700;
+  min-height: 2.75rem;
   text-decoration: none;
 }
 
@@ -45,10 +48,12 @@
 }
 
 .loginLink {
+  align-items: center;
   color: var(--color-text-muted);
   display: none;
   font-size: var(--font-size-label);
   font-weight: 700;
+  min-height: 2.75rem;
   text-decoration: none;
   white-space: nowrap;
 }
