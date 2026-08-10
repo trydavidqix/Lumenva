@@ -62,9 +62,16 @@ jobs:
       - name: Aguardar Redis REST do E2E
         run: |
           for tentativa in {1..30}; do
-            if curl -fsS \
-              -H "Authorization: Bearer $E2E_SRH_TOKEN" \
-              http://127.0.0.1:3998/ping >/dev/null; then
+            # O SRH aceita comandos pelo corpo HTTP, não por rotas como
+            # `/ping`. Usar o SDK aqui testa o mesmo protocolo do CRM.
+            if node -e '
+              const { Redis } = require("@upstash/redis");
+              const redis = new Redis({
+                url: "http://127.0.0.1:3998",
+                token: process.env.E2E_SRH_TOKEN,
+              });
+              redis.ping().then(() => process.exit(0)).catch(() => process.exit(1));
+            '; then
               exit 0
             fi
             sleep 1

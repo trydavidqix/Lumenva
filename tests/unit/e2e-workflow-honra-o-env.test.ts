@@ -162,8 +162,11 @@ describe("o workflow do e2e honra o contrato de ambiente que a suíte exige", ()
     expect(workflow).toMatch(/SRH_TOKEN:\s*\$\{\{ env\.E2E_SRH_TOKEN \}\}/);
     expect(workflow).toMatch(/SRH_CONNECTION_STRING:\s*redis:\/\/redis:6379/);
     expect(workflow).toMatch(/3998:80/);
-    expect(workflow).toMatch(/curl\s+-fsS[\s\\]+-H[\s\\]+"Authorization: Bearer \$E2E_SRH_TOKEN"/);
-    expect(workflow).toMatch(/http:\/\/127\.0\.0\.1:3998\/ping/);
+    // O SRH implementa o protocolo REST no corpo da requisição, não em rotas
+    // como `/ping`. A sonda precisa usar o próprio cliente que o CRM usa.
+    expect(workflow).toMatch(/require\(["']@upstash\/redis["']\)/);
+    expect(workflow).toMatch(/new Redis\(\{\s*url:\s*["']http:\/\/127\.0\.0\.1:3998["']/);
+    expect(workflow).toMatch(/redis\.ping\(\)/);
     const gerador = fs.readFileSync(path.join(RAIZ, "scripts/gerar-env-e2e.sh"), "utf8");
     expect(gerador).toMatch(/TOKEN_REDIS="\$\{E2E_SRH_TOKEN:-e2e-placeholder-nao-e-segredo\}"/);
   });
