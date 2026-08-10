@@ -1,180 +1,143 @@
 # AGENTS.md — DeskcommCRM
 
-> Contrato para **qualquer** agente de código (Codex, Cursor, Copilot, Amp, Claude Code).
-> Este arquivo é o núcleo portável. A **doutrina completa e não-negociável vive em
-> [`CLAUDE.md`](CLAUDE.md)** — leia-o antes de tocar em código. Aqui está o mínimo
-> para não causar dano.
+> Contrato portátil para qualquer agente de código (Codex, Cursor, Copilot, Amp, Claude Code e afins).
 
----
+A **doutrina completa e soberana** vive em [`CLAUDE.md`](CLAUDE.md). Leia-a antes de tocar código. Este arquivo existe para dar a outras plataformas o mínimo seguro e apontar para as fontes corretas — não para manter uma segunda cópia congelada da doutrina.
+
+## Ordem de leitura
+
+1. [`CLAUDE.md`](CLAUDE.md) — autoridade do repositório.
+2. [`.claude/rules/`](.claude/rules/) — regras modulares por domínio.
+3. [`docs/index.md`](docs/index.md) — índice e precedência documental.
+4. Specs/PRDs/business-rules do domínio alterado.
+5. Handoffs/current-state apenas como estado temporal, conferindo `audited_against`/data.
+
+Se este arquivo, uma skill, agent, prompt ou artefato gerado divergir do `CLAUDE.md`, **`CLAUDE.md` vence**.
 
 ## Objetivo do projeto
 
-Sistema operacional de vendas open source com agentes de IA nativos, multi-nicho,
-WhatsApp como canal primário (via WAHA). Multi-tenant com RLS desde o dia 1, LGPD
-nativa. Monetização = self-host em VPS, não assinatura. Posicionamento: [`VISION.md`](VISION.md).
+DeskcommCRM é um sistema operacional de vendas open source com agentes de IA nativos, multi-nicho, WhatsApp via WAHA, multi-tenant com RLS e LGPD by-design. O produto é self-host em VPS; instalação e atualização fazem parte da experiência do usuário.
 
-**Consequência que muda como você trabalha:** o produto é distribuído como código.
-Quem instala numa VPS **é** o usuário. Uma mudança que funciona na máquina do dev e
-quebra no clone fresco é um bug de produto, não um detalhe de ambiente.
+## Stack
 
-## Stack (CONFIRMADO em `package.json`)
+Next.js 16 App Router · React 19 · TypeScript 6 estrito · Tailwind · Supabase/Postgres · Upstash Redis · Vercel AI Gateway · WAHA Plus · Zod · Vitest · Playwright · Sentry.
 
-Next.js 16.2 (App Router) · React 19.2 · TypeScript 6.0 estrito · Tailwind 3.4 ·
-shadcn/ui · Supabase (Postgres + Auth + Realtime + Storage) · Upstash Redis ·
-Vercel AI Gateway (`@ai-sdk/anthropic|openai|google`) · WAHA Plus (engine NOWEB) ·
-Zod 4 · Vitest 4 · Playwright 1.62 · Sentry 10.
-Runtime: **Node ≥22** (`.nvmrc` = 22; o job `ci` roda 22, mas o `perf` ainda builda em 20 —
-divergência com `engines`, registrada como bug). Gerenciador: **pnpm 9.15.9** (`packageManager`).
-Versão do produto: **1.0.0** (`CHANGELOG.md`, SemVer — mudança que afeta quem roda VPS entra lá).
+Runtime: Node >=22. Gerenciador canônico: **pnpm 9.15.9**.
 
-## Estrutura que importa
-
-| Path | O quê |
-|---|---|
-| `app/api/v1/` | 166 route handlers REST (versionado por path) — 169 contando `app/api/**` |
-| `app/api/internal/`, `app/api/mcp/`, `app/api/v1/cron/` | superfícies não-cookie (secret/bearer próprio) |
-| `app/app/` | UI autenticada do tenant · `app/admin/` UI de plataforma |
-| `app/actions/` | Server Actions (auth, onboarding, team, settings) |
-| `lib/agent-engine/`, `lib/ai/` | runtime do agente, guardrails, RAG, dispatcher |
-| `lib/api/wrappers.ts` | `ok()` / `fail()` — **use sempre**, não monte Response na mão |
-| `lib/auth/require-role.ts` | `requireRole()` — guard canônico de RBAC |
-| `lib/supabase/{browser,server,admin}.ts` | clients canônicos |
-| `workers/` | workers de `event_log` + crons |
-| `supabase/migrations/` | schema versionado · `supabase/baseline.sql` = o que o self-host aplica |
-| `proxy.ts` | middleware do Next 16 (auth de borda, `X-Request-Id`) |
-
-## Comandos (CONFIRMADO em `package.json`)
+## Comandos canônicos
 
 ```bash
-pnpm install          # deps (frozen-lockfile no CI)
-pnpm dev              # dev server
-pnpm build            # next build
-pnpm lint             # eslint
-pnpm typecheck        # tsc --noEmit (estrito)
-pnpm test:unit        # vitest — EXCLUI tests/invariants e tests/e2e
-pnpm test:db          # invariantes de banco + gate do baseline (PRECISA de Docker)
-pnpm test:e2e         # Playwright (PRECISA de app rodando + banco semeado)
-pnpm gov:verify       # typecheck + lint + test:unit  ← verificação única atual
+pnpm install
+pnpm dev
+pnpm build
+pnpm lint
+pnpm lint:channels
+pnpm typecheck
+pnpm test:unit
+pnpm test:db
+pnpm test:e2e
+pnpm gov:verify
+pnpm harness:check
 ```
 
-⚠️ **`pnpm gov:verify` NÃO cobre tudo.** Ele omite `test:db` e `test:e2e`. Se sua
-mudança toca schema, RLS ou UI, `gov:verify` verde **não** é prova — rode `pnpm test:db`
-(exige Docker) e/ou `pnpm test:e2e` você mesmo. Ver [`docs/harness-audit.md`](docs/harness-audit.md).
+`pnpm gov:verify` não substitui `test:db` para schema/RLS nem `test:e2e`/prova visual para UI.
 
-**O que o CI cobre.** `.github/workflows/ci.yml`: `verify` = typecheck + lint + test:unit;
-`invariants` = `pnpm test:db` (isolamento RLS + invariantes de governança contra Postgres
-efêmero pg17). `.github/workflows/perf.yml`: `build-and-size` = `pnpm build`.
-**Os três são checks obrigatórios** na branch protection da `main`.
+## Regras críticas
 
-`.github/workflows/e2e.yml` roda **28 das 32 specs** Playwright contra um Supabase local de
-verdade com o `baseline.sql` aplicado — o mesmo banco que o self-hoster tem. **Não é
-obrigatório ainda** (o conjunto de specs acabou de mudar, então execuções verdes anteriores
-eram de outro conjunto e não provam a estabilidade deste). As 4 de fora: `followup-journey` e
-`webhooks` (precisam de WAHA), `vps-fresh-onboarding` (WAHA + Redis + Resend + Nuvemshop; é a
-P0 da doutrina de QA) e `capacidades-do-agente`, que está fora porque REPROVA de verdade — ver
-o summary do job. Se você mexeu em UI fora desse subconjunto, a prova é sua.
+### Multi-tenancy
 
-## Padrões de código (observados no repo, não inventados)
+- `organization_id` de fonte confiável; nunca do body como autoridade.
+- RLS em tabela tenant-aware.
+- Service role filtra `organization_id` manualmente.
+- Backend usa `getUser()`, não `getSession()` como prova de identidade.
+- Mudança de tenancy/RLS exige teste cross-tenant.
 
-- **Route handler:** valida input com Zod → guard (`requireRole` / `requirePlatformAdmin` /
-  secret) → query com `organization_id` explícito → `audit()` se mutação → `ok()` / `fail()`.
-- Erro: `fail(code, message, status)` com código de `lib/api/errors.ts`. Nunca `throw` cru na borda.
-- JSON **snake_case** na API. Dinheiro em `_cents` + `currency`. Datas ISO-8601 UTC.
-- Log: `lib/logger.ts` (estruturado). **`console.log` é proibido** em código merged.
-- Testes ao lado do código (`lib/foo/bar.test.ts`) ou em `tests/{unit,api,invariants,e2e}/`.
-- Comentários em PT-BR são a norma neste repo — mantenha o idioma do arquivo que editar.
+Detalhe: [`.claude/rules/multi-tenancy.md`](.claude/rules/multi-tenancy.md).
 
-## Diretórios e arquivos SENSÍVEIS
+### Schema
 
-- **`supabase/baseline.sql`** — é o que o `install.sh`/`update.sh` do self-host aplicam.
-  Toda mudança de schema tem que aparecer aqui **como apêndice idempotente**, senão
-  não chega em quem instalou. Ver doutrina de Migrations em `CLAUDE.md`.
-- **`supabase/migrations/*.sql` já aplicadas** — nunca edite. Corrija com migration nova.
-- **`lib/supabase/admin.ts`** — service role **bypassa RLS**. 89 rotas o usam; toda
-  query precisa filtrar `organization_id` manualmente, resolvido de fonte confiável
-  (cookie/JWT/webhook secret/path token), **nunca do body**.
-- **`lib/auth/public-paths.ts`** — adicionar path aqui remove a checagem de auth de borda.
-  Só com guard próprio dentro da rota.
-- **`.env*`** — não abra, não copie valor, não logue. Só `.env.example` é template.
-- **`docker-compose.traefik.yml`** — numa VPS que já tem proxy reverso próprio
-  (Hostinger, Coolify, Dokploy…), é o único lugar que dá ao contêiner `app` as labels
-  de roteamento. Todo `up -d` leva os **dois** arquivos de compose:
-  `docker compose -f docker-compose.prod.yml -f docker-compose.traefik.yml --env-file .env up -d app`.
-  Esquecer o segundo `-f` recria o contêiner sem labels: o proxy deixa de enxergá-lo e o
-  domínio inteiro responde `404`, com o contêiner `healthy` — o healthcheck é um probe TCP
-  interno e não sabe nada de roteamento. Runbook: `docs/runbooks/deploy.md`.
+Mudança de schema via:
 
-## Arquivos GERADOS — não editar à mão
+1. migration nova;
+2. apêndice idempotente em `supabase/baseline.sql`;
+3. linha em `supabase/migrations/MANIFEST.md`.
 
-- `lib/database.types.ts` (6.1k linhas — gerado do schema Supabase)
-- `graphify-out/` (grafo de conhecimento; regenerado por `/graphify .`)
-- `pnpm-lock.yaml`, `tsconfig.tsbuildinfo`, `next-env.d.ts`, `.next/`
+Tipos gerados acompanham quando o contrato muda. Nunca edite migration já aplicada.
 
-## Como validar uma alteração
+Detalhe: [`.claude/rules/database-migrations.md`](.claude/rules/database-migrations.md).
 
-1. `pnpm typecheck` e `pnpm lint` zerados.
-2. `pnpm test:unit` verde.
-3. Tocou schema/RLS/tabela tenant-aware → `pnpm test:db` (sobe Postgres efêmero via Docker,
-   aplica `baseline.sql` em modo install **e** update, roda os invariantes).
-4. Tocou UI ou fluxo de usuário → `pnpm test:e2e` com evidência visual. **`curl` não conta**
-   como prova de UX (doutrina de QA Visual em `CLAUDE.md`).
-5. Mudou schema → migration versionada em `supabase/migrations/` **+** apêndice idempotente
-   em `supabase/baseline.sql` **+** linha em `supabase/migrations/MANIFEST.md`. Os três juntos.
-6. Criou função em `public` → `revoke execute on function ... from public, anon;` e depois
-   `grant` só a quem precisa. São **duas** origens de `EXECUTE` e revogar uma só deixa a
-   função exposta como RPC alcançável pela anon key. Detalhe em `CLAUDE.md`, item 9 da
-   doutrina de Migrations.
+### Segurança
 
-## Testes existentes (CONFIRMADO)
+- segredo/token/cookie/PII não vai para log, screenshot, teste, commit ou docs;
+- API key nunca em query string;
+- RBAC é server-side;
+- produção, dados reais, credenciais, operação destrutiva e custo exigem autorização explícita.
 
-- **221** arquivos `*.test.ts(x)` unitários (rodam em `test:unit` e no CI)
-- **67** arquivos de invariante de banco em `tests/invariants/` — RLS/isolamento cross-tenant,
-  RBAC, governança (G1–G6). Excluídos do `test:unit` de propósito; rodam via `pnpm test:db`
-  **e no job `invariants` do CI**.
-- **32** specs Playwright em `tests/e2e/`. **28 rodam no CI** (via `e2e.yml`,
-  não-obrigatório). As 4 de fora dependem de serviço externo (WAHA/Redis/Resend/Nuvemshop) —
-  incluindo `vps-fresh-onboarding` — ou reprovam legitimamente (`capacidades-do-agente`).
-  Ver issue #63.
+Detalhe: [`.claude/rules/security.md`](.claude/rules/security.md).
 
-## Limitações conhecidas (estado em 2026-07-29, contra `origin/main` @ 789dfa6)
+### Side effects e audit
 
-- **4 das 32 specs E2E seguem fora do CI**, e o `e2e` ainda não é check obrigatório: um PR
-  que o quebre entra na `main` assim mesmo. Se você mexeu em UI coberta só por essas 4, a
-  prova é sua.
-- Rate limit HTTP existe em **2** pontos do código (webhook de captação e dispatcher de IA);
-  login, signup, aceite de convite, crons e MCP estão sem. Não há lockout por conta no login.
-- Fallback do rate limit é **em memória** — sem Upstash configurado o limite é por processo.
-- `Idempotency-Key` implementado em **1** rota, apesar de o contrato prometer nos POSTs de criação.
-- **6 vars de `lib/env.ts` faltam no `.env.example`**, incluindo 3 secrets. Se você adicionar
-  env var, adicione nos dois lugares (item 9 do DoD).
-- `lib/auth/invite-token.ts` cai em `"dev-fallback"` como secret HMAC se nenhum secret existir
-  (inalcançável em produção, porque `INTERNAL_SECRET` é obrigatório e derruba o boot).
-- **89 dos 169 handlers de `app/api/**` usam service role** — sem gate automático para o filtro de
-  `organization_id`. Escrevendo handler novo, o filtro é responsabilidade sua.
-- Detalhes e prioridade: [`docs/harness-audit.md`](docs/harness-audit.md),
-  [`docs/current-state.md`](docs/current-state.md) e [`docs/threat-model.md`](docs/threat-model.md).
+- trigger Postgres nunca faz HTTP;
+- evento/side effect reexecutável precisa de idempotência apropriada;
+- mutação relevante gera audit conforme o contrato do domínio;
+- input externo usa Zod;
+- borda `/api/v1/` usa `ok()`/`fail()` e códigos canônicos.
 
-## Regras de segurança
+## Git
 
-- Sempre `getUser()` no backend. **Nunca `getSession()`** (confia no cookie sem revalidar).
-- API key/token **nunca** em query string — só header. Plaintext do bearer é mostrado
-  **uma vez**; no banco só hash SHA256.
-- HMAC de webhook com `crypto.timingSafeEqual`. Fail-closed quando o secret falta.
-- Nunca logue segredo, token, CPF, telefone ou e-mail. Sentry tem `beforeSend` que
-  higieniza — não confie nele como única camada.
-- Não commite screenshot/dump com dado real de cliente.
+Antes de editar, confira branch/working tree e preserve trabalho alheio. Não faça reset destrutivo, force-push, descarte, rebase/merge arriscado ou alteração de `main` sem autorização e contexto apropriados.
 
-## Critério de conclusão
+Detalhe: [`.claude/rules/git-workflow.md`](.claude/rules/git-workflow.md).
 
-Vale a **Definition of Done de 13 itens em [`CLAUDE.md`](CLAUDE.md)**. Não declare pronto
-sem: typecheck/lint zerados, testes relevantes verdes, RLS testada se tocou tabela
-tenant-aware, migration + baseline + MANIFEST se mudou schema, e prova visual se mudou UI.
+## Testes e prova
 
-## Regra final — não invente
+Alegação não é evidência. Use o check correspondente ao raio de dano:
 
-Este repositório tem PRDs, specs, regras de negócio e doutrina escritos
-(`docs/prd/`, `docs/specs/`, `docs/business-rules/`, `docs/doctrine/`).
-**Nunca invente regra de negócio, número, SLA ou comportamento de produto.**
-Se a regra não está escrita, diga que não está e pergunte — não preencha a lacuna com
-suposição plausível. Ao documentar, marque o que é `CONFIRMADO` (provado por código) e o
-que é `INFERIDO`.
+- tipos/lint → `typecheck`/`lint`;
+- comportamento unitário → `test:unit`;
+- schema/RLS → `test:db`;
+- UI/jornada → `test:e2e` + evidência visual quando a doutrina exigir;
+- build → `build`.
+
+Diga explicitamente o que não foi medido.
+
+Detalhe: [`.claude/rules/testing-verification.md`](.claude/rules/testing-verification.md).
+
+## Documentação
+
+Não invente regra de negócio. Consulte `docs/index.md`, specs, PRDs e business-rules antes de decidir comportamento. `current-state`, handoffs, contagens e snapshots envelhecem; valide antes de tratá-los como estado atual.
+
+Detalhe: [`.claude/rules/documentation.md`](.claude/rules/documentation.md).
+
+## Skills e agentes
+
+Skills/agents são adapters de processo e especialização. Eles não substituem `CLAUDE.md`.
+
+- `.claude/skills/DeskcommCRM/SKILL.md` — ponte Claude para a doutrina.
+- `.agents/skills/DeskcommCRM/SKILL.md` — ponte Codex para a mesma doutrina.
+- `.claude/agents/` — especialistas Claude (gov-loop/triagem).
+- `.codex/agents/` — especialistas Codex.
+
+Não mantenha convenção de naming/imports/comandos congelada nessas skills. Quando a doutrina mudar, atualize a fonte canônica e os adapters somente quando necessário.
+
+Detalhe: [`.claude/rules/skill-routing.md`](.claude/rules/skill-routing.md).
+
+## Arquivos sensíveis
+
+- `supabase/baseline.sql`
+- `supabase/migrations/`
+- `supabase/migrations/MANIFEST.md`
+- `lib/database.types.ts` (gerado)
+- `lib/supabase/admin.ts`
+- `lib/auth/public-paths.ts`
+- `.env*`
+- `docker-compose.traefik.yml`
+- `loop/`
+
+Leia o runbook/spec apropriado antes de alterar.
+
+## Regra final
+
+Trabalhe no escopo pedido, faça a menor mudança correta, preserve comportamento existente e não transforme uma suposição plausível em regra do produto.
+
+Antes de declarar pronto, aplique a Definition of Done atual de [`CLAUDE.md`](CLAUDE.md) e `pnpm harness:check` quando a mudança tocar instruções/harness.
