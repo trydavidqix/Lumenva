@@ -35,7 +35,24 @@ Leia nesta ordem antes de editar código:
 5. `docs/threat-model.md`
 6. `docs/superpowers/specs/2026-08-10-ai-platform-master-design.md`
 7. `docs/superpowers/specs/2026-08-10-ai-platform-qa-release-gates.md`
-8. O plano da fase que será executada em `docs/superpowers/plans/2026-08-10-ai-platform-phase-*.md`
+8. `docs/superpowers/plans/2026-08-10-ai-platform-execution-index.md`
+9. O plano exato da fase em `docs/superpowers/plans/2026-08-10-ai-platform-phase-*.md`
+10. `docs/handoffs/HANDOFF-ai-platform.md` para estado, limites e primeiro bloqueio conhecido.
+
+## Planos exatos
+
+```text
+docs/superpowers/plans/
+├── 2026-08-10-ai-platform-execution-index.md
+├── 2026-08-10-ai-platform-phase-0-foundation.md
+├── 2026-08-10-ai-platform-phase-1-observability.md
+├── 2026-08-10-ai-platform-phase-2-mem0.md
+├── 2026-08-10-ai-platform-phase-3-knowledge.md
+├── 2026-08-10-ai-platform-phase-4-graphiti.md
+├── 2026-08-10-ai-platform-phase-5-guardrails.md
+├── 2026-08-10-ai-platform-phase-6-n8n.md
+└── 2026-08-10-ai-platform-phase-7-langgraph.md
+```
 
 ## Regras não negociáveis
 
