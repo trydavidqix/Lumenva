@@ -190,7 +190,11 @@ function walk(dir: string): string[] {
   });
 }
 
+// `path.join` devolve `\\` no Windows, enquanto as regras e a dívida usam o
+// caminho canônico do repositório (`/`). Sem normalizar, toda dívida parece
+// simultaneamente nova e obsoleta nesse sistema operacional.
 const offenders = ROOTS.flatMap(walk)
+  .map((f) => f.replaceAll("\\", "/"))
   .filter((f) => !ALLOWED.some((re) => re.test(f)))
   .filter((f) => nomeiaProvider(readFileSync(f, "utf8")));
 
