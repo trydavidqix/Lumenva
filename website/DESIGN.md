@@ -6,16 +6,15 @@ Lumenva is a restrained, light-filled institutional site for an open-source, sel
 
 ## 2. Color Palette & Roles
 
-- **Lumen Blue** (`#0066CC`) — the single accent for primary actions, active states, focus rings, and essential links.
-- **Lumen Blue Hover** (`#0071E3`) — interactive hover treatment for the accent.
-- **Lumen Blue on Dark** (`#2997FF`) — accent treatment only where a dark supporting surface is introduced.
-- **Lumen Ink** (`#1D1D1F`) — primary text and high-contrast structural detail.
-- **Pure White** (`#FFFFFF`) — page and elevated surface.
-- **Cloud Surface** (`#F5F5F7`) — quiet section background and structural contrast.
-- **Mist Surface** (`#FAFAFC`) — subtle alternate surface.
+Approved 2026-08-10 (`docs/brand/references/site/README.md`) — the brand is exclusively black, gray, and white. No chromatic accent.
+
+- **Lumenva Black** (`#111111`) — headings, primary text, primary CTA fill, and high-contrast structural detail.
+- **Lumenva Gray** (`#6E6E73`) — secondary text, icons, and support copy.
+- **Lumenva White** (`#F5F5F7`) — page canvas and large surfaces.
+- Neutral derivations only, for surface/border/hover/depth: `#FFFFFF`, `#FAFAFA`, `#E8E8ED`, `#D2D2D7`, `#AEAEB2`, `#8E8E93`, `#48484A`, `#3A3A3C`, `#2C2C2E`, `#1C1C1E`.
 - **True Black** (`#000000`) — reserved only as the approved semantic black token when essential; never use it as a page canvas or component-local color.
 
-All colors are implemented as semantic CSS tokens in `styles/tokens.css`; components must never introduce arbitrary hex values. Alpha layers and shadows derive from these tokens.
+No blue, green, purple, brown, neon, or gradient accents anywhere. All colors are implemented as semantic CSS tokens in `styles/tokens.css`; components must never introduce arbitrary hex values. Alpha layers and shadows derive from these tokens.
 
 ## 3. Typography Rules
 
@@ -64,7 +63,7 @@ Create a mobile-first web landing page for Lumenva, the public brand for an open
 - Platform: Web, mobile-first from 390 px; single-column below 768 px with no horizontal overflow.
 - Typography: Manrope throughout. Use Manrope 800 for the Lumenva monogram and wordmark; use 700–800 for compact display hierarchy and 500–700 for body/interface copy.
 - Background: Pure White (`#FFFFFF`) with Cloud Surface (`#F5F5F7`) and Mist Surface (`#FAFAFC`) as quiet editorial breaks.
-- Accent: Lumen Blue (`#0066CC`) only, with `#0071E3` hover and `#2997FF` only on dark support surfaces.
+- Accent: Lumenva Black (`#111111`) only, with `#2C2C2E` hover. No chromatic accent anywhere.
 - Text: Lumen Ink (`#1D1D1F`) for primary text. Use semantic tokens only; no arbitrary component colors.
 - Components: flat tactile primary CTA, restrained secondary action, editorial dividers and negative space instead of generic equal card grids; 44 px minimum touch targets and visible focus states.
 - Motion: the `L` monogram settles first; only in the final 10% does a low-opacity radar sweep behind it and reveal three small points. The radar is subtle supporting motion and is static under reduced motion.
