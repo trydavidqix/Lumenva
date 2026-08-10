@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import type { ReactNode } from "react";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
+import { description } from "@/content/site";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -13,10 +14,14 @@ const manrope = Manrope({
 
 export const metadata: Metadata = {
   title: {
-    default: "Lumenva | AI Sales OS",
+    default: "Lumenva | Atendimento e vendas com IA",
     template: "%s | Lumenva",
   },
-  description: "An open-source, self-hosted AI Sales OS for WhatsApp-native sales and support.",
+  description,
+};
+
+export const viewport: Viewport = {
+  themeColor: "#F5F5F7",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
