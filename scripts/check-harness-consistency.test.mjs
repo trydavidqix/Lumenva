@@ -44,6 +44,12 @@ async function healthyFixture() {
     JSON.stringify({ repo: "https://github.com/trydavidqix/CRM" }),
   );
   await put(root, ".codex/AGENTS.md", "Authority: ../CLAUDE.md\n");
+  await put(
+    root,
+    "CLAUDE.md",
+    requiredRules.map((file) => `.claude/rules/${file}`).join("\n"),
+  );
+  await put(root, "AGENTS.md", "Read CLAUDE.md and .claude/rules/.\n");
   return root;
 }
 
@@ -107,4 +113,18 @@ test("requires both repo skills to point to CLAUDE.md", async () => {
   );
   const findings = await checkHarnessConsistency(root);
   assert.ok(findings.some((f) => f.code === "missing-doctrine-pointer"));
+});
+
+test("requires CLAUDE.md to link every shared rule", async () => {
+  const root = await healthyFixture();
+  await put(root, "CLAUDE.md", ".claude/rules/security.md\n");
+  const findings = await checkHarnessConsistency(root);
+  assert.ok(findings.some((f) => f.code === "missing-rule-link"));
+});
+
+test("requires AGENTS.md to point to canonical doctrine and shared rules", async () => {
+  const root = await healthyFixture();
+  await put(root, "AGENTS.md", "# portable contract\n");
+  const findings = await checkHarnessConsistency(root);
+  assert.ok(findings.some((f) => f.code === "portable-contract-drift"));
 });
