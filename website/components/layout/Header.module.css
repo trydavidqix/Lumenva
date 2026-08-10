@@ -44,6 +44,19 @@
   color: var(--color-accent);
 }
 
+.loginLink {
+  color: var(--color-text-muted);
+  display: none;
+  font-size: var(--font-size-label);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.loginLink:hover {
+  color: var(--color-accent);
+}
+
 .demoAction {
   flex: 0 0 auto;
   white-space: nowrap;
@@ -94,6 +107,10 @@
 @media (min-width: 64rem) {
   .desktopNavigation {
     display: block;
+  }
+
+  .loginLink {
+    display: inline-flex;
   }
 
   .mobileMenuButton {

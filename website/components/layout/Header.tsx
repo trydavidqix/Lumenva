@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { demoCta, navigation, shellContent, siteName } from "@/content/site";
+import { demoCta, loginCta, navigation, shellContent, siteName } from "@/content/site";
 import { Button } from "@/components/ui/Button";
 import { MobileNavigation } from "./MobileNavigation";
+import { SolutionsMenu } from "./SolutionsMenu";
 import styles from "./Header.module.css";
 
 export interface HeaderProps {
@@ -23,13 +24,20 @@ export function Header() {
           className={styles.desktopNavigation}
         >
           <div className={styles.desktopLinks}>
-            {navigation.map((item) => (
-              <Link className={styles.navigationLink} href={item.href} key={item.href}>
-                {item.label}
-              </Link>
-            ))}
+            {navigation.map((item) =>
+              item.label === "Soluções" ? (
+                <SolutionsMenu key={item.href} />
+              ) : (
+                <Link className={styles.navigationLink} href={item.href} key={item.href}>
+                  {item.label}
+                </Link>
+              ),
+            )}
           </div>
         </nav>
+        <Link className={styles.loginLink} href={loginCta.href}>
+          {loginCta.label}
+        </Link>
         <Button
           className={styles.demoAction}
           href={demoCta.href}
