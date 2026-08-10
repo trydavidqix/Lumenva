@@ -6,64 +6,65 @@ import { breadcrumbSchema, serviceSchema } from "@/lib/schema";
 import styles from "@/components/sections/InnerPages.module.css";
 
 const description =
-  "Reúna conversas, leads, atividades e pipeline para agentes de IA e pessoas operarem com o mesmo contexto.";
+  "A Lumenva é open source e self-hosted: você executa a plataforma na sua própria infraestrutura, sem mensalidade por assento.";
 const breadcrumbs = [
   { name: "Início", path: "/" },
-  { name: "CRM", path: "/crm" },
+  { name: "Preços", path: "/precos" },
 ] as const;
-const service = { name: "CRM Lumenva", description } as const;
+const service = { name: "Preços Lumenva", description } as const;
 
 export const metadata = createPageMetadata({
-  title: "CRM",
+  title: "Preços",
   description,
-  path: "/crm",
+  path: "/precos",
 });
 
-export default function CrmPage() {
+export default function PrecosPage() {
   return (
     <>
       <JsonLd data={breadcrumbSchema(breadcrumbs)} />
       <JsonLd data={serviceSchema(service)} />
       <Breadcrumbs items={breadcrumbs} />
       <ServiceHero
-        eyebrow="CRM"
-        title="O contexto de cada conversa e oportunidade."
+        eyebrow="Preços"
+        title="Self-hosted, sem mensalidade por assento."
         description={description}
         capabilities={[
-          "Caixa de entrada compartilhada",
-          "Pipeline com etapas configuráveis",
-          "Histórico de atividades do lead",
-          "Isolamento de dados por organização",
+          "Código aberto sob licença MIT",
+          "Execução na sua própria infraestrutura",
+          "Sem limite artificial de usuários por plano",
+          "Fale com a equipe para apoio de instalação",
         ]}
       />
-      <section className={styles.sectionAlt} aria-labelledby="crm-foundation">
+      <section className={styles.sectionAlt} aria-labelledby="pricing-model">
         <div className={`site-shell ${styles.sectionStack}`}>
           <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle} id="crm-foundation">
-              Um núcleo adaptável a diferentes operações.
+            <h2 className={styles.sectionTitle} id="pricing-model">
+              Como funciona o modelo self-hosted.
             </h2>
             <p className={styles.sectionCopy}>
-              Pipelines organizam o andamento das oportunidades. Vocabulários
-              configuráveis permitem nomear leads, negócios e resultados de acordo com
-              o tipo de operação, sem separar o histórico das conversas.
+              A Lumenva não vende assinatura por usuário. O código é aberto e a
+              plataforma roda na infraestrutura da sua operação. Os custos são os da
+              sua própria hospedagem, e a equipe está disponível para apoiar a
+              instalação e a configuração inicial.
             </p>
           </div>
           <ul className={styles.factList}>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>01</span>
-              <span><strong>Inbox.</strong> Conversas ficam disponíveis para o atendimento da equipe.</span>
+              <span><strong>Open source.</strong> O código é distribuído sob licença MIT.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>02</span>
-              <span><strong>Pipeline.</strong> Etapas representam o andamento de cada oportunidade.</span>
+              <span><strong>Self-hosted.</strong> Você controla onde e como a plataforma roda.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>03</span>
-              <span><strong>Customer 360.</strong> Contato, conversas e atividades formam o histórico do lead.</span>
+              <span><strong>Sem vendor lock-in.</strong> Seus dados permanecem na sua infraestrutura.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>04</span>
-              <span><strong>Multi-tenant.</strong> RLS isola os dados de cada organização.</span>
+              <span><strong>Apoio à instalação.</strong> Fale com a equipe para planejar a sua implantação.</span>
             </li>
           </ul>
         </div>

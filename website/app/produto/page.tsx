@@ -1,75 +1,45 @@
-import Link from "next/link";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { JsonLd } from "@/components/ui/JsonLd";
-import { solutionsMenu } from "@/content/site";
 import { createPageMetadata } from "@/lib/metadata";
 import { breadcrumbSchema, serviceSchema } from "@/lib/schema";
 import styles from "@/components/sections/InnerPages.module.css";
 
 const description =
-  "Conheça como agentes de IA, automações e CRM trabalham juntos em uma operação open source e self-hosted.";
+  "Atendimento, vendas e automação com IA num só produto: WhatsApp como canal primário, CRM como contexto e agentes governados por pessoas.";
 const breadcrumbs = [
   { name: "Início", path: "/" },
-  { name: "Soluções", path: "/solucoes" },
+  { name: "Produto", path: "/produto" },
 ] as const;
-const service = { name: "Soluções Lumenva", description } as const;
+const service = { name: "Produto Lumenva", description } as const;
 
 export const metadata = createPageMetadata({
-  title: "Soluções",
+  title: "Produto",
   description,
-  path: "/solucoes",
+  path: "/produto",
 });
 
-export default function SolutionsPage() {
+export default function ProdutoPage() {
   return (
     <>
       <JsonLd data={breadcrumbSchema(breadcrumbs)} />
       <JsonLd data={serviceSchema(service)} />
       <Breadcrumbs items={breadcrumbs} />
       <ServiceHero
-        eyebrow="Soluções"
+        eyebrow="Produto"
         title="IA, automação e CRM na mesma operação."
         description={description}
         capabilities={[
-          "Agentes de IA para vendas e suporte",
+          "Agentes de IA para atendimento e vendas",
           "Automações orientadas por eventos",
           "CRM com contexto de conversas e pipeline",
           "Execução na sua própria infraestrutura",
         ]}
       />
-      <section aria-labelledby="solutions-directory">
+      <section className={styles.sectionAlt} aria-labelledby="product-foundation">
         <div className={`site-shell ${styles.sectionStack}`}>
           <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle} id="solutions-directory">
-              As quatro soluções da Lumenva.
-            </h2>
-            <p className={styles.sectionCopy}>
-              Cada solução pode ser adotada de forma independente e compartilha o
-              mesmo contexto de conversas, leads e pipeline.
-            </p>
-          </div>
-          <ul className={styles.factList}>
-            {solutionsMenu.map((item, index) => (
-              <li key={item.href}>
-                <Link className={styles.solutionCard} href={item.href}>
-                  <span className={styles.capabilityIndex}>
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <span>
-                    <span className={styles.factTitle}>{item.label}.</span>{" "}
-                    <span className={styles.sectionCopy}>{item.description}</span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-      <section className={styles.sectionAlt} aria-labelledby="solutions-foundation">
-        <div className={`site-shell ${styles.sectionStack}`}>
-          <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle} id="solutions-foundation">
+            <h2 className={styles.sectionTitle} id="product-foundation">
               Um sistema conectado, não ferramentas isoladas.
             </h2>
             <p className={styles.sectionCopy}>

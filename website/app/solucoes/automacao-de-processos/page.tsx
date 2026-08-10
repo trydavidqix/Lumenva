@@ -6,34 +6,35 @@ import { breadcrumbSchema, serviceSchema } from "@/lib/schema";
 import styles from "@/components/sections/InnerPages.module.css";
 
 const description =
-  "Conecte eventos do CRM a regras e ações para organizar leads, atribuir atendimento e enviar mensagens.";
+  "Conecte eventos do WhatsApp e do CRM a regras e ações para organizar leads, atribuir atendimento, enviar mensagens e criar tarefas de follow-up.";
 const breadcrumbs = [
   { name: "Início", path: "/" },
-  { name: "Automações", path: "/automacoes" },
+  { name: "Soluções", path: "/solucoes" },
+  { name: "Automação de Processos", path: "/solucoes/automacao-de-processos" },
 ] as const;
-const service = { name: "Automações Lumenva", description } as const;
+const service = { name: "Automação de Processos Lumenva", description } as const;
 
 export const metadata = createPageMetadata({
-  title: "Automações",
+  title: "Automação de Processos",
   description,
-  path: "/automacoes",
+  path: "/solucoes/automacao-de-processos",
 });
 
-export default function AutomationsPage() {
+export default function AutomacaoDeProcessosPage() {
   return (
     <>
       <JsonLd data={breadcrumbSchema(breadcrumbs)} />
       <JsonLd data={serviceSchema(service)} />
       <Breadcrumbs items={breadcrumbs} />
       <ServiceHero
-        eyebrow="Automações"
-        title="Do evento à próxima ação."
+        eyebrow="Automação de Processos"
+        title="Automatize processos e escale a operação com mais controle."
         description={description}
         capabilities={[
-          "Regras acionadas por eventos do CRM",
-          "Organização e movimentação de leads",
-          "Atribuição de atendimento",
-          "Envio de mensagens com regras da operação",
+          "Reduza tarefas manuais",
+          "Ligue WhatsApp, CRM e tarefas da operação",
+          "Mantenha controle e segurança com regras claras",
+          "Escale com consistência e histórico visível",
         ]}
       />
       <section className={styles.sectionAlt} aria-labelledby="automation-model">
@@ -45,13 +46,13 @@ export default function AutomationsPage() {
             <p className={styles.sectionCopy}>
               Mudanças na operação geram eventos. As regras avaliam as condições
               configuradas e encaminham o trabalho para a ação correspondente, mantendo
-              o histórico no CRM.
+              o histórico de execuções no CRM.
             </p>
           </div>
           <ul className={styles.factList}>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>01</span>
-              <span><strong>Entrada.</strong> Atividades e mudanças do CRM alimentam as regras.</span>
+              <span><strong>Entrada.</strong> Atividades, mensagens e mudanças do CRM alimentam as regras.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>02</span>
@@ -63,7 +64,7 @@ export default function AutomationsPage() {
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>04</span>
-              <span><strong>Supervisão.</strong> A equipe configura regras e acompanha a operação.</span>
+              <span><strong>Supervisão.</strong> A equipe configura regras, acompanha execuções e pode intervir.</span>
             </li>
           </ul>
         </div>
