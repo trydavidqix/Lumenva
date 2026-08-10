@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { checkHarnessConsistency } from "./check-harness-consistency.mjs";
@@ -9,6 +9,11 @@ const requiredRules = [
   "git-workflow.md",
   "security.md",
   "multi-tenancy.md",
+  "api-contract.md",
+  "audit-observability.md",
+  "lgpd.md",
+  "whatsapp-waha.md",
+  "data-modeling.md",
   "database-migrations.md",
   "testing-verification.md",
   "documentation.md",
@@ -50,6 +55,11 @@ async function healthyFixture() {
     requiredRules.map((file) => `.claude/rules/${file}`).join("\n"),
   );
   await put(root, "AGENTS.md", "Read CLAUDE.md and .claude/rules/.\n");
+  await put(
+    root,
+    "docs/harness-doctrine-matrix.md",
+    "# matrix\nESTÁVEL\nSNAPSHOT\nDIVERGENTE\n",
+  );
   return root;
 }
 
@@ -93,6 +103,13 @@ test("requires every shared rule and a gitignore exception for rules", async () 
   assert.ok(findings.some((f) => f.code === "rules-not-versionable"));
 });
 
+test("requires newly preserved LGPD rule", async () => {
+  const root = await healthyFixture();
+  await rm(join(root, ".claude/rules/lgpd.md"));
+  const findings = await checkHarnessConsistency(root);
+  assert.ok(findings.some((f) => f.code === "missing-rule" && f.path.endsWith("lgpd.md")));
+});
+
 test("rejects an attempt to version local Claude settings", async () => {
   const root = await healthyFixture();
   await put(
@@ -127,6 +144,20 @@ test("requires AGENTS.md to point to canonical doctrine and shared rules", async
   await put(root, "AGENTS.md", "# portable contract\n");
   const findings = await checkHarnessConsistency(root);
   assert.ok(findings.some((f) => f.code === "portable-contract-drift"));
+});
+
+test("requires doctrine preservation matrix", async () => {
+  const root = await healthyFixture();
+  await rm(join(root, "docs/harness-doctrine-matrix.md"));
+  const findings = await checkHarnessConsistency(root);
+  assert.ok(findings.some((f) => f.code === "missing-doctrine-matrix"));
+});
+
+test("requires all matrix classifications", async () => {
+  const root = await healthyFixture();
+  await put(root, "docs/harness-doctrine-matrix.md", "ESTÁVEL\nSNAPSHOT\n");
+  const findings = await checkHarnessConsistency(root);
+  assert.ok(findings.some((f) => f.code === "incomplete-doctrine-matrix"));
 });
 
 test("allows explicit negative references to obsolete commands", async () => {
