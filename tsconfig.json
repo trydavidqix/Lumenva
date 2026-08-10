@@ -41,6 +41,7 @@
     "node_modules",
     ".next",
     "dist",
-    "scripts/**"
+    "scripts/**",
+    "website/**"
   ]
 }
