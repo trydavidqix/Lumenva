@@ -2,7 +2,7 @@
 
 ## 1. Visual Theme & Atmosphere
 
-Lumenva is a restrained, light-filled institutional site for an open-source, self-hosted AI Sales OS. It feels precise and editorial rather than decorative: broad whitespace, deliberate asymmetry, calm technical confidence, and a clear conversion path to a demonstration. Density is gallery-airy (3/10), variance is editorial and offset (6/10), and motion is restrained cinematic support (5/10). The monogram is always the protagonist; all visual effects must preserve reading order and clear spatial separation.
+Lumenva is a restrained, light-filled institutional site for an open-source, self-hosted AI Sales OS. It feels precise and editorial rather than decorative: broad whitespace, deliberate asymmetry, calm technical confidence, and a clear conversion path to a demonstration. Density is gallery-airy (3/10), variance is editorial and offset (6/10), and motion is restrained cinematic support (5/10). The headline copy is always the protagonist; all visual effects must preserve reading order and clear spatial separation.
 
 ## 2. Color Palette & Roles
 
@@ -26,11 +26,11 @@ No blue, green, purple, brown, neon, or gradient accents anywhere. All colors ar
 
 ## 4. Component Stylings
 
-- **Primary CTA:** one decisive blue action per section, flat and tactile, with a small transform-only press response. No neon glow.
+- **Primary CTA:** one decisive black action per section, flat and tactile, with a small transform-only press response. No neon glow.
 - **Secondary action:** understated text or outline treatment; do not create competing conversion paths.
 - **Panels and cards:** use only when elevation communicates a genuine grouping. Favor editorial sequences, border-top dividers, and negative space. Never use a generic three-equal-card grid.
 - **Forms:** labels sit above controls; accessible helper and error text sit below. All tap targets are at least 44 px.
-- **Hero mark:** Manrope 800 `L` resolves first. In the final 10% of its reveal, a low-opacity circular scan behind it sweeps slowly and reveals three small found points. The radar remains visually subordinate. In reduced-motion mode, render the completed static state without loops.
+- **Hero preview:** the hero pairs the headline copy with a decorative, static product-preview panel (inbox message + AI-suggested reply + pipeline stage strip), built from typed content only — never a literal app screenshot. It is `aria-hidden` since the surrounding copy already carries the value proposition. No canvas/WebGL in the hero critical path.
 
 ## 5. Layout Principles
 
@@ -62,15 +62,15 @@ Create a mobile-first web landing page for Lumenva, the public brand for an open
 **DESIGN SYSTEM (REQUIRED):**
 - Platform: Web, mobile-first from 390 px; single-column below 768 px with no horizontal overflow.
 - Typography: Manrope throughout. Use Manrope 800 for the Lumenva monogram and wordmark; use 700–800 for compact display hierarchy and 500–700 for body/interface copy.
-- Background: Pure White (`#FFFFFF`) with Cloud Surface (`#F5F5F7`) and Mist Surface (`#FAFAFC`) as quiet editorial breaks.
+- Background: Pure White (`#FFFFFF`) with Lumenva White (`#F5F5F7`) and Mist Surface (`#FAFAFA`) as quiet editorial breaks.
 - Accent: Lumenva Black (`#111111`) only, with `#2C2C2E` hover. No chromatic accent anywhere.
-- Text: Lumen Ink (`#1D1D1F`) for primary text. Use semantic tokens only; no arbitrary component colors.
+- Text: Lumenva Black (`#111111`) for primary text, Lumenva Gray (`#6E6E73`) for secondary text. Use semantic tokens only; no arbitrary component colors.
 - Components: flat tactile primary CTA, restrained secondary action, editorial dividers and negative space instead of generic equal card grids; 44 px minimum touch targets and visible focus states.
-- Motion: the `L` monogram settles first; only in the final 10% does a low-opacity radar sweep behind it and reveal three small points. The radar is subtle supporting motion and is static under reduced motion.
+- Motion: fade/reveal and small translations only, transform/opacity, static under reduced motion. No canvas/WebGL in the hero critical path.
 
 **Page Structure:**
-1. Header with Manrope Lumenva wordmark, focused navigation, and one visible “Solicitar demonstração” CTA.
-2. Asymmetric hero with the monogram/radar mark, concise factual positioning, primary demonstration CTA, and one GitHub secondary link.
+1. Header with Manrope Lumenva wordmark, focused navigation (Produto, Soluções with dropdown, Integrações, Preços, Contato), Entrar link, and one visible “Agendar demonstração” CTA.
+2. Asymmetric hero: headline/CTA copy paired with a decorative static product-preview panel, concise factual positioning, primary demonstration CTA, and a secondary “Ver produto” link.
 3. Editorial proof band using only confirmed product properties: open source, self-hosted, WhatsApp-native, and human-governed agents.
 4. Connected in-flow narrative explaining AI agents, automations, and CRM together; use typography, dividers, and whitespace rather than equal card grids.
 5. Final CTA and factual footer.
