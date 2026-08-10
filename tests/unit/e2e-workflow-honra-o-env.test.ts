@@ -147,10 +147,24 @@ describe("o workflow do e2e honra o contrato de ambiente que a suíte exige", ()
     // browser: servidor falando com um banco e cliente com outro, no mesmo
     // teste. O `e2e:build` existe para exportar o `.env.e2e` antes do build.
     const buildPuro = COMANDOS.some((l) => /^run: pnpm build$/.test(l) || /^pnpm build$/.test(l));
-    expect(
-      buildPuro,
-      "o workflow do e2e builda com o env errado — use `pnpm e2e:build`",
-    ).toBe(false);
+    expect(buildPuro, "o workflow do e2e builda com o env errado — use `pnpm e2e:build`").toBe(
+      false,
+    );
     expect(packageJson.scripts["e2e:build"]).toBeTruthy();
+  });
+
+  it("o Redis REST de teste existe e fica pronto antes de a suíte começar", () => {
+    // O `.env.e2e` aponta o SDK @upstash/redis para 127.0.0.1:3998. Sem um
+    // serviço REST compatível nessa porta, cada chamada cai no fallback em
+    // memória e a navegação do E2E esbarra no 429 do próprio produto.
+    expect(workflow).toMatch(/services:\s*[\s\S]*?redis:/);
+    expect(workflow).toMatch(/services:\s*[\s\S]*?srh:/);
+    expect(workflow).toMatch(/SRH_TOKEN:\s*\$\{\{ env\.E2E_SRH_TOKEN \}\}/);
+    expect(workflow).toMatch(/SRH_CONNECTION_STRING:\s*redis:\/\/redis:6379/);
+    expect(workflow).toMatch(/3998:80/);
+    expect(workflow).toMatch(/curl\s+-fsS[\s\\]+-H[\s\\]+"Authorization: Bearer \$E2E_SRH_TOKEN"/);
+    expect(workflow).toMatch(/http:\/\/127\.0\.0\.1:3998\/ping/);
+    const gerador = fs.readFileSync(path.join(RAIZ, "scripts/gerar-env-e2e.sh"), "utf8");
+    expect(gerador).toMatch(/TOKEN_REDIS="\$\{E2E_SRH_TOKEN:-e2e-placeholder-nao-e-segredo\}"/);
   });
 });
