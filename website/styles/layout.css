@@ -1,0 +1,40 @@
+:root {
+  --layout-gutter: clamp(1.25rem, 4vw, 3rem);
+  --layout-max-width: 75rem;
+  --layout-reading-width: 65ch;
+  --section-space: clamp(3rem, 8vw, 6rem);
+}
+
+* {
+  min-width: 0;
+}
+
+.site-shell {
+  width: min(100% - (var(--layout-gutter) * 2), var(--layout-max-width));
+  margin-inline: auto;
+}
+
+.section {
+  padding-block: var(--section-space);
+}
+
+.reading-measure {
+  max-width: var(--layout-reading-width);
+}
+
+.content-grid {
+  display: grid;
+  gap: var(--space-6);
+}
+
+@media (min-width: 48rem) {
+  .content-grid--two-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@supports (padding: max(0px)) {
+  .safe-area-inline {
+    padding-inline: max(var(--layout-gutter), env(safe-area-inset-left)) max(var(--layout-gutter), env(safe-area-inset-right));
+  }
+}

@@ -1,0 +1,291 @@
+.section,
+.sectionAlt,
+.proofBand,
+.finalCta {
+  padding-block: var(--section-space);
+}
+
+.sectionAlt,
+.finalCta {
+  background: var(--color-surface);
+}
+
+.sectionHeader {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 46rem;
+}
+
+.eyebrow,
+.index,
+.kind {
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.sectionTitle {
+  font-size: var(--font-size-heading-md);
+}
+
+.sectionDescription,
+.itemDescription {
+  color: var(--color-text-muted);
+}
+
+.proofBand {
+  border-block: 1px solid var(--color-border);
+  background: var(--color-surface-subtle);
+}
+
+.proofList,
+.overviewList,
+.detailList,
+.steps,
+.integrations {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.proofList {
+  display: grid;
+  gap: 0;
+}
+
+.proofItem,
+.overviewItem,
+.detailItem,
+.integrationItem {
+  display: grid;
+  border-top: 1px solid var(--color-border);
+  gap: var(--space-3);
+  padding-block: var(--space-5);
+}
+
+.proofItem:first-child,
+.overviewItem:first-child,
+.detailItem:first-child,
+.integrationItem:first-child {
+  border-top: 0;
+}
+
+.proofLabel,
+.itemTitle {
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+
+.sectionStack {
+  display: grid;
+  gap: var(--space-8);
+}
+
+.overviewList {
+  display: grid;
+  border-top: 1px solid var(--color-border);
+}
+
+.overviewItem {
+  padding-block: var(--space-6);
+}
+
+.overviewItem .itemTitle {
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+}
+
+.agentLayout {
+  display: grid;
+  gap: var(--space-7);
+}
+
+.agentIntro {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+}
+
+.steps {
+  display: grid;
+  border-top: 1px solid var(--color-border);
+}
+
+.step {
+  display: grid;
+  gap: var(--space-3);
+  padding-block: var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.stepHeader {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+}
+
+.stepTitle {
+  font-size: clamp(1.35rem, 4vw, 2rem);
+}
+
+.capabilitySections {
+  display: grid;
+  gap: calc(var(--section-space) * 1.2);
+}
+
+.capabilitySection {
+  display: grid;
+  gap: var(--space-7);
+}
+
+.detailList {
+  border-top: 1px solid var(--color-border);
+}
+
+.howLayout {
+  display: grid;
+  gap: var(--space-8);
+}
+
+.stepRail {
+  position: relative;
+  padding-left: var(--space-6);
+}
+
+.stepRail::before {
+  position: absolute;
+  top: var(--space-6);
+  bottom: var(--space-6);
+  left: 0.22rem;
+  width: 1px;
+  background: var(--color-border);
+  content: "";
+}
+
+.stepRail .step {
+  position: relative;
+}
+
+.stepRail .step::before {
+  position: absolute;
+  top: 2.15rem;
+  left: calc((var(--space-6) * -1) - 0.02rem);
+  width: 0.5rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--color-accent);
+  content: "";
+}
+
+.integrations {
+  display: grid;
+  border-top: 1px solid var(--color-border);
+}
+
+.integrationItem {
+  padding-block: var(--space-6);
+}
+
+.faqList {
+  display: grid;
+  margin-top: var(--space-7);
+  border-top: 1px solid var(--color-border);
+}
+
+.faqItem {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.faqQuestion {
+  display: flex;
+  min-height: 3.5rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-block: var(--space-4);
+  font-size: 1.0625rem;
+  font-weight: 800;
+  list-style: none;
+}
+
+.faqQuestion::-webkit-details-marker {
+  display: none;
+}
+
+.faqQuestion::after {
+  flex: 0 0 auto;
+  color: var(--color-accent);
+  content: "+";
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.faqItem[open] .faqQuestion::after {
+  content: "−";
+}
+
+.faqAnswer {
+  padding: 0 0 var(--space-5);
+  color: var(--color-text-muted);
+}
+
+.finalCtaInner {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.finalCtaAction {
+  justify-self: start;
+}
+
+@media (min-width: 48rem) {
+  .proofList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--space-7);
+  }
+
+  .proofItem:nth-child(2) {
+    border-top: 0;
+  }
+
+  .overviewItem,
+  .detailItem,
+  .integrationItem {
+    grid-template-columns: minmax(12rem, 0.7fr) minmax(0, 1.3fr);
+    gap: var(--space-7);
+  }
+
+  .capabilitySection,
+  .howLayout,
+  .finalCtaInner {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: clamp(3rem, 8vw, 7rem);
+  }
+
+  .integrations {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--space-7);
+  }
+
+  .integrationItem:nth-child(2) {
+    border-top: 0;
+  }
+}
+
+@media (min-width: 64rem) {
+  .agentLayout {
+    grid-template-columns: minmax(18rem, 0.82fr) minmax(0, 1.18fr);
+    gap: clamp(4rem, 9vw, 8rem);
+  }
+}
+
+@media (max-width: 24.375rem) {
+  .section,
+  .sectionAlt,
+  .proofBand,
+  .finalCta {
+    overflow-wrap: anywhere;
+  }
+}
