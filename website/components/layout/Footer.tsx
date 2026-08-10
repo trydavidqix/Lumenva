@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Facebook, Instagram, MessageCircle } from "lucide-react";
+import { MessageCircle } from "lucide-react";
+import { FaFacebookF, FaInstagram } from "react-icons/fa";
 import { description, navigation, shellContent, siteName } from "@/content/site";
 import styles from "./Footer.module.css";
 
@@ -33,7 +34,7 @@ export function Footer() {
                 role="img"
                 aria-label="Facebook: perfil ainda não configurado"
               >
-                <Facebook aria-hidden="true" size={18} strokeWidth={1.8} />
+                <FaFacebookF aria-hidden="true" size={18} />
                 <span>Facebook</span>
               </span>
             </li>
@@ -43,7 +44,7 @@ export function Footer() {
                 role="img"
                 aria-label="Instagram: perfil ainda não configurado"
               >
-                <Instagram aria-hidden="true" size={18} strokeWidth={1.8} />
+                <FaInstagram aria-hidden="true" size={18} />
                 <span>Instagram</span>
               </span>
             </li>

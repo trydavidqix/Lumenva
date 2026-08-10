@@ -1,13 +1,12 @@
 /**
- * Issue #66 — o `AGENTS.md` declara versões de biblioteca à mão, e à mão elas
- * desatualizam. Já aconteceu: o arquivo nasceu dizendo "Zod 3" num repo em
- * zod 4, numa seção rotulada CONFIRMADO. Um agente lendo aquilo escreveria
- * idioma da major errada.
+ * Issue #66 nasceu porque `AGENTS.md` duplicava versões de bibliotecas à mão e
+ * essa cópia envelhecia. A arquitetura atual remove a duplicação em vez de
+ * tentar sincronizá-la para sempre: versões mutáveis vivem em `package.json`
+ * (e resolução exata no lockfile); `AGENTS.md` é contrato portátil.
  *
- * A régua respeita a PRECISÃO que o doc escolheu: se ele diz "Zod 4", basta a
- * major bater; se diz "Playwright 1.62", a minor entra na conta. Assim o teste
- * não vira ruído a cada bump de patch, e ainda assim pega o que enganaria
- * alguém — que foi exatamente um erro de minor.
+ * Este gate protege a causa raiz do drift: se alguém voltar a escrever
+ * "Next.js 16.3", "Zod 4" etc. no contrato portátil, a suíte reprova antes que
+ * uma versão congelada possa voltar a orientar agentes depois de um upgrade.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -16,7 +15,7 @@ import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
 
-/** Como o nome aparece no AGENTS.md → nome do pacote no package.json. */
+/** Como o nome pode aparecer no AGENTS.md → nome canônico no package.json. */
 const BIBLIOTECAS: Array<{ rotulo: string; pacote: string }> = [
   { rotulo: "Next\\.js", pacote: "next" },
   { rotulo: "React", pacote: "react" },
@@ -28,13 +27,7 @@ const BIBLIOTECAS: Array<{ rotulo: string; pacote: string }> = [
   { rotulo: "Sentry", pacote: "@sentry/nextjs" },
 ];
 
-function versaoInstalada(pkg: Record<string, Record<string, string>>, nome: string): string {
-  const bruto = pkg.dependencies?.[nome] ?? pkg.devDependencies?.[nome];
-  if (!bruto) throw new Error(`${nome} não está no package.json`);
-  return bruto.replace(/^[\^~>=<\s]+/, "");
-}
-
-describe("AGENTS.md × package.json", () => {
+describe("AGENTS.md mantém package.json como fonte das versões", () => {
   const agents = readFileSync(join(root, "AGENTS.md"), "utf8");
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as Record<
     string,
@@ -42,19 +35,15 @@ describe("AGENTS.md × package.json", () => {
   >;
 
   for (const { rotulo, pacote } of BIBLIOTECAS) {
-    it(`declara a versão certa de ${pacote}`, () => {
-      const achado = agents.match(new RegExp(`${rotulo}\\s+(\\d+(?:\\.\\d+)*)`));
-      expect(achado, `AGENTS.md não declara a versão de ${pacote}`).toBeTruthy();
-
-      const declarada = achado![1]!;
-      const instalada = versaoInstalada(pkg, pacote);
-
-      // Prefixo, não igualdade: "16.2" casa com "16.2.11", mas "1.61" não casa
-      // com "1.62.0". A precisão de quem escreveu o doc é que manda.
+    it(`não congela a versão de ${pacote} no contrato portátil`, () => {
+      const declaradaNoAgents = agents.match(new RegExp(`${rotulo}\\s+v?\\d+(?:\\.\\d+)*`, "i"));
       expect(
-        instalada === declarada || instalada.startsWith(`${declarada}.`),
-        `AGENTS.md diz ${pacote} ${declarada}, package.json tem ${instalada}`,
-      ).toBe(true);
+        declaradaNoAgents,
+        `AGENTS.md voltou a duplicar a versão de ${pacote}; mantenha a versão em package.json`,
+      ).toBeNull();
+
+      const existeNoPackage = pkg.dependencies?.[pacote] ?? pkg.devDependencies?.[pacote];
+      expect(existeNoPackage, `${pacote} precisa continuar declarado em package.json`).toBeTruthy();
     });
   }
 });
