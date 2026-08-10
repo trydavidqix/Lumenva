@@ -1,0 +1,249 @@
+.breadcrumbs {
+  padding-block: var(--space-5) 0;
+}
+
+.breadcrumbList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+  list-style: none;
+}
+
+.breadcrumbItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.breadcrumbItem:not(:last-child)::after {
+  color: var(--color-border);
+  content: "/";
+}
+
+.hero {
+  padding-block: clamp(3.5rem, 10vw, 8rem);
+}
+
+.heroInner {
+  display: grid;
+  gap: var(--space-7);
+}
+
+.heroCopy {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 52rem;
+}
+
+.eyebrow,
+.capabilityIndex {
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.title {
+  font-size: var(--font-size-heading-lg);
+}
+
+.description,
+.sectionCopy,
+.faqAnswer {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.heroAction {
+  justify-self: start;
+  margin-top: var(--space-2);
+}
+
+.capabilityList,
+.factList,
+.faqList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.capabilityList {
+  display: grid;
+  border-top: 1px solid var(--color-border);
+}
+
+.capabilityItem {
+  display: grid;
+  gap: var(--space-3);
+  padding-block: var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 1.0625rem;
+  font-weight: 800;
+}
+
+.section,
+.sectionAlt,
+.faqSection {
+  padding-block: var(--section-space);
+}
+
+.sectionAlt {
+  background: var(--color-surface);
+}
+
+.sectionStack {
+  display: grid;
+  gap: var(--space-7);
+}
+
+.sectionHeader {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 48rem;
+}
+
+.sectionTitle {
+  font-size: var(--font-size-heading-sm);
+}
+
+.factList {
+  display: grid;
+  border-top: 1px solid var(--color-border);
+}
+
+.factItem {
+  display: grid;
+  gap: var(--space-3);
+  padding-block: var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.factTitle {
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+
+.faqList {
+  display: grid;
+  margin-top: var(--space-7);
+  border-top: 1px solid var(--color-border);
+}
+
+.faqItem {
+  display: grid;
+  gap: var(--space-3);
+  padding-block: var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.faqQuestion {
+  font-size: 1.125rem;
+}
+
+.contactShell {
+  display: grid;
+  gap: var(--space-5);
+  max-width: 46rem;
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-subtle);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.fieldGrid {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--font-size-label);
+  font-weight: 800;
+}
+
+.input {
+  width: 100%;
+  min-height: 3rem;
+  box-sizing: border-box;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-white);
+  color: var(--color-ink);
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.consent {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  font-size: var(--font-size-label);
+  font-weight: 700;
+}
+
+.consent input {
+  flex: 0 0 auto;
+  min-height: auto;
+  margin-top: 0.3rem;
+}
+
+.submit {
+  min-height: 3rem;
+  justify-self: start;
+  padding: var(--space-3) var(--space-5);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-ink);
+  color: var(--color-white);
+  cursor: not-allowed;
+  font-weight: 800;
+  opacity: 0.58;
+}
+
+.formNote {
+  font-size: var(--font-size-label);
+}
+
+@media (min-width: 48rem) {
+  .heroInner {
+    grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.8fr);
+    align-items: end;
+    gap: clamp(3rem, 8vw, 7rem);
+  }
+
+  .capabilityItem,
+  .factItem {
+    grid-template-columns: 3rem minmax(0, 1fr);
+    align-items: baseline;
+  }
+
+  .factList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--space-7);
+  }
+
+  .factItem:nth-child(2) {
+    border-top: 0;
+  }
+
+  .fieldGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -1,0 +1,235 @@
+.hero {
+  overflow: clip;
+  padding-block: clamp(3.5rem, 9vw, 7.5rem);
+}
+
+.layout {
+  display: grid;
+  align-items: center;
+  gap: clamp(3rem, 8vw, 7rem);
+}
+
+.copy {
+  position: relative;
+  z-index: 3;
+}
+
+.eyebrow {
+  margin-bottom: var(--space-4);
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.title {
+  max-width: 11ch;
+  font-size: var(--font-size-heading-lg);
+}
+
+.description {
+  max-width: 38rem;
+  margin-top: var(--space-5);
+  color: var(--color-text-muted);
+  font-size: clamp(1.0625rem, 2vw, 1.25rem);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  margin-top: var(--space-6);
+}
+
+.primaryAction,
+.secondaryAction {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.primaryAction {
+  padding: 0.75rem 1.25rem;
+  background: var(--color-accent);
+  color: var(--color-white);
+}
+
+.primaryAction:hover {
+  background: var(--color-accent-hover);
+}
+
+.primaryAction:active,
+.secondaryAction:active {
+  transform: translateY(1px);
+}
+
+.secondaryAction {
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  color: var(--color-ink);
+}
+
+.secondaryAction:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.markStage {
+  display: grid;
+  place-items: center;
+  min-height: clamp(18rem, 82vw, 34rem);
+}
+
+.mark {
+  position: relative;
+  display: grid;
+  width: min(86vw, 34rem);
+  aspect-ratio: 1;
+  place-items: center;
+  isolation: isolate;
+}
+
+.scene {
+  position: absolute;
+  z-index: 0;
+  inset: 5%;
+  pointer-events: none;
+}
+
+.scene :global(.lumenva-ai-scene),
+.scene :global(canvas) {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.scanLayer {
+  position: absolute;
+  z-index: 1;
+  inset: 4%;
+  color: var(--color-accent);
+  opacity: 1;
+  transform: rotate(8deg);
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
+.ring,
+.axis,
+.sweep,
+.point {
+  position: absolute;
+  display: block;
+}
+
+.ring {
+  border: 1px solid color-mix(in srgb, currentColor 17%, transparent);
+  border-radius: 50%;
+}
+
+.ringOuter {
+  inset: 0;
+}
+
+.ringMiddle {
+  inset: 17%;
+}
+
+.ringInner {
+  inset: 34%;
+}
+
+.axisHorizontal {
+  top: 50%;
+  right: 6%;
+  left: 6%;
+  border-top: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.axisVertical {
+  top: 6%;
+  bottom: 6%;
+  left: 50%;
+  border-left: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.sweep {
+  top: 50%;
+  left: 50%;
+  width: 43%;
+  border-top: 1px solid color-mix(in srgb, currentColor 33%, transparent);
+  transform: rotate(-27deg);
+  transform-origin: left center;
+}
+
+.point {
+  width: clamp(0.34rem, 1vw, 0.48rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 0.3rem color-mix(in srgb, currentColor 9%, transparent);
+  will-change: transform, opacity;
+}
+
+.pointOne {
+  top: 24%;
+  left: 62%;
+}
+
+.pointTwo {
+  top: 58%;
+  left: 76%;
+}
+
+.pointThree {
+  top: 71%;
+  left: 31%;
+}
+
+.letter {
+  position: relative;
+  z-index: 2;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: clamp(10rem, 43vw, 18rem);
+  font-weight: 800;
+  letter-spacing: -0.09em;
+  line-height: 0.8;
+  transform-origin: center 72%;
+  will-change: transform, opacity;
+}
+
+@media (min-width: 48rem) {
+  .layout {
+    grid-template-columns: minmax(0, 1.02fr) minmax(20rem, 0.98fr);
+  }
+
+  .markStage {
+    min-height: 31rem;
+  }
+
+  .mark {
+    width: min(42vw, 34rem);
+  }
+
+  .letter {
+    font-size: clamp(12rem, 20vw, 18rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scanLayer,
+  .letter,
+  .point {
+    opacity: 1 !important;
+  }
+}

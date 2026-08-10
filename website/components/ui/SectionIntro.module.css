@@ -1,0 +1,19 @@
+.intro {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.eyebrow {
+  color: var(--color-accent);
+  font-size: var(--font-size-label);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.title {
+  font-size: var(--font-size-heading-sm);
+}
+
+.description {
+  color: var(--color-text-muted);
+}
