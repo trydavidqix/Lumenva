@@ -36,11 +36,30 @@ pnpm typecheck
 pnpm test:unit
 pnpm test:db
 pnpm test:e2e
-pnpm gov:verify
+pnpm test:harness
 pnpm harness:check
+pnpm gov:verify
 ```
 
 `pnpm gov:verify` não substitui `test:db` para schema/RLS nem `test:e2e`/prova visual para UI.
+
+## Mapa de rules
+
+| Domínio | Rule |
+|---|---|
+| Git/worktrees | [`.claude/rules/git-workflow.md`](.claude/rules/git-workflow.md) |
+| Segurança/auth/RBAC | [`.claude/rules/security.md`](.claude/rules/security.md) |
+| Tenancy/RLS | [`.claude/rules/multi-tenancy.md`](.claude/rules/multi-tenancy.md) |
+| API/idempotência | [`.claude/rules/api-contract.md`](.claude/rules/api-contract.md) |
+| Audit/observabilidade | [`.claude/rules/audit-observability.md`](.claude/rules/audit-observability.md) |
+| LGPD | [`.claude/rules/lgpd.md`](.claude/rules/lgpd.md) |
+| WhatsApp/WAHA | [`.claude/rules/whatsapp-waha.md`](.claude/rules/whatsapp-waha.md) |
+| Modelagem | [`.claude/rules/data-modeling.md`](.claude/rules/data-modeling.md) |
+| Migrations | [`.claude/rules/database-migrations.md`](.claude/rules/database-migrations.md) |
+| Testes/QA | [`.claude/rules/testing-verification.md`](.claude/rules/testing-verification.md) |
+| Documentação | [`.claude/rules/documentation.md`](.claude/rules/documentation.md) |
+| Graphify | [`.claude/rules/graphify.md`](.claude/rules/graphify.md) |
+| Skills/agentes | [`.claude/rules/skill-routing.md`](.claude/rules/skill-routing.md) |
 
 ## Regras críticas
 
@@ -50,44 +69,42 @@ pnpm harness:check
 - RLS em tabela tenant-aware.
 - Service role filtra `organization_id` manualmente.
 - Backend usa `getUser()`, não `getSession()` como prova de identidade.
+- Platform admin é o papel cross-tenant canônico e usa a representação atual `platform_admins` da Spec 01.
 - Mudança de tenancy/RLS exige teste cross-tenant.
-
-Detalhe: [`.claude/rules/multi-tenancy.md`](.claude/rules/multi-tenancy.md).
 
 ### Schema
 
-Mudança de schema via:
-
-1. migration nova;
-2. apêndice idempotente em `supabase/baseline.sql`;
-3. linha em `supabase/migrations/MANIFEST.md`.
-
-Tipos gerados acompanham quando o contrato muda. Nunca edite migration já aplicada.
-
-Detalhe: [`.claude/rules/database-migrations.md`](.claude/rules/database-migrations.md).
+Mudança de schema via migration nova + apêndice idempotente em `supabase/baseline.sql` + linha em `supabase/migrations/MANIFEST.md`. Tipos gerados acompanham quando o contrato muda. Nunca edite migration já aplicada.
 
 ### Segurança
 
 - segredo/token/cookie/PII não vai para log, screenshot, teste, commit ou docs;
 - API key nunca em query string;
 - RBAC é server-side;
+- MFA segue o contrato obrigatório de admin/platform admin;
 - produção, dados reais, credenciais, operação destrutiva e custo exigem autorização explícita.
 
-Detalhe: [`.claude/rules/security.md`](.claude/rules/security.md).
-
-### Side effects e audit
+### API, side effects e audit
 
 - trigger Postgres nunca faz HTTP;
+- POSTs de criação cobertos pelo contrato base usam idempotência de 24h;
 - evento/side effect reexecutável precisa de idempotência apropriada;
-- mutação relevante gera audit conforme o contrato do domínio;
+- mutação relevante gera audit conforme o domínio;
+- audit é append-only;
 - input externo usa Zod;
 - borda `/api/v1/` usa `ok()`/`fail()` e códigos canônicos.
+
+### LGPD
+
+Anonimização é preferida quando há histórico, é irreversível e precisa respeitar cascade/consentimento/audit. Os SLAs vigentes D+7 para export e D+15 para redact ficam em `lgpd.md`/business rules.
+
+### WhatsApp
+
+Não contorne anti-banimento, STOP/opt-out, idempotência, multi-device ou regras de recovery. Use `whatsapp-waha.md` + PRD/Spec 03.
 
 ## Git
 
 Antes de editar, confira branch/working tree e preserve trabalho alheio. Não faça reset destrutivo, force-push, descarte, rebase/merge arriscado ou alteração de `main` sem autorização e contexto apropriados.
-
-Detalhe: [`.claude/rules/git-workflow.md`](.claude/rules/git-workflow.md).
 
 ## Testes e prova
 
@@ -99,15 +116,13 @@ Alegação não é evidência. Use o check correspondente ao raio de dano:
 - UI/jornada → `test:e2e` + evidência visual quando a doutrina exigir;
 - build → `build`.
 
-Diga explicitamente o que não foi medido.
-
-Detalhe: [`.claude/rules/testing-verification.md`](.claude/rules/testing-verification.md).
+Diga explicitamente o que não foi medido. Contagens de testes e estado atual do CI pertencem a snapshots, não a este contrato.
 
 ## Documentação
 
 Não invente regra de negócio. Consulte `docs/index.md`, specs, PRDs e business-rules antes de decidir comportamento. `current-state`, handoffs, contagens e snapshots envelhecem; valide antes de tratá-los como estado atual.
 
-Detalhe: [`.claude/rules/documentation.md`](.claude/rules/documentation.md).
+A reconciliação da doutrina modular está em [`docs/harness-doctrine-matrix.md`](docs/harness-doctrine-matrix.md).
 
 ## Skills e agentes
 
@@ -119,8 +134,6 @@ Skills/agents são adapters de processo e especialização. Eles não substituem
 - `.codex/agents/` — especialistas Codex.
 
 Não mantenha convenção de naming/imports/comandos congelada nessas skills. Quando a doutrina mudar, atualize a fonte canônica e os adapters somente quando necessário.
-
-Detalhe: [`.claude/rules/skill-routing.md`](.claude/rules/skill-routing.md).
 
 ## Arquivos sensíveis
 
