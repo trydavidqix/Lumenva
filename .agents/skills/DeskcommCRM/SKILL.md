@@ -1,79 +1,52 @@
-```markdown
-# DeskcommCRM Development Patterns
+---
+name: DeskcommCRM
+description: Ponte para a doutrina viva do DeskcommCRM. Use ao escrever, revisar ou responder perguntas sobre código, schema, tenancy, segurança, API, LGPD, WhatsApp/WAHA, modelagem, self-host, testes ou Definition of Done. Leia `CLAUDE.md` e as rules aplicáveis; esta skill não substitui a fonte da verdade.
+---
 
-> Auto-generated skill from repository analysis
+# DeskcommCRM — repo skill
 
-## Overview
-This skill teaches the core development patterns and conventions used in the DeskcommCRM TypeScript codebase. It covers file organization, code style, commit message standards, and testing patterns, providing practical examples and command suggestions to streamline your workflow.
+> **Autoridade:** `CLAUDE.md` da raiz. Não confie em snapshots gerados, contagens antigas ou convenções copiadas para esta skill quando a doutrina atual puder ser lida diretamente.
 
-## Coding Conventions
+## Abertura obrigatória
 
-### File Naming
-- Use **snake_case** for all file names.
-  - Example:  
-    ```
-    user_profile.ts
-    customer_data_manager.ts
-    ```
+1. Leia `CLAUDE.md` antes de tocar código.
+2. Leia `AGENTS.md` quando precisar do contrato portátil/visão rápida do harness.
+3. Carregue as rules aplicáveis em `.claude/rules/` quando a plataforma puder lê-las; caso contrário, siga a doutrina equivalente via `CLAUDE.md`/`AGENTS.md`.
+4. Consulte a spec/PRD/business-rule/doc canônico do domínio antes de inventar comportamento.
+5. Se estiver reconciliando regra antiga, consulte `docs/harness-doctrine-matrix.md`.
 
-### Import Style
-- Use **relative imports** for referencing modules.
-  - Example:
-    ```typescript
-    import { getUser } from './user_utils';
-    import { Customer } from '../models/customer';
-    ```
+## Rules por domínio
 
-### Export Style
-- Use **named exports** for all modules.
-  - Example:
-    ```typescript
-    // In user_utils.ts
-    export function getUser(id: string) { ... }
-    export const USER_ROLE = 'admin';
-    ```
+- Git/branches/worktrees: `.claude/rules/git-workflow.md`
+- Segurança/segredos/auth/RBAC: `.claude/rules/security.md`
+- Tenant/RLS/service role: `.claude/rules/multi-tenancy.md`
+- API/idempotência/rate limit: `.claude/rules/api-contract.md`
+- Audit/observabilidade: `.claude/rules/audit-observability.md`
+- LGPD/dados pessoais: `.claude/rules/lgpd.md`
+- WhatsApp/WAHA: `.claude/rules/whatsapp-waha.md`
+- Modelagem de dados: `.claude/rules/data-modeling.md`
+- Schema/migrations: `.claude/rules/database-migrations.md`
+- Testes/QA/evidência: `.claude/rules/testing-verification.md`
+- Documentação: `.claude/rules/documentation.md`
+- Grafo local: `.claude/rules/graphify.md`
+- Skills/agentes: `.claude/rules/skill-routing.md`
 
-### Commit Messages
-- Follow **conventional commits** with the `fix` prefix for bug fixes.
-  - Example:
-    ```
-    fix: correct customer email validation logic
-    ```
+## Três invariantes que custam caro quando esquecidas
 
-## Workflows
+**Multi-tenancy:** `organization_id` vem de fonte confiável; RLS em tabela tenant-aware; service role filtra a organização manualmente; backend usa `getUser()`, nunca `getSession()` como prova de identidade.
 
-### Bug Fix Workflow
-**Trigger:** When you need to fix a bug in the codebase  
-**Command:** `/fix-bug`
+**Schema:** mudança de banco via migration versionada + apêndice idempotente em `supabase/baseline.sql` + linha no `supabase/migrations/MANIFEST.md`; tipos gerados acompanham quando o contrato muda.
 
-1. Identify the bug and create a new branch.
-2. Make code changes following the coding conventions.
-3. Write or update relevant tests (`*.test.*` files).
-4. Commit your changes using the `fix:` prefix and a concise description.
-    - Example: `fix: resolve crash on empty customer list`
-5. Push your branch and open a pull request.
+**Self-host:** uma mudança que funciona no ambiente do dev e quebra instalação/update fresco é bug de produto. Não torne serviço pago obrigatório, não deixe env crítica sem contrato e não confunda sonda verde com jornada real verde.
 
-### Adding a New Module
-**Trigger:** When you need to add a new feature or module  
-**Command:** `/add-module`
+## Antes de dizer pronto
 
-1. Create new files using snake_case naming.
-2. Use relative imports to connect new and existing modules.
-3. Export functions and constants using named exports.
-4. Write corresponding tests in `*.test.*` files.
-5. Commit with an appropriate message (e.g., `feat: add customer notes module`).
+Use evidência compatível com o raio de dano. `pnpm gov:verify` não substitui `pnpm test:db` para schema/RLS nem `pnpm test:e2e`/prova visual para UX. Declare também o que não foi medido.
 
-## Testing Patterns
+## Não objetivos desta skill
 
-- Test files follow the `*.test.*` naming pattern.
-  - Example: `user_utils.test.ts`
-- The testing framework is not explicitly specified; check existing test files for structure.
-- Place tests alongside or near the modules they test.
-- Ensure all new features and bug fixes are covered by tests.
-
-## Commands
-| Command      | Purpose                                 |
-|--------------|-----------------------------------------|
-| /fix-bug     | Start the bug fix workflow              |
-| /add-module  | Start the new module addition workflow  |
-```
+- não define naming convention de arquivos;
+- não define estilo de imports;
+- não inventa `/fix-bug`, `/add-module` ou outros comandos;
+- não replica a Definition of Done inteira;
+- não substitui `CLAUDE.md`, rules nem specs.
