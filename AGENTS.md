@@ -5,6 +5,8 @@
 > [`CLAUDE.md`](CLAUDE.md)** — leia-o antes de tocar em código. Aqui está o mínimo
 > para não causar dano.
 
+Regras modulares compartilhadas vivem em [`.claude/rules/`](.claude/rules/). Elas detalham `CLAUDE.md` por domínio e nunca o substituem.
+
 ---
 
 ## Objetivo do projeto
