@@ -20,7 +20,7 @@ DeskcommCRM é um sistema operacional de vendas open source com agentes de IA na
 
 ## Stack
 
-Next.js 16 App Router · React 19 · TypeScript 6 estrito · Tailwind · Supabase/Postgres · Upstash Redis · Vercel AI Gateway · WAHA Plus · Zod · Vitest · Playwright · Sentry.
+Next.js 16.3 App Router · React 19 · TypeScript 6 estrito · Tailwind · Supabase/Postgres · Upstash Redis · Vercel AI Gateway · WAHA Plus · Zod · Vitest · Playwright · Sentry.
 
 Runtime: Node >=22. Gerenciador canônico: **pnpm 9.15.9**.
 
