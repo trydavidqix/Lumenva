@@ -128,3 +128,14 @@ test("requires AGENTS.md to point to canonical doctrine and shared rules", async
   const findings = await checkHarnessConsistency(root);
   assert.ok(findings.some((f) => f.code === "portable-contract-drift"));
 });
+
+test("allows explicit negative references to obsolete commands", async () => {
+  const root = await healthyFixture();
+  await put(
+    root,
+    ".agents/skills/DeskcommCRM/SKILL.md",
+    "Read CLAUDE.md. Do not invent /fix-bug or /add-module commands.\n",
+  );
+  const findings = await checkHarnessConsistency(root);
+  assert.equal(findings.some((f) => f.code === "stale-command"), false);
+});
