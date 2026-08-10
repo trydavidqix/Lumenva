@@ -3,9 +3,10 @@ name: e2e
 # Issue #63: as specs de tests/e2e/ não rodavam em lugar nenhum. Este job fecha o
 # buraco com o subconjunto que não depende de serviço externo — hoje 29 de 33.
 #
-# A execução é dividida em DUAS invocações do playwright de propósito: o
+# Os fluxos são divididos em DUAS invocações do Playwright de propósito: o
 # limitador de login do produto é por IP (60/300s) e no CI todos os specs vêm do
-# mesmo 127.0.0.1. Ver o comentário do passo "E2E — parte 1 de 2".
+# mesmo 127.0.0.1. A verificação visual das telas de IA abre o job isoladamente,
+# antes da carga acumulada; ver os comentários dos passos abaixo.
 #
 # NÃO-BLOQUEANTE por ausência, não por mordaça: `e2e` não está na lista de
 # checks obrigatórios da branch protection, então falhar aqui não segura merge.
@@ -221,6 +222,16 @@ jobs:
           pnpm exec tsx --env-file=.env.local scripts/seed-e2e-capacidades-ausentes.ts
           pnpm exec tsx scripts/seed-e2e-followup-agent.ts
 
+      # Verificação visual antes da carga acumulada: estas telas fazem chamadas
+      # de dados ao abrir e o spec converte qualquer 429 em falha visual. Quando
+      # rodava depois de 50 cenários, media o orçamento compartilhado já gasto
+      # pela própria suíte, não a saúde das telas. Isolá-lo aqui preserva os
+      # limites de produção e mantém a evidência útil.
+      - name: E2E — telas de IA antes da carga acumulada
+        run: pnpm exec playwright test --workers=1 olhar-telas-do-epico.spec.ts
+        env:
+          AUTH_RATE_LIMIT_LOGIN_IP: "1000"
+
       # O que ficou DE FORA (e por quê) é declarado no passo de summary —
       # cobertura parcial silenciosa se lê como cobertura total.
       #
@@ -228,7 +239,7 @@ jobs:
       # `required()` no lib/env.ts vira obrigatória, inclusive as de serviço que
       # estes specs nem tocam. Os valores abaixo são PLACEHOLDERS FALSOS, só
       # para o boot passar da validação Zod — nenhum segredo real entra aqui.
-      # DUAS INVOCAÇÕES, e não uma — o motivo é medido, não estético.
+      # DUAS INVOCAÇÕES de fluxo, e não uma — o motivo é medido, não estético.
       #
       # `lib/auth/rate-limit.ts` limita login a 60 por IP a cada 300s. No CI todo
       # spec loga do mesmo 127.0.0.1, e ao subir a suíte de 15 para 29 specs o
@@ -273,7 +284,7 @@ jobs:
           pnpm exec playwright test --workers=1 \
             agente-novo-e-uso.spec.ts agente-organiza-operacao.spec.ts \
             central-de-avisos-capacidades.spec.ts escalacao-ciclo.spec.ts \
-            navegacao.spec.ts olhar-telas-do-epico.spec.ts pipelines-gestao.spec.ts \
+            navegacao.spec.ts pipelines-gestao.spec.ts \
             qa-agente-usa-as-maos.spec.ts qa-selo-no-funil-usado.spec.ts \
             qa-telas-descobertas-w4.spec.ts retorno-anti-morte.spec.ts \
             followup-builder.spec.ts followup-queue.spec.ts \
