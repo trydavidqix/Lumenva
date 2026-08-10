@@ -23,7 +23,7 @@
     "e2e:env": "bash scripts/gerar-env-e2e.sh",
     "test:journeys": "playwright test -c tests/journeys/playwright.config.ts",
     "test:unit": "vitest run --exclude scripts/check-harness-consistency.test.mjs",
-    "test:db": "bash scripts/test-db.sh",
+    "test:db": "node scripts/run-test-db.mjs",
     "test:shell": "bash tests/shell/update-guard.test.sh",
     "test:invariants": "bash scripts/test-db.sh",
     "test:harness": "node --test scripts/check-harness-consistency.test.mjs",
