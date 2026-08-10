@@ -44,6 +44,7 @@ aplica.
 ## Applied
 
 | Version | Name | Description |
+| `20260810151119` | `0116_ai_platform_foundation` | AI Platform Phase 0: tenant-aware feature flags (default OFF) and idempotent projection ledger, with RLS. |
 |---|---|---|
 | `20260428195354` | `0001_platform_base` | organizations, user_organizations, platform_admins, api_tokens, api_audit_log, user_recovery_codes, idempotency_keys + RLS helpers (fn_user_org_ids, fn_is_platform_admin, fn_user_role_in_org, fn_role_at_least) |
 | `20260428195513` | `0002_event_log_and_compat` | event_log + emit_event/fn_log_event helpers + compat aliases (fn_set_updated_at, fn_user_role_in returning int) |
