@@ -63,8 +63,15 @@
 }
 
 .demoAction {
+  display: none !important;
   flex: 0 0 auto;
   white-space: nowrap;
+}
+
+@media (min-width: 375px) {
+  .demoAction {
+    display: inline-flex !important;
+  }
 }
 
 .mobileMenuButton {
