@@ -170,4 +170,15 @@ describe("o workflow do e2e honra o contrato de ambiente que a suíte exige", ()
     const gerador = fs.readFileSync(path.join(RAIZ, "scripts/gerar-env-e2e.sh"), "utf8");
     expect(gerador).toMatch(/TOKEN_REDIS="\$\{E2E_SRH_TOKEN:-e2e-placeholder-nao-e-segredo\}"/);
   });
+
+  it("verifica as telas de IA antes da carga acumulada da suíte", () => {
+    // `olhar-telas-do-epico` escuta erros do console. Rodá-lo depois de dezenas
+    // de cenários que chamam APIs compartilhadas o faz diagnosticar a carga da
+    // própria suíte (429), e não a saúde das telas. Ele precisa abrir o ciclo.
+    const telas = primeiroIndice(/playwright test --workers=1 olhar-telas-do-epico\.spec\.ts/);
+    const carga = primeiroIndice(/agente-novo-e-uso\.spec\.ts/);
+    expect(telas, "a verificação visual das telas de IA não roda isoladamente").toBeGreaterThan(-1);
+    expect(carga, "a segunda parte com carga acumulada deixou de existir").toBeGreaterThan(-1);
+    expect(telas, "as telas de IA precisam rodar antes da carga acumulada").toBeLessThan(carga);
+  });
 });
