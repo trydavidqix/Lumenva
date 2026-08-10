@@ -46,6 +46,16 @@ function finding(code, path, message) {
   return { code, path, message };
 }
 
+function advertisesStaleCommand(content) {
+  return content.split(/\r?\n/).some((line) => {
+    if (!/\/(?:fix-bug|add-module)\b/.test(line)) return false;
+    if (/\b(?:do not|don't|never|not|não|nao|nunca|sem)\b/i.test(line)) return false;
+    return /(?:\bcommand\b|\bcomando\b|\buse\b|\brun\b|\bexecute\b|\bworkflow\b|\bstart\b|^\s*\|?\s*\/(?:fix-bug|add-module)\b)/i.test(
+      line,
+    );
+  });
+}
+
 export async function checkHarnessConsistency(rootDir) {
   const findings = [];
 
@@ -130,7 +140,7 @@ export async function checkHarnessConsistency(rootDir) {
       );
     }
 
-    if (/\/(?:fix-bug|add-module)\b/.test(content)) {
+    if (advertisesStaleCommand(content)) {
       findings.push(
         finding(
           "stale-command",
