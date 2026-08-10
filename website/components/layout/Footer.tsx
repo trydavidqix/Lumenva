@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { MessageCircle } from "lucide-react";
-import { FaFacebookF, FaInstagram } from "react-icons/fa";
-import { description, navigation, shellContent, siteName } from "@/content/site";
+import { FaFacebookF, FaGithub, FaInstagram } from "react-icons/fa";
+import {
+  description,
+  footerNavigation,
+  githubUrl,
+  shellContent,
+  siteName,
+} from "@/content/site";
 import styles from "./Footer.module.css";
 
 export interface FooterProps {
@@ -18,6 +24,17 @@ export function Footer() {
           </Link>
           <p className={styles.description}>{description}</p>
           <ul className={styles.socials} aria-label="Redes sociais">
+            <li>
+              <a
+                className={styles.socialLink}
+                href={githubUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                <FaGithub aria-hidden="true" size={18} />
+                <span>{shellContent.githubLabel}</span>
+              </a>
+            </li>
             <li>
               <span
                 className={styles.socialPlaceholder}
@@ -51,7 +68,7 @@ export function Footer() {
           </ul>
         </div>
         <nav aria-label={shellContent.primaryNavigationLabel} className={styles.links}>
-          {navigation.map((item) => (
+          {footerNavigation.map((item) => (
             <Link className={styles.link} href={item.href} key={item.href}>
               {item.label}
             </Link>

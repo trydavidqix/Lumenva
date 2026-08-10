@@ -1,8 +1,9 @@
 export const homeContent = {
-  eyebrow: "AI Sales OS",
-  title: "Vendas e suporte no WhatsApp, operados por IA e pessoas.",
+  eyebrow: "A plataforma de atendimento e vendas com IA",
+  title: "Atendimento e vendas com IA, WhatsApp e CRM num só lugar",
   description:
-    "Lumenva reúne agentes de IA, automações e CRM em uma plataforma open source e self-hosted.",
+    "Centralize conversas, automatize processos e impulsione vendas com IA. Tudo integrado para equipas que querem mais eficiência e clientes mais satisfeitos.",
+  secondaryCta: { label: "Ver produto", href: "/produto" },
 } as const;
 
 export type ProofPoint = Readonly<{
@@ -164,6 +165,21 @@ export const integrationItems: readonly IntegrationItem[] = [
     description: "Vendas e suporte conectados pelo WAHA.",
   },
   {
+    name: "OpenAI",
+    kind: "IA",
+    description: "Provedor de apoio para embeddings de IA.",
+  },
+  {
+    name: "Supabase",
+    kind: "Dados",
+    description: "Banco de dados, autenticação e storage com isolamento por organização.",
+  },
+  {
+    name: "Vercel",
+    kind: "Infraestrutura",
+    description: "Plataforma de deploy do frontend.",
+  },
+  {
     name: "Nuvemshop",
     kind: "E-commerce",
     description: "Integração documentada para pedidos, clientes e catálogo.",
@@ -184,7 +200,7 @@ export const finalCtaItems: readonly FinalCtaItem[] = [
     title: "Veja a Lumenva aplicada à sua operação.",
     description:
       "Converse com a equipe sobre agentes de IA, automações, CRM e self-hosting.",
-    label: "Solicitar demonstração",
+    label: "Agendar demonstração",
     href: "/contato",
   },
 ];

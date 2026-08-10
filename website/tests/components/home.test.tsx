@@ -10,7 +10,7 @@ test("home has one h1 and the approved conversion path", () => {
   expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
 
   const demoLinks = screen.getAllByRole("link", {
-    name: /solicitar demonstração/i,
+    name: /agendar demonstração/i,
   });
   expect(demoLinks.length).toBeGreaterThan(1);
   expect(demoLinks.every((link) => link.getAttribute("href") === "/contato")).toBe(

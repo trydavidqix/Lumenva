@@ -1,3 +1,4 @@
+import { demoCta } from "@/content/site";
 import { Button } from "@/components/ui/Button";
 import styles from "./InnerPages.module.css";
 
@@ -25,7 +26,7 @@ export function ServiceHero({
           </h1>
           <p className={styles.description}>{description}</p>
           <Button className={styles.heroAction} href={ctaHref} variant="primary">
-            Solicitar demonstração
+            {demoCta.label}
           </Button>
         </div>
         <ol className={styles.capabilityList} aria-label="Capacidades principais">

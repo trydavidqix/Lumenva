@@ -16,7 +16,7 @@ test("390 px home keeps demo CTA and navigation usable", async ({ page }, testIn
   await page.getByRole("button", { name: /abrir menu/i }).click();
   const dialog = page.getByRole("dialog", { name: /navegação móvel/i });
   await expect(
-    dialog.getByRole("link", { name: /solicitar demonstração/i }),
+    dialog.getByRole("link", { name: /agendar demonstração/i }),
   ).toHaveAttribute("href", "/contato");
   await dialog.getByRole("button", { name: /^fechar menu$/i }).click();
 
