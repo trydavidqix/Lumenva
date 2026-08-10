@@ -22,10 +22,6 @@ export default defineConfig({
     // tests/journeys/** roda no Playwright (jornada de baseline dos canais), igual
     // a tests/e2e/**: sem excluir, o include default do vitest o pegaria e o
     // import de @playwright/test derrubaria a suíte unitária.
-    // O checker do harness usa deliberadamente o runner nativo `node:test` e
-    // roda por `pnpm test:harness`; deixá-lo também no discovery do Vitest faz
-    // o Vite tentar empacotar `node:test` dentro do ambiente jsdom e falhar
-    // antes de executar qualquer caso do arquivo.
     exclude: [
       "**/node_modules/**",
       ".next",
@@ -34,8 +30,6 @@ export default defineConfig({
       "tests/e2e/**",
       "tests/invariants/**",
       "tests/journeys/**",
-      "website/**",
-      "scripts/check-harness-consistency.test.mjs",
     ],
   },
   resolve: { alias: { "@": path.resolve(__dirname, ".") } },
