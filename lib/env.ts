@@ -96,6 +96,15 @@ const schema = z.object({
   ANTHROPIC_API_KEY: z.string().optional().default(""),
   OPENAI_API_KEY: z.string().optional().default(""),
 
+  // AI Platform Foundation — all external providers start disabled; a kill
+  // switch wins over any tenant or global database flag.
+  AI_PLATFORM_KILL_MEM0: z.enum(["true", "false"]).optional().default("false").transform((v) => v === "true"),
+  AI_PLATFORM_KILL_GRAPHITI: z.enum(["true", "false"]).optional().default("false").transform((v) => v === "true"),
+  AI_PLATFORM_KILL_LANGSMITH: z.enum(["true", "false"]).optional().default("false").transform((v) => v === "true"),
+  AI_PLATFORM_KILL_EXTERNAL_GUARDRAILS: z.enum(["true", "false"]).optional().default("false").transform((v) => v === "true"),
+  AI_PLATFORM_KILL_N8N: z.enum(["true", "false"]).optional().default("false").transform((v) => v === "true"),
+  AI_PLATFORM_KILL_LANGGRAPH: z.enum(["true", "false"]).optional().default("false").transform((v) => v === "true"),
+
   // Fusão (Fase 4): DONO ÚNICO dos eventos ai_agent.dispatch_requested.
   // 'engine' (default) = o worker agent-engine é o único consumidor (o cron
   // agent-dispatcher vira no-op mecânico); 'native' = o dispatcher EPIC-13
