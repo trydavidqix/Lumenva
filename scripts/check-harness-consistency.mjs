@@ -52,7 +52,9 @@ export async function checkHarnessConsistency(rootDir) {
   for (const rule of REQUIRED_RULES) {
     const relativePath = `.claude/rules/${rule}`;
     if (!(await exists(join(rootDir, relativePath)))) {
-      findings.push(finding("missing-rule", relativePath, `Shared rule is missing: ${relativePath}`));
+      findings.push(
+        finding("missing-rule", relativePath, `Shared rule is missing: ${relativePath}`),
+      );
     }
   }
 
@@ -75,6 +77,41 @@ export async function checkHarnessConsistency(rootDir) {
         "settings-versioned",
         ".gitignore",
         ".claude/settings.json is machine-local and must not be explicitly unignored.",
+      ),
+    );
+  }
+
+  const claude = await read(rootDir, "CLAUDE.md");
+  if (claude === null) {
+    findings.push(
+      finding("missing-doctrine", "CLAUDE.md", "Canonical repository doctrine is missing."),
+    );
+  } else {
+    for (const rule of REQUIRED_RULES) {
+      const rulePath = `.claude/rules/${rule}`;
+      if (!claude.includes(rulePath)) {
+        findings.push(
+          finding(
+            "missing-rule-link",
+            "CLAUDE.md",
+            `Canonical doctrine must link shared rule: ${rulePath}`,
+          ),
+        );
+      }
+    }
+  }
+
+  const portable = await read(rootDir, "AGENTS.md");
+  if (
+    portable === null ||
+    !portable.includes("CLAUDE.md") ||
+    !portable.includes(".claude/rules/")
+  ) {
+    findings.push(
+      finding(
+        "portable-contract-drift",
+        "AGENTS.md",
+        "Portable agent contract must point to CLAUDE.md and .claude/rules/.",
       ),
     );
   }
@@ -127,7 +164,9 @@ export async function checkHarnessConsistency(rootDir) {
   for (const relativePath of SKILL_FILES) {
     const content = await read(rootDir, relativePath);
     if (content === null) {
-      findings.push(finding("missing-repo-skill", relativePath, `Repo skill is missing: ${relativePath}`));
+      findings.push(
+        finding("missing-repo-skill", relativePath, `Repo skill is missing: ${relativePath}`),
+      );
       continue;
     }
 
@@ -155,7 +194,9 @@ async function main() {
   const findings = await checkHarnessConsistency(rootDir);
 
   if (findings.length === 0) {
-    console.log("harness:check ok — canonical doctrine, shared rules and agent bridges are consistent.");
+    console.log(
+      "harness:check ok — canonical doctrine, shared rules and agent bridges are consistent.",
+    );
     return;
   }
 
