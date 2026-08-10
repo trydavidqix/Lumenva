@@ -52,14 +52,17 @@ supabase/.branches/
 # Epic executor (skill artifacts)
 .epic-executor/
 
-# Claude Code harness artifacts (scheduled tasks lock, etc)
-# gov-loop: agents/ e commands/ são maquinaria versionada do loop e PRECISAM
-# viajar com o repo (merge de gov/setup → main); o resto de .claude/ segue local.
+# Claude Code harness artifacts (scheduled tasks lock, settings locais, etc)
+# gov-loop: agents/ e commands/ são maquinaria versionada do loop.
+# rules/ contém doutrina modular compartilhada e também viaja com o repo.
+# O restante de .claude/ segue local, salvo arquivos históricos já rastreados.
 .claude/
 !.claude/
 .claude/*
 !.claude/agents/
 !.claude/commands/
+!.claude/rules/
+!.claude/rules/**
 
 # Local docker volumes (WAHA)
 .waha-data/

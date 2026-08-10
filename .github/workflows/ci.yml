@@ -34,6 +34,13 @@ jobs:
       - name: Channel provider leak
         run: pnpm lint:channels
 
+      # O harness é multi-superfície (CLAUDE.md, AGENTS.md, skills Claude/Codex,
+      # rules e artefatos ECC). Este gate impede regressões de instruções antigas
+      # e garante que a doutrina modular continua versionável e apontando para a
+      # mesma fonte canônica.
+      - name: Harness consistency
+        run: pnpm test:harness && pnpm harness:check
+
       - name: Unit tests
         run: pnpm test:unit
 
