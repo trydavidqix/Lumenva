@@ -34,6 +34,7 @@ export default defineConfig({
       "tests/e2e/**",
       "tests/invariants/**",
       "tests/journeys/**",
+      "website/**",
       "scripts/check-harness-consistency.test.mjs",
     ],
   },
