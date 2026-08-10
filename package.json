@@ -26,8 +26,10 @@
     "test:db": "bash scripts/test-db.sh",
     "test:shell": "bash tests/shell/update-guard.test.sh",
     "test:invariants": "bash scripts/test-db.sh",
+    "test:harness": "node --test scripts/check-harness-consistency.test.mjs",
     "lint:channels": "tsx scripts/lint-channels.ts",
-    "gov:verify": "pnpm typecheck && pnpm lint && pnpm lint:channels && pnpm test:unit",
+    "harness:check": "node scripts/check-harness-consistency.mjs",
+    "gov:verify": "pnpm harness:check && pnpm typecheck && pnpm lint && pnpm lint:channels && pnpm test:unit",
     "worker": "tsx --env-file=.env --env-file=.env.local workers/agent-worker/main.ts",
     "flywheel:judge": "tsx --env-file=.env --env-file=.env.local scripts/flywheel-judge-live.ts"
   },
