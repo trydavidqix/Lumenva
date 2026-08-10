@@ -7,6 +7,11 @@ type SubmissionState = "idle" | "pending" | "success" | "error";
 
 export function ContactForm() {
   const [state, setState] = useState<SubmissionState>("idle");
+  const [isValid, setIsValid] = useState(false);
+
+  function handleFormChange(event: FormEvent<HTMLFormElement>) {
+    setIsValid(event.currentTarget.checkValidity());
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,6 +40,7 @@ export function ContactForm() {
       }
 
       form.reset();
+      setIsValid(false);
       setState("success");
     } catch {
       setState("error");
@@ -53,6 +59,7 @@ export function ContactForm() {
       className={styles.form}
       aria-label="Solicitação de demonstração"
       aria-describedby="demo-form-status"
+      onChange={handleFormChange}
       onSubmit={handleSubmit}
     >
       <div className={styles.fieldGrid}>
@@ -105,7 +112,11 @@ export function ContactForm() {
         <input name="consent" type="checkbox" required />
         <span>Autorizo o contato da equipe sobre esta solicitação.</span>
       </label>
-      <button className={styles.submit} type="submit" disabled={state === "pending"}>
+      <button
+        className={styles.submit}
+        disabled={!isValid || state === "pending"}
+        type="submit"
+      >
         {state === "pending" ? "Enviando…" : "Agendar demonstração"}
       </button>
       <p className={`${styles.sectionCopy} ${styles.formNote}`} id="demo-form-status" aria-live="polite">
