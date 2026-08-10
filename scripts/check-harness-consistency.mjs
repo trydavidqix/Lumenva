@@ -7,6 +7,11 @@ export const REQUIRED_RULES = [
   "git-workflow.md",
   "security.md",
   "multi-tenancy.md",
+  "api-contract.md",
+  "audit-observability.md",
+  "lgpd.md",
+  "whatsapp-waha.md",
+  "data-modeling.md",
   "database-migrations.md",
   "testing-verification.md",
   "documentation.md",
@@ -26,6 +31,9 @@ const SKILL_FILES = [
   ".claude/skills/DeskcommCRM/SKILL.md",
   ".agents/skills/DeskcommCRM/SKILL.md",
 ];
+
+const DOCTRINE_MATRIX = "docs/harness-doctrine-matrix.md";
+const REQUIRED_MATRIX_CLASSIFICATIONS = ["ESTÁVEL", "SNAPSHOT", "DIVERGENTE"];
 
 async function exists(path) {
   try {
@@ -108,6 +116,30 @@ export async function checkHarnessConsistency(rootDir) {
           ),
         );
       }
+    }
+  }
+
+  const matrix = await read(rootDir, DOCTRINE_MATRIX);
+  if (matrix === null) {
+    findings.push(
+      finding(
+        "missing-doctrine-matrix",
+        DOCTRINE_MATRIX,
+        "Doctrine preservation matrix is missing.",
+      ),
+    );
+  } else {
+    const missingClassifications = REQUIRED_MATRIX_CLASSIFICATIONS.filter(
+      (classification) => !matrix.includes(classification),
+    );
+    if (missingClassifications.length > 0) {
+      findings.push(
+        finding(
+          "incomplete-doctrine-matrix",
+          DOCTRINE_MATRIX,
+          `Doctrine preservation matrix is missing classification(s): ${missingClassifications.join(", ")}`,
+        ),
+      );
     }
   }
 
@@ -205,7 +237,7 @@ async function main() {
 
   if (findings.length === 0) {
     console.log(
-      "harness:check ok — canonical doctrine, shared rules and agent bridges are consistent.",
+      "harness:check ok — canonical doctrine, shared rules, preservation matrix and agent bridges are consistent.",
     );
     return;
   }
