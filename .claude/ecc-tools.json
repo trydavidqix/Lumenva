@@ -3,7 +3,7 @@
   "schemaVersion": "1.0",
   "generatedBy": "ecc-tools",
   "generatedAt": "2026-07-06T20:13:26.688Z",
-  "repo": "https://github.com/melgarafael/DeskcommCRM",
+  "repo": "https://github.com/trydavidqix/CRM",
   "referenceSetReadiness": {
     "score": 0,
     "present": 0,
@@ -163,12 +163,12 @@
     {
       "moduleId": "runtime-core",
       "path": ".claude/skills/DeskcommCRM/SKILL.md",
-      "description": "Repository-specific Claude Code skill generated from git history."
+      "description": "Repository-specific Claude Code skill; maintained as a bridge to CLAUDE.md and shared rules."
     },
     {
       "moduleId": "runtime-core",
       "path": ".agents/skills/DeskcommCRM/SKILL.md",
-      "description": "Codex-facing copy of the generated repository skill."
+      "description": "Codex-facing repo skill; maintained as a bridge to the same canonical doctrine."
     },
     {
       "moduleId": "runtime-core",
@@ -188,7 +188,7 @@
     {
       "moduleId": "runtime-core",
       "path": ".codex/AGENTS.md",
-      "description": "Codex usage guide that points at the generated repo skill and workflow bundle."
+      "description": "Codex usage guide that points to canonical repository doctrine and the repo skill bridge."
     },
     {
       "moduleId": "runtime-core",
@@ -208,7 +208,7 @@
     {
       "moduleId": "runtime-core",
       "path": ".claude/homunculus/instincts/inherited/DeskcommCRM-instincts.yaml",
-      "description": "Continuous-learning instincts derived from repository patterns."
+      "description": "Compatibility bridge that points to the current canonical doctrine instead of frozen inferred conventions."
     }
   ],
   "workflows": [],
