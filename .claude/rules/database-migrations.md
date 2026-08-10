@@ -16,6 +16,8 @@ Se o contrato de tipos mudou, regenere `lib/database.types.ts` pelo fluxo canôn
 
 O produto é self-host. Instalação/atualização de clones depende do `baseline.sql`; uma migration que não aparece no baseline não chega corretamente aos self-hosters.
 
+O apêndice do baseline precisa ser **idempotente e auto-curativo** para funcionar tanto em instalação fresca quanto em update de clone existente. Se uma constraint nova reprovar dados históricos, corrija/deduplique os dados **antes** de criá-la.
+
 ## Regras de migration
 
 - Nunca edite migration já aplicada; crie forward-fix.
@@ -24,6 +26,16 @@ O produto é self-host. Instalação/atualização de clones depende do `baselin
 - Corrija/backfill dados incompatíveis antes de criar constraint que os reprovaria.
 - Trigger Postgres nunca faz HTTP; escreva em `event_log` e deixe worker executar side effect.
 - Antes de escolher `NNNN`, verifique colisões relevantes com branches/worktrees existentes quando o fluxo exigir.
+
+## Portabilidade
+
+Migrations precisam funcionar no fluxo de clones/self-host e em runner `psql`/Supabase correspondente, não apenas numa sessão interativa específica.
+
+- Não dependa de estado temporário de uma ferramenta proprietária.
+- Evite `create temporary table ... on commit drop` fora de uma transação explicitamente controlada pelo runner; prefira CTEs/subqueries quando o mesmo resultado for possível.
+- Não adicione `BEGIN`/`COMMIT` manualmente quando o runner canônico já envolve a migration em transação.
+- Data migrations precisam ser genéricas para qualquer clone; não codifique ID do tenant de desenvolvimento.
+- Ao repontar FKs/deduplicar, preserve histórico e confira todas as relações afetadas.
 
 ## Funções em `public`
 
@@ -34,17 +46,18 @@ revoke execute on function public.fn_x(...) from public, anon;
 grant execute on function public.fn_x(...) to <role_necessaria>;
 ```
 
-Não trate `revoke from public` e `revoke from anon` como equivalentes; o projeto exige ambos quando aplicável.
+Não trate `revoke from public` e `revoke from anon` como equivalentes. Há grants herdados/default distintos; deixar um deles vivo pode expor a RPC à anon key. O invariant `tests/invariants/hardening-definer-varredura.test.ts` vigia essa classe de falha.
 
 ## Validação
 
 Mudança de schema/RLS exige, conforme aplicável:
 
-- aplicação da migration;
-- baseline fresh install em Postgres descartável;
+- aplicação da migration no ambiente de teste apropriado;
+- baseline fresh install em Postgres descartável compatível;
 - reaplicação/update idempotente do baseline;
 - `pnpm test:db`;
 - teste de isolamento entre tenants;
-- inspeção de invariantes relevantes.
+- inspeção de invariantes relevantes;
+- estado ANTES/DEPOIS quando a migration transforma dados e a contagem/invariante precisa ser preservada.
 
 `pnpm gov:verify` sozinho não prova alteração de schema porque não cobre `test:db`.
