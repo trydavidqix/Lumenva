@@ -19,6 +19,13 @@ export type PublicRoute = NavigationItem &
 
 export const publicRoutes: readonly PublicRoute[] = [
   {
+    label: "Produto",
+    href: "/produto",
+    slug: "produto",
+    heading: "Produto",
+    description: "Como agentes de IA, automações e CRM trabalham juntos na Lumenva.",
+  },
+  {
     label: "Soluções",
     href: "/solucoes",
     slug: "solucoes",
@@ -26,25 +33,32 @@ export const publicRoutes: readonly PublicRoute[] = [
     description: "Uma visão geral das soluções da Lumenva para vendas e suporte no WhatsApp.",
   },
   {
-    label: "Inteligência artificial",
-    href: "/inteligencia-artificial",
-    slug: "inteligencia-artificial",
-    heading: "Inteligência artificial",
-    description: "Agentes de IA para vendas e suporte no WhatsApp.",
+    label: "Atendimento com IA",
+    href: "/solucoes/atendimento-com-ia",
+    slug: "atendimento-com-ia",
+    heading: "Atendimento com IA",
+    description: "Automatize o atendimento sem perder o toque humano.",
   },
   {
-    label: "Automações",
-    href: "/automacoes",
-    slug: "automacoes",
-    heading: "Automações",
-    description: "Automações conectam eventos do CRM a ações da operação.",
+    label: "Vendas & CRM",
+    href: "/solucoes/vendas-crm",
+    slug: "vendas-crm",
+    heading: "Vendas & CRM",
+    description: "Organize o funil e feche mais negócios com previsibilidade.",
   },
   {
-    label: "CRM",
-    href: "/crm",
-    slug: "crm",
-    heading: "CRM",
-    description: "Um núcleo de CRM configurável para diferentes operações.",
+    label: "Agentes de IA",
+    href: "/solucoes/agentes-de-ia",
+    slug: "agentes-de-ia",
+    heading: "Agentes de IA",
+    description: "Crie agentes de IA que atendem, qualificam e executam tarefas por você.",
+  },
+  {
+    label: "Automação de Processos",
+    href: "/solucoes/automacao-de-processos",
+    slug: "automacao-de-processos",
+    heading: "Automação de Processos",
+    description: "Automatize processos e escale a operação com mais controle.",
   },
   {
     label: "Integrações",
@@ -52,6 +66,13 @@ export const publicRoutes: readonly PublicRoute[] = [
     slug: "integracoes",
     heading: "Integrações",
     description: "Informações sobre integrações da Lumenva.",
+  },
+  {
+    label: "Preços",
+    href: "/precos",
+    slug: "precos",
+    heading: "Preços",
+    description: "Como funciona o modelo de self-hosting da Lumenva.",
   },
   {
     label: "Projetos",
@@ -76,13 +97,63 @@ export const publicRoutes: readonly PublicRoute[] = [
   },
 ];
 
-export const navigation: readonly NavigationItem[] = publicRoutes.map(
-  ({ href, label }) => ({ href, label }),
-);
+export type SolutionMenuItem = Readonly<{
+  label: string;
+  href: `/${string}`;
+  description: string;
+  icon: "atendimento" | "vendas" | "agentes" | "automacao";
+}>;
+
+export const solutionsMenu: readonly SolutionMenuItem[] = [
+  {
+    label: "Atendimento com IA",
+    href: "/solucoes/atendimento-com-ia",
+    description: "Inbox, resumo e resposta sugerida com handoff para a equipe.",
+    icon: "atendimento",
+  },
+  {
+    label: "Vendas & CRM",
+    href: "/solucoes/vendas-crm",
+    description: "Pipeline, propostas e próximas ações num só lugar.",
+    icon: "vendas",
+  },
+  {
+    label: "Agentes de IA",
+    href: "/solucoes/agentes-de-ia",
+    description: "Agentes especializados por função, com supervisão humana.",
+    icon: "agentes",
+  },
+  {
+    label: "Automação de Processos",
+    href: "/solucoes/automacao-de-processos",
+    description: "Workflows que ligam WhatsApp, CRM e tarefas da operação.",
+    icon: "automacao",
+  },
+] as const;
+
+export const navigation: readonly NavigationItem[] = [
+  { label: "Produto", href: "/produto" },
+  { label: "Soluções", href: "/solucoes" },
+  { label: "Integrações", href: "/integracoes" },
+  { label: "Preços", href: "/precos" },
+  { label: "Contato", href: "/contato" },
+] as const;
+
+export const footerNavigation: readonly NavigationItem[] = [
+  ...navigation,
+  ...solutionsMenu.map(({ href, label }) => ({ href, label })),
+  { label: "Sobre", href: "/sobre" },
+  { label: "Projetos", href: "/projetos" },
+] as const;
 
 export const demoCta = {
-  label: "Solicitar demonstração",
+  label: "Agendar demonstração",
   href: "/contato",
+} as const;
+
+export const loginCta = {
+  label: "Entrar",
+  href: (process.env.NEXT_PUBLIC_APP_URL ?? "/contato") as `/${string}` | `https://${string}`,
 } as const;
 
 export const shellContent = {

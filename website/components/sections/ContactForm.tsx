@@ -106,7 +106,7 @@ export function ContactForm() {
         <span>Autorizo o contato da equipe sobre esta solicitação.</span>
       </label>
       <button className={styles.submit} type="submit" disabled={state === "pending"}>
-        {state === "pending" ? "Enviando…" : "Enviar solicitação"}
+        {state === "pending" ? "Enviando…" : "Agendar demonstração"}
       </button>
       <p className={`${styles.sectionCopy} ${styles.formNote}`} id="demo-form-status" aria-live="polite">
         {status}

@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { ReducedMotionProvider, useReducedMotion } from "../motion/ReducedMotionProvider";
 import { getSceneQuality, type SceneQuality } from "../three/scene-quality";
 import { homeContent } from "@/content/home";
-import { demoCta, githubUrl, shellContent } from "@/content/site";
+import { demoCta } from "@/content/site";
 import { Button } from "@/components/ui/Button";
 import styles from "./Hero.module.css";
 
@@ -141,17 +141,16 @@ function HeroContent() {
           </h1>
           <p className={styles.description}>{homeContent.description}</p>
           <div className={styles.actions}>
-            <Button className={styles.primaryAction} href={demoCta.href} variant="primary">
+            <Button className={styles.primaryAction} href={demoCta.href} magnetic variant="primary">
               {demoCta.label}
             </Button>
-            <a
+            <Button
               className={styles.secondaryAction}
-              href={githubUrl}
-              rel="noreferrer"
-              target="_blank"
+              href={homeContent.secondaryCta.href}
+              variant="secondary"
             >
-              {shellContent.githubLabel}
-            </a>
+              {homeContent.secondaryCta.label}
+            </Button>
           </div>
         </div>
 

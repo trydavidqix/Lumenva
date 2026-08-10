@@ -33,7 +33,7 @@ const contactFaq: readonly FaqItem[] = [
 ];
 
 export const metadata = createPageMetadata({
-  title: "Solicitar demonstração",
+  title: "Agendar demonstração",
   description,
   path: "/contato",
 });
