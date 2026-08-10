@@ -105,6 +105,14 @@ const schema = z.object({
   AI_PLATFORM_KILL_N8N: z.enum(["true", "false"]).optional().default("false").transform((v) => v === "true"),
   AI_PLATFORM_KILL_LANGGRAPH: z.enum(["true", "false"]).optional().default("false").transform((v) => v === "true"),
 
+  // LangSmith is optional observability only. The endpoint is deliberately not
+  // validated here: a malformed optional endpoint must disable tracing safely,
+  // not prevent the CRM from booting (see external-tracing-config.ts).
+  LANGSMITH_API_KEY: z.string().optional().default(""),
+  LANGSMITH_ENDPOINT: z.string().optional().default(""),
+  LANGSMITH_PROJECT: z.string().optional().default(""),
+  LANGSMITH_WORKSPACE_ID: z.string().optional().default(""),
+
   // Fusão (Fase 4): DONO ÚNICO dos eventos ai_agent.dispatch_requested.
   // 'engine' (default) = o worker agent-engine é o único consumidor (o cron
   // agent-dispatcher vira no-op mecânico); 'native' = o dispatcher EPIC-13
