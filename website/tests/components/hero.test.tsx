@@ -13,14 +13,19 @@ test("renders the demo CTA without a canvas", () => {
   expect(container.querySelector("canvas")).not.toBeInTheDocument();
 });
 
-test("keeps the approved static mark meaningful before enhancement", () => {
+test("keeps the headline and secondary CTA meaningful", () => {
   render(<Hero />);
 
-  expect(screen.getByRole("img", { name: /marca lumenva/i })).toHaveTextContent(
-    "L",
-  );
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
     /atendimento e vendas com IA/i,
   );
   expect(screen.getByRole("link", { name: /ver produto/i })).toBeVisible();
+});
+
+test("shows a decorative product preview hidden from assistive tech", () => {
+  const { container } = render(<Hero />);
+
+  const preview = container.querySelector('[aria-hidden="true"]');
+  expect(preview).toBeTruthy();
+  expect(preview).toHaveTextContent(/caixa de entrada/i);
 });
