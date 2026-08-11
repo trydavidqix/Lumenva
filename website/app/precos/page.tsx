@@ -1,4 +1,4 @@
-import { Code2, HelpCircle, Server, Users } from "lucide-react";
+import { HelpCircle, ShieldCheck, TrendingUp, Users } from "lucide-react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { JsonLd } from "@/components/ui/JsonLd";
@@ -7,7 +7,7 @@ import { breadcrumbSchema, serviceSchema } from "@/lib/schema";
 import styles from "@/components/sections/InnerPages.module.css";
 
 const description =
-  "A Lumenva é open source e self-hosted: você executa a plataforma na sua própria infraestrutura, sem mensalidade por assento.";
+  "Fale com a nossa equipa para um plano adequado ao tamanho e às necessidades da sua operação.";
 const breadcrumbs = [
   { name: "Início", path: "/" },
   { name: "Preços", path: "/precos" },
@@ -28,44 +28,43 @@ export default function PrecosPage() {
       <Breadcrumbs items={breadcrumbs} />
       <ServiceHero
         eyebrow="Preços"
-        title="Self-hosted, sem mensalidade por assento."
+        title="Um plano ajustado à sua operação."
         description={description}
         capabilities={[
-          { icon: Code2, label: "Código aberto sob licença MIT" },
-          { icon: Server, label: "Execução na sua própria infraestrutura" },
-          { icon: Users, label: "Sem limite artificial de usuários por plano" },
-          { icon: HelpCircle, label: "Fale com a equipe para apoio de instalação" },
+          { icon: Users, label: "Sem limite artificial de utilizadores" },
+          { icon: ShieldCheck, label: "Multi-tenant seguro" },
+          { icon: TrendingUp, label: "Escala com a sua operação" },
+          { icon: HelpCircle, label: "Apoio dedicado à implementação" },
         ]}
       />
       <section className={styles.sectionAlt} aria-labelledby="pricing-model">
         <div className={`site-shell ${styles.sectionStack}`}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle} id="pricing-model">
-              Como funciona o modelo self-hosted.
+              Como funciona.
             </h2>
             <p className={styles.sectionCopy}>
-              A Lumenva não vende assinatura por usuário. O código é aberto e a
-              plataforma roda na infraestrutura da sua operação. Os custos são os da
-              sua própria hospedagem, e a equipe está disponível para apoiar a
-              instalação e a configuração inicial.
+              Cada operação tem necessidades diferentes de volume, canais e equipa.
+              Fale com a nossa equipa para definir o plano certo e receber apoio
+              dedicado durante a implementação e a configuração inicial.
             </p>
           </div>
           <ul className={styles.factList}>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>01</span>
-              <span><strong>Open source.</strong> O código é distribuído sob licença MIT.</span>
+              <span><strong>Sob medida.</strong> O plano acompanha o tamanho e o ritmo da sua operação.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>02</span>
-              <span><strong>Self-hosted.</strong> Você controla onde e como a plataforma roda.</span>
+              <span><strong>Sem letras miúdas.</strong> Condições claras, definidas com a nossa equipa.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>03</span>
-              <span><strong>Sem vendor lock-in.</strong> Seus dados permanecem na sua infraestrutura.</span>
+              <span><strong>Dados protegidos.</strong> Isolamento multi-tenant desde a camada do banco.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>04</span>
-              <span><strong>Apoio à instalação.</strong> Fale com a equipe para planejar a sua implantação.</span>
+              <span><strong>Apoio à implementação.</strong> Fale com a equipa para planear a sua operação.</span>
             </li>
           </ul>
         </div>

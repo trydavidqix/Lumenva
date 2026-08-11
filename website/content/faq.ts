@@ -7,14 +7,15 @@ export const faqItems: readonly FaqItem[] = [
   {
     question: "O que é a Lumenva?",
     answer:
-      "Lumenva é a identidade pública de um AI Sales OS open source e self-hosted para vendas e suporte pelo WhatsApp.",
+      "Lumenva é uma plataforma de atendimento e vendas com IA que une agentes, automações e CRM num só sistema, com o WhatsApp como canal principal.",
   },
   {
-    question: "A Lumenva é open source?",
-    answer: "Sim. O projeto é distribuído sob a licença MIT.",
+    question: "Como funcionam os agentes de IA?",
+    answer:
+      "Os agentes atendem e qualificam com o contexto da sua operação, seguindo regras definidas pela sua equipa, com handoff para uma pessoa sempre que necessário.",
   },
   {
-    question: "Onde a Lumenva é executada?",
-    answer: "A Lumenva é self-hosted e pode ser executada na sua própria infraestrutura.",
+    question: "Qual é o canal principal?",
+    answer: "O WhatsApp é o canal primário da Lumenva para vendas e suporte.",
   },
 ];

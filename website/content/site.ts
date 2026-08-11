@@ -1,8 +1,7 @@
 export const site = {
   siteName: "Lumenva",
   description:
-    "Lumenva é um AI Sales OS open source e self-hosted para vendas e suporte pelo WhatsApp.",
-  githubUrl: "https://github.com/melgarafael/DeskcommCRM",
+    "Lumenva é a plataforma de atendimento e vendas com IA que une agentes, automações e CRM, com o WhatsApp como canal principal.",
 } as const;
 
 export type NavigationItem = Readonly<{
@@ -72,7 +71,7 @@ export const publicRoutes: readonly PublicRoute[] = [
     href: "/precos",
     slug: "precos",
     heading: "Preços",
-    description: "Como funciona o modelo de self-hosting da Lumenva.",
+    description: "Planos e condições para a sua operação.",
   },
   {
     label: "Projetos",
@@ -86,7 +85,7 @@ export const publicRoutes: readonly PublicRoute[] = [
     href: "/sobre",
     slug: "sobre",
     heading: "Sobre a Lumenva",
-    description: "Lumenva é um AI Sales OS open source e self-hosted para vendas e suporte pelo WhatsApp.",
+    description: "Lumenva é a plataforma de atendimento e vendas com IA que une agentes, automações e CRM.",
   },
   {
     label: "Contato",
@@ -158,7 +157,6 @@ export const shellContent = {
   closeMenuLabel: "Fechar menu",
   closeMenuBackdropLabel: "Fechar menu ao clicar fora",
   skipToContentLabel: "Ir para o conteúdo principal",
-  githubLabel: "Ver no GitHub",
 } as const;
 
-export const { siteName, description, githubUrl } = site;
+export const { siteName, description } = site;

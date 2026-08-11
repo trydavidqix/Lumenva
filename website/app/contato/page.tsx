@@ -1,4 +1,4 @@
-import { Bot, Database, Server, Zap } from "lucide-react";
+import { Bot, Database, MessageCircle, Zap } from "lucide-react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ContactForm } from "@/components/sections/ContactForm";
 import { ProseFAQ } from "@/components/sections/ProseFAQ";
@@ -10,7 +10,7 @@ import { breadcrumbSchema, faqSchema } from "@/lib/schema";
 import styles from "@/components/sections/InnerPages.module.css";
 
 const description =
-  "Conheça a Lumenva e converse sobre agentes de IA, automações, CRM e self-hosting para a sua operação.";
+  "Conheça a Lumenva e converse sobre agentes de IA, automações e CRM para a sua operação.";
 const breadcrumbs = [
   { name: "Início", path: "/" },
   { name: "Contato", path: "/contato" },
@@ -19,12 +19,12 @@ const contactFaq: readonly FaqItem[] = [
   {
     question: "O que é a Lumenva?",
     answer:
-      "Lumenva é a identidade pública de um AI Sales OS open source e self-hosted para vendas e suporte pelo WhatsApp.",
+      "Lumenva é uma plataforma de atendimento e vendas com IA que une agentes, automações e CRM num só sistema.",
   },
   {
-    question: "Onde a plataforma é executada?",
+    question: "Como funcionam os agentes de IA?",
     answer:
-      "A Lumenva é self-hosted e pode ser executada na infraestrutura da própria operação.",
+      "Os agentes atendem e qualificam com o contexto da sua operação, seguindo regras definidas pela sua equipa.",
   },
   {
     question: "Qual é o canal principal?",
@@ -53,7 +53,7 @@ export default function ContactPage() {
           { icon: Bot, label: "Agentes de IA" },
           { icon: Zap, label: "Automações" },
           { icon: Database, label: "CRM" },
-          { icon: Server, label: "Self-hosting" },
+          { icon: MessageCircle, label: "WhatsApp" },
         ]}
         ctaHref="#demonstracao"
       />

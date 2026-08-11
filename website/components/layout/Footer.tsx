@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { MessageCircle } from "lucide-react";
-import { FaFacebookF, FaGithub, FaInstagram } from "react-icons/fa";
+import { FaFacebookF, FaInstagram } from "react-icons/fa";
 import {
   description,
   footerNavigation,
-  githubUrl,
   shellContent,
   siteName,
 } from "@/content/site";
@@ -26,17 +25,6 @@ export function Footer() {
           </Link>
           <p className={styles.description}>{description}</p>
           <ul className={styles.socials} aria-label="Redes sociais">
-            <li>
-              <a
-                className={styles.socialLink}
-                href={githubUrl}
-                rel="noreferrer"
-                target="_blank"
-              >
-                <FaGithub aria-hidden="true" size={18} />
-                <span>{shellContent.githubLabel}</span>
-              </a>
-            </li>
             <li>
               <span
                 className={styles.socialPlaceholder}
