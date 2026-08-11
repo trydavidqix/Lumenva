@@ -1,4 +1,4 @@
-import { Code2, MessageCircle, ShoppingBag, Webhook } from "lucide-react";
+import { Code2, MessageCircle, Sparkles, Webhook } from "lucide-react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { JsonLd } from "@/components/ui/JsonLd";
@@ -8,7 +8,7 @@ import { breadcrumbSchema, serviceSchema } from "@/lib/schema";
 import styles from "@/components/sections/InnerPages.module.css";
 
 const description =
-  "Conecte o canal principal de atendimento e a integração de e-commerce documentada pela plataforma.";
+  "Conecte o canal principal de atendimento e os provedores de IA e dados documentados pela plataforma.";
 const breadcrumbs = [
   { name: "Início", path: "/" },
   { name: "Integrações", path: "/integracoes" },
@@ -17,7 +17,7 @@ const service = { name: "Integrações Lumenva", description } as const;
 
 const integrationCards = [
   { icon: MessageCircle, title: "WhatsApp", description: "Canal primário de vendas e suporte, conectado pelo WAHA." },
-  { icon: ShoppingBag, title: "Nuvemshop", description: "Integração documentada para pedidos, clientes e catálogo." },
+  { icon: Sparkles, title: "OpenAI / Claude Code", description: "Provedor de apoio para embeddings de IA." },
   { icon: Webhook, title: "Webhooks", description: "Eventos externos podem entrar e sair por endpoints dedicados." },
   { icon: Code2, title: "API REST", description: "Recursos do CRM são expostos por uma API versionada." },
 ] as const;
@@ -40,7 +40,7 @@ export default function IntegrationsPage() {
         description={description}
         capabilities={[
           { icon: MessageCircle, label: "WhatsApp conectado pelo WAHA" },
-          { icon: ShoppingBag, label: "Nuvemshop para pedidos, clientes e catálogo" },
+          { icon: Sparkles, label: "OpenAI / Claude Code para IA" },
           { icon: Webhook, label: "Webhooks de entrada e saída" },
           { icon: Code2, label: "API REST versionada" },
         ]}
