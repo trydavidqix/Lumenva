@@ -1,3 +1,4 @@
+import { CircleSlash2, FileCheck2, ShieldCheck } from "lucide-react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { JsonLd } from "@/components/ui/JsonLd";
@@ -28,9 +29,9 @@ export default function ProjectsPage() {
         title="Resultados publicados com evidência."
         description={description}
         capabilities={[
-          "Somente casos aprovados",
-          "Resultados verificáveis",
-          "Nenhum depoimento ou métrica fabricada",
+          { icon: ShieldCheck, label: "Somente casos aprovados" },
+          { icon: FileCheck2, label: "Resultados verificáveis" },
+          { icon: CircleSlash2, label: "Nenhum depoimento ou métrica fabricada" },
         ]}
       />
       <section className={styles.sectionAlt} aria-labelledby="projects-status">

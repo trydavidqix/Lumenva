@@ -1,3 +1,4 @@
+import { Code2, MessageCircle, ShoppingBag, Webhook } from "lucide-react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { JsonLd } from "@/components/ui/JsonLd";
@@ -30,10 +31,10 @@ export default function IntegrationsPage() {
         title="Canais e dados ligados à operação."
         description={description}
         capabilities={[
-          "WhatsApp conectado pelo WAHA",
-          "Nuvemshop para pedidos, clientes e catálogo",
-          "Webhooks de entrada e saída",
-          "API REST versionada",
+          { icon: MessageCircle, label: "WhatsApp conectado pelo WAHA" },
+          { icon: ShoppingBag, label: "Nuvemshop para pedidos, clientes e catálogo" },
+          { icon: Webhook, label: "Webhooks de entrada e saída" },
+          { icon: Code2, label: "API REST versionada" },
         ]}
       />
       <section className={styles.sectionAlt} aria-labelledby="documented-integrations">

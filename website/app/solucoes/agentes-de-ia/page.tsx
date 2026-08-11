@@ -1,18 +1,28 @@
+import { BarChart3, BookOpen, ShieldCheck, User, Zap } from "lucide-react";
+import { AgentesMockup } from "@/components/sections/AgentesMockup";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { JsonLd } from "@/components/ui/JsonLd";
+import { FeatureCardGrid } from "@/components/ui/FeatureCardGrid";
 import { createPageMetadata } from "@/lib/metadata";
 import { breadcrumbSchema, serviceSchema } from "@/lib/schema";
 import styles from "@/components/sections/InnerPages.module.css";
 
 const description =
-  "Agentes de IA usam o contexto da sua operação para atender, qualificar e executar ações no WhatsApp, com regras, permissões e handoff para pessoas.";
+  "Treine agentes com contexto do seu negócio, defina funções específicas e acompanhe o desempenho em tempo real. Atendimento, vendas e operações num só sistema.";
 const breadcrumbs = [
   { name: "Início", path: "/" },
   { name: "Soluções", path: "/solucoes" },
   { name: "Agentes de IA", path: "/solucoes/agentes-de-ia" },
 ] as const;
 const service = { name: "Agentes de IA Lumenva", description } as const;
+
+const benefits = [
+  { icon: BookOpen, title: "Treine com o seu contexto", description: "Use documentos, FAQs, CRM e histórico de conversas para orientar cada agente." },
+  { icon: User, title: "Especialize por função", description: "Tenha agentes dedicados para vendas, suporte, cobrança e operação." },
+  { icon: ShieldCheck, title: "Automatize com controlo", description: "Defina regras, aprovações e handoff para manter qualidade e segurança." },
+  { icon: BarChart3, title: "Acompanhe desempenho", description: "Veja métricas, histórico e resultados de cada agente em tempo real." },
+] as const;
 
 export const metadata = createPageMetadata({
   title: "Agentes de IA",
@@ -27,16 +37,22 @@ export default function AgentesDeIaPage() {
       <JsonLd data={serviceSchema(service)} />
       <Breadcrumbs items={breadcrumbs} />
       <ServiceHero
-        eyebrow="Agentes de IA"
-        title="Crie agentes de IA que atendem, qualificam e executam tarefas por você."
+        eyebrow="Solução · Agentes de IA"
+        title="Crie agentes de IA que atendem, qualificam e executam tarefas por si."
         description={description}
         capabilities={[
-          "Treine com o contexto da sua operação",
-          "Especialize agentes por função",
-          "Automatize com controle e permissões",
-          "Acompanhe desempenho e histórico",
+          { icon: User, label: "Agentes especializados" },
+          { icon: BookOpen, label: "Base de conhecimento" },
+          { icon: Zap, label: "Ações automáticas" },
+          { icon: ShieldCheck, label: "Supervisão humana" },
         ]}
+        visual={<AgentesMockup />}
       />
+      <section aria-labelledby="agents-benefits">
+        <div className="site-shell">
+          <FeatureCardGrid ariaLabel="Benefícios dos agentes de IA" items={benefits} />
+        </div>
+      </section>
       <section className={styles.sectionAlt} aria-labelledby="ai-operation">
         <div className={`site-shell ${styles.sectionStack}`}>
           <div className={styles.sectionHeader}>

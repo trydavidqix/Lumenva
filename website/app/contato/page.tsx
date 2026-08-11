@@ -1,3 +1,4 @@
+import { Bot, Database, Server, Zap } from "lucide-react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ContactForm } from "@/components/sections/ContactForm";
 import { ProseFAQ } from "@/components/sections/ProseFAQ";
@@ -49,10 +50,10 @@ export default function ContactPage() {
         title="Vamos conversar sobre a sua operação."
         description={description}
         capabilities={[
-          "Agentes de IA",
-          "Automações",
-          "CRM",
-          "Self-hosting",
+          { icon: Bot, label: "Agentes de IA" },
+          { icon: Zap, label: "Automações" },
+          { icon: Database, label: "CRM" },
+          { icon: Server, label: "Self-hosting" },
         ]}
         ctaHref="#demonstracao"
       />

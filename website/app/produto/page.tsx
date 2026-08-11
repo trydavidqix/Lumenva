@@ -1,3 +1,4 @@
+import { Bot, Database, Server, Zap } from "lucide-react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { JsonLd } from "@/components/ui/JsonLd";
@@ -30,10 +31,10 @@ export default function ProdutoPage() {
         title="IA, automação e CRM na mesma operação."
         description={description}
         capabilities={[
-          "Agentes de IA para atendimento e vendas",
-          "Automações orientadas por eventos",
-          "CRM com contexto de conversas e pipeline",
-          "Execução na sua própria infraestrutura",
+          { icon: Bot, label: "Agentes de IA para atendimento e vendas" },
+          { icon: Zap, label: "Automações orientadas por eventos" },
+          { icon: Database, label: "CRM com contexto de conversas e pipeline" },
+          { icon: Server, label: "Execução na sua própria infraestrutura" },
         ]}
       />
       <section className={styles.sectionAlt} aria-labelledby="product-foundation">
