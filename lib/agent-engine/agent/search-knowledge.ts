@@ -41,7 +41,7 @@ export async function searchKnowledge(
     /** Só para telemetria — opcional, os chamadores de hoje seguem válidos. */
     jobId?: string | null;
   },
-  deps?: { embed?: typeof embedText; log?: Logger; tracer?: AiTracer },
+  deps?: { embed?: typeof embedText; log?: Logger; tracer?: AiTracer; traceId?: string },
 ): Promise<SearchKnowledgeResult> {
   const embed = deps?.embed ?? embedText;
   let span: AiTraceSpan | undefined;
@@ -49,7 +49,8 @@ export async function searchKnowledge(
     try {
       span = await deps.tracer.startSpan({
         name: 'knowledge_search',
-        runId: args.jobId ?? randomUUID(),
+        runId: randomUUID(),
+        traceId: deps.traceId ?? args.jobId ?? randomUUID(),
         organizationId: args.organizationId,
         // Query text and retrieved chunks can carry PII, so this seam exports
         // retrieval metadata only.

@@ -41,7 +41,8 @@ describe('searchKnowledge', () => {
     expect(starts).toEqual([
       {
         name: 'knowledge_search',
-        runId: 'job-9',
+        runId: expect.stringMatching(/^[a-f0-9-]{36}$/),
+        traceId: 'job-9',
         organizationId: 'org-1',
         metadata: {
           organization_id: expect.stringMatching(/^tenant_[a-f0-9]{16}$/),

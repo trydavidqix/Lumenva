@@ -60,6 +60,7 @@ class LangSmithAiTraceSpan implements AiTraceSpan {
   constructor(
     private readonly client: LangSmithClient,
     private readonly runId: string,
+    private readonly traceId: string,
     private readonly traceDottedOrder: string,
     private readonly tenantId: string,
     private readonly traceName: string,
@@ -70,7 +71,7 @@ class LangSmithAiTraceSpan implements AiTraceSpan {
   async end(input: { output?: unknown; error?: unknown; metrics?: Record<string, number> }): Promise<void> {
     try {
       await this.client.updateRun(this.runId, {
-        trace_id: this.runId,
+        trace_id: this.traceId,
         dotted_order: this.traceDottedOrder,
         end_time: this.now().getTime(),
         ...(input.output === undefined ? {} : { outputs: { output: sanitizeExternalTraceValue(input.output) } }),
@@ -109,12 +110,14 @@ export class LangSmithAiTracer implements AiTracer {
   async startSpan(input: {
     name: string;
     runId: string;
+    traceId?: string;
     organizationId: string;
     metadata?: Record<string, unknown>;
     input?: unknown;
   }): Promise<AiTraceSpan> {
     const tenantId = opaqueTenantId(input.organizationId);
     const traceName = sanitizedString(input.name);
+    const traceId = input.traceId ?? input.runId;
 
     let config: ExternalTracingConfig;
     try {
@@ -132,7 +135,7 @@ export class LangSmithAiTracer implements AiTracer {
       const traceDottedOrder = dottedOrder(startedAt, input.runId);
       await client.createRun({
         id: input.runId,
-        trace_id: input.runId,
+        trace_id: traceId,
         dotted_order: traceDottedOrder,
         name: traceName,
         run_type: "chain",
@@ -146,7 +149,7 @@ export class LangSmithAiTracer implements AiTracer {
           },
         },
       } as LangSmithRun);
-      return new LangSmithAiTraceSpan(client, input.runId, traceDottedOrder, tenantId, traceName, this.log, this.now);
+      return new LangSmithAiTraceSpan(client, input.runId, traceId, traceDottedOrder, tenantId, traceName, this.log, this.now);
     } catch {
       this.warn("start", tenantId, traceName);
       return this.noop.startSpan(input);

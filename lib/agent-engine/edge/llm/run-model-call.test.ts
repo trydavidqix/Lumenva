@@ -60,7 +60,8 @@ describe("runModelCall tracing", () => {
     expect(starts).toEqual([
       {
         name: "llm_model_call",
-        runId: JOB_ID,
+        runId: expect.stringMatching(/^[a-f0-9-]{36}$/),
+        traceId: JOB_ID,
         organizationId: ORGANIZATION_ID,
         metadata: {
           purpose: "classifier",

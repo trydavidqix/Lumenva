@@ -6,6 +6,8 @@ export interface AiTracer {
   startSpan(input: {
     name: string;
     runId: string;
+    /** Root trace identifier; absent means this span starts its own trace. */
+    traceId?: string;
     organizationId: string;
     metadata?: Record<string, unknown>;
     input?: unknown;
@@ -21,6 +23,7 @@ export class NoopAiTracer implements AiTracer {
   async startSpan(_input: {
     name: string;
     runId: string;
+    traceId?: string;
     organizationId: string;
     metadata?: Record<string, unknown>;
     input?: unknown;
