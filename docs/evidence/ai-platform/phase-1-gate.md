@@ -63,7 +63,7 @@ The warnings contain only `event=langsmith_trace_failure`, `operation=start`, an
 | `pnpm test:db` | BLOCKED | Attempted; `scripts/test-db.sh` stopped at `docker: command not found`. Docker is unavailable on this Mac. |
 | `pnpm ai:eval:local` | PASS | 25 synthetic cases, 0 duplicate IDs, 0 P0 failures. |
 | `pnpm build` | BLOCKED / inconclusive | Two bounded attempts reached `Creating an optimized production build ...` without a final success result or `.next/BUILD_ID`. The first left a stale generated `.next/lock`; with no active build process, that lock alone was removed before retry. |
-| `git diff --check` | pending final document check | Re-run immediately before the Task 7 commit. |
+| `git diff --check` | PASS | Re-run after Task 7 commit `d16399f0` against the current worktree; no whitespace errors reported. This is current-state evidence, not a claim about pre-commit timing. |
 
 ## Required follow-up before GO
 
