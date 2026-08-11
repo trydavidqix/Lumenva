@@ -1,18 +1,28 @@
+import { GitBranch, Puzzle, ShieldCheck, TrendingUp } from "lucide-react";
+import { AutomacaoMockup } from "@/components/sections/AutomacaoMockup";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { JsonLd } from "@/components/ui/JsonLd";
+import { FeatureCardGrid } from "@/components/ui/FeatureCardGrid";
 import { createPageMetadata } from "@/lib/metadata";
 import { breadcrumbSchema, serviceSchema } from "@/lib/schema";
 import styles from "@/components/sections/InnerPages.module.css";
 
 const description =
-  "Conecte eventos do WhatsApp e do CRM a regras e ações para organizar leads, atribuir atendimento, enviar mensagens e criar tarefas de follow-up.";
+  "Crie fluxos inteligentes, ligue ferramentas, defina regras e reduza tarefas repetitivas. Automatize operações, aprovações e follow-ups num único sistema.";
 const breadcrumbs = [
   { name: "Início", path: "/" },
   { name: "Soluções", path: "/solucoes" },
   { name: "Automação de Processos", path: "/solucoes/automacao-de-processos" },
 ] as const;
 const service = { name: "Automação de Processos Lumenva", description } as const;
+
+const benefits = [
+  { icon: TrendingUp, title: "Reduza tarefas manuais", description: "Automatize etapas repetitivas e liberte a equipa para trabalho de maior valor." },
+  { icon: Puzzle, title: "Ligue toda a operação", description: "Integre CRM, WhatsApp, formulários e processos internos num só fluxo." },
+  { icon: ShieldCheck, title: "Mantenha controlo e segurança", description: "Defina condições, aprovações e handoff humano sempre que necessário." },
+  { icon: GitBranch, title: "Escala com consistência", description: "Execute processos com previsibilidade, rapidez e menos falhas operacionais." },
+] as const;
 
 export const metadata = createPageMetadata({
   title: "Automação de Processos",
@@ -27,16 +37,22 @@ export default function AutomacaoDeProcessosPage() {
       <JsonLd data={serviceSchema(service)} />
       <Breadcrumbs items={breadcrumbs} />
       <ServiceHero
-        eyebrow="Automação de Processos"
-        title="Automatize processos e escale a operação com mais controle."
+        eyebrow="Solução · Automação de Processos"
+        title="Automatize processos e escale a operação com mais controlo."
         description={description}
         capabilities={[
-          "Reduza tarefas manuais",
-          "Ligue WhatsApp, CRM e tarefas da operação",
-          "Mantenha controle e segurança com regras claras",
-          "Escale com consistência e histórico visível",
+          { icon: GitBranch, label: "Fluxos visuais" },
+          { icon: ShieldCheck, label: "Regras e condições" },
+          { icon: Puzzle, label: "Integrações ativas" },
+          { icon: TrendingUp, label: "Aprovação humana" },
         ]}
+        visual={<AutomacaoMockup />}
       />
+      <section aria-labelledby="automation-benefits">
+        <div className="site-shell">
+          <FeatureCardGrid ariaLabel="Benefícios da automação de processos" items={benefits} />
+        </div>
+      </section>
       <section className={styles.sectionAlt} aria-labelledby="automation-model">
         <div className={`site-shell ${styles.sectionStack}`}>
           <div className={styles.sectionHeader}>

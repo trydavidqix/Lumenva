@@ -1,3 +1,4 @@
+import { Code2, HelpCircle, Server, Users } from "lucide-react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { JsonLd } from "@/components/ui/JsonLd";
@@ -30,10 +31,10 @@ export default function PrecosPage() {
         title="Self-hosted, sem mensalidade por assento."
         description={description}
         capabilities={[
-          "Código aberto sob licença MIT",
-          "Execução na sua própria infraestrutura",
-          "Sem limite artificial de usuários por plano",
-          "Fale com a equipe para apoio de instalação",
+          { icon: Code2, label: "Código aberto sob licença MIT" },
+          { icon: Server, label: "Execução na sua própria infraestrutura" },
+          { icon: Users, label: "Sem limite artificial de usuários por plano" },
+          { icon: HelpCircle, label: "Fale com a equipe para apoio de instalação" },
         ]}
       />
       <section className={styles.sectionAlt} aria-labelledby="pricing-model">

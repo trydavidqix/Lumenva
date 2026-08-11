@@ -1,3 +1,4 @@
+import { Bot, Code2, MessageCircle, Server } from "lucide-react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { JsonLd } from "@/components/ui/JsonLd";
@@ -29,10 +30,10 @@ export default function AboutPage() {
         title="Tecnologia aberta para operações de vendas."
         description={description}
         capabilities={[
-          "Código distribuído sob licença MIT",
-          "Implantação na infraestrutura da operação",
-          "WhatsApp como canal primário",
-          "Agentes governados por pessoas",
+          { icon: Code2, label: "Código distribuído sob licença MIT" },
+          { icon: Server, label: "Implantação na infraestrutura da operação" },
+          { icon: MessageCircle, label: "WhatsApp como canal primário" },
+          { icon: Bot, label: "Agentes governados por pessoas" },
         ]}
       />
       <section className={styles.sectionAlt} aria-labelledby="principles-title">

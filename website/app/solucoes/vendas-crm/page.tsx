@@ -1,18 +1,28 @@
+import { Filter, History, TrendingUp, Zap } from "lucide-react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
+import { VendasCrmMockup } from "@/components/sections/VendasCrmMockup";
 import { JsonLd } from "@/components/ui/JsonLd";
+import { FeatureCardGrid } from "@/components/ui/FeatureCardGrid";
 import { createPageMetadata } from "@/lib/metadata";
 import { breadcrumbSchema, serviceSchema } from "@/lib/schema";
 import styles from "@/components/sections/InnerPages.module.css";
 
 const description =
-  "Reúna leads, oportunidades, contactos e pipeline com o contexto de cada conversa, para agentes de IA e pessoas trabalharem juntos.";
+  "Centralize leads, acompanhe oportunidades, automatize follow-ups e dê à sua equipa comercial uma visão clara de cada etapa da venda.";
 const breadcrumbs = [
   { name: "Início", path: "/" },
   { name: "Soluções", path: "/solucoes" },
   { name: "Vendas & CRM", path: "/solucoes/vendas-crm" },
 ] as const;
 const service = { name: "Vendas & CRM Lumenva", description } as const;
+
+const benefits = [
+  { icon: Filter, title: "Visualize o funil", description: "Acompanhe cada oportunidade em tempo real." },
+  { icon: Zap, title: "Ganhe produtividade", description: "Automatize tarefas e follow-ups repetitivos." },
+  { icon: History, title: "Centralize contexto", description: "Tenha histórico, notas e atividades num só lugar." },
+  { icon: TrendingUp, title: "Melhore conversões", description: "Tome decisões com dados claros e previsíveis." },
+] as const;
 
 export const metadata = createPageMetadata({
   title: "Vendas & CRM",
@@ -27,16 +37,22 @@ export default function VendasCrmPage() {
       <JsonLd data={serviceSchema(service)} />
       <Breadcrumbs items={breadcrumbs} />
       <ServiceHero
-        eyebrow="Vendas & CRM"
+        eyebrow="Solução · Vendas & CRM"
         title="Organize o funil e feche mais negócios com previsibilidade."
         description={description}
         capabilities={[
-          "Visualize o funil em Kanban",
-          "Ganhe produtividade com tarefas e follow-ups",
-          "Centralize contexto de leads e propostas",
-          "Melhore conversões com histórico completo",
+          { icon: Filter, label: "Pipeline visual" },
+          { icon: Zap, label: "Follow-up automático" },
+          { icon: History, label: "Histórico do cliente" },
+          { icon: TrendingUp, label: "Relatórios de vendas" },
         ]}
+        visual={<VendasCrmMockup />}
       />
+      <section aria-labelledby="crm-benefits">
+        <div className="site-shell">
+          <FeatureCardGrid ariaLabel="Benefícios de Vendas & CRM" items={benefits} />
+        </div>
+      </section>
       <section className={styles.sectionAlt} aria-labelledby="crm-foundation">
         <div className={`site-shell ${styles.sectionStack}`}>
           <div className={styles.sectionHeader}>
