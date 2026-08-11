@@ -15,10 +15,13 @@
  * cacheWriteTokens}. Validado no ai@7 via scripts/smoke-llm.sh (modelo real) —
  * upgrade de major re-valida esses paths pelo mesmo gate (regra dura 16).
  */
+import { randomUUID } from 'node:crypto';
 import { generateText, stepCountIs, type ModelMessage, type ToolSet } from 'ai';
 import type pg from 'pg';
 import { z } from 'zod';
 
+import type { AiTraceSpan, AiTracer } from '../../obs/ai-tracing';
+import { opaqueTenantId } from '../../obs/external-redaction';
 import type { Logger } from '../../obs/logger';
 import { resolveOrgLlmConfig, type LlmEdgeConfig } from './credentials';
 import { costCents } from './pricing';
@@ -100,6 +103,19 @@ export interface RunModelCallInput {
 export interface RunModelCallDeps {
   registry?: ProviderRegistry;
   log?: Logger;
+  tracer?: AiTracer;
+}
+
+async function endTraceSpan(
+  span: AiTraceSpan | undefined,
+  input: Parameters<AiTraceSpan['end']>[0],
+): Promise<void> {
+  if (span === undefined) return;
+  try {
+    await span.end(input);
+  } catch {
+    // Tracing must never change the model call outcome.
+  }
 }
 
 /**
@@ -173,20 +189,49 @@ export async function runModelCall(db: pg.Pool, cfg: LlmEdgeConfig, input: RunMo
     cacheTtl: cfg.cacheTtl ?? '1h',
   });
 
+  let span: AiTraceSpan | undefined;
+  if (deps.tracer !== undefined) {
+    try {
+      span = await deps.tracer.startSpan({
+        name: 'llm_model_call',
+        runId: input.jobId ?? randomUUID(),
+        organizationId: input.tenantId,
+        // Metadata-first by default: prompts/messages can carry PII and are
+        // deliberately not supplied by this seam without an explicit content
+        // tracing contract.
+        metadata: {
+          purpose: input.purpose ?? 'agent_turn',
+          organization_id: opaqueTenantId(input.tenantId),
+          ...(input.jobId ? { job_id: input.jobId } : {}),
+          provider: config.provider,
+          model,
+        },
+      });
+    } catch {
+      // Tracing must never prevent a model call.
+    }
+  }
+
   const startedAt = Date.now();
   // `system` aceita SystemModelMessage (com providerOptions de cache) — igual
   // em v6 e v7 (smoke prova que o cacheControl continua virando cache_control).
-  const result = await generateText({
-    model: factory(config.apiKey, model),
-    system: prefix.system,
-    messages: input.messages,
-    tools: prefix.tools,
-    stopWhen: input.maxSteps === undefined ? undefined : stepCountIs(input.maxSteps),
-    temperature,
-    topP,
-    topK,
-    maxOutputTokens,
-  });
+  let result;
+  try {
+    result = await generateText({
+      model: factory(config.apiKey, model),
+      system: prefix.system,
+      messages: input.messages,
+      tools: prefix.tools,
+      stopWhen: input.maxSteps === undefined ? undefined : stepCountIs(input.maxSteps),
+      temperature,
+      topP,
+      topK,
+      maxOutputTokens,
+    });
+  } catch (error) {
+    await endTraceSpan(span, { error: 'model_call_failed' });
+    throw error;
+  }
   const latencyMs = Date.now() - startedAt;
 
   const usage = {
@@ -196,6 +241,17 @@ export async function runModelCall(db: pg.Pool, cfg: LlmEdgeConfig, input: RunMo
     cacheWriteTokens: result.usage.inputTokenDetails.cacheWriteTokens ?? 0,
   };
   const cost = costCents(model, usage);
+
+  await endTraceSpan(span, {
+    metrics: {
+      latency_ms: latencyMs,
+      input_tokens: usage.inputTokens,
+      output_tokens: usage.outputTokens,
+      cache_read_tokens: usage.cacheReadTokens,
+      cache_write_tokens: usage.cacheWriteTokens,
+      ...(cost === null ? {} : { cost_cents: cost }),
+    },
+  });
 
   const { rows } = await db.query<{ id: string }>(
     `insert into llm_calls
