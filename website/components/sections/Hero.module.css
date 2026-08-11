@@ -16,11 +16,11 @@
 
 .eyebrow {
   margin-bottom: var(--space-4);
-  color: var(--color-accent);
-  font-family: var(--font-mono);
+  color: var(--color-text-muted);
   font-size: var(--font-size-label);
   font-weight: 700;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .title {

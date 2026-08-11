@@ -39,13 +39,20 @@
   max-width: 52rem;
 }
 
-.eyebrow,
 .capabilityIndex {
   color: var(--color-accent);
   font-family: var(--font-mono);
   font-size: var(--font-size-label);
   font-weight: 700;
   letter-spacing: 0.06em;
+}
+
+.eyebrow {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .title {
