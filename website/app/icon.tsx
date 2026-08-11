@@ -6,7 +6,7 @@ export const size = { width: 32, height: 32 };
 export const contentType = "image/png";
 
 export default function Icon() {
-  const markPath = join(process.cwd(), "public", "brand", "lumenva-mark.png");
+  const markPath = join(process.cwd(), "public", "brand", "lumenva-mark-favicon.png");
   const markBase64 = readFileSync(markPath).toString("base64");
 
   return new ImageResponse(
@@ -26,10 +26,10 @@ export default function Icon() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           alt=""
-          height="30"
+          height={30}
           src={`data:image/png;base64,${markBase64}`}
-          style={{ objectFit: "contain" }}
-          width="45"
+          style={{ height: 30, objectFit: "contain", width: 45 }}
+          width={45}
         />
       </div>
     ),
