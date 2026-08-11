@@ -75,7 +75,9 @@ export function fuseContext(input: {
  * risk records are omitted even after a feature reaches canary/on mode.
  */
 export function promptSafeContextItems(items: readonly ContextItem[]): ContextItem[] {
-  return items.filter((item) => item.risk !== "high" && !PROMPT_BLOCKED_DOMAINS.has(item.authorityDomain));
+  return items.filter(
+    (item) => item.actionable === true && item.risk !== "high" && !PROMPT_BLOCKED_DOMAINS.has(item.authorityDomain),
+  );
 }
 
 /** Renders data, not instructions, in a visibly delimited prompt suffix. */
@@ -110,7 +112,7 @@ export function prepareSemanticContext(
 ): { fusion: ReturnType<typeof fuseContext>; promptBlock: string } {
   const measuredItems = result.bucket === "shadow" ? result.shadowItems : result.items;
   const fusion = fuseContext({ items: measuredItems, maxTokens });
-  if (!result.influencePrompt) return { fusion, promptBlock: "" };
+  if (result.bucket !== "candidate" || !result.influencePrompt) return { fusion, promptBlock: "" };
 
   const promptFusion = fuseContext({
     items: promptSafeContextItems(result.items),

@@ -13,6 +13,7 @@ function item(overrides: Partial<ContextItem> = {}): ContextItem {
     occurredAt: "2026-08-10T10:00:00.000Z",
     expiresAt: null,
     risk: "low",
+    actionable: true,
     sourceId: "message-1",
     text: "Prefere receber novidades por WhatsApp.",
     ...overrides,
@@ -75,12 +76,25 @@ describe("semantic prompt context", () => {
     expect(result.promptBlock).toBe("");
   });
 
+  it("never renders a malformed shadow result even when it claims prompt influence", () => {
+    const result = prepareSemanticContext({
+      items: [item()],
+      shadowItems: [],
+      influencePrompt: true,
+      bucket: "shadow",
+      degraded: false,
+    });
+
+    expect(result.promptBlock).toBe("");
+  });
+
   it("excludes high-risk and protected authority facts from prompt context", () => {
     const safe = item({ id: "safe" });
     const highRisk = item({ id: "high-risk", risk: "high", sourceId: "message-2" });
     const consent = item({ id: "consent", authorityDomain: "consent", authorityLevel: 85, sourceId: "message-3" });
+    const nonActionable = { ...item({ id: "non-actionable", sourceId: "message-4" }), actionable: false };
 
-    expect(promptSafeContextItems([safe, highRisk, consent])).toEqual([safe]);
+    expect(promptSafeContextItems([safe, highRisk, consent, nonActionable])).toEqual([safe]);
   });
 
   it("renders selected context as clearly delimited untrusted data", () => {

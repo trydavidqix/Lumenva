@@ -12,6 +12,7 @@ const validRecord: SemanticMemoryRecord = {
   type: "preference",
   authorityDomain: "customer_preference",
   risk: "low",
+  actionable: true,
   confidence: 0.9,
   validFrom: null,
   validUntil: null,

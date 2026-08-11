@@ -96,6 +96,7 @@ function candidateRecord(candidate: MemoryCandidate, input: {
     type: candidate.type,
     authorityDomain: candidate.authorityDomain,
     risk: candidate.risk,
+    actionable: candidate.actionable,
     confidence: candidate.confidence,
     validFrom: candidate.validFrom ?? null,
     validUntil: candidate.validUntil ?? null,

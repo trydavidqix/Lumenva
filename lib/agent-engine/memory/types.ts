@@ -26,6 +26,7 @@ export const semanticMemoryRecordSchema = z.object({
   type: semanticMemoryTypeSchema,
   authorityDomain: authorityDomainSchema,
   risk: memoryRiskSchema,
+  actionable: z.boolean(),
   confidence: z.number().finite().min(0).max(1),
   validFrom: z.string().nullable(),
   validUntil: z.string().nullable(),
@@ -41,6 +42,7 @@ export interface SemanticMemoryRecord {
   type: SemanticMemoryType;
   authorityDomain: AuthorityDomain;
   risk: MemoryRisk;
+  actionable: boolean;
   confidence: number;
   validFrom: string | null;
   validUntil: string | null;
