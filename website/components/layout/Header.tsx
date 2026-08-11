@@ -18,7 +18,7 @@ export function Header() {
       </a>
       <div className={`site-shell ${styles.inner}`}>
         <Link aria-label={siteName} className={styles.wordmark} href="/">
-          <LumenvaMark priority size={22} />
+          <LumenvaMark priority size={50} />
           {siteName}
         </Link>
         <nav
