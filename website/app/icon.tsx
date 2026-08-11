@@ -1,9 +1,14 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 
 export const size = { width: 32, height: 32 };
 export const contentType = "image/png";
 
 export default function Icon() {
+  const markPath = join(process.cwd(), "public", "brand", "lumenva-mark.png");
+  const markBase64 = readFileSync(markPath).toString("base64");
+
   return new ImageResponse(
     (
       <div
@@ -14,14 +19,18 @@ export default function Icon() {
           display: "flex",
           height: "100%",
           justifyContent: "center",
+          overflow: "hidden",
           width: "100%",
         }}
       >
-        <svg fill="none" height="22" viewBox="0 0 24 24" width="22" xmlns="http://www.w3.org/2000/svg">
-          <path d="M8 3.5L14 3.5 14 15.5 20 15.5 20 20.5 8 20.5Z" fill="#111111" />
-          <path d="M4 9.5V20.5" stroke="#111111" strokeLinecap="round" strokeWidth="1.75" />
-          <path d="M6.5 8L6.5 14" stroke="#111111" strokeLinecap="round" strokeWidth="1.75" />
-        </svg>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          alt=""
+          height="30"
+          src={`data:image/png;base64,${markBase64}`}
+          style={{ objectFit: "contain" }}
+          width="45"
+        />
       </div>
     ),
     { ...size },

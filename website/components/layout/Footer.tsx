@@ -20,7 +20,7 @@ export function Footer() {
       <div className={`site-shell ${styles.content}`}>
         <div className={styles.brand}>
           <Link aria-label={siteName} className={styles.wordmark} href="/">
-            <LumenvaMark size={22} />
+            <LumenvaMark size={50} />
             {siteName}
           </Link>
           <p className={styles.description}>{description}</p>
