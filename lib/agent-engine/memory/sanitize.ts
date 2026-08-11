@@ -11,42 +11,20 @@ const API_KEY_LIKE_VALUE =
 const BEARER_CREDENTIAL = /\bbearer\s+\S+/iu;
 const JWT_LIKE_VALUE = /\b[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/;
 const SESSION_OR_COOKIE_ASSIGNMENT =
-  /\b(?:session(?:[_-]?(?:id|token|key))?|cookie|set-cookie|authorization)\b\s*(?:=|:)\s*\S+/iu;
+  /\b(?:session(?:[_ -]?(?:id|token|key))?|cookie|set-cookie|authorization)\b\s*(?:=|:|é|is)\s*\S+/iu;
 const PASSWORD_STATEMENT = /\b(?:password|passwd|senha|passcode)\b/iu;
 const RECOVERY_CODE_STATEMENT =
   /\b(?:recovery[ -]?code|c[oó]digo\s+de\s+recupera[cç][aã]o)\b/iu;
 const CVV_STATEMENT =
-  /\b(?:cvv|cvc|security[ -]?code|c[oó]digo\s+de\s+seguran[cç]a)\b\s*(?:=|:|é|is)\s*\d{3,4}\b/iu;
+  /\b(?:cvv|cvc|security[ -]?code|c[oó]digo\s+de\s+seguran[cç]a)\b\s*(?:(?:=|:|é|is)\s*)?\d{3,4}\b/iu;
 const INTERNAL_SECRET_VARIABLE =
   /\b(?:[A-Z][A-Z0-9]*_)*(?:API_?KEY|ACCESS_TOKEN|REFRESH_TOKEN|AUTH_TOKEN|CLIENT_SECRET|PRIVATE_KEY|DATABASE_PASSWORD|DB_PASSWORD|SESSION_TOKEN|SESSION_KEY|SECRET)\b/i;
 const CREDENTIAL_ASSIGNMENT =
-  /\b(?:token|access[_ -]?token|refresh[_ -]?token|auth(?:orization)?[_ -]?token|client[_ -]?secret|private[_ -]?key)\b\s*(?:=|:)\s*\S+/iu;
-const CARD_NUMBER_CANDIDATE = /(?<!\d)(?:\d[ -]?){13,19}(?!\d)/g;
-
-function isLuhnValid(value: string): boolean {
-  let total = 0;
-  let shouldDouble = false;
-
-  for (let index = value.length - 1; index >= 0; index -= 1) {
-    let digit = Number(value[index]);
-    if (shouldDouble) {
-      digit *= 2;
-      if (digit > 9) digit -= 9;
-    }
-    total += digit;
-    shouldDouble = !shouldDouble;
-  }
-
-  return total % 10 === 0;
-}
+  /\b(?:token|access[_ -]?token|refresh[_ -]?token|auth(?:orization)?[_ -]?token|client[_ -]?secret|private[_ -]?key)\b\s*(?:=|:|é|is)\s*\S+/iu;
+const CARD_NUMBER_CANDIDATE = /(?<!\d)(?:\d[ -]?){13,19}(?!\d)/;
 
 function containsCardNumber(text: string): boolean {
-  for (const match of text.matchAll(CARD_NUMBER_CANDIDATE)) {
-    const digits = match[0].replace(/\D/g, "");
-    if (digits.length >= 13 && digits.length <= 19 && isLuhnValid(digits)) return true;
-  }
-
-  return false;
+  return CARD_NUMBER_CANDIDATE.test(text);
 }
 
 /**
