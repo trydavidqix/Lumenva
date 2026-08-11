@@ -1,16 +1,16 @@
 ---
 type: index
 project: DeskcommCRM
-status: draft
-last_updated: 2026-07-29
+status: maintained
+last_updated: 2026-08-11
 generated_by: auditoria documental (Claude Code)
 confidence: alta (inventário de arquivos é CONFIRMADO; agrupamento temático é INFERIDO)
-audited_against: origin/main @ 789dfa6 (v1.0.0, 2026-07-27)
+audited_against: ai-platform-foundation @ 7ce49214 (AI Platform Phase 2, Task 8)
 ---
 
 # Índice da documentação — DeskcommCRM
 
-Mapa dos **119** arquivos `.md` de `docs/`, espalhados por **23** subpastas — régua:
+Mapa da documentação versionada de `docs/` — confirme a contagem com
 `git ls-files 'docs/**/*.md' | wc -l`. Existe porque a documentação cresceu sem ponto
 de entrada: sem este índice, humano e agente não acham o que já foi decidido e
 reescrevem por cima.
@@ -128,6 +128,8 @@ Documentação de *processo*. Alta rotatividade; trate como estado, não como co
 - [`handoffs/`](handoffs/) — arquivados: casos humanos, inbox multimodal, CRM vivo, LGPD, wave1-devvivo, contrato wave5, briefing CRM vivo
 - [`stories/`](stories/) — épicos e stories (`epics/MASTER.md` = plano por epic/wave)
 - [`superpowers/`](superpowers/) — `plans/` e `specs/` datados por onda, mais `handoffs/`
+- [`superpowers/plans/2026-08-10-ai-platform-execution-index.md`](superpowers/plans/2026-08-10-ai-platform-execution-index.md) — ordem e estado da iniciativa AI Platform
+- [`evidence/ai-platform/`](evidence/ai-platform/) — gates das Fases 0–1 e snapshot verificável da Fase 2; não confundir com ativação de provider
 - [`growth/`](growth/) — material de crescimento · [`brand/`](brand/) — marca · [`white-label.md`](white-label.md) — instalação com marca própria
 - [`../plan/`](../plan/) — backlog do gov-loop (`features.json` 31/31, `phases.md`, `progress.md`)
 - [`../loop/`](../loop/) — máquina do gov-loop (`LOOP.md`, `CHECKPOINT.md`, `checkpoints/G1..G6-report.md` + `.approved`)

@@ -1,29 +1,21 @@
 # HANDOFF — AI Platform
 
-**Date:** 2026-08-10  
-**Branch:** `gpt-ai-platform`  
-**Status:** PLANNED — NOT IMPLEMENTED  
+**Date:** 2026-08-11
+**Branch:** `ai-platform-foundation`
+**Status:** Fases 0–1 com `GO`; Fase 2 implementada até a Tarefa 8, sem gate de release
 **Base branch SHA when created:** `4fa4ca9a7042b88d6de35e411e4375213fb26d93`
 
-## What is finished
+## Estado atual
 
-The architecture/planning package for the AI Platform initiative has been written on this branch.
+Além do pacote de arquitetura e planos, a implementação já contém:
 
-It includes:
+- Fase 0: contratos, flags tenant-aware, kill switches, projection ledger, Golden Dataset e gate `GO`;
+- Fase 1: tracing LangSmith opcional e sanitizado, avaliador local e gate `GO`; LangSmith continua OFF;
+- Fase 2, Tarefas 1–8: contrato e sanitização de memória, adapter REST Mem0, compose opcional isolado, projeção assíncrona idempotente, provider de contexto em shadow e fusão de prompt fail-closed.
 
-- Codex execution rules;
-- master architecture;
-- QA/release gates;
-- detailed Phase 0–7 implementation plans;
-- test strategy;
-- security/privacy boundaries;
-- multi-tenant requirements;
-- failure/rollback behavior;
-- cost approval stops;
-- rollout modes;
-- explicit anti-patterns.
+O estado verificável da Fase 2 está em [`../evidence/ai-platform/phase-2-status.md`](../evidence/ai-platform/phase-2-status.md). Isto **não** é um gate: Mem0 não foi iniciado, não recebeu chave, não foi ativado em SHADOW/CANARY/ON e não houve alteração de produção.
 
-No product feature described by those plans should be assumed implemented merely because this handoff exists.
+Faltam a Tarefa 9 (lifecycle/rebuild LGPD) e a Tarefa 10 (gate da Fase 2), além da validação real do profile `ai-memory` no Windows. Não inicie a Fase 3 antes de um gate da Fase 2 com decisão explícita.
 
 ## Start here
 
@@ -60,18 +52,15 @@ docs/superpowers/plans/
 - Tenant BYOK provider credentials already exist encrypted in PostgreSQL. Do not move them all to Infisical.
 - MCP bearer tokens already carry org/scopes/role from `api_tokens`; use that for n8n instead of service role.
 
-## First blocking problem to solve
+## Próximo ponto de parada
 
-The planning-time base `main@4fa4ca9` had a Vercel production build failure after recent website commits. The observed failure was a missing import/module around:
+Não há bloqueio de código conhecido nas Tarefas 1–8. As pendências são deliberadas:
 
-```text
-website/app/api/contact/route.ts
-@/lib/contact-form
-```
+- Tarefa 9: apagar/reconstruir projeções semânticas com rastreabilidade LGPD;
+- Tarefa 10: executar e registrar o gate da Fase 2;
+- Windows: validar o Docker Compose do profile `ai-memory`, o health/bootstrap e o comportamento real do cabeçalho `Idempotency-Key`.
 
-Phase 0 Task 1 requires reproducing and fixing the actual merge/module root cause before any AI-platform implementation.
-
-Do not hide this baseline failure with ignored TypeScript errors, removed build paths or deleted tests.
+O Mac não deve instalar nem executar Docker para estas pendências. A feature do CRM permanece `OFF` até decisão humana posterior baseada no gate.
 
 ## Codex operating mode
 
