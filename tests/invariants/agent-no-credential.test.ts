@@ -17,9 +17,7 @@ import type { AiTraceSpan, AiTracer } from "@/lib/agent-engine/obs/ai-tracing";
 
 const container = process.env.TEST_DB_CONTAINER;
 if (!container) {
-  throw new Error(
-    "TEST_DB_CONTAINER not set — rode via `pnpm test:invariants` (scripts/test-db.sh)",
-  );
+  throw new Error("TEST_DB_CONTAINER not set — rode via `pnpm test:invariants` (scripts/test-db.sh)");
 }
 
 // Placeholders ANTES dos imports dinâmicos do engine (módulos da borda leem env
@@ -41,10 +39,10 @@ const CONV = "dddddddd-0000-4000-8000-000000000004";
 const MSG = "dddddddd-0000-4000-8000-000000000005";
 
 type EngineModules = {
-  createInboundTurnHandler: (typeof import("@/lib/agent-engine/agent/inbound-turn"))["createInboundTurnHandler"];
+  createInboundTurnHandler: typeof import("@/lib/agent-engine/agent/inbound-turn")["createInboundTurnHandler"];
   queue: typeof import("@/lib/agent-engine/queue/queue");
-  createLogger: (typeof import("@/lib/agent-engine/obs/logger"))["createLogger"];
-  crmEdgeConfigFromEnv: (typeof import("@/lib/agent-engine/edge/crm/mcp-client"))["crmEdgeConfigFromEnv"];
+  createLogger: typeof import("@/lib/agent-engine/obs/logger")["createLogger"];
+  crmEdgeConfigFromEnv: typeof import("@/lib/agent-engine/edge/crm/mcp-client")["crmEdgeConfigFromEnv"];
 };
 let m: EngineModules;
 
@@ -106,11 +104,7 @@ describe("4B — turno sem credencial NENHUMA (nem env, nem BYOK)", () => {
     const log = m.createLogger();
     const traceEnds: Parameters<AiTraceSpan["end"]>[0][] = [];
     const tracer: AiTracer = {
-      startSpan: async () => ({
-        end: async (input) => {
-          traceEnds.push(input);
-        },
-      }),
+      startSpan: async () => ({ end: async (input) => { traceEnds.push(input); } }),
     };
     const handler = m.createInboundTurnHandler({
       crmCfg: m.crmEdgeConfigFromEnv({

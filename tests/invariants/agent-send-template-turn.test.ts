@@ -303,18 +303,8 @@ beforeEach(() => {
   ultimoResultadoDeTool = null;
 });
 
-const ALVO_META = {
-  conv: CONV,
-  sessao: SESSION_META,
-  msg: MSG,
-  evento: "cccccccc-0000-4000-8000-000000000006",
-};
-const ALVO_WAHA = {
-  conv: CONV_WAHA,
-  sessao: SESSION_WAHA,
-  msg: MSG_WAHA,
-  evento: "cccccccc-0000-4000-8000-000000000016",
-};
+const ALVO_META = { conv: CONV, sessao: SESSION_META, msg: MSG, evento: "cccccccc-0000-4000-8000-000000000006" };
+const ALVO_WAHA = { conv: CONV_WAHA, sessao: SESSION_WAHA, msg: MSG_WAHA, evento: "cccccccc-0000-4000-8000-000000000016" };
 
 describe("turno completo — send_template com a janela de 24h FECHADA", () => {
   it("correlaciona o span do turno aos dois spans LLM pelo mesmo jobId, sem conteúdo do lead", async () => {
@@ -323,23 +313,12 @@ describe("turno completo — send_template com a janela de 24h FECHADA", () => {
     const tracer: AiTracer = {
       startSpan: async (input) => {
         starts.push(input);
-        return {
-          end: async (input) => {
-            ends.push(input);
-          },
-        };
+        return { end: async (input) => { ends.push(input); } };
       },
     };
 
     const erro = await rodaTurno(
-      montaHandler(
-        modeloQueChamaTemplate({
-          template_name: "retomada",
-          language: "pt_BR",
-          values: { "1": "Ana" },
-        }),
-        tracer,
-      ),
+      montaHandler(modeloQueChamaTemplate({ template_name: "retomada", language: "pt_BR", values: { "1": "Ana" } }), tracer),
       ALVO_META,
     );
 
@@ -355,11 +334,7 @@ describe("turno completo — send_template com a janela de 24h FECHADA", () => {
       },
     });
     expect(starts.slice(1).map((span) => span.name)).toEqual(["llm_model_call", "llm_model_call"]);
-    expect(
-      starts.every(
-        (span) => span.runId === starts[0]!.runId && span.metadata?.job_id === starts[0]!.runId,
-      ),
-    ).toBe(true);
+    expect(starts.every((span) => span.runId === starts[0]!.runId && span.metadata?.job_id === starts[0]!.runId)).toBe(true);
     expect(ends).toHaveLength(3);
     expect(ends[2]).toEqual({});
     expect(JSON.stringify({ starts, ends })).not.toContain("Lead Template");
@@ -369,11 +344,7 @@ describe("turno completo — send_template com a janela de 24h FECHADA", () => {
   it("o template sai, com corpo renderizado e identidade preservada", async () => {
     const erro = await rodaTurno(
       montaHandler(
-        modeloQueChamaTemplate({
-          template_name: "retomada",
-          language: "pt_BR",
-          values: { "1": "Ana" },
-        }),
+        modeloQueChamaTemplate({ template_name: "retomada", language: "pt_BR", values: { "1": "Ana" } }),
       ),
       ALVO_META,
     );
@@ -399,11 +370,7 @@ describe("turno completo — send_template com a janela de 24h FECHADA", () => {
     // Se a flag deixasse de ser passada, o gate vetaria e `enviados` ficaria vazio.
     const erro = await rodaTurno(
       montaHandler(
-        modeloQueChamaTemplate({
-          template_name: "retomada",
-          language: "pt_BR",
-          values: { "1": "Bia" },
-        }),
+        modeloQueChamaTemplate({ template_name: "retomada", language: "pt_BR", values: { "1": "Bia" } }),
       ),
       ALVO_META,
     );
@@ -417,11 +384,7 @@ describe("turno completo — send_template com a janela de 24h FECHADA", () => {
     // um template em análise ia à Graph API para voltar erro genérico.
     const erro = await rodaTurno(
       montaHandler(
-        modeloQueChamaTemplate({
-          template_name: "em_analise",
-          language: "pt_BR",
-          values: { "1": "Ana" },
-        }),
+        modeloQueChamaTemplate({ template_name: "em_analise", language: "pt_BR", values: { "1": "Ana" } }),
       ),
       ALVO_META,
     );
@@ -460,11 +423,7 @@ describe("turno completo — canal WAHA não ganha a ferramenta", () => {
     // mundos não prova nada sobre o gate.
     const erro = await rodaTurno(
       montaHandler(
-        modeloQueChamaTemplate({
-          template_name: "retomada",
-          language: "pt_BR",
-          values: { "1": "Ana" },
-        }),
+        modeloQueChamaTemplate({ template_name: "retomada", language: "pt_BR", values: { "1": "Ana" } }),
       ),
       ALVO_WAHA,
     );
