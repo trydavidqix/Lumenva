@@ -140,6 +140,57 @@ services:
     logging: *default-logging
     networks: [internal]
 
+  # Semântica opcional, isolada da stack CRM. Só inicia quando o operador usa
+  # `--profile ai-memory`; nenhuma porta é publicada e o Caddy não a expõe.
+  mem0:
+    image: mem0/mem0-api-server:latest
+    profiles: ["ai-memory"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: mem0-postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: mem0
+      POSTGRES_USER: mem0
+      POSTGRES_PASSWORD: ${MEM0_POSTGRES_PASSWORD:?set MEM0_POSTGRES_PASSWORD in managed runtime secrets}
+      JWT_SECRET: ${MEM0_JWT_SECRET:?set MEM0_JWT_SECRET in managed runtime secrets}
+      OPENAI_API_KEY: ${MEM0_OPENAI_API_KEY:?set MEM0_OPENAI_API_KEY in managed runtime secrets}
+    depends_on:
+      mem0-postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=3)",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+    logging: *default-logging
+    networks: [internal]
+
+  # Armazenamento interno do Mem0, separado completamente do Supabase/CRM.
+  mem0-postgres:
+    image: pgvector/pgvector:pg16
+    profiles: ["ai-memory"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mem0
+      POSTGRES_USER: mem0
+      POSTGRES_PASSWORD: ${MEM0_POSTGRES_PASSWORD:?set MEM0_POSTGRES_PASSWORD in managed runtime secrets}
+    volumes:
+      - mem0-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mem0 -d mem0"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging: *default-logging
+    networks: [internal]
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -164,6 +215,7 @@ volumes:
   waha-media:
   caddy-data:
   caddy-config:
+  mem0-postgres-data:
 
 networks:
   internal:
