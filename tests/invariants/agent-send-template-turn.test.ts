@@ -5,6 +5,7 @@ import type * as InboundTurn from "@/lib/agent-engine/agent/inbound-turn";
 import type * as Providers from "@/lib/agent-engine/edge/llm/providers";
 import type * as Queue from "@/lib/agent-engine/queue/queue";
 import type * as ObsLogger from "@/lib/agent-engine/obs/logger";
+import type { AiTraceSpan, AiTracer } from "@/lib/agent-engine/obs/ai-tracing";
 
 /**
  * O turno COMPLETO enviando template — o que `send-template-wiring.test.ts` declarava
@@ -135,7 +136,7 @@ function modeloQueChamaTemplate(input: Record<string, unknown>) {
   };
 }
 
-function montaHandler(doGenerate: unknown) {
+function montaHandler(doGenerate: unknown, tracer?: AiTracer) {
   return m.createInboundTurnHandler({
     crmCfg: { supabase: {} as never },
     llmCfg: { anthropicApiKey: "fake" } as never,
@@ -172,7 +173,8 @@ function montaHandler(doGenerate: unknown) {
     // reprovaria o turno por um motivo que não é o deste teste.
     clock: () => new Date("2026-07-30T15:00:00Z"),
     sleep: async () => {},
-  });
+    ...(tracer === undefined ? {} : { tracer }),
+  } as never);
 }
 
 async function rodaTurno(
@@ -301,14 +303,77 @@ beforeEach(() => {
   ultimoResultadoDeTool = null;
 });
 
-const ALVO_META = { conv: CONV, sessao: SESSION_META, msg: MSG, evento: "cccccccc-0000-4000-8000-000000000006" };
-const ALVO_WAHA = { conv: CONV_WAHA, sessao: SESSION_WAHA, msg: MSG_WAHA, evento: "cccccccc-0000-4000-8000-000000000016" };
+const ALVO_META = {
+  conv: CONV,
+  sessao: SESSION_META,
+  msg: MSG,
+  evento: "cccccccc-0000-4000-8000-000000000006",
+};
+const ALVO_WAHA = {
+  conv: CONV_WAHA,
+  sessao: SESSION_WAHA,
+  msg: MSG_WAHA,
+  evento: "cccccccc-0000-4000-8000-000000000016",
+};
 
 describe("turno completo — send_template com a janela de 24h FECHADA", () => {
+  it("correlaciona o span do turno aos dois spans LLM pelo mesmo jobId, sem conteúdo do lead", async () => {
+    const starts: Parameters<AiTracer["startSpan"]>[0][] = [];
+    const ends: Parameters<AiTraceSpan["end"]>[0][] = [];
+    const tracer: AiTracer = {
+      startSpan: async (input) => {
+        starts.push(input);
+        return {
+          end: async (input) => {
+            ends.push(input);
+          },
+        };
+      },
+    };
+
+    const erro = await rodaTurno(
+      montaHandler(
+        modeloQueChamaTemplate({
+          template_name: "retomada",
+          language: "pt_BR",
+          values: { "1": "Ana" },
+        }),
+        tracer,
+      ),
+      ALVO_META,
+    );
+
+    expect(erro).toBeNull();
+    expect(starts).toHaveLength(3);
+    expect(starts[0]).toMatchObject({
+      name: "agent_turn",
+      runId: expect.any(String),
+      metadata: {
+        organization_id: expect.stringMatching(/^tenant_[a-f0-9]{16}$/),
+        job_id: expect.any(String),
+        kind: "inbound_turn",
+      },
+    });
+    expect(starts.slice(1).map((span) => span.name)).toEqual(["llm_model_call", "llm_model_call"]);
+    expect(
+      starts.every(
+        (span) => span.runId === starts[0]!.runId && span.metadata?.job_id === starts[0]!.runId,
+      ),
+    ).toBe(true);
+    expect(ends).toHaveLength(3);
+    expect(ends[2]).toEqual({});
+    expect(JSON.stringify({ starts, ends })).not.toContain("Lead Template");
+    expect(JSON.stringify({ starts, ends })).not.toContain("Oi Ana, tudo certo?");
+  });
+
   it("o template sai, com corpo renderizado e identidade preservada", async () => {
     const erro = await rodaTurno(
       montaHandler(
-        modeloQueChamaTemplate({ template_name: "retomada", language: "pt_BR", values: { "1": "Ana" } }),
+        modeloQueChamaTemplate({
+          template_name: "retomada",
+          language: "pt_BR",
+          values: { "1": "Ana" },
+        }),
       ),
       ALVO_META,
     );
@@ -334,7 +399,11 @@ describe("turno completo — send_template com a janela de 24h FECHADA", () => {
     // Se a flag deixasse de ser passada, o gate vetaria e `enviados` ficaria vazio.
     const erro = await rodaTurno(
       montaHandler(
-        modeloQueChamaTemplate({ template_name: "retomada", language: "pt_BR", values: { "1": "Bia" } }),
+        modeloQueChamaTemplate({
+          template_name: "retomada",
+          language: "pt_BR",
+          values: { "1": "Bia" },
+        }),
       ),
       ALVO_META,
     );
@@ -348,7 +417,11 @@ describe("turno completo — send_template com a janela de 24h FECHADA", () => {
     // um template em análise ia à Graph API para voltar erro genérico.
     const erro = await rodaTurno(
       montaHandler(
-        modeloQueChamaTemplate({ template_name: "em_analise", language: "pt_BR", values: { "1": "Ana" } }),
+        modeloQueChamaTemplate({
+          template_name: "em_analise",
+          language: "pt_BR",
+          values: { "1": "Ana" },
+        }),
       ),
       ALVO_META,
     );
@@ -387,7 +460,11 @@ describe("turno completo — canal WAHA não ganha a ferramenta", () => {
     // mundos não prova nada sobre o gate.
     const erro = await rodaTurno(
       montaHandler(
-        modeloQueChamaTemplate({ template_name: "retomada", language: "pt_BR", values: { "1": "Ana" } }),
+        modeloQueChamaTemplate({
+          template_name: "retomada",
+          language: "pt_BR",
+          values: { "1": "Ana" },
+        }),
       ),
       ALVO_WAHA,
     );
