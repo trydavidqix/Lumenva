@@ -83,8 +83,8 @@
   .newAutomation {
     display: inline-flex;
     position: absolute;
-    right: var(--space-4);
-    bottom: var(--space-4);
+    right: var(--space-7);
+    bottom: var(--space-7);
   }
 }
 
