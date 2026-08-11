@@ -118,6 +118,8 @@ describe("extractMemoryCandidates", () => {
   it.each([
     ["a settled invoice", "A fatura foi quitada."],
     ["a signed agreement", "As partes assinaram o acordo."],
+    ["a completed bank transfer", "transferência bancária concluída"],
+    ["an annual subscription renewal", "subscrição anual renovada"],
   ])("fails closed for %s even when the model labels it non-sensitive", async (_caseName, text) => {
     const modelCandidate = {
       type: "commercial_context",
@@ -138,7 +140,7 @@ describe("extractMemoryCandidates", () => {
     ]);
   });
 
-  it("preserves ordinary non-sensitive commercial context", async () => {
+  it("marks ordinary commercial status as high risk and never actionable", async () => {
     const modelCandidate = {
       type: "commercial_context",
       authorityDomain: "commercial_status",
@@ -153,7 +155,9 @@ describe("extractMemoryCandidates", () => {
     await expect(extractMemoryCandidates(
       { ...input, sourceText: modelCandidate.text },
       { runModelCall } as never,
-    )).resolves.toEqual([modelCandidate]);
+    )).resolves.toEqual([
+      { ...modelCandidate, risk: "high", actionable: false },
+    ]);
   });
 
   it("does not return model candidates containing passwords or API keys", async () => {
