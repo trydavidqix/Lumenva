@@ -27,7 +27,10 @@ function defaultClient(config: ClientConfig): LangSmithClient {
 
 function dottedOrder(startedAt: Date, runId: string): string {
   const timestamp = `${startedAt.toISOString().slice(0, -1)}001Z`;
-  return timestamp.replace(/[-:.]/g, "") + runId;
+  // Keep the punctuation removal explicit: Tailwind treats the equivalent
+  // character-class regex as an arbitrary utility candidate while scanning
+  // source files, then emits invalid CSS for it during `next build`.
+  return timestamp.replaceAll("-", "").replaceAll(":", "").replaceAll(".", "") + runId;
 }
 
 function sanitizedString(value: unknown): string {

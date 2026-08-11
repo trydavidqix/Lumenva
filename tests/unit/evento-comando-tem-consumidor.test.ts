@@ -79,12 +79,21 @@ function arquivos(dir: string): string[] {
   });
 }
 
-function tiposEmitidos(): string[] {
+function lerTiposEmitidos(): string[] {
   const achados = new Set<string>();
   for (const f of RAIZES.flatMap(arquivos)) {
     for (const m of readFileSync(f, "utf8").matchAll(EMISSAO)) achados.add(m[1]!);
   }
   return [...achados].sort();
+}
+
+// A varredura percorre centenas de fontes. Faça-a uma vez por arquivo de teste:
+// repetir a mesma leitura em cada asserção torna o resultado dependente da
+// pressão de I/O acumulada pela suíte completa no Windows.
+const TIPOS_EMITIDOS = lerTiposEmitidos();
+
+function tiposEmitidos(): string[] {
+  return [...TIPOS_EMITIDOS];
 }
 
 function tiposConsumidos(): Set<string> {
