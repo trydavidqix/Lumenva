@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { AiTraceSpan, AiTracer } from "../../obs/ai-tracing";
+import type { Logger } from "../../obs/logger";
+import { LangSmithAiTracer, type LangSmithClient } from "../../obs/langsmith-adapter";
 import { createFakeRegistry } from "./providers";
 import { runModelCall } from "./run-model-call";
 
@@ -27,6 +29,14 @@ function modelCallPool() {
       throw new Error(`unexpected query: ${query}`);
     }),
   } as never;
+}
+
+function failingTraceLogger(warnings: Array<{ msg: string; fields?: Record<string, unknown> }>): Logger {
+  return {
+    info: () => undefined,
+    warn: (msg, fields) => warnings.push({ msg, fields }),
+    error: () => undefined,
+  };
 }
 
 describe("runModelCall tracing", () => {
@@ -120,5 +130,47 @@ describe("runModelCall tracing", () => {
     expect(second.result.text).toBe("ok");
     expect(anthropic).toHaveBeenCalledTimes(2);
     expect(endFailure.end).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["timeout", new Error("synthetic trace timeout")],
+    ["401", new Error("synthetic trace HTTP 401")],
+    ["429", new Error("synthetic trace HTTP 429")],
+  ])("keeps the model call available when LangSmith returns %s", async (_scenario, traceFailure) => {
+    const warnings: Array<{ msg: string; fields?: Record<string, unknown> }> = [];
+    const client: LangSmithClient = {
+      createRun: vi.fn().mockRejectedValue(traceFailure),
+      updateRun: vi.fn(),
+    };
+    const tracer = new LangSmithAiTracer({
+      logger: failingTraceLogger(warnings),
+      resolveConfig: vi.fn().mockResolvedValue({
+        enabled: true,
+        apiKey: "synthetic-test-key",
+        project: "synthetic-phase-1-gate",
+      }),
+      createClient: () => client,
+    });
+
+    const outcome = await runModelCall(
+      modelCallPool(),
+      { anthropicApiKey: API_KEY },
+      { tenantId: ORGANIZATION_ID, messages: [{ role: "user", content: "synthetic safe prompt" }] },
+      { registry: createFakeRegistry(), tracer } as never,
+    );
+
+    expect(outcome.result.text).toBe("ok");
+    expect(warnings).toEqual([
+      {
+        msg: "LangSmith tracing failed",
+        fields: {
+          event: "langsmith_trace_failure",
+          operation: "start",
+          tenant_id: expect.stringMatching(/^tenant_[a-f0-9]{16}$/),
+          trace_name: "llm_model_call",
+        },
+      },
+    ]);
+    expect(JSON.stringify(warnings)).not.toContain("synthetic-test-key");
   });
 });
