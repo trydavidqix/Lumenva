@@ -244,6 +244,7 @@
 }
 
 .finalCtaAction {
+  align-self: start;
   justify-self: start;
 }
 
