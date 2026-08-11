@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import { LumenvaMark } from "@/components/ui/LumenvaMark";
 import styles from "./SidebarNav.module.css";
 
 export interface SidebarNavItem {
@@ -14,7 +15,10 @@ export interface SidebarNavProps {
 export function SidebarNav({ activeLabel, items }: Readonly<SidebarNavProps>) {
   return (
     <nav className={styles.nav}>
-      <span className={styles.wordmark}>LUMENVA</span>
+      <span className={styles.wordmark}>
+        <LumenvaMark size={14} />
+        LUMENVA
+      </span>
       <ul className={styles.list}>
         {items.map(({ icon: Icon, label }) => (
           <li className={styles.item} data-active={label === activeLabel} key={label}>

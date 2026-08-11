@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { demoCta, navigation, shellContent, siteName } from "@/content/site";
 import { Button } from "@/components/ui/Button";
+import { LumenvaMark } from "@/components/ui/LumenvaMark";
 import { MobileNavigation } from "./MobileNavigation";
 import { SolutionsMenu } from "./SolutionsMenu";
 import styles from "./Header.module.css";
@@ -17,6 +18,7 @@ export function Header() {
       </a>
       <div className={`site-shell ${styles.inner}`}>
         <Link aria-label={siteName} className={styles.wordmark} href="/">
+          <LumenvaMark size={22} />
           {siteName}
         </Link>
         <nav

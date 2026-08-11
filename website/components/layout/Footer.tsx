@@ -8,6 +8,7 @@ import {
   shellContent,
   siteName,
 } from "@/content/site";
+import { LumenvaMark } from "@/components/ui/LumenvaMark";
 import styles from "./Footer.module.css";
 
 export interface FooterProps {
@@ -20,6 +21,7 @@ export function Footer() {
       <div className={`site-shell ${styles.content}`}>
         <div className={styles.brand}>
           <Link aria-label={siteName} className={styles.wordmark} href="/">
+            <LumenvaMark size={22} />
             {siteName}
           </Link>
           <p className={styles.description}>{description}</p>
