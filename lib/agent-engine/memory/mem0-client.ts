@@ -90,7 +90,7 @@ export class Mem0Client implements MemoryPort {
       user_id: namespaceFor(parsedRecord.organizationId, parsedRecord.contactId),
       infer: false,
       metadata: metadataFor(parsedRecord),
-    });
+    }, idempotencyKey);
     this.parseResponse(writeResponseSchema, response);
   }
 
@@ -158,7 +158,12 @@ export class Mem0Client implements MemoryPort {
     return { ok: true, latencyMs: Date.now() - startedAt };
   }
 
-  private async request(path: string, method: "DELETE" | "GET" | "POST", body?: unknown): Promise<unknown> {
+  private async request(
+    path: string,
+    method: "DELETE" | "GET" | "POST",
+    body?: unknown,
+    idempotencyKey?: string,
+  ): Promise<unknown> {
     const controller = new AbortController();
     let timedOut = false;
     const timeout = setTimeout(() => {
@@ -172,6 +177,7 @@ export class Mem0Client implements MemoryPort {
         headers: {
           "Content-Type": "application/json",
           "X-API-Key": this.config.apiKey,
+          ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
         },
         body: body === undefined ? undefined : JSON.stringify(body),
         signal: controller.signal,

@@ -69,6 +69,7 @@ describe("Mem0Client", () => {
     expect(init.headers).toMatchObject({
       "Content-Type": "application/json",
       "X-API-Key": apiKey,
+      "Idempotency-Key": "memory:event-1:1",
     });
     expect(JSON.parse(String(init.body))).toEqual({
       messages: [{ role: "user", content: record.text }],
