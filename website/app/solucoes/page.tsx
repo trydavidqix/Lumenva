@@ -1,4 +1,4 @@
-import { Bot, Database, Server, Zap } from "lucide-react";
+import { Bot, Database, MessageCircle, Zap } from "lucide-react";
 import Link from "next/link";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
@@ -9,7 +9,7 @@ import { breadcrumbSchema, serviceSchema } from "@/lib/schema";
 import styles from "@/components/sections/InnerPages.module.css";
 
 const description =
-  "Conheça como agentes de IA, automações e CRM trabalham juntos em uma operação open source e self-hosted.";
+  "Conheça como agentes de IA, automações e CRM trabalham juntos na mesma operação.";
 const breadcrumbs = [
   { name: "Início", path: "/" },
   { name: "Soluções", path: "/solucoes" },
@@ -36,7 +36,7 @@ export default function SolutionsPage() {
           { icon: Bot, label: "Agentes de IA para vendas e suporte" },
           { icon: Zap, label: "Automações orientadas por eventos" },
           { icon: Database, label: "CRM com contexto de conversas e pipeline" },
-          { icon: Server, label: "Execução na sua própria infraestrutura" },
+          { icon: MessageCircle, label: "WhatsApp como canal principal" },
         ]}
       />
       <section aria-labelledby="solutions-directory">
@@ -90,11 +90,11 @@ export default function SolutionsPage() {
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>03</span>
-              <span><strong>Open source.</strong> O código é distribuído sob licença MIT.</span>
+              <span><strong>Contexto único.</strong> Conversas, leads e pipeline ficam no mesmo lugar.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>04</span>
-              <span><strong>Self-hosted.</strong> A plataforma roda na infraestrutura da operação.</span>
+              <span><strong>Multi-tenant.</strong> Dados isolados por organização em cada camada.</span>
             </li>
           </ul>
         </div>

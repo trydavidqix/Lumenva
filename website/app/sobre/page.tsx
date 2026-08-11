@@ -1,4 +1,4 @@
-import { Bot, Code2, MessageCircle, Server } from "lucide-react";
+import { Bot, MessageCircle, ShieldCheck, Users } from "lucide-react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { JsonLd } from "@/components/ui/JsonLd";
@@ -7,7 +7,7 @@ import { breadcrumbSchema, organizationSchema } from "@/lib/schema";
 import styles from "@/components/sections/InnerPages.module.css";
 
 const description =
-  "Lumenva é a identidade pública de um AI Sales OS open source e self-hosted para vendas e suporte pelo WhatsApp.";
+  "Lumenva é a plataforma de atendimento e vendas com IA que une agentes, automações e CRM, com o WhatsApp como canal principal.";
 const breadcrumbs = [
   { name: "Início", path: "/" },
   { name: "Sobre", path: "/sobre" },
@@ -27,13 +27,13 @@ export default function AboutPage() {
       <Breadcrumbs items={breadcrumbs} />
       <ServiceHero
         eyebrow="Sobre a Lumenva"
-        title="Tecnologia aberta para operações de vendas."
+        title="Uma plataforma feita para equipas de vendas e suporte."
         description={description}
         capabilities={[
-          { icon: Code2, label: "Código distribuído sob licença MIT" },
-          { icon: Server, label: "Implantação na infraestrutura da operação" },
+          { icon: Bot, label: "Agentes de IA governados por pessoas" },
           { icon: MessageCircle, label: "WhatsApp como canal primário" },
-          { icon: Bot, label: "Agentes governados por pessoas" },
+          { icon: ShieldCheck, label: "Multi-tenant seguro" },
+          { icon: Users, label: "Equipa acompanha cada operação" },
         ]}
       />
       <section className={styles.sectionAlt} aria-labelledby="principles-title">
@@ -44,17 +44,17 @@ export default function AboutPage() {
             </h2>
             <p className={styles.sectionCopy}>
               A Lumenva foi desenhada para unir agentes de IA, automações e CRM sem
-              retirar da equipe o controle sobre regras, dados e infraestrutura.
+              retirar da equipe o controle sobre regras, dados e operação.
             </p>
           </div>
           <ul className={styles.factList}>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>01</span>
-              <span><strong>Aberta.</strong> O código pode ser inspecionado e executado pela própria operação.</span>
+              <span><strong>Contexto único.</strong> Conversas, leads e atividades ficam no mesmo lugar.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>02</span>
-              <span><strong>Self-hosted.</strong> A implantação acontece na infraestrutura escolhida pela operação.</span>
+              <span><strong>Controlada.</strong> A equipe define regras, permissões e prioridades.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>03</span>

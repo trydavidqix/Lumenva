@@ -1,4 +1,4 @@
-import { Bot, Database, Server, Zap } from "lucide-react";
+import { Bot, Database, MessageCircle, Zap } from "lucide-react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { JsonLd } from "@/components/ui/JsonLd";
@@ -34,7 +34,7 @@ export default function ProdutoPage() {
           { icon: Bot, label: "Agentes de IA para atendimento e vendas" },
           { icon: Zap, label: "Automações orientadas por eventos" },
           { icon: Database, label: "CRM com contexto de conversas e pipeline" },
-          { icon: Server, label: "Execução na sua própria infraestrutura" },
+          { icon: MessageCircle, label: "WhatsApp como canal principal" },
         ]}
       />
       <section className={styles.sectionAlt} aria-labelledby="product-foundation">
@@ -60,11 +60,11 @@ export default function ProdutoPage() {
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>03</span>
-              <span><strong>Open source.</strong> O código é distribuído sob licença MIT.</span>
+              <span><strong>Contexto único.</strong> Conversas, leads e pipeline ficam no mesmo lugar.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>04</span>
-              <span><strong>Self-hosted.</strong> A plataforma roda na infraestrutura da operação.</span>
+              <span><strong>Multi-tenant.</strong> Dados isolados por organização em cada camada.</span>
             </li>
           </ul>
         </div>

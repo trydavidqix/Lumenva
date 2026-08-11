@@ -4,14 +4,11 @@ import { Footer } from "@/components/layout/Footer";
 
 afterEach(cleanup);
 
-test("footer exposes a real GitHub link and neutral social placeholders without invented links", () => {
+test("footer exposes neutral social placeholders without invented links", () => {
   const { container } = render(<Footer />);
   const footer = within(container.querySelector("footer")!);
 
-  expect(footer.getByRole("link", { name: /github/i })).toHaveAttribute(
-    "href",
-    "https://github.com/melgarafael/DeskcommCRM",
-  );
+  expect(footer.queryByRole("link", { name: /github/i })).not.toBeInTheDocument();
 
   for (const name of ["WhatsApp", "Facebook", "Instagram"]) {
     const placeholder = footer.getByLabelText(

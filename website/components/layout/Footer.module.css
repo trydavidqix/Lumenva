@@ -40,24 +40,13 @@
   list-style: none;
 }
 
-.socialPlaceholder,
-.socialLink {
+.socialPlaceholder {
   display: inline-flex;
   min-height: 2.75rem;
   align-items: center;
   gap: var(--space-2);
   font-size: var(--font-size-label);
   font-weight: 700;
-}
-
-.socialLink {
-  color: var(--color-text-muted);
-  text-decoration: none;
-}
-
-.socialLink:hover,
-.socialLink:focus-visible {
-  color: var(--color-accent);
 }
 
 .links {

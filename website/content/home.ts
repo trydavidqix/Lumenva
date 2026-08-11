@@ -15,12 +15,12 @@ export type ProofPoint = Readonly<{
 
 export const proofPoints: readonly ProofPoint[] = [
   {
-    label: "Open source",
-    description: "Código distribuído sob licença MIT.",
+    label: "Multi-tenant seguro",
+    description: "Isolamento de dados por organização em cada camada.",
   },
   {
-    label: "Self-hosted",
-    description: "Executado na sua própria infraestrutura.",
+    label: "Auditoria completa",
+    description: "Toda mutação relevante fica registrada para rastreabilidade.",
   },
   {
     label: "WhatsApp-native",
@@ -201,7 +201,7 @@ export const finalCtaItems: readonly FinalCtaItem[] = [
     eyebrow: "Demonstração",
     title: "Veja a Lumenva aplicada à sua operação.",
     description:
-      "Converse com a equipe sobre agentes de IA, automações, CRM e self-hosting.",
+      "Converse com a equipe sobre agentes de IA, automações e CRM.",
     label: "Agendar demonstração",
     href: "/contato",
   },
