@@ -167,7 +167,7 @@ export const integrationItems: readonly IntegrationItem[] = [
     description: "Vendas e suporte conectados pelo WAHA.",
   },
   {
-    name: "OpenAI",
+    name: "OpenAI / Claude Code",
     kind: "IA",
     description: "Provedor de apoio para embeddings de IA.",
   },
@@ -180,11 +180,6 @@ export const integrationItems: readonly IntegrationItem[] = [
     name: "Vercel",
     kind: "Infraestrutura",
     description: "Plataforma de deploy do frontend.",
-  },
-  {
-    name: "Nuvemshop",
-    kind: "E-commerce",
-    description: "Integração documentada para pedidos, clientes e catálogo.",
   },
 ];
 
