@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@sentry/nextjs", () => ({
+  withSentryConfig: (config: unknown) => config,
+}));
+
 async function loadNextConfig(vercel?: string) {
   vi.resetModules();
 

@@ -6,6 +6,7 @@ export default defineConfig({
   // a opção `esbuild.jsx` saiu do tipo — provado pelos testes de componente.
   test: {
     environment: "jsdom",
+    maxWorkers: 1,
     // O padrão do vitest é 5s por teste. Numa suíte jsdom + Testing Library
     // isso é apertado: em máquina carregada (CI concorrido, dev rodando outras
     // coisas) testes SAUDÁVEIS estouram e a suíte fica vermelha por lentidão.
