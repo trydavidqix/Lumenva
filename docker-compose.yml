@@ -79,7 +79,69 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+    # Mantém o worker na rede padrão (WAHA) e adiciona a rede privada opcional
+    # usada pelo sidecar Mem0. O profile ai-memory continua desativado por padrão.
+    networks:
+      - default
+      - ai-memory-internal
+
+  # Projeção semântica opcional. Nunca inicia com `docker compose up`: exige
+  # explicitamente `--profile ai-memory` e só fica acessível pelo loopback no
+  # host para o bootstrap local.
+  mem0:
+    image: mem0/mem0-api-server:latest
+    profiles: ["ai-memory"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: mem0-postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: mem0
+      POSTGRES_USER: mem0
+      POSTGRES_PASSWORD: ${MEM0_POSTGRES_PASSWORD:?set MEM0_POSTGRES_PASSWORD in managed runtime secrets}
+      JWT_SECRET: ${MEM0_JWT_SECRET:?set MEM0_JWT_SECRET in managed runtime secrets}
+      OPENAI_API_KEY: ${MEM0_OPENAI_API_KEY:?set MEM0_OPENAI_API_KEY in managed runtime secrets}
+    ports:
+      - "127.0.0.1:${MEM0_DEV_PORT:-8888}:8000"
+    depends_on:
+      mem0-postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=3)",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+    networks: [ai-memory-internal]
+
+  # Banco exclusivo do Mem0; nunca aponta para Supabase nem para o schema CRM.
+  mem0-postgres:
+    image: pgvector/pgvector:pg16
+    profiles: ["ai-memory"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mem0
+      POSTGRES_USER: mem0
+      POSTGRES_PASSWORD: ${MEM0_POSTGRES_PASSWORD:?set MEM0_POSTGRES_PASSWORD in managed runtime secrets}
+    volumes:
+      - mem0-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mem0 -d mem0"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [ai-memory-internal]
 
 volumes:
   waha-data:
   waha-media:
+  mem0-postgres-data:
+
+networks:
+  ai-memory-internal:
+    internal: true
