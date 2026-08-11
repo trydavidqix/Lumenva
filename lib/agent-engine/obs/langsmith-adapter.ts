@@ -66,6 +66,7 @@ class LangSmithAiTraceSpan implements AiTraceSpan {
     private readonly traceName: string,
     private readonly log: Logger,
     private readonly now: () => Date,
+    private readonly cleanup: () => void,
   ) {}
 
   async end(input: { output?: unknown; error?: unknown; metrics?: Record<string, number> }): Promise<void> {
@@ -85,6 +86,8 @@ class LangSmithAiTraceSpan implements AiTraceSpan {
         tenant_id: this.tenantId,
         trace_name: this.traceName,
       });
+    } finally {
+      this.cleanup();
     }
   }
 }
@@ -155,7 +158,17 @@ export class LangSmithAiTracer implements AiTracer {
         },
       } as LangSmithRun);
       this.dottedOrders.set(input.runId, traceDottedOrder);
-      return new LangSmithAiTraceSpan(client, input.runId, traceId, traceDottedOrder, tenantId, traceName, this.log, this.now);
+      return new LangSmithAiTraceSpan(
+        client,
+        input.runId,
+        traceId,
+        traceDottedOrder,
+        tenantId,
+        traceName,
+        this.log,
+        this.now,
+        () => this.dottedOrders.delete(input.runId),
+      );
     } catch {
       this.warn("start", tenantId, traceName);
       return this.noop.startSpan(input);

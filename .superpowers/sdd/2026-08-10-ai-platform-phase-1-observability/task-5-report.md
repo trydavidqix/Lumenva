@@ -41,3 +41,10 @@ The two DB-backed agent lifecycle tests could not be run in this environment. `p
 - LangSmith exports `parent_run_id` and derives child `dotted_order` values from the recorded parent dotted order, so child runs are explicitly nested while retaining distinct run IDs and the shared root `trace_id`.
 - The real-adapter fake-client regression now asserts distinct IDs, common `trace_id`, `parent_run_id`, and a child dotted order prefixed by the parent dotted order.
 - PASS: focused 18-test tracing suite, `pnpm typecheck`, and `git diff --check`.
+
+## Round 4 dotted-order lifecycle correction
+
+- `LangSmithAiTraceSpan.end` now removes its run ID from the adapter's dotted-order map in `finally`, including update failures. Failed creates never insert an entry.
+- Parent entries remain while child spans are active, preserving their dotted-order prefix; each child removes only its own entry on completion.
+- The adapter regression verifies a parent plus child creates two entries, child completion preserves only the parent entry, and parent completion returns the map to zero.
+- PASS: focused 18-test tracing suite, `pnpm typecheck`, and `git diff --check`.
