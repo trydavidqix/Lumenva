@@ -22,6 +22,7 @@ const memory: SemanticMemoryRecord = {
   type: "preference",
   authorityDomain: "customer_preference",
   risk: "low",
+  actionable: true,
   confidence: 0.8,
   validFrom: "2026-08-10T10:00:00.000Z",
   validUntil: null,

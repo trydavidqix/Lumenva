@@ -67,6 +67,8 @@ export const contextItemSchema = z.object({
   occurredAt: z.string().datetime({ offset: true }).nullable(),
   expiresAt: z.string().datetime({ offset: true }).nullable(),
   risk: memoryRiskSchema,
+  /** Missing authority is never prompt-eligible; providers must propagate it explicitly. */
+  actionable: z.boolean().optional(),
   sourceId: z.string().min(1),
   text: z.string().min(1),
 });

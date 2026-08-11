@@ -63,6 +63,7 @@ function toContextItem(record: unknown): ContextItem | null {
     occurredAt: memory.validFrom,
     expiresAt: memory.validUntil,
     risk: memory.risk,
+    actionable: memory.actionable,
     sourceId: memory.sourceId,
     text: memory.text,
   });
