@@ -29,6 +29,7 @@
     "test:harness": "node --test scripts/check-harness-consistency.test.mjs",
     "lint:channels": "tsx scripts/lint-channels.ts",
     "ai:eval:local": "tsx scripts/ai-platform-eval.ts",
+    "ai:eval:langsmith": "tsx scripts/ai-platform-eval-langsmith.ts",
     "harness:check": "node scripts/check-harness-consistency.mjs",
     "gov:verify": "pnpm harness:check && pnpm typecheck && pnpm lint && pnpm lint:channels && pnpm test:unit",
     "worker": "tsx --env-file=.env --env-file=.env.local workers/agent-worker/main.ts",
