@@ -36,6 +36,8 @@ import type { ChannelAdapter, ChannelSendResult } from '../channel-adapter';
 import type { AiTraceSpan, AiTracer } from '../obs/ai-tracing';
 import { opaqueTenantId } from '../obs/external-redaction';
 import { withFields, type Logger } from '../obs/logger';
+import type { ContextProvider } from '../context/provider';
+import { prepareSemanticContext } from '../context/fusion';
 import { getLeadContext, type LeadContext, type LeadContextResult } from '../edge/crm/get-lead-context';
 import { citationsFromHits, searchKnowledge } from './search-knowledge';
 import type { CrmEdgeConfig } from '../edge/crm/mcp-client';
@@ -478,6 +480,18 @@ export interface InboundTurnDeps {
    * anti-ban observável no artefato de trace de forma determinística.
    */
   sleep?: (ms: number) => Promise<void>;
+  /**
+   * Optional semantic-memory provider. Omitting it preserves the exact legacy
+   * prompt path; rollout state is still resolved inside the provider.
+   */
+  semanticContextProvider?: ContextProvider;
+  /** Counts-only telemetry for fusion comparisons; it must never affect a turn. */
+  recordContextFusionMetric?: (metric: {
+    bucket: 'shadow' | 'candidate' | 'disabled';
+    selectedCount: number;
+    droppedCount: number;
+    degraded: boolean;
+  }) => void | Promise<void>;
 }
 
 /** Checkpoint mais recente do lead — a memória que atravessa sessões. */
@@ -2014,6 +2028,44 @@ export async function runAgentTurn(
     projeta: projetaContexto,
     entregues,
   });
+  // Mem0 context is deliberately opt-in at the dependency boundary. The
+  // provider resolves the tenant feature itself: off does no request, shadow
+  // is measured only, and only canary/on can contribute a prompt suffix.
+  let semanticContextBlock = '';
+  if (deps.semanticContextProvider !== undefined) {
+    try {
+      const semantic = await deps.semanticContextProvider.retrieve({
+        organizationId: tenantId,
+        contactId: leadId,
+        conversationId: input.conversationId,
+        // Context providers require an opaque valid id. A published agent id is
+        // preferred; the trusted job id is a per-run fallback and is never sent
+        // to Mem0 as a user or tenant namespace.
+        agentId: agentConfig?.agentId ?? job.id,
+        query: skillSignal,
+        now: new Date().toISOString(),
+      });
+      const preparedSemanticContext = prepareSemanticContext(semantic);
+
+      try {
+        await deps.recordContextFusionMetric?.({
+          bucket: semantic.bucket,
+          selectedCount: preparedSemanticContext.fusion.selected.length,
+          droppedCount: preparedSemanticContext.fusion.dropped.length,
+          degraded: semantic.degraded,
+        });
+      } catch {
+        // Observability cannot block a customer reply.
+      }
+
+      semanticContextBlock = preparedSemanticContext.promptBlock;
+    } catch {
+      // Optional context is a best-effort enhancement. No provider failure,
+      // including malformed output, may change the normal agent path or expose
+      // provider details in a prompt/log/error.
+      runLog.warn('contexto semântico indisponível — turno segue sem ele');
+    }
+  }
   // Sufixos por-lead (situacionais, voláteis — depois do prefixo cacheável F2-17): corpos de
   // skill casadas (F3-09) + hint do classificador (F3-11) + instrução de split (F4-xx, quando
   // split_messages está on — Onda 4). Vazios são omitidos.
@@ -2035,7 +2087,7 @@ export async function runAgentTurn(
         `Se a mensagem dele responde a isso, chame provide_case_update com este case_id e a informação recebida — ` +
         `NÃO diga que já repassou/avisou o responsável sem chamar a tool.`
       : '';
-  const openingSuffixes = [matchedSkillsBlock, stageHintBlock, splitHint, caseAwaitingLeadBlock].filter(
+  const openingSuffixes = [matchedSkillsBlock, stageHintBlock, splitHint, caseAwaitingLeadBlock, semanticContextBlock].filter(
     (b) => b !== '',
   );
   const openingText =
