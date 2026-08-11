@@ -62,6 +62,8 @@ export interface ExtractMemoryCandidatesDeps {
 
 const PROTECTED_AUTHORITY_CLAIM =
   /\b(?:consent(?:imento)?|autoriz(?:o|a|ação|ado|ada)?|authorize|authorise|contract|contrato|agreement|payment|pagamento)\b/iu;
+const DETERMINISTIC_CONTRACT_OR_PAYMENT_FACT =
+  /\b(?:acordo|contrato|contratual|assin(?:ado|ada|ar|aram|atura)|agreement|signed|signature|fatura|invoice|boleto|cobran[cç]a|quitad[ao]|settled|liquidad[ao]|pagamento|pagou|pago)\b/iu;
 const PROTECTED_AUTHORITY_DOMAINS = new Set(["consent", "legal"]);
 
 function buildExtractionPrompt(sourceText: string): string {
@@ -86,7 +88,9 @@ function constrainAuthority(candidate: MemoryCandidate, sourceText: string): Mem
     PROTECTED_AUTHORITY_DOMAINS.has(candidate.authorityDomain) ||
     candidate.sensitiveClassification !== "none" ||
     PROTECTED_AUTHORITY_CLAIM.test(candidate.text) ||
-    PROTECTED_AUTHORITY_CLAIM.test(sourceText)
+    PROTECTED_AUTHORITY_CLAIM.test(sourceText) ||
+    DETERMINISTIC_CONTRACT_OR_PAYMENT_FACT.test(candidate.text) ||
+    DETERMINISTIC_CONTRACT_OR_PAYMENT_FACT.test(sourceText)
   ) {
     return { ...candidate, risk: "high", actionable: false };
   }
