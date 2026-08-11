@@ -104,6 +104,8 @@ export interface RunModelCallDeps {
   registry?: ProviderRegistry;
   log?: Logger;
   tracer?: AiTracer;
+  /** Parent trace ID when this model call belongs to a larger agent turn. */
+  traceId?: string;
 }
 
 async function endTraceSpan(
@@ -194,7 +196,8 @@ export async function runModelCall(db: pg.Pool, cfg: LlmEdgeConfig, input: RunMo
     try {
       span = await deps.tracer.startSpan({
         name: 'llm_model_call',
-        runId: input.jobId ?? randomUUID(),
+        runId: randomUUID(),
+        traceId: deps.traceId ?? input.jobId ?? randomUUID(),
         organizationId: input.tenantId,
         // Metadata-first by default: prompts/messages can carry PII and are
         // deliberately not supplied by this seam without an explicit content

@@ -5,6 +5,7 @@ import { LangSmithAiTracer, type LangSmithClient } from "./langsmith-adapter";
 
 const ORGANIZATION_ID = "00000000-0000-4000-8000-000000000002";
 const RUN_ID = "00000000-0000-4000-8000-000000000001";
+const CHILD_RUN_ID = "00000000-0000-4000-8000-000000000003";
 const API_KEY = "langsmith-api-key-that-must-not-be-logged";
 
 function enabledConfig() {
@@ -26,6 +27,38 @@ function warningLogger(warnings: Array<{ msg: string; fields?: Record<string, un
 }
 
 describe("LangSmithAiTracer", () => {
+  it("keeps child spans distinct while correlating them to the parent trace", async () => {
+    const createRun = vi.fn().mockResolvedValue(undefined);
+    const updateRun = vi.fn().mockResolvedValue(undefined);
+    const tracer = new LangSmithAiTracer({
+      resolveConfig: vi.fn().mockResolvedValue(enabledConfig()),
+      createClient: () => ({ createRun, updateRun }),
+      now: () => new Date("2026-08-11T10:20:00.000Z"),
+    });
+
+    const parent = await tracer.startSpan({
+      name: "agent_turn",
+      runId: RUN_ID,
+      traceId: RUN_ID,
+      organizationId: ORGANIZATION_ID,
+      metadata: { job_id: "job-safe" },
+    } as never);
+    const child = await tracer.startSpan({
+      name: "llm_model_call",
+      runId: CHILD_RUN_ID,
+      traceId: RUN_ID,
+      organizationId: ORGANIZATION_ID,
+      metadata: { job_id: "job-safe" },
+    } as never);
+    await parent.end({});
+    await child.end({});
+
+    expect(createRun.mock.calls.map(([run]) => run.id)).toEqual([RUN_ID, CHILD_RUN_ID]);
+    expect(createRun.mock.calls.map(([run]) => run.trace_id)).toEqual([RUN_ID, RUN_ID]);
+    expect(updateRun.mock.calls.map(([runId]) => runId)).toEqual([RUN_ID, CHILD_RUN_ID]);
+    expect(updateRun.mock.calls.map(([, run]) => run.trace_id)).toEqual([RUN_ID, RUN_ID]);
+  });
+
   it("sanitizes span data before passing it to the LangSmith client", async () => {
     const createRun = vi.fn().mockResolvedValue(undefined);
     const updateRun = vi.fn().mockResolvedValue(undefined);

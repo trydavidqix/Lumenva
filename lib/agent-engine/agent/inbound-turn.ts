@@ -27,6 +27,7 @@
  * duplicata); veto is_blocked cancela o job em definitivo (JobSettledError —
  * main.ts não completa nem re-tenta). PII nunca entra em log/erro de job.
  */
+import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import { z } from 'zod';
 import { auxModelArgs, type AuxModelArgs } from './aux-model-args';
@@ -747,11 +748,14 @@ export async function runAgentTurn(
   input: AgentTurnInput,
 ): Promise<void> {
   let span: AiTraceSpan | undefined;
+  let traceId: string | undefined;
   if (deps.tracer !== undefined) {
     try {
+      traceId = randomUUID();
       span = await deps.tracer.startSpan({
         name: 'agent_turn',
-        runId: job.id,
+        runId: traceId,
+        traceId,
         organizationId: job.organization_id,
         metadata: {
           organization_id: opaqueTenantId(job.organization_id),
@@ -1342,7 +1346,7 @@ export async function runAgentTurn(
           topK: agentConfig.ragTopK,
           threshold: agentConfig.ragSimilarityThreshold,
           jobId: job.id,
-        }, { log: runLog, tracer: deps.tracer });
+        }, { log: runLog, tracer: deps.tracer, traceId });
         if (out.ok && out.results.length > 0) {
           // As citações são montadas AQUI, pelo código, a partir do resultado
           // cru — é por isso que os ids podem sair do que vai ao modelo sem
@@ -2072,7 +2076,7 @@ export async function runAgentTurn(
           }
         : {}),
     },
-    { registry: deps.registry, log: runLog, tracer: deps.tracer },
+    { registry: deps.registry, log: runLog, tracer: deps.tracer, traceId },
   );
 
   // F4-04: correlação dos dois sinais do MESMO turno — jailbreak ALTO + tentativa de
@@ -2132,7 +2136,7 @@ export async function runAgentTurn(
         { role: 'user', content: CHECKPOINT_INSTRUCTION },
       ],
     },
-    { registry: deps.registry, log: runLog, tracer: deps.tracer },
+    { registry: deps.registry, log: runLog, tracer: deps.tracer, traceId },
   );
   const content = parseCheckpointText(closing.result.text);
 

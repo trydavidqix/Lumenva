@@ -26,3 +26,11 @@ The two DB-backed agent lifecycle tests could not be run in this environment. `p
 - Restored the original formatting of the five source/test files while retaining only the Task 5 tracing and test hunks (`git diff --stat HEAD^` reports 192 additions and 7 deletions across those files).
 - Re-ran `pnpm typecheck`, the focused 15-test Vitest command, and `git diff --check` after the correction.
 - The DB lifecycle suite remains inconclusive for the Docker reason above.
+
+## Round 2 span identity correction
+
+- Added optional `traceId` to the tracing contract. `runId` now identifies one external span, while `traceId` identifies its root trace.
+- Agent turns mint a root UUID and propagate it as `traceId` to LLM and retrieval spans; every span mints its own UUID and retains the safe `job_id` metadata correlation.
+- LangSmith now uses `runId` for `createRun`/`updateRun` identity and `traceId` for `trace_id` on both calls.
+- Added a real `LangSmithAiTracer` fake-client regression test that proves parent/child create and update IDs differ while both retain the parent trace ID.
+- PASS: `pnpm exec vitest run lib/agent-engine/obs/langsmith-adapter.test.ts lib/agent-engine/edge/llm/run-model-call.test.ts lib/agent-engine/agent/search-knowledge.test.ts` (18 tests), `pnpm typecheck`, and `git diff --check`.

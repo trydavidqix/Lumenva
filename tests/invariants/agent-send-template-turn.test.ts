@@ -327,6 +327,7 @@ describe("turno completo — send_template com a janela de 24h FECHADA", () => {
     expect(starts[0]).toMatchObject({
       name: "agent_turn",
       runId: expect.any(String),
+      traceId: expect.any(String),
       metadata: {
         organization_id: expect.stringMatching(/^tenant_[a-f0-9]{16}$/),
         job_id: expect.any(String),
@@ -334,7 +335,8 @@ describe("turno completo — send_template com a janela de 24h FECHADA", () => {
       },
     });
     expect(starts.slice(1).map((span) => span.name)).toEqual(["llm_model_call", "llm_model_call"]);
-    expect(starts.every((span) => span.runId === starts[0]!.runId && span.metadata?.job_id === starts[0]!.runId)).toBe(true);
+    expect(new Set(starts.map((span) => span.runId)).size).toBe(3);
+    expect(starts.every((span) => span.traceId === starts[0]!.runId && span.metadata?.job_id === starts[0]!.metadata?.job_id)).toBe(true);
     expect(ends).toHaveLength(3);
     expect(ends[2]).toEqual({});
     expect(JSON.stringify({ starts, ends })).not.toContain("Lead Template");
