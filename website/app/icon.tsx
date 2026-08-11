@@ -28,7 +28,7 @@ export default function Icon() {
           alt=""
           height={60}
           src={`data:image/png;base64,${markBase64}`}
-          style={{ height: 60, objectFit: "contain", width: 90 }}
+          style={{ height: 60, marginLeft: -13, marginTop: -6, objectFit: "contain", width: 90 }}
           width={90}
         />
       </div>
