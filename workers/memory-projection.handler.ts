@@ -148,22 +148,9 @@ export async function processMemoryProjection(
     return { consumer_key, status: "skipped", detail: "contact_not_found" };
   }
 
-  const db = deps.db ?? projectionPool();
   const sourceVersion = message.created_at ?? row.id;
-  const ledger = await beginProjection(db, {
-    organizationId: row.organization_id,
-    projectionType: "memory",
-    provider: "mem0",
-    entityType: "contact",
-    entityId: conversation.contact_id,
-    sourceId: message.id,
-    sourceVersion,
-    idempotencyKey: `memory_projection_v1:${row.id}:${sourceVersion}`,
-  });
-  if (ledger.status === "applied") {
-    return { consumer_key, status: "skipped", detail: "already_applied" };
-  }
-
+  const db = deps.db ?? projectionPool();
+  let safeCandidates: MemoryCandidate[];
   try {
     const extract = deps.extract ?? extractMemoryCandidates;
     const candidates = await extract({
@@ -178,9 +165,33 @@ export async function processMemoryProjection(
       sourceMessageId: message.id,
       sourceText: message.body.trim(),
     });
-    const safeCandidates = candidates.filter((candidate) =>
+    safeCandidates = candidates.filter((candidate) =>
       sanitizeMemoryCandidate({ text: candidate.text, type: candidate.type }).allowed,
     );
+  } catch {
+    const now = (deps.now ?? (() => new Date()))();
+    return { consumer_key, status: "retry", retry_at: retryAt(now), detail: "memory_extraction_failed" };
+  }
+  if (safeCandidates.length === 0) {
+    return { consumer_key, status: "skipped", detail: "no_safe_candidates" };
+  }
+
+  const idempotencyBase = `memory_projection_v1:${message.id}:${sourceVersion}`;
+  const ledger = await beginProjection(db, {
+    organizationId: row.organization_id,
+    projectionType: "memory",
+    provider: "mem0",
+    entityType: "contact",
+    entityId: conversation.contact_id,
+    sourceId: message.id,
+    sourceVersion,
+    idempotencyKey: idempotencyBase,
+  });
+  if (ledger.status === "applied") {
+    return { consumer_key, status: "skipped", detail: "already_applied" };
+  }
+
+  try {
     const memoryPort = deps.memoryPort ?? defaultMemoryPort();
     await Promise.all(safeCandidates.map((candidate, index) =>
       memoryPort.upsert(
@@ -191,15 +202,16 @@ export async function processMemoryProjection(
           contactId: conversation.contact_id!,
           index,
         }),
-        `memory_projection_v1:${row.id}:${index}`,
+        `${idempotencyBase}:${index}`,
       ),
     ));
     await markProjectionApplied(db, row.organization_id, ledger.id);
     return { consumer_key, status: "ok" };
   } catch (error) {
     const code = errorCode(error);
-    await markProjectionRetry(db, row.organization_id, ledger.id, code, retryAt((deps.now ?? (() => new Date()))()));
-    return { consumer_key, status: "retry", retry_at: retryAt((deps.now ?? (() => new Date()))()), detail: code };
+    const now = (deps.now ?? (() => new Date()))();
+    await markProjectionRetry(db, row.organization_id, ledger.id, code, retryAt(now));
+    return { consumer_key, status: "retry", retry_at: retryAt(now), detail: code };
   }
 }
 

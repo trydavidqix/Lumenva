@@ -97,11 +97,51 @@ describe("memory projection handler", () => {
     expect(memoryPort.upsert).not.toHaveBeenCalled();
   });
 
+  it("skips cleanly without opening a ledger or provider when extraction yields no safe candidates", async () => {
+    const { deps, query } = harness({
+      extract: vi.fn().mockResolvedValue([]),
+      memoryPort: undefined,
+    });
+
+    await expect(processMemoryProjection(event(), deps)).resolves.toEqual({
+      consumer_key: MEMORY_PROJECTION_CONSUMER_KEY,
+      status: "skipped",
+      detail: "no_safe_candidates",
+    });
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it("uses source identity and version as the stable ledger and provider idempotency key", async () => {
+    const seenKeys = new Set<string>();
+    const query = vi.fn(async (sql: string, values: unknown[]) => {
+      if (sql.startsWith("insert into ai_projection_ledger")) {
+        const key = values[7] as string;
+        const prior = seenKeys.has(key);
+        seenKeys.add(key);
+        return { rows: [{ id: "ledger-1", status: prior ? "applied" : "pending" }] };
+      }
+      return { rows: [{ id: "ledger-1", status: "applied" }] };
+    });
+    const { deps, memoryPort } = harness({ db: { query } });
+    const replay = event({ id: "00000000-0000-4000-8000-000000000031" });
+
+    await expect(processMemoryProjection(event(), deps)).resolves.toMatchObject({ status: "ok" });
+    await expect(processMemoryProjection(replay, deps)).resolves.toMatchObject({ status: "skipped", detail: "already_applied" });
+
+    expect(memoryPort.upsert).toHaveBeenCalledTimes(1);
+    expect(memoryPort.upsert).toHaveBeenCalledWith(expect.any(Object), "memory_projection_v1:00000000-0000-4000-8000-000000000010:2026-08-10T12:00:00.000Z:0");
+    const insertCalls = query.mock.calls.filter(([sql]) => String(sql).startsWith("insert into ai_projection_ledger"));
+    expect(insertCalls.map(([, values]) => values[7])).toEqual([
+      "memory_projection_v1:00000000-0000-4000-8000-000000000010:2026-08-10T12:00:00.000Z",
+      "memory_projection_v1:00000000-0000-4000-8000-000000000010:2026-08-10T12:00:00.000Z",
+    ]);
+  });
+
   it("retries extraction failures without marking a projection applied", async () => {
     const { deps, query } = harness({ extract: vi.fn().mockRejectedValue(new Error("model response included raw customer message")) });
 
     await expect(processMemoryProjection(event(), deps)).resolves.toMatchObject({ status: "retry", detail: "memory_extraction_failed" });
-    expect(query).toHaveBeenLastCalledWith(expect.stringContaining("last_error_code=$3"), expect.arrayContaining(["memory_extraction_failed"]));
+    expect(query).not.toHaveBeenCalled();
   });
 
   it("retries a Mem0 timeout without persisting raw text in the ledger error", async () => {
