@@ -105,6 +105,15 @@ const schema = z.object({
   AI_PLATFORM_KILL_N8N: z.enum(["true", "false"]).optional().default("false").transform((v) => v === "true"),
   AI_PLATFORM_KILL_LANGGRAPH: z.enum(["true", "false"]).optional().default("false").transform((v) => v === "true"),
 
+  // Mem0 is an optional self-hosted semantic-memory projection. Declaring its
+  // connection here does not activate the provider; rollout remains feature-gated.
+  MEM0_BASE_URL: z.string().url().optional().or(z.literal("")).default(""),
+  MEM0_API_KEY: z.string().optional().default(""),
+  MEM0_TIMEOUT_MS: z.preprocess(
+    (value) => value === "" ? undefined : value,
+    z.coerce.number().int().positive().optional().default(2_000),
+  ),
+
   // LangSmith is optional observability only. The endpoint is deliberately not
   // validated here: a malformed optional endpoint must disable tracing safely,
   // not prevent the CRM from booting (see external-tracing-config.ts).
