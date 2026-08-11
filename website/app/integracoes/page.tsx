@@ -2,6 +2,7 @@ import { Code2, MessageCircle, ShoppingBag, Webhook } from "lucide-react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { JsonLd } from "@/components/ui/JsonLd";
+import { FeatureCardGrid } from "@/components/ui/FeatureCardGrid";
 import { createPageMetadata } from "@/lib/metadata";
 import { breadcrumbSchema, serviceSchema } from "@/lib/schema";
 import styles from "@/components/sections/InnerPages.module.css";
@@ -13,6 +14,13 @@ const breadcrumbs = [
   { name: "Integrações", path: "/integracoes" },
 ] as const;
 const service = { name: "Integrações Lumenva", description } as const;
+
+const integrationCards = [
+  { icon: MessageCircle, title: "WhatsApp", description: "Canal primário de vendas e suporte, conectado pelo WAHA." },
+  { icon: ShoppingBag, title: "Nuvemshop", description: "Integração documentada para pedidos, clientes e catálogo." },
+  { icon: Webhook, title: "Webhooks", description: "Eventos externos podem entrar e sair por endpoints dedicados." },
+  { icon: Code2, title: "API REST", description: "Recursos do CRM são expostos por uma API versionada." },
+] as const;
 
 export const metadata = createPageMetadata({
   title: "Integrações",
@@ -48,24 +56,7 @@ export default function IntegrationsPage() {
               conectores serão incluídos quando estiverem disponíveis no produto.
             </p>
           </div>
-          <ul className={styles.factList}>
-            <li className={styles.factItem}>
-              <span className={styles.capabilityIndex}>01</span>
-              <span><strong>WhatsApp.</strong> Canal primário de vendas e suporte, conectado pelo WAHA.</span>
-            </li>
-            <li className={styles.factItem}>
-              <span className={styles.capabilityIndex}>02</span>
-              <span><strong>Nuvemshop.</strong> Integração documentada para pedidos, clientes e catálogo.</span>
-            </li>
-            <li className={styles.factItem}>
-              <span className={styles.capabilityIndex}>03</span>
-              <span><strong>Webhooks.</strong> Eventos externos podem entrar e sair por endpoints dedicados.</span>
-            </li>
-            <li className={styles.factItem}>
-              <span className={styles.capabilityIndex}>04</span>
-              <span><strong>API.</strong> Recursos do CRM são expostos por uma API REST versionada.</span>
-            </li>
-          </ul>
+          <FeatureCardGrid ariaLabel="Integrações documentadas" items={integrationCards} />
         </div>
       </section>
     </>

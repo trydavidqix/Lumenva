@@ -1,7 +1,9 @@
 import { Bot, Database, MessageCircle, Zap } from "lucide-react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
+import { HeroProductMockup } from "@/components/sections/HeroProductMockup";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { JsonLd } from "@/components/ui/JsonLd";
+import { FeatureCardGrid } from "@/components/ui/FeatureCardGrid";
 import { createPageMetadata } from "@/lib/metadata";
 import { breadcrumbSchema, serviceSchema } from "@/lib/schema";
 import styles from "@/components/sections/InnerPages.module.css";
@@ -13,6 +15,13 @@ const breadcrumbs = [
   { name: "Produto", path: "/produto" },
 ] as const;
 const service = { name: "Produto Lumenva", description } as const;
+
+const benefits = [
+  { icon: MessageCircle, title: "Inbox unificado", description: "Todas as conversas em um só lugar: WhatsApp, Instagram, e-mail e mais." },
+  { icon: Database, title: "Pipeline inteligente", description: "Acompanhe oportunidades e feche mais negócios com previsibilidade." },
+  { icon: Bot, title: "Agentes de IA", description: "Agentes treinados para atender, nutrir e converter 24/7 com qualidade." },
+  { icon: Zap, title: "Automação sem limites", description: "Crie fluxos poderosos com condições, integrações e mais." },
+] as const;
 
 export const metadata = createPageMetadata({
   title: "Produto",
@@ -36,7 +45,13 @@ export default function ProdutoPage() {
           { icon: Database, label: "CRM com contexto de conversas e pipeline" },
           { icon: MessageCircle, label: "WhatsApp como canal principal" },
         ]}
+        visual={<HeroProductMockup />}
       />
+      <section aria-labelledby="product-benefits">
+        <div className="site-shell">
+          <FeatureCardGrid ariaLabel="Benefícios do produto" items={benefits} />
+        </div>
+      </section>
       <section className={styles.sectionAlt} aria-labelledby="product-foundation">
         <div className={`site-shell ${styles.sectionStack}`}>
           <div className={styles.sectionHeader}>
