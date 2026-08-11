@@ -1,9 +1,20 @@
 # AI Platform — Execution Index
 
-**Branch:** `gpt-ai-platform`  
+**Branch:** `ai-platform-foundation`
 **Entry point:** `CODEX-AI-PLATFORM.md`  
 **Master spec:** `docs/superpowers/specs/2026-08-10-ai-platform-master-design.md`  
 **QA gates:** `docs/superpowers/specs/2026-08-10-ai-platform-qa-release-gates.md`
+
+## Estado de execução em 2026-08-11
+
+| Fase | Estado | Evidência atual | Limite para avançar |
+|---|---|---|---|
+| 0 | `GO` | [`phase-0-gate.md`](../../evidence/ai-platform/phase-0-gate.md) | concluída |
+| 1 | `GO` | [`phase-1-gate.md`](../../evidence/ai-platform/phase-1-gate.md) | concluída; LangSmith continua OFF |
+| 2 | em curso | [`phase-2-status.md`](../../evidence/ai-platform/phase-2-status.md) | Tarefas 9–10 e validação Windows do sidecar; sem promoção de rollout |
+| 3–7 | não iniciadas | — | gate da fase anterior e aprovação humana aplicável |
+
+Esta tabela é um snapshot operacional. Os planos preservam tarefas/checklists originais e não são reescritos como histórico de execução.
 
 ## Purpose
 

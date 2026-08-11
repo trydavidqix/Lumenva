@@ -6,6 +6,22 @@ Platform/runtime secrets remain environment variables validated by `lib/env.ts`:
 
 Tenant BYOK remains in `ai_provider_credentials`, encrypted in PostgreSQL by the existing `AI_CRED_AES_KEY` flow. It is not moved to Infisical, Mem0, Graphiti, LangSmith or any external provider.
 
+## Mem0 optional sidecar
+
+The Phase 2 sidecar introduces two distinct secret groups:
+
+- server-only bootstrap material (`MEM0_POSTGRES_PASSWORD`, `MEM0_JWT_SECRET`
+  and the embedding-provider key required by the Mem0 OSS server);
+- CRM client configuration (`MEM0_BASE_URL`, `MEM0_API_KEY`,
+  `MEM0_TIMEOUT_MS`).
+
+Keep both groups empty while the feature is `OFF`. They belong only to the
+approved self-host runtime/secret manager, never to Git, browser variables,
+fixtures, LangSmith traces or error text. `MEM0_API_KEY` is emitted by Mem0
+after bootstrap; do not manufacture or paste a value into the CRM before the
+sidecar health and namespace checks have passed. The operational sequence and
+safe wipe procedure are in [`mem0.md`](mem0.md).
+
 ## Controlled runtime injection
 
 For a controlled local or operator runtime, inject a pre-existing Infisical project with:

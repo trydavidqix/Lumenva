@@ -1,8 +1,8 @@
 # Codex — AI Platform Implementation Entry Point
 
-> Branch exclusiva: `gpt-ai-platform`
-> Base inicial: `main@4fa4ca9a7042b88d6de35e411e4375213fb26d93`
-> Estado deste documento: instrução de execução. Não é prova de que as fases foram implementadas.
+> Branch de trabalho: `ai-platform-foundation`
+> Base histórica: `main@4fa4ca9a7042b88d6de35e411e4375213fb26d93`
+> Estado em 2026-08-11: Fases 0 e 1 encerradas com `GO`; Fase 2 implementada até a Tarefa 8, ainda sem gate de release. Consulte [`docs/evidence/ai-platform/phase-2-status.md`](docs/evidence/ai-platform/phase-2-status.md) antes de continuar.
 
 ## Missão
 
@@ -12,10 +12,10 @@ A arquitetura é incremental. PostgreSQL/Supabase continua sendo a fonte de verd
 
 ## Ordem obrigatória
 
-1. Gate 0 — restaurar baseline verde e capturar métricas atuais.
-2. Fase 0 — contratos, flags, projection ledger, secrets e Golden Dataset.
-3. Fase 1 — LangSmith + redaction + avaliações.
-4. Fase 2 — Mem0 em shadow, depois canary, depois active.
+1. Gate 0 — restaurar baseline verde e capturar métricas atuais. **Concluído: GO.**
+2. Fase 0 — contratos, flags, projection ledger, secrets e Golden Dataset. **Concluída: GO.**
+3. Fase 1 — LangSmith + redaction + avaliações. **Concluída: GO; LangSmith continua OFF.**
+4. Fase 2 — Mem0 em shadow, depois canary, depois active. **Em curso: Tarefas 1–8 concluídas; Tarefas 9–10 e validação Windows pendentes. Mem0 continua OFF.**
 5. Fase 3 — Obsidian + knowledge publishing + LlamaIndex somente como adapter opcional.
 6. Fase 4 — Graphiti + FalkorDB em shadow, depois canary.
 7. Fase 5 — guardrails externos somente para gaps medidos.
@@ -58,7 +58,7 @@ docs/superpowers/plans/
 
 ### Git
 
-- Trabalhe somente em `gpt-ai-platform` ou em uma branch filha criada a partir dela.
+- Trabalhe somente em `ai-platform-foundation` ou em uma branch filha criada a partir dela.
 - Nunca faça commit direto em `main`.
 - Nunca faça merge para `main` automaticamente.
 - Faça commits pequenos por task, depois de teste vermelho→verde quando aplicável.
