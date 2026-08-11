@@ -128,6 +128,39 @@ describe("Mem0ContextProvider", () => {
     expect(metric).toHaveBeenCalledWith(expect.objectContaining({ degraded: true, resultCount: 0 }));
   });
 
+  it("does not let a successful shadow telemetry failure reject the retrieved result", async () => {
+    const provider = new Mem0ContextProvider({
+      memory: memoryPort(),
+      resolveFeature: vi.fn().mockResolvedValue({ mode: "shadow", config: {}, killed: false }),
+      recordShadowMetric: vi.fn().mockRejectedValue(new Error("telemetry unavailable")),
+    });
+
+    await expect(provider.retrieve(request)).resolves.toMatchObject({
+      shadowItems: [expect.objectContaining({ id: memory.id })],
+      degraded: false,
+      influencePrompt: false,
+      bucket: "shadow",
+    });
+  });
+
+  it("does not let fallback shadow telemetry failure reject a degraded result", async () => {
+    const port = memoryPort();
+    vi.mocked(port.search).mockRejectedValue(new Error("Mem0 unavailable"));
+    const provider = new Mem0ContextProvider({
+      memory: port,
+      resolveFeature: vi.fn().mockResolvedValue({ mode: "shadow", config: {}, killed: false }),
+      recordShadowMetric: vi.fn().mockRejectedValue(new Error("telemetry unavailable")),
+    });
+
+    await expect(provider.retrieve(request)).resolves.toMatchObject({
+      items: [],
+      shadowItems: [],
+      degraded: true,
+      influencePrompt: false,
+      bucket: "shadow",
+    });
+  });
+
   it("rejects malformed provider records instead of granting them authority", async () => {
     const port = memoryPort([{ ...memory, authorityDomain: "legal", risk: "high", confidence: 0.8, validFrom: "not-a-date" }]);
     const provider = new Mem0ContextProvider({

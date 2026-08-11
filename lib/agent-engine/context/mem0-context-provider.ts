@@ -143,15 +143,19 @@ export class Mem0ContextProvider implements ContextProvider {
   ): Promise<void> {
     if (!this.deps.recordShadowMetric) return;
     const nativeIds = new Set(input.nativeSourceIds ?? []);
-    await this.deps.recordShadowMetric({
-      provider: "mem0",
-      latencyMs: Math.max(0, latencyMs),
-      resultCount: items.length,
-      selectedCount: 0,
-      notSelectedCount: items.length,
-      overlappingSourceIds: items.filter((item) => nativeIds.has(item.sourceId)).length,
-      nativeSourceCount: nativeIds.size,
-      degraded,
-    });
+    try {
+      await this.deps.recordShadowMetric({
+        provider: "mem0",
+        latencyMs: Math.max(0, latencyMs),
+        resultCount: items.length,
+        selectedCount: 0,
+        notSelectedCount: items.length,
+        overlappingSourceIds: items.filter((item) => nativeIds.has(item.sourceId)).length,
+        nativeSourceCount: nativeIds.size,
+        degraded,
+      });
+    } catch {
+      // Telemetry is strictly best-effort: it must never alter a reply/context.
+    }
   }
 }
