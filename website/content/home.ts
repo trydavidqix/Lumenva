@@ -23,7 +23,7 @@ export const proofPoints: readonly ProofPoint[] = [
     description: "Toda mutação relevante fica registrada para rastreabilidade.",
   },
   {
-    label: "WhatsApp-native",
+    label: "WhatsApp",
     description: "WhatsApp como canal primário para vendas e suporte.",
   },
   {

@@ -82,7 +82,7 @@ export default function SolutionsPage() {
           <ul className={styles.factList}>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>01</span>
-              <span><strong>WhatsApp-native.</strong> O WhatsApp é o canal primário para vendas e suporte.</span>
+              <span><strong>WhatsApp.</strong> O WhatsApp é o canal primário para vendas e suporte.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>02</span>
