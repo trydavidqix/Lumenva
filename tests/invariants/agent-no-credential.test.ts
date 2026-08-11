@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import pg from "pg";
+import type { AiTraceSpan, AiTracer } from "@/lib/agent-engine/obs/ai-tracing";
 
 /**
  * Fase 4B (robustez BYOK) — turno SEM credencial nenhuma (nem env, nem BYOK).
@@ -16,7 +17,9 @@ import pg from "pg";
 
 const container = process.env.TEST_DB_CONTAINER;
 if (!container) {
-  throw new Error("TEST_DB_CONTAINER not set — rode via `pnpm test:invariants` (scripts/test-db.sh)");
+  throw new Error(
+    "TEST_DB_CONTAINER not set — rode via `pnpm test:invariants` (scripts/test-db.sh)",
+  );
 }
 
 // Placeholders ANTES dos imports dinâmicos do engine (módulos da borda leem env
@@ -38,10 +41,10 @@ const CONV = "dddddddd-0000-4000-8000-000000000004";
 const MSG = "dddddddd-0000-4000-8000-000000000005";
 
 type EngineModules = {
-  createInboundTurnHandler: typeof import("@/lib/agent-engine/agent/inbound-turn")["createInboundTurnHandler"];
+  createInboundTurnHandler: (typeof import("@/lib/agent-engine/agent/inbound-turn"))["createInboundTurnHandler"];
   queue: typeof import("@/lib/agent-engine/queue/queue");
-  createLogger: typeof import("@/lib/agent-engine/obs/logger")["createLogger"];
-  crmEdgeConfigFromEnv: typeof import("@/lib/agent-engine/edge/crm/mcp-client")["crmEdgeConfigFromEnv"];
+  createLogger: (typeof import("@/lib/agent-engine/obs/logger"))["createLogger"];
+  crmEdgeConfigFromEnv: (typeof import("@/lib/agent-engine/edge/crm/mcp-client"))["crmEdgeConfigFromEnv"];
 };
 let m: EngineModules;
 
@@ -101,6 +104,14 @@ afterAll(async () => {
 describe("4B — turno sem credencial NENHUMA (nem env, nem BYOK)", () => {
   it("falha EXPLÍCITA e ISOLADA: dead + inbox critical + fila viva + zero envio", async () => {
     const log = m.createLogger();
+    const traceEnds: Parameters<AiTraceSpan["end"]>[0][] = [];
+    const tracer: AiTracer = {
+      startSpan: async () => ({
+        end: async (input) => {
+          traceEnds.push(input);
+        },
+      }),
+    };
     const handler = m.createInboundTurnHandler({
       crmCfg: m.crmEdgeConfigFromEnv({
         SUPABASE_URL: "https://placeholder.supabase.co",
@@ -123,7 +134,8 @@ describe("4B — turno sem credencial NENHUMA (nem env, nem BYOK)", () => {
         },
       },
       log,
-    });
+      tracer,
+    } as never);
 
     // O PG efêmero é compartilhado com as outras suítes: neutraliza jobs
     // pendentes alheios para o claim (FIFO global) pegar o DESTE teste.
@@ -160,6 +172,8 @@ describe("4B — turno sem credencial NENHUMA (nem env, nem BYOK)", () => {
     expect(turnError).not.toBeNull();
     expect(turnError!.message).toMatch(/credencial LLM/);
     expect(turnError!.message).toMatch(/ai_provider_credentials|ANTHROPIC_API_KEY/);
+    expect(traceEnds).toEqual([{ error: "agent_turn_failed" }]);
+    expect(JSON.stringify(traceEnds)).not.toContain("ai_provider_credentials");
 
     // 2. job dead (max_attempts=1), com o erro gravado
     const { rows: jobs } = await pool.query(
