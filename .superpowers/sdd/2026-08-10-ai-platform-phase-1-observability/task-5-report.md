@@ -20,3 +20,9 @@
 ## Verification gap
 
 The two DB-backed agent lifecycle tests could not be run in this environment. `pnpm test:db tests/invariants/agent-send-template-turn.test.ts tests/invariants/agent-no-credential.test.ts` stopped before Vitest because Docker is unavailable (`scripts/test-db.sh: docker: command not found`).
+
+## Round 1 formatting correction
+
+- Restored the original formatting of the five source/test files while retaining only the Task 5 tracing and test hunks (`git diff --stat HEAD^` reports 192 additions and 7 deletions across those files).
+- Re-ran `pnpm typecheck`, the focused 15-test Vitest command, and `git diff --check` after the correction.
+- The DB lifecycle suite remains inconclusive for the Docker reason above.
