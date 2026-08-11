@@ -24,8 +24,7 @@
 }
 
 .title {
-  max-width: 11ch;
-  font-size: var(--font-size-heading-lg);
+  font-size: clamp(2.25rem, 3.4vw, 3.25rem);
 }
 
 .description {

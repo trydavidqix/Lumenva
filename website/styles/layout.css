@@ -1,6 +1,6 @@
 :root {
   --layout-gutter: clamp(1.25rem, 4vw, 3rem);
-  --layout-max-width: 75rem;
+  --layout-max-width: 90rem;
   --layout-reading-width: 65ch;
   --section-space: clamp(3rem, 8vw, 6rem);
 }
