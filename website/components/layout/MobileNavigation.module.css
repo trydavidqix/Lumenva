@@ -113,20 +113,6 @@
   color: var(--color-accent);
 }
 
-.loginLink {
-  align-items: center;
-  color: var(--color-text-muted);
-  display: flex;
-  font-weight: 700;
-  justify-content: center;
-  min-height: 2.75rem;
-  text-decoration: none;
-}
-
-.loginLink:hover {
-  color: var(--color-accent);
-}
-
 .cta {
   align-self: end;
 }

@@ -151,11 +151,6 @@ export const demoCta = {
   href: "/contato",
 } as const;
 
-export const loginCta = {
-  label: "Entrar",
-  href: (process.env.NEXT_PUBLIC_APP_URL ?? "/contato") as `/${string}` | `https://${string}`,
-} as const;
-
 export const shellContent = {
   primaryNavigationLabel: "Navegação principal",
   mobileNavigationLabel: "Navegação móvel",
