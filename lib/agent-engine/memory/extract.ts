@@ -60,11 +60,7 @@ export interface ExtractMemoryCandidatesDeps {
   runModelCall?: typeof runModelCall;
 }
 
-const PROTECTED_AUTHORITY_CLAIM =
-  /\b(?:consent(?:imento)?|autoriz(?:o|a|ação|ado|ada)?|authorize|authorise|contract|contrato|agreement|payment|pagamento)\b/iu;
-const DETERMINISTIC_CONTRACT_OR_PAYMENT_FACT =
-  /\b(?:acordo|contrato|contratual|assin(?:ado|ada|ar|aram|atura)|agreement|signed|signature|fatura|invoice|boleto|cobran[cç]a|quitad[ao]|settled|liquidad[ao]|pagamento|pagou|pago)\b/iu;
-const PROTECTED_AUTHORITY_DOMAINS = new Set(["consent", "legal"]);
+const HIGH_RISK_AUTHORITY_DOMAINS = new Set(["commercial_status", "consent", "legal"]);
 
 function buildExtractionPrompt(sourceText: string): string {
   return [
@@ -82,15 +78,11 @@ function buildExtractionPrompt(sourceText: string): string {
   ].join("\n");
 }
 
-function constrainAuthority(candidate: MemoryCandidate, sourceText: string): MemoryCandidate {
+function constrainAuthority(candidate: MemoryCandidate): MemoryCandidate {
   if (
     candidate.risk === "high" ||
-    PROTECTED_AUTHORITY_DOMAINS.has(candidate.authorityDomain) ||
-    candidate.sensitiveClassification !== "none" ||
-    PROTECTED_AUTHORITY_CLAIM.test(candidate.text) ||
-    PROTECTED_AUTHORITY_CLAIM.test(sourceText) ||
-    DETERMINISTIC_CONTRACT_OR_PAYMENT_FACT.test(candidate.text) ||
-    DETERMINISTIC_CONTRACT_OR_PAYMENT_FACT.test(sourceText)
+    HIGH_RISK_AUTHORITY_DOMAINS.has(candidate.authorityDomain) ||
+    candidate.sensitiveClassification !== "none"
   ) {
     return { ...candidate, risk: "high", actionable: false };
   }
@@ -131,6 +123,6 @@ export async function extractMemoryCandidates(
   });
 
   return parseModelCandidates(result.text)
-    .map((candidate) => constrainAuthority(candidate, input.sourceText))
+    .map(constrainAuthority)
     .filter((candidate) => sanitizeMemoryCandidate(candidate).allowed);
 }
