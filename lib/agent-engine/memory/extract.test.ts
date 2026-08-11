@@ -115,6 +115,47 @@ describe("extractMemoryCandidates", () => {
     ]);
   });
 
+  it.each([
+    ["a settled invoice", "A fatura foi quitada."],
+    ["a signed agreement", "As partes assinaram o acordo."],
+  ])("fails closed for %s even when the model labels it non-sensitive", async (_caseName, text) => {
+    const modelCandidate = {
+      type: "commercial_context",
+      authorityDomain: "commercial_status",
+      sensitiveClassification: "none",
+      risk: "low",
+      confidence: 0.87,
+      actionable: true,
+      text,
+    };
+    const runModelCall = vi.fn().mockResolvedValue(modelReply([modelCandidate]));
+
+    await expect(extractMemoryCandidates(
+      { ...input, sourceText: text },
+      { runModelCall } as never,
+    )).resolves.toEqual([
+      { ...modelCandidate, risk: "high", actionable: false },
+    ]);
+  });
+
+  it("preserves ordinary non-sensitive commercial context", async () => {
+    const modelCandidate = {
+      type: "commercial_context",
+      authorityDomain: "commercial_status",
+      sensitiveClassification: "none",
+      risk: "low",
+      confidence: 0.87,
+      actionable: true,
+      text: "A empresa possui cinco atendentes.",
+    };
+    const runModelCall = vi.fn().mockResolvedValue(modelReply([modelCandidate]));
+
+    await expect(extractMemoryCandidates(
+      { ...input, sourceText: modelCandidate.text },
+      { runModelCall } as never,
+    )).resolves.toEqual([modelCandidate]);
+  });
+
   it("does not return model candidates containing passwords or API keys", async () => {
     const runModelCall = vi.fn().mockResolvedValue(modelReply([
       {
