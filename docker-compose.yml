@@ -89,7 +89,9 @@ services:
   # explicitamente `--profile ai-memory` e só fica acessível pelo loopback no
   # host para o bootstrap local.
   mem0:
-    image: mem0/mem0-api-server:latest
+    # Explicit release pin: upgrades require a reviewed compose change and
+    # Windows profile validation before promotion.
+    image: mem0/mem0-api-server:0.1.117
     profiles: ["ai-memory"]
     restart: unless-stopped
     environment:

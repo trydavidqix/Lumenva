@@ -35,7 +35,7 @@ services:
       retries: 5
       start_period: 40s
     logging: *default-logging
-    networks: [internal]
+    networks: [internal, ai-memory-internal]
 
 
   # Worker 24/7 do agent-engine (fusão Vendaval) — cérebro do agente SDR.
@@ -50,6 +50,7 @@ services:
       WAHA_API_BASE_URL: http://waha:3000
     networks:
       - internal
+      - ai-memory-internal
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:8787/healthz"]
       interval: 30s
@@ -143,7 +144,9 @@ services:
   # Semântica opcional, isolada da stack CRM. Só inicia quando o operador usa
   # `--profile ai-memory`; nenhuma porta é publicada e o Caddy não a expõe.
   mem0:
-    image: mem0/mem0-api-server:latest
+    # Explicit release pin: upgrades require a reviewed compose change and
+    # Windows profile validation before promotion.
+    image: mem0/mem0-api-server:0.1.117
     profiles: ["ai-memory"]
     restart: unless-stopped
     environment:
@@ -170,7 +173,7 @@ services:
       retries: 5
       start_period: 45s
     logging: *default-logging
-    networks: [internal]
+    networks: [ai-memory-internal]
 
   # Armazenamento interno do Mem0, separado completamente do Supabase/CRM.
   mem0-postgres:
@@ -189,7 +192,7 @@ services:
       timeout: 5s
       retries: 10
     logging: *default-logging
-    networks: [internal]
+    networks: [ai-memory-internal]
 
   caddy:
     image: caddy:2-alpine
@@ -220,3 +223,7 @@ volumes:
 networks:
   internal:
     driver: bridge
+  # Mem0 storage/API must never share a network with Caddy, WAHA, Redis or SRH.
+  # Only app and worker bridge into it for the optional client connection.
+  ai-memory-internal:
+    internal: true

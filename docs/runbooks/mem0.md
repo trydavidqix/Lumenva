@@ -13,6 +13,13 @@ Não publique a API, o dashboard ou o banco por Caddy. Em desenvolvimento a API
 pode ser aberta apenas em `127.0.0.1:8888`; em produção não há porta publicada.
 O nome DNS interno é `mem0` e só serviços na rede Docker interna podem alcançá-lo.
 
+A imagem do servidor está deliberadamente pinada em
+`mem0/mem0-api-server:0.1.117`; `latest` não é aceitável porque pode mudar sem
+revisão. Uma atualização exige alteração versionada, revisão e a validação do
+perfil no Windows antes de promoção. O pin é uma referência de release, não um
+digest imutável: confirme disponibilidade e release notes no Windows antes de
+alterá-lo.
+
 Este runbook é para a máquina Windows com Docker já autorizado. Não instalar,
 executar ou pedir Docker no Mac.
 
