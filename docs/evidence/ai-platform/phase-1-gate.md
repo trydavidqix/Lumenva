@@ -5,7 +5,7 @@ Scope: optional LangSmith observability only; no external account, API key, prov
 
 ## Decision
 
-**NO-GO.** The local safety proofs below passed, but the full gate is incomplete: database verification is blocked by the missing Docker CLI, the full unit suite did not conclude in the bounded local runner, and the production build did not conclude or produce a `BUILD_ID`.
+**GO.** The complete local gate passed on Windows at commit `feee3977`. Database verification used only the disposable local Postgres container created by `pnpm test:db`; the script removed that container after the run.
 
 This is not evidence of a remote LangSmith experiment. It is local fake-client evidence only.
 
@@ -57,17 +57,15 @@ The warnings contain only `event=langsmith_trace_failure`, `operation=start`, an
 
 | Command | Result | Evidence / limitation |
 | --- | --- | --- |
-| `pnpm typecheck` | PASS | `tsc --noEmit` exited successfully. |
-| `pnpm lint` | PASS | `eslint .` exited successfully. |
-| `pnpm test:unit` | BLOCKED / inconclusive | The full Vitest process remained running beyond the bounded capture (one process exceeded nine minutes) and was terminated. No green result is claimed. Focused observability tests passed separately. |
-| `pnpm test:db` | BLOCKED | Attempted; `scripts/test-db.sh` stopped at `docker: command not found`. Docker is unavailable on this Mac. |
-| `pnpm ai:eval:local` | PASS | 25 synthetic cases, 0 duplicate IDs, 0 P0 failures. |
-| `pnpm build` | BLOCKED / inconclusive | Two bounded attempts reached `Creating an optimized production build ...` without a final success result or `.next/BUILD_ID`. The first left a stale generated `.next/lock`; with no active build process, that lock alone was removed before retry. |
-| `git diff --check` | PASS | Re-run after Task 7 commit `d16399f0` against the current worktree; no whitespace errors reported. This is current-state evidence, not a claim about pre-commit timing. |
+| `pnpm install --frozen-lockfile` | PASS | Exit code 0; the lockfile was not changed. |
+| `pnpm typecheck` | PASS | Exit code 0 from `tsc --noEmit` on the final tree. |
+| `pnpm lint` | PASS | Exit code 0; 0 errors and 187 existing warnings. |
+| `pnpm test:unit` | PASS | Exit code 0 from the Windows-safe log/exit-code collector: 298 files and 2,994 tests passed. Vitest runs one worker on this 8 GB host; the full final run took 1,615.07 s. |
+| `pnpm test:db` | PASS | Exit code 0: 72 files passed; 480 tests passed and 1 was skipped. Docker daemon 29.6.2 hosted only the disposable local Postgres container, which the script removed on teardown. |
+| `pnpm ai:eval:local` | PASS | Exit code 0: 25 synthetic cases, 0 duplicate IDs, 0 P0 failures. |
+| `pnpm build` | PASS | Exit code 0 from the complete Next.js 16.3.0 production build. |
+| `git diff --check` | PASS | Exit code 0; no whitespace errors reported before the evidence commit. |
 
-## Required follow-up before GO
+## Gate closure
 
-1. Install/start Docker locally (or use an approved disposable Postgres environment) and rerun `pnpm test:db`.
-2. Diagnose why full `pnpm test:unit` does not exit in this runner; retain its final result.
-3. Diagnose the incomplete `pnpm build`, then retain successful build output and `BUILD_ID` evidence.
-4. Re-run the complete gate after those blockers are resolved. Do not enable remote LangSmith tracing from this evidence alone.
+The earlier Mac-only blockers are closed by the Windows results above. No external account, API key, provider, production environment, Vercel project, Supabase project, WAHA instance, or Redis instance was configured or changed. LangSmith remains OFF by default; this GO decision authorizes only the local Phase 1 code and safety evidence, not remote tracing activation.
