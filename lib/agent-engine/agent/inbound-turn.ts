@@ -1346,7 +1346,7 @@ export async function runAgentTurn(
           topK: agentConfig.ragTopK,
           threshold: agentConfig.ragSimilarityThreshold,
           jobId: job.id,
-        }, { log: runLog, tracer: deps.tracer, traceId });
+        }, { log: runLog, tracer: deps.tracer, traceId, parentRunId: traceId });
         if (out.ok && out.results.length > 0) {
           // As citações são montadas AQUI, pelo código, a partir do resultado
           // cru — é por isso que os ids podem sair do que vai ao modelo sem
@@ -2076,7 +2076,7 @@ export async function runAgentTurn(
           }
         : {}),
     },
-    { registry: deps.registry, log: runLog, tracer: deps.tracer, traceId },
+    { registry: deps.registry, log: runLog, tracer: deps.tracer, traceId, parentRunId: traceId },
   );
 
   // F4-04: correlação dos dois sinais do MESMO turno — jailbreak ALTO + tentativa de
@@ -2136,7 +2136,7 @@ export async function runAgentTurn(
         { role: 'user', content: CHECKPOINT_INSTRUCTION },
       ],
     },
-    { registry: deps.registry, log: runLog, tracer: deps.tracer, traceId },
+    { registry: deps.registry, log: runLog, tracer: deps.tracer, traceId, parentRunId: traceId },
   );
   const content = parseCheckpointText(closing.result.text);
 

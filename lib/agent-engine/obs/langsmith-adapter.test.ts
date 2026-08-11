@@ -47,6 +47,7 @@ describe("LangSmithAiTracer", () => {
       name: "llm_model_call",
       runId: CHILD_RUN_ID,
       traceId: RUN_ID,
+      parentRunId: RUN_ID,
       organizationId: ORGANIZATION_ID,
       metadata: { job_id: "job-safe" },
     } as never);
@@ -55,6 +56,10 @@ describe("LangSmithAiTracer", () => {
 
     expect(createRun.mock.calls.map(([run]) => run.id)).toEqual([RUN_ID, CHILD_RUN_ID]);
     expect(createRun.mock.calls.map(([run]) => run.trace_id)).toEqual([RUN_ID, RUN_ID]);
+    const [parentRun] = createRun.mock.calls[0]!;
+    const [childRun] = createRun.mock.calls[1]!;
+    expect(childRun.parent_run_id).toBe(RUN_ID);
+    expect(childRun.dotted_order.startsWith(`${parentRun.dotted_order}.`)).toBe(true);
     expect(updateRun.mock.calls.map(([runId]) => runId)).toEqual([RUN_ID, CHILD_RUN_ID]);
     expect(updateRun.mock.calls.map(([, run]) => run.trace_id)).toEqual([RUN_ID, RUN_ID]);
   });

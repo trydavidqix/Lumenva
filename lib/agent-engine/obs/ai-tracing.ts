@@ -8,6 +8,8 @@ export interface AiTracer {
     runId: string;
     /** Root trace identifier; absent means this span starts its own trace. */
     traceId?: string;
+    /** Immediate parent span identifier when this span is a child. */
+    parentRunId?: string;
     organizationId: string;
     metadata?: Record<string, unknown>;
     input?: unknown;
@@ -24,6 +26,7 @@ export class NoopAiTracer implements AiTracer {
     name: string;
     runId: string;
     traceId?: string;
+    parentRunId?: string;
     organizationId: string;
     metadata?: Record<string, unknown>;
     input?: unknown;
