@@ -24,6 +24,7 @@ describe("extractMemoryCandidates", () => {
       {
         type: "preference",
         authorityDomain: "customer_preference",
+        sensitiveClassification: "none",
         risk: "low",
         confidence: 0.93,
         actionable: true,
@@ -35,6 +36,7 @@ describe("extractMemoryCandidates", () => {
       {
         type: "preference",
         authorityDomain: "customer_preference",
+        sensitiveClassification: "none",
         risk: "low",
         confidence: 0.93,
         actionable: true,
@@ -53,30 +55,63 @@ describe("extractMemoryCandidates", () => {
     expect(runModelCall.mock.calls[0]?.[2].messages[0].content).toContain("epistêmica");
   });
 
-  it("marks payment authorization as high risk and never actionable", async () => {
-    const runModelCall = vi.fn().mockResolvedValue(modelReply([
+  it.each([
+    [
+      "a consent authority domain",
       {
-        type: "commercial_context",
+        type: "preference",
         authorityDomain: "consent",
+        sensitiveClassification: "none",
         risk: "low",
         confidence: 0.87,
         actionable: true,
-        text: "The customer said: I authorize payment.",
+        text: "O cliente confirmou a escolha de receber comunicações.",
       },
-    ]));
-
-    await expect(extractMemoryCandidates(
-      { ...input, sourceText: "I authorize payment." },
-      { runModelCall } as never,
-    )).resolves.toEqual([
+    ],
+    [
+      "a legal authority domain",
       {
         type: "commercial_context",
-        authorityDomain: "consent",
-        risk: "high",
+        authorityDomain: "legal",
+        sensitiveClassification: "none",
+        risk: "low",
         confidence: 0.87,
-        actionable: false,
-        text: "The customer said: I authorize payment.",
+        actionable: true,
+        text: "O cliente concordou com os termos da proposta.",
       },
+    ],
+    [
+      "a non-keyword contract classification",
+      {
+        type: "commercial_context",
+        authorityDomain: "commercial_status",
+        sensitiveClassification: "contract",
+        risk: "low",
+        confidence: 0.87,
+        actionable: true,
+        text: "O cliente aceitou os termos da proposta.",
+      },
+    ],
+    [
+      "a non-keyword payment classification",
+      {
+        type: "commercial_context",
+        authorityDomain: "commercial_status",
+        sensitiveClassification: "payment",
+        risk: "low",
+        confidence: 0.87,
+        actionable: true,
+        text: "O cliente aprovou a cobrança recorrente.",
+      },
+    ],
+  ])("marks %s as high risk and never actionable", async (_caseName, modelCandidate) => {
+    const runModelCall = vi.fn().mockResolvedValue(modelReply([modelCandidate]));
+
+    await expect(extractMemoryCandidates(
+      { ...input, sourceText: modelCandidate.text },
+      { runModelCall } as never,
+    )).resolves.toEqual([
+      { ...modelCandidate, risk: "high", actionable: false },
     ]);
   });
 
@@ -85,6 +120,7 @@ describe("extractMemoryCandidates", () => {
       {
         type: "preference",
         authorityDomain: "customer_preference",
+        sensitiveClassification: "none",
         risk: "low",
         confidence: 0.8,
         actionable: true,
@@ -93,6 +129,7 @@ describe("extractMemoryCandidates", () => {
       {
         type: "commercial_context",
         authorityDomain: "operational_state",
+        sensitiveClassification: "none",
         risk: "medium",
         confidence: 0.8,
         actionable: false,
