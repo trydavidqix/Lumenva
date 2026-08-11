@@ -1,35 +1,23 @@
+import Image from "next/image";
+
 export interface LumenvaMarkProps {
   readonly size?: number;
   readonly className?: string;
+  readonly priority?: boolean;
 }
 
-export function LumenvaMark({ className, size = 24 }: Readonly<LumenvaMarkProps>) {
+const NATURAL_ASPECT_RATIO = 1536 / 1024;
+
+export function LumenvaMark({ className, priority = false, size = 24 }: Readonly<LumenvaMarkProps>) {
   return (
-    <svg
+    <Image
+      alt=""
       aria-hidden="true"
       className={className}
-      fill="none"
       height={size}
-      viewBox="0 0 24 24"
-      width={size}
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M8 3.5L14 3.5 14 15.5 20 15.5 20 20.5 8 20.5Z"
-        fill="currentColor"
-      />
-      <path
-        d="M4 9.5V20.5"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.75"
-      />
-      <path
-        d="M6.5 8L6.5 14"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.75"
-      />
-    </svg>
+      priority={priority}
+      src="/brand/lumenva-mark.png"
+      width={Math.round(size * NATURAL_ASPECT_RATIO)}
+    />
   );
 }
