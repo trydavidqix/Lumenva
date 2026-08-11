@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { demoCta, loginCta, navigation, shellContent, siteName } from "@/content/site";
+import { demoCta, navigation, shellContent, siteName } from "@/content/site";
 import { Button } from "@/components/ui/Button";
 import { MobileNavigation } from "./MobileNavigation";
 import { SolutionsMenu } from "./SolutionsMenu";
@@ -35,9 +35,6 @@ export function Header() {
             )}
           </div>
         </nav>
-        <Link className={styles.loginLink} href={loginCta.href}>
-          {loginCta.label}
-        </Link>
         <Button
           className={styles.demoAction}
           href={demoCta.href}

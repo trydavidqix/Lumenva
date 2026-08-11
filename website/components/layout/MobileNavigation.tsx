@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { demoCta, loginCta, navigation, shellContent, solutionsMenu } from "@/content/site";
+import { demoCta, navigation, shellContent, solutionsMenu } from "@/content/site";
 import { Button } from "@/components/ui/Button";
 import styles from "./MobileNavigation.module.css";
 
@@ -181,9 +181,6 @@ export function MobileNavigation({
                 ),
               )}
             </nav>
-            <Link className={styles.loginLink} href={loginCta.href} onClick={close}>
-              {loginCta.label}
-            </Link>
             <Button className={styles.cta} href={demoCta.href} variant="primary">
               {demoCta.label}
             </Button>

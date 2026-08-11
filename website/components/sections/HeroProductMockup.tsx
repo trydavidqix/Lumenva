@@ -1,7 +1,9 @@
 import {
   BarChart3,
+  Contact,
   Home,
   Inbox,
+  MessageCircle,
   MessageSquare,
   Settings,
   Sparkles,
@@ -17,7 +19,8 @@ const NAV_ITEMS = [
   { label: "Resumo", icon: Home },
   { label: "Inbox", icon: Inbox },
   { label: "Leads", icon: Users },
-  { label: "Contactos", icon: MessageSquare },
+  { label: "Contactos", icon: Contact },
+  { label: "Conversas", icon: MessageCircle },
   { label: "Automação", icon: Zap },
   { label: "Relatórios", icon: BarChart3 },
   { label: "Configurações", icon: Settings },
@@ -71,18 +74,22 @@ export function HeroProductMockup() {
         <div className={styles.activityItem}>
           <MessageSquare aria-hidden="true" size={16} strokeWidth={1.8} />
           <div>
-            <p className={styles.activityTitle}>Nova conversa via WhatsApp</p>
-            <p className={styles.activityMeta}>há 2 min</p>
+            <p className={styles.activityTitle}>Nova conversa com João Silva</p>
+            <p className={styles.activityMeta}>via WhatsApp</p>
           </div>
         </div>
         <div className={styles.activityItem}>
           <Sparkles aria-hidden="true" size={16} strokeWidth={1.8} />
           <div>
-            <p className={styles.activityTitle}>Resposta gerada pelo agente de IA</p>
-            <p className={styles.activityMeta}>há 15 min</p>
+            <p className={styles.activityTitle}>Resposta gerada: Proposta #482</p>
+            <p className={styles.activityMeta}>por Agente de IA</p>
           </div>
         </div>
       </div>
+      <button className={styles.newAutomation} type="button">
+        Nova automação
+        <Zap aria-hidden="true" size={14} strokeWidth={1.8} />
+      </button>
     </AppWindow>
   );
 }
