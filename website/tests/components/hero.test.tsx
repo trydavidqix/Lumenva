@@ -25,7 +25,9 @@ test("keeps the headline and secondary CTA meaningful", () => {
 test("shows a decorative product preview hidden from assistive tech", () => {
   const { container } = render(<Hero />);
 
-  const preview = container.querySelector('[aria-hidden="true"]');
+  const hiddenElements = [...container.querySelectorAll('[aria-hidden="true"]')];
+  const preview = hiddenElements.find((element) =>
+    /novas conversas/i.test(element.textContent ?? ""),
+  );
   expect(preview).toBeTruthy();
-  expect(preview).toHaveTextContent(/caixa de entrada/i);
 });

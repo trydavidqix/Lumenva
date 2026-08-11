@@ -6,6 +6,8 @@ export const homeContent = {
   secondaryCta: { label: "Ver produto", href: "/produto" },
 } as const;
 
+export const heroIntegrations = ["WhatsApp", "OpenAI", "n8n", "Supabase", "Vercel"] as const;
+
 export type ProofPoint = Readonly<{
   label: string;
   description: string;
