@@ -26,10 +26,10 @@ export default function Icon() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           alt=""
-          height={30}
+          height={60}
           src={`data:image/png;base64,${markBase64}`}
-          style={{ height: 30, objectFit: "contain", width: 45 }}
-          width={45}
+          style={{ height: 60, objectFit: "contain", width: 90 }}
+          width={90}
         />
       </div>
     ),
