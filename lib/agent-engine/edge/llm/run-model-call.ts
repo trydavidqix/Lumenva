@@ -106,6 +106,8 @@ export interface RunModelCallDeps {
   tracer?: AiTracer;
   /** Parent trace ID when this model call belongs to a larger agent turn. */
   traceId?: string;
+  /** Immediate parent span ID when this model call belongs to an agent turn. */
+  parentRunId?: string;
 }
 
 async function endTraceSpan(
@@ -198,6 +200,7 @@ export async function runModelCall(db: pg.Pool, cfg: LlmEdgeConfig, input: RunMo
         name: 'llm_model_call',
         runId: randomUUID(),
         traceId: deps.traceId ?? input.jobId ?? randomUUID(),
+        parentRunId: deps.parentRunId,
         organizationId: input.tenantId,
         // Metadata-first by default: prompts/messages can carry PII and are
         // deliberately not supplied by this seam without an explicit content

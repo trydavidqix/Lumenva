@@ -99,6 +99,7 @@ export class LangSmithAiTracer implements AiTracer {
   private readonly resolveConfig: (input: { organizationId: string }) => Promise<ExternalTracingConfig>;
   private readonly createClient: (config: ClientConfig) => LangSmithClient;
   private readonly now: () => Date;
+  private readonly dottedOrders = new Map<string, string>();
 
   constructor(deps: LangSmithAiTracerDeps = {}) {
     this.log = deps.logger ?? createLogger();
@@ -111,6 +112,7 @@ export class LangSmithAiTracer implements AiTracer {
     name: string;
     runId: string;
     traceId?: string;
+    parentRunId?: string;
     organizationId: string;
     metadata?: Record<string, unknown>;
     input?: unknown;
@@ -132,11 +134,14 @@ export class LangSmithAiTracer implements AiTracer {
     try {
       const startedAt = this.now();
       const client = this.createClient(toClientConfig(config));
-      const traceDottedOrder = dottedOrder(startedAt, input.runId);
+      const ownDottedOrder = dottedOrder(startedAt, input.runId);
+      const parentDottedOrder = input.parentRunId === undefined ? undefined : this.dottedOrders.get(input.parentRunId);
+      const traceDottedOrder = parentDottedOrder === undefined ? ownDottedOrder : `${parentDottedOrder}.${ownDottedOrder}`;
       await client.createRun({
         id: input.runId,
         trace_id: traceId,
         dotted_order: traceDottedOrder,
+        ...(input.parentRunId === undefined ? {} : { parent_run_id: input.parentRunId }),
         name: traceName,
         run_type: "chain",
         start_time: startedAt.getTime(),
@@ -149,6 +154,7 @@ export class LangSmithAiTracer implements AiTracer {
           },
         },
       } as LangSmithRun);
+      this.dottedOrders.set(input.runId, traceDottedOrder);
       return new LangSmithAiTraceSpan(client, input.runId, traceId, traceDottedOrder, tenantId, traceName, this.log, this.now);
     } catch {
       this.warn("start", tenantId, traceName);

@@ -34,3 +34,10 @@ The two DB-backed agent lifecycle tests could not be run in this environment. `p
 - LangSmith now uses `runId` for `createRun`/`updateRun` identity and `traceId` for `trace_id` on both calls.
 - Added a real `LangSmithAiTracer` fake-client regression test that proves parent/child create and update IDs differ while both retain the parent trace ID.
 - PASS: `pnpm exec vitest run lib/agent-engine/obs/langsmith-adapter.test.ts lib/agent-engine/edge/llm/run-model-call.test.ts lib/agent-engine/agent/search-knowledge.test.ts` (18 tests), `pnpm typecheck`, and `git diff --check`.
+
+## Round 3 parent hierarchy correction
+
+- Added optional `parentRunId` to the tracing contract and propagated the parent agent-turn span ID into its LLM and retrieval children.
+- LangSmith exports `parent_run_id` and derives child `dotted_order` values from the recorded parent dotted order, so child runs are explicitly nested while retaining distinct run IDs and the shared root `trace_id`.
+- The real-adapter fake-client regression now asserts distinct IDs, common `trace_id`, `parent_run_id`, and a child dotted order prefixed by the parent dotted order.
+- PASS: focused 18-test tracing suite, `pnpm typecheck`, and `git diff --check`.
