@@ -1,0 +1,120 @@
+.layout {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.conversationList {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.conversationItem {
+  display: grid;
+  gap: 0.125rem;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.conversationItem[data-active="true"] {
+  border-color: var(--color-ink);
+  background: var(--color-surface);
+}
+
+.conversationName {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.conversationPreview {
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversationTime {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.625rem;
+}
+
+.thread {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.bubbleIn {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+  font-size: 0.8125rem;
+}
+
+.suggestions {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.suggestionsLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.suggestionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--color-white);
+  color: var(--color-ink);
+  font-size: 0.75rem;
+}
+
+.suggestionRow p {
+  margin: 0;
+}
+
+.panelLabel {
+  margin: 0 0 0.25rem;
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.panelText {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.8125rem;
+}
+
+@media (min-width: 40rem) {
+  .layout {
+    grid-template-columns: 11rem minmax(0, 1fr);
+  }
+}

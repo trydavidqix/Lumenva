@@ -1,41 +1,58 @@
+import { Filter, History, TrendingUp, Zap } from "lucide-react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
+import { VendasCrmMockup } from "@/components/sections/VendasCrmMockup";
 import { JsonLd } from "@/components/ui/JsonLd";
+import { FeatureCardGrid } from "@/components/ui/FeatureCardGrid";
 import { createPageMetadata } from "@/lib/metadata";
 import { breadcrumbSchema, serviceSchema } from "@/lib/schema";
 import styles from "@/components/sections/InnerPages.module.css";
 
 const description =
-  "Reúna conversas, leads, atividades e pipeline para agentes de IA e pessoas operarem com o mesmo contexto.";
+  "Centralize leads, acompanhe oportunidades, automatize follow-ups e dê à sua equipa comercial uma visão clara de cada etapa da venda.";
 const breadcrumbs = [
   { name: "Início", path: "/" },
-  { name: "CRM", path: "/crm" },
+  { name: "Soluções", path: "/solucoes" },
+  { name: "Vendas & CRM", path: "/solucoes/vendas-crm" },
 ] as const;
-const service = { name: "CRM Lumenva", description } as const;
+const service = { name: "Vendas & CRM Lumenva", description } as const;
+
+const benefits = [
+  { icon: Filter, title: "Visualize o funil", description: "Acompanhe cada oportunidade em tempo real." },
+  { icon: Zap, title: "Ganhe produtividade", description: "Automatize tarefas e follow-ups repetitivos." },
+  { icon: History, title: "Centralize contexto", description: "Tenha histórico, notas e atividades num só lugar." },
+  { icon: TrendingUp, title: "Melhore conversões", description: "Tome decisões com dados claros e previsíveis." },
+] as const;
 
 export const metadata = createPageMetadata({
-  title: "CRM",
+  title: "Vendas & CRM",
   description,
-  path: "/crm",
+  path: "/solucoes/vendas-crm",
 });
 
-export default function CrmPage() {
+export default function VendasCrmPage() {
   return (
     <>
       <JsonLd data={breadcrumbSchema(breadcrumbs)} />
       <JsonLd data={serviceSchema(service)} />
       <Breadcrumbs items={breadcrumbs} />
       <ServiceHero
-        eyebrow="CRM"
-        title="O contexto de cada conversa e oportunidade."
+        eyebrow="Solução · Vendas & CRM"
+        title="Organize o funil e feche mais negócios com previsibilidade."
         description={description}
         capabilities={[
-          "Caixa de entrada compartilhada",
-          "Pipeline com etapas configuráveis",
-          "Histórico de atividades do lead",
-          "Isolamento de dados por organização",
+          { icon: Filter, label: "Pipeline visual" },
+          { icon: Zap, label: "Follow-up automático" },
+          { icon: History, label: "Histórico do cliente" },
+          { icon: TrendingUp, label: "Relatórios de vendas" },
         ]}
+        visual={<VendasCrmMockup />}
       />
+      <section className={styles.cardsSection} aria-labelledby="crm-benefits">
+        <div className="site-shell">
+          <FeatureCardGrid ariaLabel="Benefícios de Vendas & CRM" items={benefits} />
+        </div>
+      </section>
       <section className={styles.sectionAlt} aria-labelledby="crm-foundation">
         <div className={`site-shell ${styles.sectionStack}`}>
           <div className={styles.sectionHeader}>
@@ -51,15 +68,15 @@ export default function CrmPage() {
           <ul className={styles.factList}>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>01</span>
-              <span><strong>Inbox.</strong> Conversas ficam disponíveis para o atendimento da equipe.</span>
+              <span><strong>Inbox.</strong> Conversas ficam disponíveis para o atendimento da equipa.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>02</span>
-              <span><strong>Pipeline.</strong> Etapas representam o andamento de cada oportunidade.</span>
+              <span><strong>Pipeline.</strong> Etapas representam o andamento de cada oportunidade e as próximas ações.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>03</span>
-              <span><strong>Customer 360.</strong> Contato, conversas e atividades formam o histórico do lead.</span>
+              <span><strong>Customer 360.</strong> Contacto, conversas e atividades formam o histórico do lead.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>04</span>

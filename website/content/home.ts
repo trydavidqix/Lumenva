@@ -1,9 +1,12 @@
 export const homeContent = {
-  eyebrow: "AI Sales OS",
-  title: "Vendas e suporte no WhatsApp, operados por IA e pessoas.",
+  eyebrow: "A plataforma de atendimento e vendas com IA",
+  title: "Atendimento e vendas com IA, WhatsApp e CRM num só lugar",
   description:
-    "Lumenva reúne agentes de IA, automações e CRM em uma plataforma open source e self-hosted.",
+    "Centralize conversas, automatize processos e acompanhe vendas com IA, tudo numa única operação.",
+  secondaryCta: { label: "Ver produto", href: "/produto" },
 } as const;
+
+export const heroIntegrations = ["WhatsApp", "OpenAI", "Claude", "n8n", "Supabase", "Vercel"] as const;
 
 export type ProofPoint = Readonly<{
   label: string;
@@ -12,20 +15,20 @@ export type ProofPoint = Readonly<{
 
 export const proofPoints: readonly ProofPoint[] = [
   {
-    label: "Open source",
-    description: "Código distribuído sob licença MIT.",
+    label: "Multi-tenant seguro",
+    description: "Isolamento de dados por organização em cada camada.",
   },
   {
-    label: "Self-hosted",
-    description: "Executado na sua própria infraestrutura.",
+    label: "Auditoria completa",
+    description: "Toda mutação relevante fica registada para rastreabilidade.",
   },
   {
-    label: "WhatsApp-native",
+    label: "WhatsApp",
     description: "WhatsApp como canal primário para vendas e suporte.",
   },
   {
     label: "Governado por pessoas",
-    description: "Agentes trabalham com regras e handoff para a equipe.",
+    description: "Agentes trabalham com regras e handoff para a equipa.",
   },
 ];
 
@@ -64,7 +67,7 @@ export const agentNarrativeSteps: readonly AgentNarrativeStep[] = [
     label: "05",
     title: "Resultado",
     description:
-      "A equipe acompanha o histórico no CRM e assume o atendimento quando necessário.",
+      "A equipa acompanha o histórico no CRM e assume o atendimento quando necessário.",
   },
 ];
 
@@ -98,7 +101,7 @@ export const capabilitySections: readonly CapabilitySection[] = [
         description: "Organize leads, atribua atendimento e envie mensagens.",
       },
       {
-        label: "Controle humano",
+        label: "Controlo humano",
         description: "Pessoas definem as regras e podem assumir o atendimento.",
       },
     ],
@@ -147,7 +150,7 @@ export const howItWorksSteps: readonly HowItWorksStep[] = [
     label: "03",
     title: "Opere com contexto",
     description:
-      "Agentes e equipe acompanham mensagens, atividades e leads no CRM.",
+      "Agentes e equipa acompanham mensagens, atividades e leads no CRM.",
   },
 ];
 
@@ -164,9 +167,19 @@ export const integrationItems: readonly IntegrationItem[] = [
     description: "Vendas e suporte conectados pelo WAHA.",
   },
   {
-    name: "Nuvemshop",
-    kind: "E-commerce",
-    description: "Integração documentada para pedidos, clientes e catálogo.",
+    name: "OpenAI / Claude Code",
+    kind: "IA",
+    description: "Fornecedor de apoio para embeddings de IA.",
+  },
+  {
+    name: "Supabase",
+    kind: "Dados",
+    description: "Base de dados, autenticação e armazenamento com isolamento por organização.",
+  },
+  {
+    name: "Vercel",
+    kind: "Infraestrutura",
+    description: "Plataforma de deploy do frontend.",
   },
 ];
 
@@ -183,8 +196,8 @@ export const finalCtaItems: readonly FinalCtaItem[] = [
     eyebrow: "Demonstração",
     title: "Veja a Lumenva aplicada à sua operação.",
     description:
-      "Converse com a equipe sobre agentes de IA, automações, CRM e self-hosting.",
-    label: "Solicitar demonstração",
+      "Converse com a equipa sobre agentes de IA, automações e CRM.",
+    label: "Agendar demonstração",
     href: "/contato",
   },
 ];
