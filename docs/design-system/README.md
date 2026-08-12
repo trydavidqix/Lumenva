@@ -1,9 +1,9 @@
 # Design System DeskcommCRM — Documentação Canônica
 
-> **Versão:** v1.0 (lockada em 2026-04-28)
+> **Versão:** v2.0 (2026-08-11)
 > **Status:** Ativa
-> **Direção:** Soft-tech / calmo, anti-genérico
-> **Stack visual:** Sage + Atkinson Hyperlegible + IBM Plex Mono + Aerada + Phosphor (duotone)
+> **Direção:** Apple-inspired premium, luxury, profissional, confortável
+> **Stack visual:** Lumenva (preto/cinza/branco) + System UI + IBM Plex Mono + Aerada + Phosphor (duotone)
 
 Esta pasta é a **fonte canônica** da linguagem visual do DeskcommCRM. Toda decisão de UI deve consultar estes documentos antes de implementação. Quando houver conflito entre código e doc, **a doc vence** — ajuste o código.
 
@@ -13,8 +13,8 @@ Esta pasta é a **fonte canônica** da linguagem visual do DeskcommCRM. Toda dec
 |---|-----------|-------------|
 | 00 | [Overview](./00-overview.md) | Filosofia, princípios, referências |
 | 01 | [Foundation Tokens](./01-foundation-tokens.md) | Spacing, radius, shadow, motion, z-index |
-| 02 | [Paleta Sage](./02-palette-sage.md) | 22 stops com hex (light + dark), estados, contraste |
-| 03 | [Tipografia](./03-typography.md) | Atkinson Hyperlegible, escala, IBM Plex Mono |
+| 02 | [Paleta Lumenva](./02-palette-lumenva.md) | 22 stops com hex (light + dark), estados, contraste |
+| 03 | [Tipografia](./03-typography.md) | System UI, escala, IBM Plex Mono |
 | 04 | [Densidade Aerada](./04-density-aerada.md) | Row 56 / gap 24, quando overrider |
 | 05 | [Iconografia Phosphor](./05-iconography-phosphor.md) | Duotone, mapeamento por feature |
 | 06 | [Componentes](./06-components.md) | shadcn customizado + componentes do produto |
@@ -26,7 +26,7 @@ Esta pasta é a **fonte canônica** da linguagem visual do DeskcommCRM. Toda dec
 
 | Decisão | Onde está canonizada | Quando consultar |
 |---------|----------------------|------------------|
-| Cor (hex, stop, estado) | `02-palette-sage.md` + `app/design/lib/tokens.ts` | Sempre que precisar referenciar uma cor |
+| Cor (hex, stop, estado) | `02-palette-lumenva.md` + `app/design/lib/tokens.ts` | Sempre que precisar referenciar uma cor |
 | Spacing / radius / shadow | `01-foundation-tokens.md` + `app/design/lib/tokens.ts` | Toda vez que escrever CSS de layout |
 | Tamanho/peso de texto | `03-typography.md` | Ao criar headers, body, dados, captions |
 | Altura de linha de inbox / kanban / tabela | `04-density-aerada.md` | Ao desenhar listas e grids |
@@ -45,5 +45,5 @@ Esta pasta é a **fonte canônica** da linguagem visual do DeskcommCRM. Toda dec
 
 ## Versionamento
 
-- **v1.0** (2026-04-28) — paleta Sage, tipografia Atkinson, densidade Aerada, iconografia Phosphor lockados.
+- **v2.0** (2026-08-11) — paleta Lumenva (preto/cinza/branco) e tipografia system-ui substituem Sage/Atkinson. Densidade Aerada e iconografia Phosphor permanecem lockadas desde v1.0 (2026-04-28).
 - Mudanças de versão maior exigem PR + revisão do design owner. Patches (ajuste de hex em ±2 luminosidade, novos ícones, novos exemplos de microcopy) podem ir direto.
