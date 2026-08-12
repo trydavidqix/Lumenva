@@ -115,7 +115,7 @@
 
 .previewStage {
   display: grid;
-  place-items: center;
+  align-items: center;
 }
 
 @media (min-width: 64rem) {

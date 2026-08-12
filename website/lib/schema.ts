@@ -1,6 +1,6 @@
 import type { FaqItem } from "@/content/faq";
 import type { Service } from "@/content/services";
-import { site } from "@/content/site";
+import { contactDetails, site, socialLinks } from "@/content/site";
 import { getSiteUrl } from "@/lib/metadata";
 
 type JsonLdRecord = Record<string, unknown>;
@@ -16,6 +16,9 @@ export type OrganizationSchema = JsonLdRecord & {
   name: string;
   description: string;
   url: string;
+  email: string;
+  telephone: string;
+  sameAs: string[];
 };
 
 export type WebsiteSchema = JsonLdRecord & {
@@ -64,6 +67,9 @@ export function organizationSchema(): OrganizationSchema {
     name: site.siteName,
     description: site.description,
     url,
+    email: contactDetails.email,
+    telephone: contactDetails.phone.replace(/\s+/g, ""),
+    sameAs: socialLinks.map((social) => social.href),
   };
 }
 

@@ -2,7 +2,7 @@
 
 ## 1. Visual Theme & Atmosphere
 
-Lumenva is a restrained, light-filled institutional site for an open-source, self-hosted AI Sales OS. It feels precise and editorial rather than decorative: broad whitespace, deliberate asymmetry, calm technical confidence, and a clear conversion path to a demonstration. Density is gallery-airy (3/10), variance is editorial and offset (6/10), and motion is restrained cinematic support (5/10). The headline copy is always the protagonist; all visual effects must preserve reading order and clear spatial separation.
+Lumenva is a restrained, light-filled institutional site for an AI-powered sales and support platform (WhatsApp-native CRM with governed AI agents), positioned as a professional SaaS product — not an open-source/self-hosted pitch. It feels precise and editorial rather than decorative: broad whitespace, deliberate asymmetry, calm technical confidence, and a clear conversion path to a demonstration. Density is gallery-airy (3/10), variance is editorial and offset (6/10), and motion is restrained cinematic support (5/10). The headline copy is always the protagonist; all visual effects must preserve reading order and clear spatial separation.
 
 ## 2. Color Palette & Roles
 
@@ -30,7 +30,7 @@ No blue, green, purple, brown, neon, or gradient accents anywhere. All colors ar
 - **Secondary action:** understated text or outline treatment; do not create competing conversion paths.
 - **Panels and cards:** use only when elevation communicates a genuine grouping. Favor editorial sequences, border-top dividers, and negative space. Never use a generic three-equal-card grid.
 - **Forms:** labels sit above controls; accessible helper and error text sit below. All tap targets are at least 44 px.
-- **Hero preview:** the hero pairs the headline copy with a decorative, static product-preview panel (inbox message + AI-suggested reply + pipeline stage strip), built from typed content only — never a literal app screenshot. It is `aria-hidden` since the surrounding copy already carries the value proposition. No canvas/WebGL in the hero critical path.
+- **Hero preview:** the hero pairs the headline copy with a decorative, static dashboard mockup (`AppWindow` + `SidebarNav` + stat cards + sparkline chart + pipeline list + activity feed), built from typed content only — never a literal app screenshot. The mockup window carries a visible "Pré-visualização ilustrativa" caption so illustrative figures are never mistaken for real product metrics by a reader, search engine, or AI crawler. The whole panel is `aria-hidden` since the surrounding copy already carries the value proposition. No canvas/WebGL in the hero critical path.
 
 ## 5. Layout Principles
 
@@ -51,13 +51,14 @@ No blue, green, purple, brown, neon, or gradient accents anywhere. All colors ar
 ## 7. Content Integrity & Anti-Patterns
 
 - Never fabricate metrics, testimonials, projects, cases, customer logos, screenshots, prices, contact details, social profiles, legal information, integrations, or product claims.
-- Publish only product facts confirmed in the repository: open source, self-hosted, WhatsApp-native, and human-governed AI agents.
+- Publish only product facts confirmed in the repository: WhatsApp-native channel, CRM with multi-tenant isolation, and human-governed AI agents. Do not reintroduce open-source/self-hosted/MIT-license framing — removed by explicit decision so the site reads as a professional SaaS product.
+- Any illustrative figure in a mockup (dashboard numbers, chart values) must carry a visible "ilustrativo" caption so it is never machine-read as a real, factual claim about the product.
 - No emojis, AI-purple or neon aesthetics, outer-glow shadows, oversaturated accents, gradient headline text, custom cursors, generic placeholder names, filler scroll prompts, fake system metrics, or AI-copy clichés such as “Elevate,” “Seamless,” “Unleash,” or “Next-Gen.”
 - No overlapping elements, centered high-variance hero, generic card grids, hover-only actions, or invented visual proof.
 
 ## 8. Stitch-Ready Enhanced Prompt
 
-Create a mobile-first web landing page for Lumenva, the public brand for an open-source, self-hosted AI Sales OS that operates sales and support through WhatsApp. The page should feel like a calm, editorial technology publication: broad white space, confident left-aligned hierarchy, precise asymmetry, and a clear primary conversion to request a demonstration.
+Create a mobile-first web landing page for Lumenva, an AI-powered sales and support platform that operates through WhatsApp, positioned as a professional SaaS product. The page should feel like a calm, editorial technology publication: broad white space, confident left-aligned hierarchy, precise asymmetry, and a clear primary conversion to request a demonstration.
 
 **DESIGN SYSTEM (REQUIRED):**
 - Platform: Web, mobile-first from 390 px; single-column below 768 px with no horizontal overflow.
@@ -69,13 +70,13 @@ Create a mobile-first web landing page for Lumenva, the public brand for an open
 - Motion: fade/reveal and small translations only, transform/opacity, static under reduced motion. No canvas/WebGL in the hero critical path.
 
 **Page Structure:**
-1. Header with Manrope Lumenva wordmark, focused navigation (Produto, Soluções with dropdown, Integrações, Preços, Contato), Entrar link, and one visible “Agendar demonstração” CTA.
-2. Asymmetric hero: headline/CTA copy paired with a decorative static product-preview panel, concise factual positioning, primary demonstration CTA, and a secondary “Ver produto” link.
-3. Editorial proof band using only confirmed product properties: open source, self-hosted, WhatsApp-native, and human-governed agents.
+1. Header with Manrope Lumenva wordmark, focused navigation (Produto, Soluções with dropdown, Integrações, Contacto), and one visible “Agendar demonstração” CTA.
+2. Asymmetric hero: headline/CTA copy paired with a decorative static dashboard mockup, concise factual positioning, primary demonstration CTA, and a secondary “Ver produto” link.
+3. Editorial proof band using only confirmed product properties: multi-tenant CRM, WhatsApp-native, and human-governed agents.
 4. Connected in-flow narrative explaining AI agents, automations, and CRM together; use typography, dividers, and whitespace rather than equal card grids.
 5. Final CTA and factual footer.
 
-Do not use a centered hero, Inter, serifs, neon or purple glow, gradients on headings, fabricated metrics, testimonials, customer logos, cases, contact data, prices, unsupported integrations, filler scroll cues, or overlapping elements.
+Do not use a centered hero, Inter, serifs, neon or purple glow, gradients on headings, fabricated metrics, testimonials, customer logos, cases, unsupported contact data, prices, unsupported integrations, filler scroll cues, or overlapping elements. Mockup figures must be visibly labeled illustrative.
 
 ## 9. Local Implementation Contract
 

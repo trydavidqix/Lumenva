@@ -1,7 +1,8 @@
-import { Bot, Database, MessageCircle, Zap } from "lucide-react";
+import { Bot, Database, Zap } from "lucide-react";
 import Link from "next/link";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
+import { WhatsAppIcon } from "@/components/ui/BrandIcons";
 import { JsonLd } from "@/components/ui/JsonLd";
 import { solutionsMenu } from "@/content/site";
 import { createPageMetadata } from "@/lib/metadata";
@@ -30,23 +31,23 @@ export default function SolutionsPage() {
       <Breadcrumbs items={breadcrumbs} />
       <ServiceHero
         eyebrow="Soluções"
-        title="IA, automação e CRM na mesma operação."
+        title="Quatro soluções, um único sistema."
         description={description}
         capabilities={[
           { icon: Bot, label: "Agentes de IA para vendas e suporte" },
           { icon: Zap, label: "Automações orientadas por eventos" },
           { icon: Database, label: "CRM com contexto de conversas e pipeline" },
-          { icon: MessageCircle, label: "WhatsApp como canal principal" },
+          { icon: WhatsAppIcon, label: "WhatsApp como canal principal" },
         ]}
       />
-      <section aria-labelledby="solutions-directory">
+      <section className={styles.cardsSection} aria-labelledby="solutions-directory">
         <div className={`site-shell ${styles.sectionStack}`}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle} id="solutions-directory">
               As quatro soluções da Lumenva.
             </h2>
             <p className={styles.sectionCopy}>
-              Cada solução pode ser adotada de forma independente e compartilha o
+              Cada solução pode ser adotada de forma independente e partilha o
               mesmo contexto de conversas, leads e pipeline.
             </p>
           </div>
@@ -64,38 +65,6 @@ export default function SolutionsPage() {
                 </Link>
               </li>
             ))}
-          </ul>
-        </div>
-      </section>
-      <section className={styles.sectionAlt} aria-labelledby="solutions-foundation">
-        <div className={`site-shell ${styles.sectionStack}`}>
-          <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle} id="solutions-foundation">
-              Um sistema conectado, não ferramentas isoladas.
-            </h2>
-            <p className={styles.sectionCopy}>
-              Mensagens, leads, atividades e etapas do pipeline formam o contexto usado
-              por agentes e pessoas. Regras da operação definem quando automatizar e
-              quando transferir o atendimento.
-            </p>
-          </div>
-          <ul className={styles.factList}>
-            <li className={styles.factItem}>
-              <span className={styles.capabilityIndex}>01</span>
-              <span><strong>WhatsApp.</strong> O WhatsApp é o canal primário para vendas e suporte.</span>
-            </li>
-            <li className={styles.factItem}>
-              <span className={styles.capabilityIndex}>02</span>
-              <span><strong>Controle humano.</strong> A equipe configura regras e pode assumir conversas.</span>
-            </li>
-            <li className={styles.factItem}>
-              <span className={styles.capabilityIndex}>03</span>
-              <span><strong>Contexto único.</strong> Conversas, leads e pipeline ficam no mesmo lugar.</span>
-            </li>
-            <li className={styles.factItem}>
-              <span className={styles.capabilityIndex}>04</span>
-              <span><strong>Multi-tenant.</strong> Dados isolados por organização em cada camada.</span>
-            </li>
           </ul>
         </div>
       </section>

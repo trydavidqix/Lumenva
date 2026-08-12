@@ -16,7 +16,7 @@ export function SidebarNav({ activeLabel, items }: Readonly<SidebarNavProps>) {
   return (
     <nav className={styles.nav}>
       <span className={styles.wordmark}>
-        <LumenvaMark size={14} />
+        <LumenvaMark size={50} />
         LUMENVA
       </span>
       <ul className={styles.list}>

@@ -1,3 +1,31 @@
+.menuIcon,
+.menuIcon::before,
+.menuIcon::after {
+  background: currentColor;
+  content: "";
+  display: block;
+  height: 1px;
+  width: 1.125rem;
+}
+
+.menuIcon {
+  position: relative;
+}
+
+.menuIcon::before,
+.menuIcon::after {
+  left: 0;
+  position: absolute;
+}
+
+.menuIcon::before {
+  top: -0.375rem;
+}
+
+.menuIcon::after {
+  top: 0.375rem;
+}
+
 .backdrop {
   background: color-mix(in srgb, var(--color-ink) 22%, transparent);
   inset: 0;
@@ -10,6 +38,7 @@
   border-left: 1px solid var(--color-border);
   box-shadow: var(--shadow-panel);
   display: grid;
+  grid-template-rows: auto 1fr auto;
   gap: var(--space-6);
   inset: 0 0 0 auto;
   max-width: min(100%, 24rem);
@@ -22,12 +51,7 @@
 .dialogHeader {
   align-items: center;
   display: flex;
-  justify-content: space-between;
-}
-
-.dialogTitle {
-  font-size: 1rem;
-  font-weight: 800;
+  justify-content: flex-end;
 }
 
 .closeButton {
@@ -111,10 +135,6 @@
 
 .solutionLink:hover {
   color: var(--color-accent);
-}
-
-.cta {
-  align-self: end;
 }
 
 @media (prefers-reduced-motion: reduce) {

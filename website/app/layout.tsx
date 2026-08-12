@@ -18,6 +18,13 @@ export const metadata: Metadata = {
     template: "%s | Lumenva",
   },
   description,
+  icons: {
+    icon: "/icon",
+    apple: "/brand/apple-touch-icon.png",
+  },
+  openGraph: {
+    locale: "pt_PT",
+  },
 };
 
 export const viewport: Viewport = {
@@ -26,7 +33,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="pt-BR" className={manrope.variable}>
+    <html lang="pt-PT" className={manrope.variable}>
       <body>
         <Header />
         <main id="main-content">{children}</main>

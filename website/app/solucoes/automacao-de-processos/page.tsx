@@ -48,7 +48,7 @@ export default function AutomacaoDeProcessosPage() {
         ]}
         visual={<AutomacaoMockup />}
       />
-      <section aria-labelledby="automation-benefits">
+      <section className={styles.cardsSection} aria-labelledby="automation-benefits">
         <div className="site-shell">
           <FeatureCardGrid ariaLabel="Benefícios da automação de processos" items={benefits} />
         </div>
@@ -76,11 +76,11 @@ export default function AutomacaoDeProcessosPage() {
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>03</span>
-              <span><strong>Execução.</strong> Workers processam os efeitos fora da transação do banco.</span>
+              <span><strong>Execução.</strong> Workers processam os efeitos fora da transação da base de dados.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>04</span>
-              <span><strong>Supervisão.</strong> A equipe configura regras, acompanha execuções e pode intervir.</span>
+              <span><strong>Supervisão.</strong> A equipa configura regras, acompanha execuções e pode intervir.</span>
             </li>
           </ul>
         </div>

@@ -1,9 +1,10 @@
-import { Bot, Database, MessageCircle, Zap } from "lucide-react";
+import { Bot, Database } from "lucide-react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { HeroProductMockup } from "@/components/sections/HeroProductMockup";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { JsonLd } from "@/components/ui/JsonLd";
 import { FeatureCardGrid } from "@/components/ui/FeatureCardGrid";
+import { N8nIcon, WhatsAppIcon } from "@/components/ui/BrandIcons";
 import { createPageMetadata } from "@/lib/metadata";
 import { breadcrumbSchema, serviceSchema } from "@/lib/schema";
 import styles from "@/components/sections/InnerPages.module.css";
@@ -17,10 +18,10 @@ const breadcrumbs = [
 const service = { name: "Produto Lumenva", description } as const;
 
 const benefits = [
-  { icon: MessageCircle, title: "Inbox unificado", description: "Todas as conversas em um só lugar: WhatsApp, Instagram, e-mail e mais." },
+  { icon: WhatsAppIcon, title: "Inbox unificado", description: "Todas as conversas num só lugar: WhatsApp, Instagram, e-mail e mais." },
   { icon: Database, title: "Pipeline inteligente", description: "Acompanhe oportunidades e feche mais negócios com previsibilidade." },
-  { icon: Bot, title: "Agentes de IA", description: "Agentes treinados para atender, nutrir e converter 24/7 com qualidade." },
-  { icon: Zap, title: "Automação sem limites", description: "Crie fluxos poderosos com condições, integrações e mais." },
+  { icon: Bot, title: "Agentes de IA", description: "Agentes treinados para atender, nutrir e converter a qualquer hora." },
+  { icon: N8nIcon, title: "Automação sem limites", description: "Crie fluxos com condições e integrações." },
 ] as const;
 
 export const metadata = createPageMetadata({
@@ -41,13 +42,13 @@ export default function ProdutoPage() {
         description={description}
         capabilities={[
           { icon: Bot, label: "Agentes de IA para atendimento e vendas" },
-          { icon: Zap, label: "Automações orientadas por eventos" },
+          { icon: N8nIcon, label: "Automações orientadas por eventos" },
           { icon: Database, label: "CRM com contexto de conversas e pipeline" },
-          { icon: MessageCircle, label: "WhatsApp como canal principal" },
+          { icon: WhatsAppIcon, label: "WhatsApp como canal principal" },
         ]}
         visual={<HeroProductMockup />}
       />
-      <section aria-labelledby="product-benefits">
+      <section className={`${styles.cardsSection} ${styles.cardsSectionTopSpace}`} aria-labelledby="product-benefits">
         <div className="site-shell">
           <FeatureCardGrid ariaLabel="Benefícios do produto" items={benefits} />
         </div>
@@ -71,7 +72,7 @@ export default function ProdutoPage() {
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>02</span>
-              <span><strong>Controle humano.</strong> A equipe configura regras e pode assumir conversas.</span>
+              <span><strong>Controlo humano.</strong> A equipa configura regras e pode assumir conversas.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>03</span>

@@ -8,7 +8,6 @@ const publicRoutes = [
   "/solucoes/agentes-de-ia",
   "/solucoes/automacao-de-processos",
   "/integracoes",
-  "/precos",
   "/projetos",
   "/sobre",
   "/contato",
@@ -37,6 +36,6 @@ test("/contato presents the demo request fields without submitting before Task 8
   await expect(form.getByLabel(/empresa/i)).toBeVisible();
   await expect(form.getByLabel(/e-mail/i)).toBeVisible();
   await expect(form.getByLabel(/whatsapp/i)).toBeVisible();
-  await expect(form.getByRole("checkbox", { name: /autorizo o contato/i })).toBeVisible();
+  await expect(form.getByRole("checkbox", { name: /autorizo o contacto/i })).toBeVisible();
   await expect(form.getByRole("button", { name: /agendar demonstração/i })).toBeDisabled();
 });

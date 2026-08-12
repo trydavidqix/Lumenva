@@ -54,7 +54,7 @@ export function VendasCrmMockup() {
         {STAGES.map((stage) => (
           <div className={styles.column} key={stage.label}>
             <p className={styles.columnHeader}>
-              {stage.label}
+              <span className={styles.columnLabel}>{stage.label}</span>
               <span>{stage.count}</span>
             </p>
             <div className={styles.card}>

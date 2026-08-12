@@ -48,7 +48,7 @@ export default function VendasCrmPage() {
         ]}
         visual={<VendasCrmMockup />}
       />
-      <section aria-labelledby="crm-benefits">
+      <section className={styles.cardsSection} aria-labelledby="crm-benefits">
         <div className="site-shell">
           <FeatureCardGrid ariaLabel="Benefícios de Vendas & CRM" items={benefits} />
         </div>
@@ -68,7 +68,7 @@ export default function VendasCrmPage() {
           <ul className={styles.factList}>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>01</span>
-              <span><strong>Inbox.</strong> Conversas ficam disponíveis para o atendimento da equipe.</span>
+              <span><strong>Inbox.</strong> Conversas ficam disponíveis para o atendimento da equipa.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>02</span>

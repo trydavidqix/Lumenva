@@ -50,14 +50,14 @@ export const publicRoutes: readonly PublicRoute[] = [
     href: "/solucoes/agentes-de-ia",
     slug: "agentes-de-ia",
     heading: "Agentes de IA",
-    description: "Crie agentes de IA que atendem, qualificam e executam tarefas por você.",
+    description: "Crie agentes de IA que atendem, qualificam e executam tarefas por si.",
   },
   {
     label: "Automação de Processos",
     href: "/solucoes/automacao-de-processos",
     slug: "automacao-de-processos",
     heading: "Automação de Processos",
-    description: "Automatize processos e escale a operação com mais controle.",
+    description: "Automatize processos e escale a operação com mais controlo.",
   },
   {
     label: "Integrações",
@@ -65,13 +65,6 @@ export const publicRoutes: readonly PublicRoute[] = [
     slug: "integracoes",
     heading: "Integrações",
     description: "Informações sobre integrações da Lumenva.",
-  },
-  {
-    label: "Preços",
-    href: "/precos",
-    slug: "precos",
-    heading: "Preços",
-    description: "Planos e condições para a sua operação.",
   },
   {
     label: "Projetos",
@@ -88,7 +81,7 @@ export const publicRoutes: readonly PublicRoute[] = [
     description: "Lumenva é a plataforma de atendimento e vendas com IA que une agentes, automações e CRM.",
   },
   {
-    label: "Contato",
+    label: "Contacto",
     href: "/contato",
     slug: "contato",
     heading: "Solicitar demonstração",
@@ -107,7 +100,7 @@ export const solutionsMenu: readonly SolutionMenuItem[] = [
   {
     label: "Atendimento com IA",
     href: "/solucoes/atendimento-com-ia",
-    description: "Inbox, resumo e resposta sugerida com handoff para a equipe.",
+    description: "Inbox, resumo e resposta sugerida com handoff para a equipa.",
     icon: "atendimento",
   },
   {
@@ -134,8 +127,7 @@ export const navigation: readonly NavigationItem[] = [
   { label: "Produto", href: "/produto" },
   { label: "Soluções", href: "/solucoes" },
   { label: "Integrações", href: "/integracoes" },
-  { label: "Preços", href: "/precos" },
-  { label: "Contato", href: "/contato" },
+  { label: "Contacto", href: "/contato" },
 ] as const;
 
 export const footerNavigation: readonly NavigationItem[] = [
@@ -145,10 +137,53 @@ export const footerNavigation: readonly NavigationItem[] = [
   { label: "Projetos", href: "/projetos" },
 ] as const;
 
+export type LegalFooterLink = Readonly<{
+  label: string;
+  href: string;
+  external?: boolean;
+}>;
+
+export const legalNavigation: readonly LegalFooterLink[] = [
+  { label: "Informação Legal", href: "/informacao-legal" },
+  { label: "Política de Privacidade", href: "/politica-de-privacidade" },
+  {
+    label: "Livro de Reclamações",
+    href: "https://www.livroreclamacoes.pt/Inicio/",
+    external: true,
+  },
+] as const;
+
 export const demoCta = {
   label: "Agendar demonstração",
   href: "/contato",
 } as const;
+
+export const contactDetails = {
+  email: "contato@lumenva.pt",
+  phone: "+351 910 293 287",
+  whatsappHref: "https://wa.me/351910293287",
+  address: "Porto",
+} as const;
+
+export type SocialLink = Readonly<{
+  label: string;
+  href: string;
+  icon: "whatsapp" | "facebook" | "instagram";
+}>;
+
+export const socialLinks: readonly SocialLink[] = [
+  { label: "WhatsApp", href: contactDetails.whatsappHref, icon: "whatsapp" },
+  {
+    label: "Facebook",
+    href: "https://www.facebook.com/profile.php?id=61592131762439",
+    icon: "facebook",
+  },
+  {
+    label: "Instagram",
+    href: "https://www.instagram.com/lumenva.group/",
+    icon: "instagram",
+  },
+] as const;
 
 export const shellContent = {
   primaryNavigationLabel: "Navegação principal",

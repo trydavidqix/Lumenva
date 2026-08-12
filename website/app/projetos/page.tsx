@@ -1,16 +1,23 @@
-import { CircleSlash2, FileCheck2, ShieldCheck } from "lucide-react";
+import { Globe, Smartphone, Database } from "lucide-react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { JsonLd } from "@/components/ui/JsonLd";
+import { FeatureCardGrid } from "@/components/ui/FeatureCardGrid";
 import { createPageMetadata } from "@/lib/metadata";
 import { breadcrumbSchema } from "@/lib/schema";
 import styles from "@/components/sections/InnerPages.module.css";
 
 const description =
-  "Casos aprovados e verificáveis da Lumenva serão publicados aqui quando estiverem disponíveis.";
+  "Serviços de desenvolvimento sob medida da Lumenva, à parte da plataforma de atendimento e vendas com IA: sites, aplicações e implementação de CRM.";
 const breadcrumbs = [
   { name: "Início", path: "/" },
   { name: "Projetos", path: "/projetos" },
+] as const;
+
+const projectCards = [
+  { icon: Globe, title: "Criação de sites", description: "Sites institucionais e páginas de conversão construídos sob medida." },
+  { icon: Smartphone, title: "Aplicações móveis", description: "Aplicações nativas e multiplataforma para a sua operação." },
+  { icon: Database, title: "CRM", description: "Implementação e personalização do CRM para vendas e atendimento." },
 ] as const;
 
 export const metadata = createPageMetadata({
@@ -26,24 +33,17 @@ export default function ProjectsPage() {
       <Breadcrumbs items={breadcrumbs} />
       <ServiceHero
         eyebrow="Projetos"
-        title="Resultados publicados com evidência."
+        title="Sites, aplicações e CRM sob medida."
         description={description}
         capabilities={[
-          { icon: ShieldCheck, label: "Somente casos aprovados" },
-          { icon: FileCheck2, label: "Resultados verificáveis" },
-          { icon: CircleSlash2, label: "Nenhum depoimento ou métrica fabricada" },
+          { icon: Globe, label: "Criação de sites" },
+          { icon: Smartphone, label: "Aplicações móveis" },
+          { icon: Database, label: "CRM" },
         ]}
       />
-      <section className={styles.sectionAlt} aria-labelledby="projects-status">
-        <div className={`site-shell reading-measure ${styles.sectionHeader}`}>
-          <h2 className={styles.sectionTitle} id="projects-status">
-            Ainda não há estudos de caso publicados.
-          </h2>
-          <p className={styles.sectionCopy}>
-            A Lumenva não publica logos, depoimentos, números ou histórias sem
-            aprovação e fonte verificável. Os primeiros estudos de caso aparecerão
-            nesta página quando esse material estiver autorizado.
-          </p>
+      <section className={styles.cardsSectionEnd} aria-labelledby="projects-offer">
+        <div className="site-shell">
+          <FeatureCardGrid ariaLabel="Projetos oferecidos" items={projectCards} />
         </div>
       </section>
     </>

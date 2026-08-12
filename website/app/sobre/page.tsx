@@ -1,13 +1,14 @@
-import { Bot, MessageCircle, ShieldCheck, Users } from "lucide-react";
+import { Bot, ShieldCheck, Users } from "lucide-react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
+import { WhatsAppIcon } from "@/components/ui/BrandIcons";
 import { JsonLd } from "@/components/ui/JsonLd";
 import { createPageMetadata } from "@/lib/metadata";
 import { breadcrumbSchema, organizationSchema } from "@/lib/schema";
 import styles from "@/components/sections/InnerPages.module.css";
 
 const description =
-  "Lumenva é a plataforma de atendimento e vendas com IA que une agentes, automações e CRM, com o WhatsApp como canal principal.";
+  "Os princípios que orientam o produto Lumenva: contexto único entre conversas e pipeline, controlo da equipa sobre regras e agentes, e dados isolados por organização.";
 const breadcrumbs = [
   { name: "Início", path: "/" },
   { name: "Sobre", path: "/sobre" },
@@ -31,7 +32,7 @@ export default function AboutPage() {
         description={description}
         capabilities={[
           { icon: Bot, label: "Agentes de IA governados por pessoas" },
-          { icon: MessageCircle, label: "WhatsApp como canal primário" },
+          { icon: WhatsAppIcon, label: "WhatsApp como canal primário" },
           { icon: ShieldCheck, label: "Multi-tenant seguro" },
           { icon: Users, label: "Equipa acompanha cada operação" },
         ]}
@@ -44,7 +45,7 @@ export default function AboutPage() {
             </h2>
             <p className={styles.sectionCopy}>
               A Lumenva foi desenhada para unir agentes de IA, automações e CRM sem
-              retirar da equipe o controle sobre regras, dados e operação.
+              retirar da equipa o controlo sobre regras, dados e operação.
             </p>
           </div>
           <ul className={styles.factList}>
@@ -54,7 +55,7 @@ export default function AboutPage() {
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>02</span>
-              <span><strong>Controlada.</strong> A equipe define regras, permissões e prioridades.</span>
+              <span><strong>Controlada.</strong> A equipa define regras, permissões e prioridades.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>03</span>
@@ -62,7 +63,7 @@ export default function AboutPage() {
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>04</span>
-              <span><strong>Multi-tenant.</strong> O produto isola dados de organizações desde a camada do banco.</span>
+              <span><strong>Multi-tenant.</strong> O produto isola dados de organizações desde a camada da base de dados.</span>
             </li>
           </ul>
         </div>

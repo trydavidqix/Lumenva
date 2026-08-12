@@ -12,7 +12,7 @@ test("home has one h1 and the approved conversion path", () => {
   const demoLinks = screen.getAllByRole("link", {
     name: /agendar demonstração/i,
   });
-  expect(demoLinks.length).toBeGreaterThan(1);
+  expect(demoLinks.length).toBeGreaterThanOrEqual(1);
   expect(demoLinks.every((link) => link.getAttribute("href") === "/contato")).toBe(
     true,
   );

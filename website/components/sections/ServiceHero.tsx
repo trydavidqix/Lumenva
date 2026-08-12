@@ -1,11 +1,14 @@
-import type { LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode, SVGProps } from "react";
 import { demoCta } from "@/content/site";
 import { Button } from "@/components/ui/Button";
 import styles from "./InnerPages.module.css";
 
+export type ServiceHeroIcon = ComponentType<
+  SVGProps<SVGSVGElement> & { size?: number; strokeWidth?: number }
+>;
+
 export interface ServiceHeroChip {
-  readonly icon: LucideIcon;
+  readonly icon: ServiceHeroIcon;
   readonly label: string;
 }
 
