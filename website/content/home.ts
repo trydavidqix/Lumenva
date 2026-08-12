@@ -2,11 +2,11 @@ export const homeContent = {
   eyebrow: "A plataforma de atendimento e vendas com IA",
   title: "Atendimento e vendas com IA, WhatsApp e CRM num só lugar",
   description:
-    "Centralize conversas, automatize processos e impulsione vendas com IA. Tudo integrado para equipas que querem mais eficiência e clientes mais satisfeitos.",
+    "Centralize conversas, automatize processos e acompanhe vendas com IA, tudo numa única operação.",
   secondaryCta: { label: "Ver produto", href: "/produto" },
 } as const;
 
-export const heroIntegrations = ["WhatsApp", "OpenAI", "n8n", "Supabase", "Vercel"] as const;
+export const heroIntegrations = ["WhatsApp", "OpenAI", "Claude", "n8n", "Supabase", "Vercel"] as const;
 
 export type ProofPoint = Readonly<{
   label: string;
@@ -20,7 +20,7 @@ export const proofPoints: readonly ProofPoint[] = [
   },
   {
     label: "Auditoria completa",
-    description: "Toda mutação relevante fica registrada para rastreabilidade.",
+    description: "Toda mutação relevante fica registada para rastreabilidade.",
   },
   {
     label: "WhatsApp",
@@ -28,7 +28,7 @@ export const proofPoints: readonly ProofPoint[] = [
   },
   {
     label: "Governado por pessoas",
-    description: "Agentes trabalham com regras e handoff para a equipe.",
+    description: "Agentes trabalham com regras e handoff para a equipa.",
   },
 ];
 
@@ -67,7 +67,7 @@ export const agentNarrativeSteps: readonly AgentNarrativeStep[] = [
     label: "05",
     title: "Resultado",
     description:
-      "A equipe acompanha o histórico no CRM e assume o atendimento quando necessário.",
+      "A equipa acompanha o histórico no CRM e assume o atendimento quando necessário.",
   },
 ];
 
@@ -101,7 +101,7 @@ export const capabilitySections: readonly CapabilitySection[] = [
         description: "Organize leads, atribua atendimento e envie mensagens.",
       },
       {
-        label: "Controle humano",
+        label: "Controlo humano",
         description: "Pessoas definem as regras e podem assumir o atendimento.",
       },
     ],
@@ -150,7 +150,7 @@ export const howItWorksSteps: readonly HowItWorksStep[] = [
     label: "03",
     title: "Opere com contexto",
     description:
-      "Agentes e equipe acompanham mensagens, atividades e leads no CRM.",
+      "Agentes e equipa acompanham mensagens, atividades e leads no CRM.",
   },
 ];
 
@@ -169,12 +169,12 @@ export const integrationItems: readonly IntegrationItem[] = [
   {
     name: "OpenAI / Claude Code",
     kind: "IA",
-    description: "Provedor de apoio para embeddings de IA.",
+    description: "Fornecedor de apoio para embeddings de IA.",
   },
   {
     name: "Supabase",
     kind: "Dados",
-    description: "Banco de dados, autenticação e storage com isolamento por organização.",
+    description: "Base de dados, autenticação e armazenamento com isolamento por organização.",
   },
   {
     name: "Vercel",
@@ -196,7 +196,7 @@ export const finalCtaItems: readonly FinalCtaItem[] = [
     eyebrow: "Demonstração",
     title: "Veja a Lumenva aplicada à sua operação.",
     description:
-      "Converse com a equipe sobre agentes de IA, automações e CRM.",
+      "Converse com a equipa sobre agentes de IA, automações e CRM.",
     label: "Agendar demonstração",
     href: "/contato",
   },

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 
-export const size = { width: 32, height: 32 };
+export const size = { width: 96, height: 96 };
 export const contentType = "image/png";
 
 export default function Icon() {
@@ -13,23 +13,22 @@ export default function Icon() {
     (
       <div
         style={{
-          alignItems: "center",
-          background: "#F5F5F7",
-          borderRadius: 7,
+          background: "#FFFFFF",
+          borderRadius: 18,
           display: "flex",
           height: "100%",
-          justifyContent: "center",
           overflow: "hidden",
+          position: "relative",
           width: "100%",
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           alt=""
-          height={60}
+          height={179}
           src={`data:image/png;base64,${markBase64}`}
-          style={{ height: 60, marginLeft: -13, marginTop: -6, objectFit: "contain", width: 90 }}
-          width={90}
+          style={{ height: 179, left: -83, position: "absolute", top: -33, width: 267 }}
+          width={267}
         />
       </div>
     ),

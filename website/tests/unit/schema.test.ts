@@ -9,14 +9,20 @@ import {
   websiteSchema,
 } from "@/lib/schema";
 
-test("organization schema identifies Lumenva without unsupported contact data", () => {
+test("organization schema identifies Lumenva with real published contact data only", () => {
   const schema = organizationSchema();
 
   expect(schema["@type"]).toBe("Organization");
   expect(schema.name).toBe("Lumenva");
+  expect(schema.email).toBe("contato@lumenva.pt");
+  expect(schema.telephone).toBe("+351910293287");
+  expect(schema.sameAs).toEqual([
+    "https://wa.me/351910293287",
+    "https://www.facebook.com/profile.php?id=61592131762439",
+    "https://www.instagram.com/lumenva.group/",
+  ]);
+  // No structured postal address: only "Porto" is public, not a full street/postal code.
   expect(schema).not.toHaveProperty("address");
-  expect(schema).not.toHaveProperty("telephone");
-  expect(schema).not.toHaveProperty("email");
 });
 
 test("website schema describes the public product site", () => {

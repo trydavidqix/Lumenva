@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Bot, KanbanSquare, MessageCircle, Workflow, type LucideIcon } from "lucide-react";
-import { useEffect, useId, useRef, useState, type FocusEvent } from "react";
+import { Bot, KanbanSquare, Workflow } from "lucide-react";
+import { useEffect, useId, useRef, useState, type FocusEvent, type ComponentType, type SVGProps } from "react";
 import { solutionsMenu, type SolutionMenuItem } from "@/content/site";
+import { WhatsAppIcon } from "@/components/ui/BrandIcons";
 import styles from "./SolutionsMenu.module.css";
 
-const icons: Record<SolutionMenuItem["icon"], LucideIcon> = {
-  atendimento: MessageCircle,
+type MenuIcon = ComponentType<SVGProps<SVGSVGElement> & { size?: number; strokeWidth?: number }>;
+
+const icons: Record<SolutionMenuItem["icon"], MenuIcon> = {
+  atendimento: WhatsAppIcon,
   vendas: KanbanSquare,
   agentes: Bot,
   automacao: Workflow,

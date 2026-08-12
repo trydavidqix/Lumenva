@@ -24,6 +24,7 @@ export function ContactForm() {
       company: formData.get("company"),
       email: formData.get("email"),
       whatsapp: formData.get("whatsapp"),
+      message: formData.get("message") || undefined,
       consent: formData.get("consent") === "on",
     };
 
@@ -49,12 +50,12 @@ export function ContactForm() {
 
   const status =
     state === "success"
-      ? "Recebemos sua solicitação. Retornaremos em breve."
+      ? "Recebemos a sua solicitação. Entraremos em contacto brevemente."
       : state === "error"
-        ? "Não foi possível enviar agora. Tente novamente em alguns minutos."
+        ? "Não foi possível enviar agora. Tente novamente daqui a alguns minutos."
         : isValid
-          ? "Seus dados serão usados somente para responder a este contato."
-          : "Preencha todos os campos para habilitar o envio.";
+          ? "Os seus dados serão usados apenas para responder a este contacto."
+          : "Preencha todos os campos para ativar o envio.";
 
   return (
     <form
@@ -72,7 +73,7 @@ export function ContactForm() {
             name="name"
             type="text"
             autoComplete="name"
-            placeholder="Como podemos te chamar?"
+            placeholder="Como se chama?"
             required
           />
         </label>
@@ -94,7 +95,7 @@ export function ContactForm() {
             name="email"
             type="email"
             autoComplete="email"
-            placeholder="voce@empresa.com"
+            placeholder="nome@empresa.com"
             required
           />
         </label>
@@ -111,9 +112,18 @@ export function ContactForm() {
           />
         </label>
       </div>
+      <label className={styles.field}>
+        <span className={styles.label}>Como podemos ajudar?</span>
+        <textarea
+          className={styles.textarea}
+          name="message"
+          placeholder="Conte-nos brevemente o que pretende fazer ou resolver."
+          rows={4}
+        />
+      </label>
       <label className={styles.consent}>
         <input name="consent" type="checkbox" required />
-        <span>Autorizo o contato da equipe sobre esta solicitação.</span>
+        <span>Autorizo o contacto da equipa sobre esta solicitação.</span>
       </label>
       <button
         aria-describedby="demo-form-status"

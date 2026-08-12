@@ -1,22 +1,30 @@
-import { Sparkles } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
-import { FaWhatsapp } from "react-icons/fa";
-import { SiN8N, SiSupabase, SiVercel } from "react-icons/si";
 import { heroIntegrations, homeContent } from "@/content/home";
 import { demoCta } from "@/content/site";
 import { Button } from "@/components/ui/Button";
 import { HeroProductMockup } from "@/components/sections/HeroProductMockup";
+import {
+  ClaudeIcon,
+  N8nIcon,
+  OpenAIIcon,
+  SupabaseIcon,
+  VercelIcon,
+  WhatsAppIcon,
+} from "@/components/ui/BrandIcons";
 import styles from "./Hero.module.css";
 
 type IntegrationIcon = ComponentType<SVGProps<SVGSVGElement> & { size?: number }>;
 
 const INTEGRATION_ICONS: Record<(typeof heroIntegrations)[number], IntegrationIcon> = {
-  WhatsApp: FaWhatsapp,
-  OpenAI: Sparkles,
-  n8n: SiN8N,
-  Supabase: SiSupabase,
-  Vercel: SiVercel,
+  WhatsApp: WhatsAppIcon,
+  OpenAI: OpenAIIcon,
+  Claude: ClaudeIcon,
+  n8n: N8nIcon,
+  Supabase: SupabaseIcon,
+  Vercel: VercelIcon,
 };
+
+const WORDMARK_LOGOS = new Set<(typeof heroIntegrations)[number]>(["OpenAI", "Supabase", "Vercel"]);
 
 export function Hero() {
   return (
@@ -44,10 +52,11 @@ export function Hero() {
           <ul className={styles.integrations}>
             {heroIntegrations.map((name) => {
               const Icon = INTEGRATION_ICONS[name];
+              const isWordmark = WORDMARK_LOGOS.has(name);
               return (
                 <li className={styles.integrationPill} key={name}>
                   <Icon aria-hidden="true" size={16} />
-                  {name}
+                  <span className={isWordmark ? "visually-hidden" : undefined}>{name}</span>
                 </li>
               );
             })}

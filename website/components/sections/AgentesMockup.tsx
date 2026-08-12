@@ -36,7 +36,7 @@ export function AgentesMockup() {
           <div>
             <p className={styles.panelLabel}>Resumo do agente</p>
             <p className={styles.panelText}>
-              Agente Comercial qualifica leads e agenda reuniões com o time de vendas.
+              Agente Comercial qualifica leads e agenda reuniões com a equipa de vendas.
             </p>
           </div>
           <div>

@@ -48,7 +48,7 @@ export default function AgentesDeIaPage() {
         ]}
         visual={<AgentesMockup />}
       />
-      <section aria-labelledby="agents-benefits">
+      <section className={styles.cardsSection} aria-labelledby="agents-benefits">
         <div className="site-shell">
           <FeatureCardGrid ariaLabel="Benefícios dos agentes de IA" items={benefits} />
         </div>
@@ -61,7 +61,7 @@ export default function AgentesDeIaPage() {
             </h2>
             <p className={styles.sectionCopy}>
               O agente interpreta mensagens e o contexto disponível, escolhe uma ação
-              entre as capacidades configuradas e registra o andamento no CRM. A equipe
+              entre as capacidades configuradas e regista o andamento no CRM. A equipa
               permanece responsável pelas regras, pelas permissões e pela transferência
               do atendimento.
             </p>
@@ -81,7 +81,7 @@ export default function AgentesDeIaPage() {
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>04</span>
-              <span><strong>Supervisão e handoff.</strong> A equipe acompanha o desempenho e pode assumir a conversa quando necessário.</span>
+              <span><strong>Supervisão e handoff.</strong> A equipa acompanha o desempenho e pode assumir a conversa quando necessário.</span>
             </li>
           </ul>
         </div>

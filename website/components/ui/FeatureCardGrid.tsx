@@ -1,8 +1,10 @@
-import type { LucideIcon } from "lucide-react";
+import type { ComponentType, SVGProps } from "react";
 import styles from "./FeatureCardGrid.module.css";
 
+export type FeatureCardIcon = ComponentType<SVGProps<SVGSVGElement> & { size?: number }>;
+
 export interface FeatureCard {
-  readonly icon: LucideIcon;
+  readonly icon: FeatureCardIcon;
   readonly title: string;
   readonly description: string;
 }

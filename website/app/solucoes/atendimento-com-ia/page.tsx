@@ -1,7 +1,8 @@
-import { Clock, Clock3, Heart, History, MessageCircle, Sparkles, Users2, Zap } from "lucide-react";
+import { Clock, Clock3, Heart, History, Sparkles, Users2, Zap } from "lucide-react";
 import { AtendimentoMockup } from "@/components/sections/AtendimentoMockup";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
+import { WhatsAppIcon } from "@/components/ui/BrandIcons";
 import { JsonLd } from "@/components/ui/JsonLd";
 import { FeatureCardGrid } from "@/components/ui/FeatureCardGrid";
 import { createPageMetadata } from "@/lib/metadata";
@@ -41,14 +42,14 @@ export default function AtendimentoComIaPage() {
         title="Automatize o atendimento sem perder o toque humano."
         description={description}
         capabilities={[
-          { icon: MessageCircle, label: "WhatsApp centralizado" },
+          { icon: WhatsAppIcon, label: "WhatsApp centralizado" },
           { icon: Sparkles, label: "Respostas automáticas" },
           { icon: Users2, label: "Handoff inteligente" },
           { icon: Clock, label: "Contexto completo" },
         ]}
         visual={<AtendimentoMockup />}
       />
-      <section aria-labelledby="attendance-benefits">
+      <section className={styles.cardsSection} aria-labelledby="attendance-benefits">
         <div className="site-shell">
           <FeatureCardGrid ariaLabel="Benefícios do atendimento com IA" items={benefits} />
         </div>
@@ -61,14 +62,14 @@ export default function AtendimentoComIaPage() {
             </h2>
             <p className={styles.sectionCopy}>
               Cada conversa chega com resumo, intenção e prioridade. O agente sugere a
-              próxima resposta a partir do contexto do lead; a equipe revisa, ajusta ou
+              próxima resposta a partir do contexto do lead; a equipa revê, ajusta ou
               assume o atendimento a qualquer momento.
             </p>
           </div>
           <ul className={styles.factList}>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>01</span>
-              <span><strong>Inbox unificada.</strong> Todas as conversas de WhatsApp em um único lugar.</span>
+              <span><strong>Inbox unificada.</strong> Todas as conversas de WhatsApp num único lugar.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>02</span>

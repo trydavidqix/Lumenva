@@ -1,8 +1,10 @@
 :root {
   --layout-gutter: clamp(1.25rem, 4vw, 3rem);
-  --layout-max-width: 90rem;
+  --layout-max-width: 100rem;
   --layout-reading-width: 65ch;
   --section-space: clamp(3rem, 8vw, 6rem);
+  --section-space-inner: clamp(2.25rem, 5vw, 3.5rem);
+  --hero-space-inner: clamp(2.75rem, 5.5vw, 4.5rem);
 }
 
 * {

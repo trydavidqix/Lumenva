@@ -57,16 +57,22 @@ export function HeroProductMockup() {
             />
           </svg>
         </div>
-        <div className={styles.pipeline}>
-          <p className={styles.chartTitle}>Pipeline</p>
-          <ul className={styles.pipelineList}>
-            {PIPELINE.map((stage) => (
-              <li className={styles.pipelineItem} key={stage.label}>
-                <span>{stage.label}</span>
-                <span>{stage.value}</span>
-              </li>
-            ))}
-          </ul>
+        <div className={styles.pipelineColumn}>
+          <div className={styles.pipeline}>
+            <p className={styles.chartTitle}>Pipeline</p>
+            <ul className={styles.pipelineList}>
+              {PIPELINE.map((stage) => (
+                <li className={styles.pipelineItem} key={stage.label}>
+                  <span>{stage.label}</span>
+                  <span>{stage.value}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <button className={styles.newAutomation} type="button">
+            Nova automação
+            <Zap aria-hidden="true" size={14} strokeWidth={1.8} />
+          </button>
         </div>
       </div>
       <div className={styles.activity}>
@@ -86,10 +92,6 @@ export function HeroProductMockup() {
           </div>
         </div>
       </div>
-      <button className={styles.newAutomation} type="button">
-        Nova automação
-        <Zap aria-hidden="true" size={14} strokeWidth={1.8} />
-      </button>
     </AppWindow>
   );
 }

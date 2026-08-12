@@ -1,9 +1,10 @@
 .card {
   display: grid;
   gap: var(--space-1);
-  padding: var(--space-3);
+  padding: var(--space-4);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-sm);
+  text-align: center;
 }
 
 .label {
@@ -18,6 +19,7 @@
   color: var(--color-ink);
   font-size: 1.125rem;
   font-weight: 800;
+  white-space: nowrap;
 }
 
 .delta {

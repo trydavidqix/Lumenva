@@ -115,7 +115,7 @@ export function MobileNavigation({
             type="button"
           />
           <div
-            aria-labelledby={`${dialogId}-title`}
+            aria-label={shellContent.mobileNavigationLabel}
             aria-modal="true"
             className={styles.dialog}
             id={dialogId}
@@ -123,9 +123,6 @@ export function MobileNavigation({
             role="dialog"
           >
             <div className={styles.dialogHeader}>
-              <p className={styles.dialogTitle} id={`${dialogId}-title`}>
-                {shellContent.mobileNavigationLabel}
-              </p>
               <Button
               className={styles.closeButton}
               onClick={close}
@@ -181,7 +178,7 @@ export function MobileNavigation({
                 ),
               )}
             </nav>
-            <Button className={styles.cta} href={demoCta.href} variant="primary">
+            <Button href={demoCta.href} variant="primary">
               {demoCta.label}
             </Button>
           </div>

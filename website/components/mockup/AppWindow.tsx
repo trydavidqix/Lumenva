@@ -11,9 +11,12 @@ export function AppWindow({ children, panel, sidebar }: Readonly<AppWindowProps>
   return (
     <div aria-hidden="true" className={styles.window}>
       <div className={styles.chrome}>
-        <span className={styles.dot} />
-        <span className={styles.dot} />
-        <span className={styles.dot} />
+        <span className={styles.dots}>
+          <span className={styles.dot} />
+          <span className={styles.dot} />
+          <span className={styles.dot} />
+        </span>
+        <span className={styles.caption}>Pré-visualização ilustrativa</span>
       </div>
       <div className={panel ? styles.body : `${styles.body} ${styles.bodyNoPanel}`}>
         <div className={styles.sidebar}>{sidebar}</div>
