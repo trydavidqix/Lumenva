@@ -3,7 +3,7 @@
 // 5-Constraint Rule applied: Shape, Color (exact hex), Typography, Motion, Layout.
 
 export type PaletteId = "lumenva" | "clay" | "mist" | "plum" | "olive";
-export type TypoId = "bricolage-jakarta" | "fraunces-manrope" | "atkinson" | "source-plex";
+export type TypoId = "bricolage-jakarta" | "fraunces-manrope" | "system-ui" | "source-plex";
 export type DensityId = "aerada" | "equilibrada" | "compacta";
 export type ThemeId = "light" | "dark";
 
@@ -209,12 +209,12 @@ export const TYPOS: Record<TypoId, { name: string; display: string; body: string
     description: "Serif quente com SOFT/WONK + sans humanista.",
     scale: 1.333,
   },
-  "atkinson": {
-    name: "Atkinson Hyperlegible",
-    display: '"Atkinson Hyperlegible", system-ui, sans-serif',
-    body: '"Atkinson Hyperlegible", system-ui, sans-serif',
+  "system-ui": {
+    name: "System UI (Lumenva)",
+    display: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    body: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     mono: '"JetBrains Mono", ui-monospace, monospace',
-    description: "Acessibilidade-first. Glifos diferenciados, mesma família display+body.",
+    description: "Fonte nativa do SO. Zero custo de carregamento, renderização Apple-real em Mac, self-host coerente em qualquer OS.",
     scale: 1.2,
   },
   "source-plex": {
