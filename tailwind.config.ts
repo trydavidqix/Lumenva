@@ -30,7 +30,7 @@ const config: Config = {
           subtle: "var(--color-text-subtle)",
         },
 
-        // Accent — Sage scale
+        // Accent — Lumenva gray scale
         accent: {
           DEFAULT: "var(--color-accent)",
           foreground: "var(--color-accent-fg)",
