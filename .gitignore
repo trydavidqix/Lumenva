@@ -45,6 +45,10 @@ pnpm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Python (skill scripts, etc)
+__pycache__/
+*.pyc
+
 # Supabase local
 supabase/.temp/
 supabase/.branches/
