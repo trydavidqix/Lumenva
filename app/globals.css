@@ -3,70 +3,71 @@
 @tailwind utilities;
 
 /* ─────────────────────────────────────────────────────────────────────────
-   DeskcommCRM — Design System tokens (Sage palette · density Aerada)
-   Source of truth: /app/design/lib/tokens.ts (PALETTES.sage)
+   Lumenva CRM — Design System tokens (Lumenva palette · density Aerada)
+   Source of truth: /app/design/lib/tokens.ts (PALETTES.lumenva)
    Light + dark drawn separately (NOT inverted).
    ───────────────────────────────────────────────────────────────────────── */
 
 :root {
   /* Surfaces (light) */
-  --color-bg: #faf9f6;
+  --color-bg: #f5f5f7;
   --color-surface: #ffffff;
-  --color-surface-elevated: #f5f3ee;
-  --color-overlay: rgba(28, 26, 22, 0.42);
+  --color-surface-elevated: #fafafa;
+  --color-overlay: rgba(17, 17, 17, 0.42);
 
   /* Text (light) */
-  --color-text: #1c1a16;
-  --color-text-muted: #5d594f;
-  --color-text-subtle: #7d786c;
+  --color-text: #111111;
+  --color-text-muted: #6e6e73;
+  --color-text-subtle: #8e8e93;
 
   /* Borders (light) */
-  --color-border: #e7e3da;
-  --color-border-strong: #d2cdbf;
+  --color-border: #e8e8ed;
+  --color-border-strong: #d2d2d7;
 
-  /* Accent — Sage (11 stops) */
-  --color-accent-50:  #f3f6f1;
-  --color-accent-100: #e4ebe0;
-  --color-accent-200: #c8d6c1;
-  --color-accent-300: #a4ba9a;
-  --color-accent-400: #82a077;
-  --color-accent-500: #67885d;
-  --color-accent-600: #506d48;
-  --color-accent-700: #41573b;
-  --color-accent-800: #374731;
-  --color-accent-900: #2f3c2b;
-  --color-accent-950: #171f15;
-  --color-accent: var(--color-accent-600);
+  /* Accent — Lumenva gray scale (marca não tem accent cromático) */
+  --color-accent-50:  #fafafa;
+  --color-accent-100: #f5f5f7;
+  --color-accent-200: #e8e8ed;
+  --color-accent-300: #d2d2d7;
+  --color-accent-400: #aeaeb2;
+  --color-accent-500: #8e8e93;
+  --color-accent-600: #6e6e73;
+  --color-accent-700: #48484a;
+  --color-accent-800: #3a3a3c;
+  --color-accent-900: #2c2c2e;
+  --color-accent-950: #1c1c1e;
+  --color-accent: #111111;
   --color-accent-fg: #ffffff;
   --color-accent-soft: var(--color-accent-100);
-  --color-accent-hover: var(--color-accent-700);
+  --color-accent-hover: #2c2c2e;
 
-  /* Neutrals — greige (11 stops, light) */
-  --color-neutral-50:  #faf9f6;
-  --color-neutral-100: #f3f1ec;
-  --color-neutral-200: #e7e3da;
-  --color-neutral-300: #d2cdbf;
-  --color-neutral-400: #a9a395;
-  --color-neutral-500: #7d786c;
-  --color-neutral-600: #5d594f;
-  --color-neutral-700: #46433b;
-  --color-neutral-800: #2e2c26;
-  --color-neutral-900: #1c1a16;
-  --color-neutral-950: #0e0d0a;
+  /* Neutrals — Lumenva gray (11 stops, light) */
+  --color-neutral-50:  #fafafa;
+  --color-neutral-100: #f5f5f7;
+  --color-neutral-200: #e8e8ed;
+  --color-neutral-300: #d2d2d7;
+  --color-neutral-400: #aeaeb2;
+  --color-neutral-500: #8e8e93;
+  --color-neutral-600: #6e6e73;
+  --color-neutral-700: #48484a;
+  --color-neutral-800: #3a3a3c;
+  --color-neutral-900: #2c2c2e;
+  --color-neutral-950: #1c1c1e;
 
-  /* States (light) */
-  --color-success: #5a8a5f;
-  --color-success-bg: rgba(90, 138, 95, 0.12);
-  --color-success-fg: #41673f;
-  --color-warning: #b07a2b;
-  --color-warning-bg: rgba(176, 122, 43, 0.12);
-  --color-warning-fg: #875a1a;
-  --color-error: #a94a3c;
-  --color-error-bg: rgba(169, 74, 60, 0.12);
-  --color-error-fg: #8a3a2e;
-  --color-info: #4a7a93;
-  --color-info-bg: rgba(74, 122, 147, 0.12);
-  --color-info-fg: #355d72;
+  /* States (light) — cor é sempre reforço, nunca único canal (ícone + texto obrigatórios) */
+  --color-success: #2e7d46;
+  --color-success-bg: rgba(46, 125, 70, 0.12);
+  --color-success-fg: #1f5c33;
+  --color-warning: #a9660b;
+  --color-warning-bg: rgba(169, 102, 11, 0.12);
+  --color-warning-fg: #7a4a08;
+  --color-error: #b3261e;
+  --color-error-bg: rgba(179, 38, 30, 0.12);
+  --color-error-fg: #8c1d17;
+  /* info não recebe hue própria (evita 4ª família cromática): usa o cinza mais escuro do texto */
+  --color-info: #48484a;
+  --color-info-bg: rgba(72, 72, 74, 0.10);
+  --color-info-fg: #2c2c2e;
 
   /* Spacing (4-base) */
   --space-0: 0px;
@@ -86,18 +87,18 @@
 
   /* Radius */
   --radius-none: 0px;
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
   --radius-xl: 16px;
   --radius-full: 9999px;
 
-  /* Shadows — desaturated, neutral-based */
-  --shadow-xs: 0 1px 2px 0 rgba(20, 18, 14, 0.04);
-  --shadow-sm: 0 1px 2px 0 rgba(20, 18, 14, 0.05), 0 1px 1px 0 rgba(20, 18, 14, 0.03);
-  --shadow-md: 0 4px 12px -2px rgba(20, 18, 14, 0.06), 0 2px 4px -1px rgba(20, 18, 14, 0.04);
-  --shadow-lg: 0 12px 32px -6px rgba(20, 18, 14, 0.10), 0 4px 12px -2px rgba(20, 18, 14, 0.06);
-  --shadow-xl: 0 24px 48px -12px rgba(20, 18, 14, 0.16), 0 8px 16px -4px rgba(20, 18, 14, 0.08);
+  /* Shadows — quase imperceptíveis (spec identidade §5), base rgba = Lumenva Black */
+  --shadow-xs: 0 1px 1px 0 rgba(17, 17, 17, 0.03);
+  --shadow-sm: 0 1px 2px 0 rgba(17, 17, 17, 0.04);
+  --shadow-md: 0 4px 16px 0 rgba(17, 17, 17, 0.08);
+  --shadow-lg: 0 8px 24px -4px rgba(17, 17, 17, 0.10);
+  --shadow-xl: 0 16px 40px -8px rgba(17, 17, 17, 0.12);
 
   /* Density — Aerada */
   --density-row: 56px;
@@ -144,37 +145,37 @@
 }
 
 [data-theme="dark"] {
-  /* Surfaces (dark — drawn) */
-  --color-bg: #161510;
-  --color-surface: #1d1c17;
-  --color-surface-elevated: #272620;
-  --color-overlay: rgba(0, 0, 0, 0.55);
+  /* Surfaces (dark — drawn, not inverted) */
+  --color-bg: #111111;
+  --color-surface: #1c1c1e;
+  --color-surface-elevated: #2c2c2e;
+  --color-overlay: rgba(0, 0, 0, 0.6);
 
   /* Text (dark) */
-  --color-text: #f5f4ef;
-  --color-text-muted: #8e8b7f;
-  --color-text-subtle: #605e54;
+  --color-text: #f5f5f7;
+  --color-text-muted: #aeaeb2;
+  --color-text-subtle: #8e8e93;
 
   /* Borders (dark) */
-  --color-border: #33312a;
-  --color-border-strong: #444239;
+  --color-border: #3a3a3c;
+  --color-border-strong: #48484a;
 
-  /* Accent stays same hex stops; default shifts up for dark contrast */
-  --color-accent-50:  #f3f6f1;
-  --color-accent-100: #e4ebe0;
-  --color-accent-200: #c8d6c1;
-  --color-accent-300: #a4ba9a;
-  --color-accent-400: #82a077;
-  --color-accent-500: #67885d;
-  --color-accent-600: #506d48;
-  --color-accent-700: #41573b;
-  --color-accent-800: #374731;
-  --color-accent-900: #2f3c2b;
-  --color-accent-950: #171f15;
-  --color-accent: var(--color-accent-400);
-  --color-accent-fg: #161510;
-  --color-accent-soft: rgba(130, 160, 119, 0.16);
-  --color-accent-hover: var(--color-accent-300);
+  /* Accent — Lumenva gray scale, same stops as light; default shifts for dark contrast */
+  --color-accent-50:  #fafafa;
+  --color-accent-100: #f5f5f7;
+  --color-accent-200: #e8e8ed;
+  --color-accent-300: #d2d2d7;
+  --color-accent-400: #aeaeb2;
+  --color-accent-500: #8e8e93;
+  --color-accent-600: #6e6e73;
+  --color-accent-700: #48484a;
+  --color-accent-800: #3a3a3c;
+  --color-accent-900: #2c2c2e;
+  --color-accent-950: #1c1c1e;
+  --color-accent: #f5f5f7;
+  --color-accent-fg: #111111;
+  --color-accent-soft: rgba(245, 245, 247, 0.12);
+  --color-accent-hover: #e8e8ed;
 
   /* Neutrals — greige (11 stops, dark) */
   --color-neutral-50:  #f5f4ef;
@@ -190,25 +191,25 @@
   --color-neutral-950: #0c0b08;
 
   /* States (dark) */
-  --color-success: #82a077;
-  --color-success-bg: rgba(130, 160, 119, 0.18);
-  --color-success-fg: #a4ba9a;
-  --color-warning: #d09455;
-  --color-warning-bg: rgba(208, 148, 85, 0.18);
-  --color-warning-fg: #e0ad77;
-  --color-error: #c87263;
-  --color-error-bg: rgba(200, 114, 99, 0.18);
-  --color-error-fg: #d99182;
-  --color-info: #7da9bf;
-  --color-info-bg: rgba(125, 169, 191, 0.18);
-  --color-info-fg: #9bbfd2;
+  --color-success: #5fb37a;
+  --color-success-bg: rgba(95, 179, 122, 0.18);
+  --color-success-fg: #8ecda2;
+  --color-warning: #e0973b;
+  --color-warning-bg: rgba(224, 151, 59, 0.18);
+  --color-warning-fg: #eab672;
+  --color-error: #ff6259;
+  --color-error-bg: rgba(255, 98, 89, 0.18);
+  --color-error-fg: #ff9089;
+  --color-info: #aeaeb2;
+  --color-info-bg: rgba(174, 174, 178, 0.14);
+  --color-info-fg: #e8e8ed;
 
-  /* Shadows — heavier in dark */
-  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.30);
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.40), 0 1px 1px 0 rgba(0, 0, 0, 0.20);
-  --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.45), 0 2px 4px -1px rgba(0, 0, 0, 0.30);
-  --shadow-lg: 0 12px 32px -6px rgba(0, 0, 0, 0.55), 0 4px 12px -2px rgba(0, 0, 0, 0.40);
-  --shadow-xl: 0 24px 48px -12px rgba(0, 0, 0, 0.65), 0 8px 16px -4px rgba(0, 0, 0, 0.50);
+  /* Shadows — heavier in dark (elevation cue against near-black bg; light stays the "quase imperceptível" reference) */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.24);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.32);
+  --shadow-md: 0 4px 16px 0 rgba(0, 0, 0, 0.40);
+  --shadow-lg: 0 8px 24px -4px rgba(0, 0, 0, 0.48);
+  --shadow-xl: 0 16px 40px -8px rgba(0, 0, 0, 0.56);
 
   /* shadcn-compat aliases */
   --background: var(--color-bg);
@@ -246,8 +247,8 @@
   body {
     background-color: var(--color-bg);
     color: var(--color-text);
-    font-family: var(--font-atkinson), ui-sans-serif, system-ui, -apple-system,
-      "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -269,7 +270,7 @@
     color: var(--color-accent-50);
   }
 
-  /* Focus ring: Sage 500/400, 2px with offset */
+  /* Focus ring: Lumenva accent 500/400, 2px with offset */
   :focus-visible {
     outline: 2px solid var(--color-accent-500);
     outline-offset: 2px;

@@ -13,9 +13,9 @@ const TYPO_FONTS: Record<TypoId, { display: string; body: string }> = {
     display: "var(--font-fraunces)",
     body: "var(--font-manrope)",
   },
-  atkinson: {
-    display: "var(--font-atkinson)",
-    body: "var(--font-atkinson)",
+  "system-ui": {
+    display: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    body: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   },
   "source-plex": {
     display: "var(--font-source-serif)",
@@ -128,7 +128,7 @@ export function SectionTypography() {
 
       <PairBlock id="bricolage-jakarta" />
       <PairBlock id="fraunces-manrope" />
-      <PairBlock id="atkinson" />
+      <PairBlock id="system-ui" />
       <PairBlock id="source-plex" />
     </div>
   );
