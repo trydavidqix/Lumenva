@@ -120,12 +120,12 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
-          "var(--font-atkinson)",
-          "ui-sans-serif",
-          "system-ui",
           "-apple-system",
+          "BlinkMacSystemFont",
           "Segoe UI",
           "Roboto",
+          "Helvetica Neue",
+          "Arial",
           "sans-serif",
         ],
         mono: [
