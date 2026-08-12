@@ -1,32 +1,31 @@
 # 03 — Tipografia
 
-> **Source of truth:** `app/design/lib/fonts.ts` (`atkinson`, `plexMono`), `app/design/lib/tokens.ts` → `TYPOS.atkinson`
+> **Source of truth:** `app/globals.css` (font-family), `app/design/lib/tokens.ts` → `TYPOS["system-ui"]`
 
-## Por que Atkinson Hyperlegible
+## Por que System UI
 
-A fonte de display + body do DeskcommCRM é **Atkinson Hyperlegible**, criada pelo Braille Institute em 2020 com um único objetivo: **maximizar a distinção entre caracteres similares** para usuários com baixa visão.
+A fonte de display + body do Lumenva CRM é a **stack de fonte nativa do sistema operacional** (`-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`), decisão registrada em `docs/superpowers/specs/2026-08-11-lumenva-crm-fundacao-visual-design.md`.
 
 Razões da escolha:
 
-- **Acessibilidade-first.** `0` vs `O`, `1` vs `l` vs `I`, `rn` vs `m`, `B` vs `8` — todos disambiguados por design. Crítico em CRM onde número de pedido (`#01430`) e código de cliente (`Bl0OO1`) precisam ser lidos sem ambiguidade.
-- **Humanista, não geométrica.** Curvas levemente abertas, terminais não-mecânicos. Diferencia do par Inter/Geist (geométrico, dominante no SaaS atual).
-- **Baseline alta, x-height generosa.** Confortável em 12–13px, que é onde acontece 80% da UI operacional (timestamps, helpers, dados de tabela).
-- **Anti-genérica.** Quase ninguém em CRM SaaS usa Atkinson. Diverge sem custo de legibilidade — pelo contrário, ganha.
+- **Zero custo de carregamento.** Nenhum request de font externo — resolve o filtro "reduz fadiga, acelera leitura" sem depender de rede, relevante para instalações self-host em VPS de latência variável.
+- **Renderização nativa por SO.** O produto é self-host e roda em qualquer sistema operacional do usuário final — Mac renderiza SF real, Windows renderiza Segoe UI, Linux cai no sans-serif do ambiente. Não força uma fonte importada por cima da preferência de renderização nativa do SO.
+- **Coerente com a direção Apple-inspired.** Em Mac (onde a referência visual foi desenhada), a fonte resultante É a família do sistema Apple — sem imitação.
 - **Mesma família display + body.** Reduz cognição na hierarquia: o que muda é peso e tamanho, não tipo. Combina com Aerada (a hierarquia vem do whitespace).
 
-A fonte secundária para **dados monoespaçados** é **IBM Plex Mono** — escolhida por ter a mesma sensibilidade humanista (pertence à família Plex, da IBM) sem cair em JetBrains Mono (saturação developer-tools) nem Fira Code (ligatures que confundem em UI).
+A fonte secundária para **dados monoespaçados** continua **IBM Plex Mono** — inalterada por esta migração (fora do escopo da spec de identidade visual).
 
 ## Stack completo
 
 ```css
---ds-font-display: var(--font-atkinson), ui-sans-serif, system-ui, sans-serif;
---ds-font-body:    var(--font-atkinson), ui-sans-serif, system-ui, sans-serif;
+--ds-font-display: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+--ds-font-body:    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 --ds-font-mono:    var(--font-plex-mono), ui-monospace, "SF Mono", Menlo, monospace;
 ```
 
-`var(--font-atkinson)` é injetado por `next/font/google` via `app/design/lib/fonts.ts`.
+A stack de display/body não passa por `next/font` — é resolvida pelo navegador/SO diretamente, sem variável CSS injetada.
 
-**Pesos disponíveis** (Atkinson):
+**Pesos disponíveis** (System UI):
 - 400 — body, default UI
 - 700 — bold, headings, ênfase
 
@@ -63,7 +62,7 @@ Modular ratio: **1.250 (minor third)**, com ajustes manuais em alguns stops para
 
 ## Numerais
 
-Atkinson Hyperlegible suporta **tabular nums** via `font-feature-settings`. Aplicado obrigatoriamente em:
+A stack de sistema suporta **tabular nums** via `font-feature-settings`. Aplicado obrigatoriamente em:
 
 ```css
 .tabular {
@@ -116,7 +115,7 @@ Exemplo canônico: **item de inbox**.
 
 Detalhes a observar:
 - O nome da pessoa e o ID do pedido convivem na mesma linha porque hierarquia é dada por `weight` + `text-muted`, não por tamanho diferente.
-- ID `#12.443` está em sans (Atkinson) com `font-variant-numeric: tabular-nums` porque é um número curto inline; quando vira coluna de tabela, vira `mono-data` (Plex Mono).
+- ID `#12.443` está em sans (System UI) com `font-variant-numeric: tabular-nums` porque é um número curto inline; quando vira coluna de tabela, vira `mono-data` (Plex Mono).
 - Timestamp em `caption` + `tabular` para alinhar verticalmente entre rows.
 
 Outro exemplo: **header de view**.
@@ -133,7 +132,7 @@ Outro exemplo: **header de view**.
 - **Tamanho mínimo:** 12px (`caption`). Abaixo disso só ícones com `aria-label`.
 - **Line-height mínimo:** 1.4 em prosa, 1.35 em UI compacta.
 - **Tracking:** já calibrado por escala. Não sobrescreva sem motivo (legível ou marketing).
-- **Peso mínimo de leitura:** 400 sempre. Light (300) não existe na escala — Atkinson não tem 300 carregado.
+- **Peso mínimo de leitura:** 400 sempre. Light (300) não faz parte da escala — a fonte de sistema varia peso disponível por SO, e a escala do produto não depende de um 300 garantido.
 - **Foco visual:** texto em `text-muted` (`#5d594f` light / `#8e8b7f` dark) só pra UI 14px+; nunca aplicar a prosa longa.
 - **Truncate:** sempre com `text-overflow: ellipsis` + `white-space: nowrap` + `min-width: 0`. Tooltip com texto completo no hover (`<Tooltip>` shadcn).
 
