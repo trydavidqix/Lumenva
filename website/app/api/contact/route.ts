@@ -31,7 +31,7 @@ export async function POST(request: Request): Promise<Response> {
     await sendContactEmails(parsed.data);
   } catch {
     return NextResponse.json(
-      { error: { message: "Não foi possível enviar sua solicitação. Tente novamente." } },
+      { error: { message: "Não foi possível enviar a sua solicitação. Tente novamente." } },
       { status: 503 },
     );
   }

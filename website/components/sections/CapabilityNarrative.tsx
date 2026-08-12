@@ -34,7 +34,7 @@ export function CapabilityOverview({ items }: Readonly<CapabilityOverviewProps>)
             Agentes, automações e CRM trabalham como um sistema.
           </h2>
           <p className={styles.sectionDescription}>
-            Cada parte compartilha o mesmo contexto operacional, do WhatsApp ao pipeline.
+            Cada parte partilha o mesmo contexto operacional, do WhatsApp ao pipeline.
           </p>
         </Reveal>
         <Reveal>
@@ -74,13 +74,15 @@ export function AgentNarrative({ steps }: Readonly<AgentNarrativeProps>) {
 
       const media = gsap.matchMedia();
       media.add("(min-width: 64rem) and (prefers-reduced-motion: no-preference)", () => {
-        ScrollTrigger.create({
+        const trigger = ScrollTrigger.create({
           trigger: rootRef.current,
           start: "top top+=96",
           end: "bottom bottom-=96",
           pin: introRef.current,
           pinSpacing: false,
         });
+
+        return () => trigger.kill();
       });
 
       return () => media.revert();
@@ -98,10 +100,10 @@ export function AgentNarrative({ steps }: Readonly<AgentNarrativeProps>) {
         <div className={styles.agentIntro} ref={introRef}>
           <p className={styles.eyebrow}>Inteligência artificial</p>
           <h2 className={styles.sectionTitle} id="agents-title">
-            Agentes de IA, sob controle humano.
+            Agentes de IA, sob controlo humano.
           </h2>
           <p className={styles.sectionDescription}>
-            Um fluxo conectado para atender, agir e devolver contexto à equipe.
+            Um fluxo conectado para atender, agir e devolver contexto à equipa.
           </p>
         </div>
         <Reveal>

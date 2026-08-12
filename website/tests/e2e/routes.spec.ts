@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
 
 const publicRoutes = [
+  "/produto",
   "/solucoes",
-  "/inteligencia-artificial",
-  "/automacoes",
-  "/crm",
+  "/solucoes/atendimento-com-ia",
+  "/solucoes/vendas-crm",
+  "/solucoes/agentes-de-ia",
+  "/solucoes/automacao-de-processos",
   "/integracoes",
   "/projetos",
   "/sobre",
@@ -19,7 +21,7 @@ for (const path of publicRoutes) {
     expect(response?.ok()).toBe(true);
     await expect(main.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(
-      main.getByRole("link", { name: /solicitar demonstração/i }),
+      main.getByRole("link", { name: /agendar demonstração/i }),
     ).toBeVisible();
   });
 }
@@ -34,6 +36,6 @@ test("/contato presents the demo request fields without submitting before Task 8
   await expect(form.getByLabel(/empresa/i)).toBeVisible();
   await expect(form.getByLabel(/e-mail/i)).toBeVisible();
   await expect(form.getByLabel(/whatsapp/i)).toBeVisible();
-  await expect(form.getByRole("checkbox", { name: /autorizo o contato/i })).toBeVisible();
-  await expect(form.getByRole("button", { name: /solicitar demonstração/i })).toBeDisabled();
+  await expect(form.getByRole("checkbox", { name: /autorizo o contacto/i })).toBeVisible();
+  await expect(form.getByRole("button", { name: /agendar demonstração/i })).toBeDisabled();
 });

@@ -36,6 +36,7 @@ export function createPageMetadata({ title, description, path }: PageMetadataInp
       description,
       url,
       siteName: site.siteName,
+      locale: "pt_PT",
     },
     twitter: {
       card: "summary",

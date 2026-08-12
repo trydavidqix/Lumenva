@@ -1,12 +1,14 @@
+import { Bot, ShieldCheck, Users } from "lucide-react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
+import { WhatsAppIcon } from "@/components/ui/BrandIcons";
 import { JsonLd } from "@/components/ui/JsonLd";
 import { createPageMetadata } from "@/lib/metadata";
 import { breadcrumbSchema, organizationSchema } from "@/lib/schema";
 import styles from "@/components/sections/InnerPages.module.css";
 
 const description =
-  "Lumenva é a identidade pública de um AI Sales OS open source e self-hosted para vendas e suporte pelo WhatsApp.";
+  "Os princípios que orientam o produto Lumenva: contexto único entre conversas e pipeline, controlo da equipa sobre regras e agentes, e dados isolados por organização.";
 const breadcrumbs = [
   { name: "Início", path: "/" },
   { name: "Sobre", path: "/sobre" },
@@ -26,13 +28,13 @@ export default function AboutPage() {
       <Breadcrumbs items={breadcrumbs} />
       <ServiceHero
         eyebrow="Sobre a Lumenva"
-        title="Tecnologia aberta para operações de vendas."
+        title="Uma plataforma feita para equipas de vendas e suporte."
         description={description}
         capabilities={[
-          "Código distribuído sob licença MIT",
-          "Implantação na infraestrutura da operação",
-          "WhatsApp como canal primário",
-          "Agentes governados por pessoas",
+          { icon: Bot, label: "Agentes de IA governados por pessoas" },
+          { icon: WhatsAppIcon, label: "WhatsApp como canal primário" },
+          { icon: ShieldCheck, label: "Multi-tenant seguro" },
+          { icon: Users, label: "Equipa acompanha cada operação" },
         ]}
       />
       <section className={styles.sectionAlt} aria-labelledby="principles-title">
@@ -43,17 +45,17 @@ export default function AboutPage() {
             </h2>
             <p className={styles.sectionCopy}>
               A Lumenva foi desenhada para unir agentes de IA, automações e CRM sem
-              retirar da equipe o controle sobre regras, dados e infraestrutura.
+              retirar da equipa o controlo sobre regras, dados e operação.
             </p>
           </div>
           <ul className={styles.factList}>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>01</span>
-              <span><strong>Aberta.</strong> O código pode ser inspecionado e executado pela própria operação.</span>
+              <span><strong>Contexto único.</strong> Conversas, leads e atividades ficam no mesmo lugar.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>02</span>
-              <span><strong>Self-hosted.</strong> A implantação acontece na infraestrutura escolhida pela operação.</span>
+              <span><strong>Controlada.</strong> A equipa define regras, permissões e prioridades.</span>
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>03</span>
@@ -61,7 +63,7 @@ export default function AboutPage() {
             </li>
             <li className={styles.factItem}>
               <span className={styles.capabilityIndex}>04</span>
-              <span><strong>Multi-tenant.</strong> O produto isola dados de organizações desde a camada do banco.</span>
+              <span><strong>Multi-tenant.</strong> O produto isola dados de organizações desde a camada da base de dados.</span>
             </li>
           </ul>
         </div>

@@ -5,6 +5,7 @@ export const contactRequestSchema = z.object({
   company: z.string().trim().min(2).max(160),
   email: z.string().trim().email().max(254),
   whatsapp: z.string().trim().min(8).max(32),
+  message: z.string().trim().max(2000).optional(),
   consent: z.literal(true),
 });
 
