@@ -33,9 +33,9 @@ const TYPO_VAR_MAP: Record<TypoId, { display: string; body: string; mono: string
     body: "var(--font-manrope)",
     mono: "var(--font-jetbrains)",
   },
-  atkinson: {
-    display: "var(--font-atkinson)",
-    body: "var(--font-atkinson)",
+  "system-ui": {
+    display: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    body: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     mono: "var(--font-jetbrains)",
   },
   "source-plex": {
