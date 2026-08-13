@@ -113,17 +113,21 @@ export interface ObsidianExportResult {
  * and clean of detectable secrets/PII, writes a sanitized Markdown body
  * plus a canonical metadata sidecar JSON into the output directory.
  *
- * The secret/PII scan runs on the extracted body, not the raw frontmatter
- * block: `organization_id`/`agent_id` are UUID v4 strings, and their
- * hyphen-grouped digit runs collide with `scanPublishableKnowledge`'s phone
- * heuristic (verified against this scanner directly — every valid,
- * Zod-schema-conformant frontmatter block gets flagged `personal_phone` on
- * its UUID lines). Those fields are already validated by
- * `assertPublishableDocument`'s strict Zod schema (UUID/enum/positive
- * int/ISO datetime), so they cannot smuggle freeform secret shapes through
- * this path; the body is the freeform prose that actually reaches the
- * knowledge corpus, and scanning it is what the export's threat model
- * (a human pasting a password into the note) actually needs.
+ * The secret/PII scan runs on `title` + body, not the raw frontmatter
+ * block: `organization_id`/`agent_id`/`source_id`/`version`/`published_at`
+ * are UUID/slug/int/ISO-datetime-shaped and already validated by
+ * `assertPublishableDocument`'s strict Zod schema, so they cannot smuggle
+ * freeform secret text through this path — feeding them to the scanner
+ * anyway is actively harmful: UUID v4's hyphen-grouped digit runs collide
+ * with `scanPublishableKnowledge`'s phone heuristic (verified directly —
+ * every valid, schema-conformant frontmatter block gets `organization_id`/
+ * `agent_id` flagged `personal_phone`), which would make every valid
+ * PUBLISHED note unexportable. `title`, however, is `z.string().trim().min(1)`
+ * with no shape constraint — the one frontmatter field besides body that can
+ * carry arbitrary pasted text — so it is scanned alongside body rather than
+ * excluded with the rest of the workflow metadata. A secret pasted into
+ * `title` must block the export exactly like one pasted into the body; it
+ * would otherwise reach the metadata sidecar undetected.
  *
  * The source file is opened read-only and is never written to.
  */
@@ -137,7 +141,7 @@ export function exportObsidianNote(options: ObsidianExportOptions): ObsidianExpo
   const { frontmatterRaw, body } = parseObsidianNote(raw);
   const frontmatter = assertPublishableDocument(frontmatterRaw);
 
-  const scan = scanPublishableKnowledge(body);
+  const scan = scanPublishableKnowledge(`${frontmatter.title}\n${body}`);
   if (!scan.allowed) {
     throw new ObsidianExportBlockedError(scan.findings);
   }
