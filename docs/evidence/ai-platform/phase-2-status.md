@@ -33,9 +33,18 @@ gate completo da fase.
 
 1. Tarefa 9: lifecycle/rebuild e prova de apagamento/reconstrução para LGPD.
 2. Tarefa 10: Golden Dataset em shadow, falhas/outage e decisão `GO` ou `NO-GO`.
-3. Validação no Windows, onde Docker já existe: `docker compose config`,
-   bootstrap/health do profile `ai-memory` e confirmação de que o Mem0 OSS em
-   execução respeita `Idempotency-Key`.
+3. ~~Validação no Windows~~ — feita em 2026-08-13. `docker compose config`
+   válido nos dois arquivos; healthcheck do profile `ai-memory` responde
+   `HEALTHY` e `/auth/setup-status` responde `{"needsSetup":true}` num boot
+   limpo, sem intervenção manual. Achado no caminho: a imagem pinada
+   `mem0/mem0-api-server:0.1.117` não existe mais no Docker Hub e `latest` é
+   ARM64-only — sem build amd64 publicado. Caminho adotado: build local a
+   partir do source oficial (commit `96d45b78`), com 3 correções sobre o
+   `server/Dockerfile` deles (dependência `psycopg[binary]` ausente, pasta
+   `/app/history` nunca criada, migração `alembic` nunca executada) — receita
+   completa em `docs/runbooks/mem0.md`. Ainda não validado: confirmação de que
+   o Mem0 OSS em execução respeita `Idempotency-Key` (requer bootstrap com
+   chave de provider real, fora do escopo desta validação de infraestrutura).
 
 Até estas pendências estarem fechadas com evidência, não promover Mem0 para
 `SHADOW`, `CANARY` ou `ON`, não iniciar a Fase 3 e não configurar credenciais
