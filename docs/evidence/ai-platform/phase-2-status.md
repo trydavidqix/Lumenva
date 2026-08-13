@@ -2,16 +2,48 @@
 
 Data: 2026-08-13
 Branch: `ai-platform-foundation`
-Estado: **gate da Tarefa 10 passou — ver `docs/evidence/ai-platform/phase-2-mem0-gate.md`. `SHADOW` está tecnicamente desbloqueado; ainda falta decisão explícita de promoção.**
+Estado: **FECHADA. Gate da Tarefa 10 passou (`phase-2-mem0-gate.md`) e `SHADOW` foi ativado e verificado ponta a ponta — ver "Verificação SHADOW" abaixo.**
 
 ## Decisão operacional atual
 
-Mem0 permanece `OFF` por padrão — nenhuma promoção foi feita nesta sessão.
-Não houve servidor Mem0 iniciado, mudança em Vercel/Supabase/WAHA/Redis, nem
-promoção para `SHADOW`, `CANARY` ou `ON`; a chave real usada para o Golden
-Dataset ficou só na sessão (nunca em arquivo commitado) e nunca ligou o
-sidecar Mem0 em si. PostgreSQL/Supabase continua a fonte de verdade; Mem0 é
-apenas uma projeção reconstruível.
+`SHADOW` está ligado para **uma única organização de teste descartável**
+(`ai-platform-mem0-shadow-test`), local nesta estação, não em produção. O
+default global (`organization_id is null`) continua `OFF` — nenhum tenant
+real foi afetado. PostgreSQL/Supabase continua a fonte de verdade; Mem0 é
+projeção reconstruível.
+
+Três bugs reais de infraestrutura/cliente foram encontrados e corrigidos
+durante o boot (commit `f8fbb92c`): a rede `ai-memory-internal` sozinha
+(`internal: true`) bloqueava egress do sidecar pro provider de embedding;
+`Mem0Client.deleteContact()` mandava o identificador no body de um DELETE
+que o servidor Mem0 só lê como query param; e `scripts/lib/env-de-teste.ts`
+quebrava silenciosamente em `.env.local` com CRLF (Windows), então todo
+script de seed falhava ao ler credenciais locais.
+
+## Verificação SHADOW (2026-08-13)
+
+Mensagem inbound simulada, ponta a ponta, contra infraestrutura real:
+
+1. Servidor Mem0 real (build local, Gemini como embedder, tabela
+   `memories` recriada em 768 dimensões) — `Mem0Client.upsert/search/
+   deleteContact` provados contra ele diretamente.
+2. Migration `20260810151119_0116_ai_platform_foundation.sql` aplicada no
+   projeto Supabase remoto compartilhado (histórico de migration do CLI
+   estava desincronizado de ~100 entradas; aplicada via SQL direto no
+   dashboard para não arriscar `migration repair` errado).
+3. Org de teste criada, `ai_platform_feature_flags` com `feature='mem0',
+   mode='shadow'` escopado só a ela.
+4. Mensagem/conversa/contato reais inseridos; o consumer real
+   (`processMemoryProjection`, o mesmo que o worker chama para um evento
+   `message.received` genuíno) resolveu a flag do banco como `shadow`,
+   gerou `ai_projection_ledger.status='applied'`, e a memória apareceu de
+   fato numa busca real no Mem0.
+5. Único trecho substituído por dublê: a chamada de extração LLM (a chave
+   Anthropic real usada mais cedo na sessão nunca foi persistida em disco,
+   por disciplina de segurança). O pipeline extract → sanitize → ledger →
+   upsert completo já tinha sido provado com a chave real no Golden Dataset
+   (Tarefa 10); o que esta verificação prova de novo é a fiação do
+   consumer (resolução de flag real + carga de mensagem real + Mem0 real).
 
 ## Entregue
 
@@ -59,9 +91,10 @@ completa em `docs/runbooks/mem0.md`. Ainda não validado: confirmação de que
 o Mem0 OSS em execução respeita `Idempotency-Key` (requer bootstrap com
 chave de provider real, fora do escopo desta validação de infraestrutura).
 
-Sem decisão explícita de produto para promoção, não promover Mem0 para
-`SHADOW`, `CANARY` ou `ON`, não iniciar a Fase 3 e não configurar
-credenciais de provider por conveniência.
+`SHADOW` foi ativado apenas para a org de teste descartável acima, como
+verificação técnica — não é promoção de produto para tenants reais. Sem
+decisão explícita de produto, não promover nenhum tenant real para
+`SHADOW`, `CANARY` ou `ON`, e não iniciar a Fase 3 por conta própria.
 
 ## Referências operacionais
 
