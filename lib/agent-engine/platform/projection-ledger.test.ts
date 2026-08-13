@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { beginProjection, markProjectionApplied } from "./projection-ledger";
+import { beginProjection, markProjectionApplied, markProjectionDeletedByEntity } from "./projection-ledger";
 
 describe("projection ledger", () => {
   it("uses the tenant id and idempotency key when beginning a projection", async () => {
@@ -12,5 +12,14 @@ describe("projection ledger", () => {
     const query = vi.fn().mockResolvedValue({ rows: [{ id: "ledger-1", status: "applied" }] });
     await markProjectionApplied({ query }, "org-a", "ledger-1");
     expect(query).toHaveBeenCalledWith(expect.stringContaining("organization_id = $2"), ["ledger-1", "org-a"]);
+  });
+
+  it("marks every applied ledger row for one entity as deleted, scoped to the org", async () => {
+    const query = vi.fn().mockResolvedValue({ rows: [{ id: "ledger-1", status: "deleted" }] });
+    await markProjectionDeletedByEntity({ query }, "org-a", { provider: "mem0", entityType: "contact", entityId: "contact-a" });
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("status='deleted'"),
+      ["org-a", "mem0", "contact", "contact-a"],
+    );
   });
 });

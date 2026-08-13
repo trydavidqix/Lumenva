@@ -158,6 +158,30 @@ describe("memory projection handler", () => {
     expect(query).toHaveBeenLastCalledWith(expect.stringContaining("status = 'applied'"), ["ledger-1", orgA]);
   });
 
+  it("a delayed event for an already-LGPD-redacted contact does not resurrect memory: the source re-read is live, and redaction already blanked the body", async () => {
+    // The handler never trusts the event payload for content — it always
+    // re-reads `messages` from Postgres, the source of truth. If the LGPD
+    // cascade already ran (contact anonymized, message.body wiped) by the
+    // time a delayed/redelivered old `message.received` event is drained,
+    // this live read sees the post-redaction row, not a stale snapshot.
+    const { deps, memoryPort } = harness({
+      admin: {
+        from: vi.fn((table: string) =>
+          table === "messages"
+            ? { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), maybeSingle: vi.fn().mockResolvedValue({ data: { id: messageId, body: "", organization_id: orgA, conversation_id: "conversation-a", created_at: "2026-08-10T12:00:00.000Z" }, error: null }) }
+            : { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), maybeSingle: vi.fn().mockResolvedValue({ data: { id: "conversation-a", organization_id: orgA, contact_id: contactId }, error: null }) },
+        ),
+      },
+    });
+
+    await expect(processMemoryProjection(event(), deps)).resolves.toEqual({
+      consumer_key: MEMORY_PROJECTION_CONSUMER_KEY,
+      status: "skipped",
+      detail: "message_not_projectable",
+    });
+    expect(memoryPort.upsert).not.toHaveBeenCalled();
+  });
+
   it("never accepts a source message returned from another organization", async () => {
     const { deps, memoryPort } = harness({
       admin: {

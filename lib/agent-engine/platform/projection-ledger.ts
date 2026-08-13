@@ -33,3 +33,13 @@ export async function markProjectionFailed(db: Queryable, organizationId: string
 export async function markProjectionDeleted(db: Queryable, organizationId: string, id: string) {
   return db.query(`update ai_projection_ledger set status='deleted', updated_at=now() where id=$1 and organization_id=$2 returning id, status`, [id, organizationId]);
 }
+
+/** Bulk-marks every applied ledger row for one entity — used by the memory lifecycle handler after a Mem0 namespace delete. */
+export async function markProjectionDeletedByEntity(db: Queryable, organizationId: string, input: { provider: string; entityType: string; entityId: string }) {
+  return db.query(
+    `update ai_projection_ledger set status='deleted', updated_at=now()
+     where organization_id=$1 and provider=$2 and entity_type=$3 and entity_id=$4 and status='applied'
+     returning id, status`,
+    [organizationId, input.provider, input.entityType, input.entityId],
+  );
+}
