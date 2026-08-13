@@ -1,0 +1,5 @@
+# Scripts de shell rodam dentro de containers Linux (bind mount ou build).
+# CRLF quebra o shebang ("/bin/bash\r": interpretador não encontrado) — achado
+# real ao montar docker/mem0/init-db.sh num container Postgres a partir de um
+# checkout Windows. Força LF no working tree independente de core.autocrlf.
+*.sh text eol=lf

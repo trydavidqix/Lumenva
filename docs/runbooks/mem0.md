@@ -13,12 +13,58 @@ Não publique a API, o dashboard ou o banco por Caddy. Em desenvolvimento a API
 pode ser aberta apenas em `127.0.0.1:8888`; em produção não há porta publicada.
 O nome DNS interno é `mem0` e só serviços na rede Docker interna podem alcançá-lo.
 
-A imagem do servidor está deliberadamente pinada em
-`mem0/mem0-api-server:0.1.117`; `latest` não é aceitável porque pode mudar sem
-revisão. Uma atualização exige alteração versionada, revisão e a validação do
-perfil no Windows antes de promoção. O pin é uma referência de release, não um
-digest imutável: confirme disponibilidade e release notes no Windows antes de
-alterá-lo.
+A imagem do servidor era pinada em `mem0/mem0-api-server:0.1.117`. Essa tag foi
+removida do Docker Hub (confirmado em 2026-08-13: `docker pull` retorna "not
+found") e a única tag publicada hoje, `latest`, só existe para `linux/arm64` —
+sem manifesto `linux/amd64`, não roda nativo num Windows/PC comum (x86_64).
+Puxar `latest` forçando `--platform linux/arm64` funciona via emulação do
+Docker Desktop, mas fica lento; não é o caminho recomendado.
+
+O caminho atual é **build local a partir do source oficial**, com três
+correções necessárias sobre o `server/Dockerfile` de `mem0ai/mem0` — sem elas
+o container quebra na inicialização em qualquer máquina limpa, não só
+Windows:
+
+1. `requirements.txt` pede `psycopg` puro; sem `libpq` no sistema (ausente na
+   imagem base `python:3.12-slim`), o import falha. Trocar para
+   `psycopg[binary]`.
+2. O código espera `/app/history` já existir (`HISTORY_DB_PATH`); o
+   `Dockerfile` nunca cria essa pasta — só funciona por acidente no compose
+   oficial deles porque um `volumes:` mapeado cria a pasta de brinde. Sem
+   volume, o boot quebra. Adicionar `RUN mkdir -p /app/history`.
+3. O `Dockerfile` sobe `uvicorn` direto, sem migração. O schema
+   (`users`, `api_keys` etc.) só existe depois de `alembic upgrade head`.
+   Trocar o `CMD` para rodar a migração antes de subir o servidor.
+
+Passo a passo (build único; a imagem fica salva localmente depois):
+
+```bash
+git clone --depth 1 https://github.com/mem0ai/mem0.git mem0-src
+cd mem0-src && git log -1 --format=%H   # confirme/anote o commit — é o pin
+
+# 1) troca psycopg puro por psycopg[binary] (evita depender de libpq do SO)
+sed -i 's/^psycopg>=/psycopg[binary]>=/' server/requirements.txt
+
+# 2) garante /app/history antes do EXPOSE, e 3) roda alembic antes do uvicorn
+# — editar server/Dockerfile:
+#   depois de `COPY . .`:          RUN mkdir -p /app/history
+#   trocar o CMD por:              CMD ["sh", "-c", "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"]
+
+docker build -t mem0-api-server:local server
+```
+
+Commit fonte validado nesta receita: `96d45b78c702b742fc91a2ce9eae91805be9144b`
+(2026-08-13). Uma atualização de commit exige repetir a validação completa
+abaixo antes de promover — mesmo espírito do pin antigo, só que agora contra
+um commit do source em vez de uma tag de imagem que pode sumir.
+
+O banco (`mem0-postgres`) também precisa criar um segundo banco
+(`mem0_app`, para users/api-keys, separado do banco de vetores). O compose
+deste repo já monta `docker/mem0/init-db.sh` (cópia do `init-db.sh` oficial,
+Apache-2.0) em `/docker-entrypoint-initdb.d/`. Se copiar esse arquivo de novo
+a partir do checkout do source no Windows, salve-o com quebra de linha LF —
+CRLF faz o entrypoint do Postgres falhar com "cannot execute: required file
+not found" (o interpretador do shebang `#!/bin/bash\r` não é encontrado).
 
 Este runbook é para a máquina Windows com Docker já autorizado. Não instalar,
 executar ou pedir Docker no Mac.

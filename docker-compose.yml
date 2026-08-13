@@ -89,9 +89,11 @@ services:
   # explicitamente `--profile ai-memory` e só fica acessível pelo loopback no
   # host para o bootstrap local.
   mem0:
-    # Explicit release pin: upgrades require a reviewed compose change and
-    # Windows profile validation before promotion.
-    image: mem0/mem0-api-server:0.1.117
+    # mem0/mem0-api-server:0.1.117 (o pin anterior) não existe mais no Docker
+    # Hub, e a única tag publicada hoje (`latest`) só tem build ARM64 — não
+    # roda nativo em x86_64. Build local a partir do source oficial; receita
+    # completa e commit pinado em docs/runbooks/mem0.md.
+    image: mem0-api-server:local
     profiles: ["ai-memory"]
     restart: unless-stopped
     environment:
@@ -132,6 +134,7 @@ services:
       POSTGRES_PASSWORD: ${MEM0_POSTGRES_PASSWORD:?set MEM0_POSTGRES_PASSWORD in managed runtime secrets}
     volumes:
       - mem0-postgres-data:/var/lib/postgresql/data
+      - ./docker/mem0/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mem0 -d mem0"]
       interval: 10s
