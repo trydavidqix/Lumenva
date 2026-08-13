@@ -135,6 +135,22 @@ describe("scanPublishableKnowledge", () => {
         "password_or_recovery_code: recovery-code prose in English, no code present",
         "Keep your recovery code somewhere safe and never share it.",
       ],
+      [
+        "password_or_recovery_code: colon-headed policy prose, no password value present",
+        "Password policy: no reuse in the last 90 days.",
+      ],
+      [
+        "password_or_recovery_code: colon-headed policy prose, no recovery code value present",
+        "Recovery code policy: generate 10 backup codes.",
+      ],
+      [
+        "session_or_cookie: colon-headed domain prose about session duration, no token present",
+        "Duração da sessão: 30 minutos.",
+      ],
+      [
+        "session_or_cookie: colon-headed domain prose about session configuration, no token present",
+        "Configuração da sessão: usar engine NOWEB.",
+      ],
     ])("does not flag %s", (_caseName, line) => {
       const markdown = markdownWithLine(line, 2);
 

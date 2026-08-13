@@ -32,14 +32,17 @@ const PRIVATE_KEY_HEADER =
 // natural-language "é"/"is".
 const FILLER_WORDS = "(?:\\s+[A-Za-zÀ-ÿ]+){0,4}";
 
-// Two separator shapes on purpose: an explicit `:`/`=` is an unambiguous
-// assignment signal on its own, but "é"/"is" are ordinary Portuguese/English
-// words — "a chave da API é armazenada..." or "this session is temporary"
-// use them without stating a secret. So the "é"/"is" branch additionally
-// requires the following token to look credential-shaped (see
-// looksCredentialShaped), while the strict `:`/`=` branch does not.
-const API_KEY_STRICT_ASSIGNMENT =
-  /\b(?:api[_ -]?key|apikey|chave\s+(?:da|de)\s+api)\b\s*(?:=|:)\s*\S+/iu;
+// Both separator shapes now capture their value and are validated through
+// looksCredentialShaped — an explicit `:`/`=` is a stronger signal than the
+// natural-language "é"/"is", but it is not by itself proof of a real secret:
+// "Password policy: no reuse in the last 90 days." and "Duração da sessão:
+// 30 minutos." are colon-headed prose, not leaked credentials. Only the
+// *value* shape tells the two apart, so every branch below captures it and
+// runs it through the same gate.
+const API_KEY_STRICT_ASSIGNMENT = new RegExp(
+  `\\b(?:api[_ -]?key|apikey|chave\\s+(?:da|de)\\s+api)\\b\\s*(?:=|:)\\s*(\\S+)`,
+  "iu",
+);
 const API_KEY_NATURAL_ASSIGNMENT = new RegExp(
   `\\b(?:api[_ -]?key|apikey|chave\\s+(?:da|de)\\s+api)\\b${FILLER_WORDS}\\s*(?:é|is)\\s+(\\S+)`,
   "iu",
@@ -52,16 +55,16 @@ const JWT_LIKE_VALUE = /\b[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,
 
 // Portuguese phrasing puts "token"/"sessão" in either order ("session
 // token" vs "token de sessão"), so both are covered explicitly instead of
-// relying on one canonical word order.
+// relying on one canonical word order. "Sessão" alone is core WhatsApp/WAHA
+// domain vocabulary ("Duração da sessão: 30 minutos.") and appears in
+// legitimate knowledge-base prose constantly, which is exactly why the
+// strict branch below is gated too, not just the natural one.
 const SESSION_KEYWORD =
   "(?:set-cookie|cookie|session(?:[_ -]?(?:id|token|key))?|token\\s+de\\s+sess[aã]o|sess[aã]o(?:[_ -]?(?:id|token|key))?)";
 const SESSION_OR_COOKIE_STRICT_ASSIGNMENT = new RegExp(
-  `\\b${SESSION_KEYWORD}\\b\\s*(?:=|:)\\s*\\S+`,
+  `\\b${SESSION_KEYWORD}\\b\\s*(?:=|:)\\s*(\\S+)`,
   "iu",
 );
-// Gated the same way as the other natural-language branches (see
-// looksCredentialShaped): "this session is temporary" must not match, but
-// "session token is abc123session456" must.
 const SESSION_OR_COOKIE_NATURAL_ASSIGNMENT = new RegExp(
   `\\b${SESSION_KEYWORD}\\b\\s*(?:é|is)\\s+(\\S+)`,
   "iu",
@@ -69,13 +72,13 @@ const SESSION_OR_COOKIE_NATURAL_ASSIGNMENT = new RegExp(
 
 // Assignment-shaped on purpose (keyword ... separator ... value), not a bare
 // keyword ban: a support knowledge base legitimately contains prose like
-// "como redefinir sua senha", and a blanket ban on the word would make that
+// "como redefinir sua senha" or "Password policy: no reuse...", and a
+// blanket ban on the word (or on any colon following it) would make that
 // unpublishable. Filler words are allowed between the keyword and *either*
 // separator shape to cover phrasing like "a senha do administrador: valor"
-// and "a senha do administrador é valor". See API_KEY above for why the
-// "é"/"is" branch additionally validates the value.
+// and "a senha do administrador é valor".
 const PASSWORD_STRICT_ASSIGNMENT = new RegExp(
-  `\\b(?:password|passwd|senha|passcode)\\b${FILLER_WORDS}\\s*(?:=|:)\\s*\\S+`,
+  `\\b(?:password|passwd|senha|passcode)\\b${FILLER_WORDS}\\s*(?:=|:)\\s*(\\S+)`,
   "iu",
 );
 const PASSWORD_NATURAL_ASSIGNMENT = new RegExp(
@@ -83,7 +86,7 @@ const PASSWORD_NATURAL_ASSIGNMENT = new RegExp(
   "iu",
 );
 const RECOVERY_CODE_STRICT_ASSIGNMENT = new RegExp(
-  `\\b(?:recovery[ -]?code|backup[ -]?code|c[oó]digo\\s+de\\s+recupera[cç][aã]o)\\b${FILLER_WORDS}\\s*(?:=|:)\\s*\\S+`,
+  `\\b(?:recovery[ -]?code|backup[ -]?code|c[oó]digo\\s+de\\s+recupera[cç][aã]o)\\b${FILLER_WORDS}\\s*(?:=|:)\\s*(\\S+)`,
   "iu",
 );
 const RECOVERY_CODE_NATURAL_ASSIGNMENT = new RegExp(
@@ -101,19 +104,37 @@ const PHONE_CANDIDATE = /(?:\+?\d{1,3}[\s.-]?)?\(?\d{2,3}\)?[\s.-]?\d{4,5}[\s.-]
 const CONTACT_DIRECTORY_MARKER =
   /<!--\s*knowledge-content-type\s*:\s*contact-directory\s*-->/i;
 
-// The "é"/"is" natural-language branches only fire when the captured token
-// itself looks like a credential rather than an ordinary dictionary word
-// like "armazenada" or "temporary". A digit or quoting is an easy signal,
-// but a real secret can also be purely alphabetic ("minhaSenhaSecreta",
-// "ABCDEFGH") — those are still distinguishable from ordinary prose words
-// by shape: a long unspaced run of only uppercase letters is not how
-// Portuguese/English sentences write real words, and an internal lowercase
-// -> uppercase transition (camelCase/PascalCase-with-inner-caps) doesn't
-// happen in ordinary prose either (simple Title-Case, one leading capital,
-// is excluded on purpose so this doesn't fire on every capitalized word).
+// Every assignment-shaped branch (strict `:`/`=` and natural "é"/"is"
+// alike) only fires when the captured value itself looks like a credential
+// rather than an ordinary word from the surrounding sentence ("policy",
+// "30", "no", "usar", "armazenada", "temporary"). Two signals combine:
+//
+// 1. Minimum length. Real secrets in every fixture we have (this file's
+//    tests, the sibling lib/agent-engine/memory/sanitize.ts fixtures) are
+//    all 6+ characters; ordinary short words/numbers that show up right
+//    after a colon in policy prose ("30", "no", "usar") are not. A short
+//    value never counts as credential-shaped, regardless of what else is
+//    true about it — this is what stops "Duração da sessão: 30 minutos."
+//    from matching just because "30" contains a digit.
+// 2. Shape, for anything long enough to pass (1): a digit anywhere, OR a
+//    long (6+) unspaced run of only uppercase letters (how a generated
+//    code like "ABCDEFGH" looks, not how Portuguese/English sentences
+//    write real words), OR an internal lowercase-then-later-uppercase
+//    transition (camelCase/PascalCase-with-inner-caps, e.g.
+//    "minhaSenhaSecreta" — simple Title-Case with one leading capital is
+//    excluded on purpose so this doesn't fire on every capitalized word).
+//
+// Quoted/backtick-wrapped values are the one unconditional exception:
+// explicit quoting is already an intentional "this is a value" signal on
+// its own, independent of length or shape.
+const MIN_CREDENTIAL_LENGTH = 6;
+
 function looksCredentialShaped(value: string): boolean {
   if (/^[`"'].+[`"']$/.test(value)) {
     return true;
+  }
+  if (value.length < MIN_CREDENTIAL_LENGTH) {
+    return false;
   }
   if (/\d/.test(value)) {
     return true;
@@ -124,7 +145,7 @@ function looksCredentialShaped(value: string): boolean {
   return /[a-z].*[A-Z]/.test(value);
 }
 
-function matchesNaturalAssignment(pattern: RegExp, line: string): boolean {
+function matchesGatedAssignment(pattern: RegExp, line: string): boolean {
   const match = pattern.exec(line);
   const value = match?.[1];
   return value !== undefined && looksCredentialShaped(value);
@@ -135,9 +156,9 @@ function scanLine(line: string): string | null {
     return "private_key";
   }
   if (
-    API_KEY_STRICT_ASSIGNMENT.test(line) ||
     API_KEY_LIKE_VALUE.test(line) ||
-    matchesNaturalAssignment(API_KEY_NATURAL_ASSIGNMENT, line)
+    matchesGatedAssignment(API_KEY_STRICT_ASSIGNMENT, line) ||
+    matchesGatedAssignment(API_KEY_NATURAL_ASSIGNMENT, line)
   ) {
     return "api_key";
   }
@@ -145,16 +166,16 @@ function scanLine(line: string): string | null {
     return "credential";
   }
   if (
-    SESSION_OR_COOKIE_STRICT_ASSIGNMENT.test(line) ||
-    matchesNaturalAssignment(SESSION_OR_COOKIE_NATURAL_ASSIGNMENT, line)
+    matchesGatedAssignment(SESSION_OR_COOKIE_STRICT_ASSIGNMENT, line) ||
+    matchesGatedAssignment(SESSION_OR_COOKIE_NATURAL_ASSIGNMENT, line)
   ) {
     return "session_or_cookie";
   }
   if (
-    PASSWORD_STRICT_ASSIGNMENT.test(line) ||
-    RECOVERY_CODE_STRICT_ASSIGNMENT.test(line) ||
-    matchesNaturalAssignment(PASSWORD_NATURAL_ASSIGNMENT, line) ||
-    matchesNaturalAssignment(RECOVERY_CODE_NATURAL_ASSIGNMENT, line)
+    matchesGatedAssignment(PASSWORD_STRICT_ASSIGNMENT, line) ||
+    matchesGatedAssignment(RECOVERY_CODE_STRICT_ASSIGNMENT, line) ||
+    matchesGatedAssignment(PASSWORD_NATURAL_ASSIGNMENT, line) ||
+    matchesGatedAssignment(RECOVERY_CODE_NATURAL_ASSIGNMENT, line)
   ) {
     return "password_or_recovery_code";
   }
