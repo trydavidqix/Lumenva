@@ -17,6 +17,7 @@ import { z } from "zod";
 
 import { runAgent } from "@/lib/ai/runtime/agent";
 import { ok, fail } from "@/lib/api/wrappers";
+import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
@@ -61,6 +62,18 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   if (!authorize(req)) {
     return fail("unauthenticated", "Internal secret missing or invalid.", 401, {
+      requestId,
+      details: { meta: { requestId } },
+    });
+  }
+
+  // Defesa em profundidade contra secret vazado ou worker que reentra em
+  // loop: cada chamada roda o runtime de IA completo (custo real de LLM).
+  // Bucket global (sem organization_id disponível aqui antes de resolver
+  // run_id) — generoso o bastante pro uso legítimo do worker interno.
+  const rl = await checkRateLimit("internal_agent_run", 300, 60);
+  if (!rl.allowed) {
+    return fail("rate_limited", "Muitas execuções internas em pouco tempo.", 429, {
       requestId,
       details: { meta: { requestId } },
     });

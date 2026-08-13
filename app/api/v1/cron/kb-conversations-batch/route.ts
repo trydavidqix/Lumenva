@@ -17,13 +17,34 @@ import type { NextRequest } from "next/server";
 
 import { ok, fail } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
-import { env } from "@/lib/env";
+import { cronSecretMatches } from "@/lib/auth/cron-secret";
 import { ingestConversationsBatch } from "@/lib/ai/rag/ingest/conversations";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
 const LOOKBACK_HOURS = 24;
+/**
+ * Teto de orgs processadas por rodada — sem ele, um install com muitos
+ * tenants ativos arrisca estourar o tempo de request numa rota HTTP síncrona
+ * (embedding é I/O pesado, por org). Sem paginação/cursor real, o corte
+ * embaralha a ordem a cada rodada (Fisher–Yates) em vez de sempre pegar os
+ * mesmos primeiros N — senão orgs "depois" na query nunca seriam ingeridas
+ * em instalações grandes.
+ */
+const ORG_LIMIT = 50;
+
+function embaralhado<T>(arr: T[]): T[] {
+  const out = arr.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = out[i]!;
+    out[i] = out[j]!;
+    out[j] = tmp;
+  }
+  return out;
+}
 
 interface AgentRow {
   id: string;
@@ -36,13 +57,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   const auth = req.headers.get("authorization") ?? "";
   const provided = auth.startsWith("Bearer ") ? auth.slice("Bearer ".length).trim() : "";
 
-  const cronSecret = env.INTERNAL_CRON_SECRET;
-  const fallbackSecret = env.INTERNAL_SECRET;
-  const accepted: string[] = [];
-  if (cronSecret) accepted.push(cronSecret);
-  if (fallbackSecret) accepted.push(fallbackSecret);
-
-  if (accepted.length === 0 || !provided || !accepted.includes(provided)) {
+  if (!cronSecretMatches(provided)) {
     return fail("forbidden", "Cron secret missing or invalid.", 403, { requestId });
   }
 
@@ -55,18 +70,29 @@ export async function GET(req: NextRequest): Promise<Response> {
     .eq("is_active", true);
 
   if (agentErr) {
-    console.error("[kb-conversations-cron] agent list failed", agentErr.message);
+    logger.error("kb-conversations-cron: agent list failed", { error: agentErr.message });
     return fail("internal_error", agentErr.message, 500, { requestId });
   }
 
   const agents = (agentRows ?? []) as AgentRow[];
   // Pick one agent per org (first active wins) to avoid double-ingesting.
   const seenOrgs = new Set<string>();
-  const unique: AgentRow[] = [];
+  const uniqueAll: AgentRow[] = [];
   for (const a of agents) {
     if (seenOrgs.has(a.organization_id)) continue;
     seenOrgs.add(a.organization_id);
-    unique.push(a);
+    uniqueAll.push(a);
+  }
+
+  const shuffled = embaralhado(uniqueAll);
+  const unique = shuffled.slice(0, ORG_LIMIT);
+  const droppedThisRound = shuffled.length - unique.length;
+  if (droppedThisRound > 0) {
+    logger.info("kb-conversations-cron: teto de orgs por rodada atingido", {
+      orgs_elegiveis: shuffled.length,
+      orgs_processadas: unique.length,
+      orgs_deixadas_pra_proxima_rodada: droppedThisRound,
+    });
   }
 
   let totalProcessed = 0;
@@ -88,11 +114,10 @@ export async function GET(req: NextRequest): Promise<Response> {
       totalSkipped += result.skipped;
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
-      console.error(
-        "[kb-conversations-cron] org failed",
-        agent.organization_id,
-        detail,
-      );
+      logger.error("kb-conversations-cron: org failed", {
+        organization_id: agent.organization_id,
+        error: detail,
+      });
       failures.push(`${agent.organization_id}:${detail}`);
     }
   }
@@ -107,6 +132,7 @@ export async function GET(req: NextRequest): Promise<Response> {
       total_skipped: totalSkipped,
       failures: failures.length,
       since_ts: sinceTs.toISOString(),
+      orgs_dropped_this_round: droppedThisRound,
     },
     requestId,
   });

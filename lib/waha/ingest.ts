@@ -12,6 +12,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 import { audit } from "@/lib/audit";
+import { blockContactIfStopKeyword } from "@/lib/messaging/stop-keyword";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import { ackToStatus } from "@/lib/types/messaging";
 import { bareWaMessageId, chatIdFromWaMessageId } from "@/lib/waha/message-id";
@@ -133,11 +134,11 @@ async function avisarChatNaoReconhecido(
     p_organization_id: organizationId,
   } as never);
   if (error) {
-    console.error("[waha.ingest] o aviso de chat não reconhecido também falhou", error.message);
+    logger.error("waha.ingest: o aviso de chat não reconhecido também falhou", {
+      error: error.message,
+    });
   }
 }
-
-const STOP_RX = /\b(STOP|PARAR|SAIR|UNSUBSCRIBE)\b/i;
 
 export function verifyHmacSha512(
   rawBody: string,
@@ -277,7 +278,7 @@ async function upsertContact(
     p_notify: notifyName,
   } as never);
   if (error) {
-    console.error("[waha.ingest] fn_upsert_wa_contact failed", error.message);
+    logger.error("waha.ingest: fn_upsert_wa_contact failed", { error: error.message });
     return null;
   }
   return (data as string) ?? null;
@@ -295,7 +296,7 @@ async function upsertConversation(
     p_session: sessionId,
   } as never);
   if (error) {
-    console.error("[waha.ingest] fn_upsert_wa_conversation failed", error.message);
+    logger.error("waha.ingest: fn_upsert_wa_conversation failed", { error: error.message });
     return null;
   }
   return (data as string) ?? null;
@@ -351,7 +352,7 @@ async function markConversation(
   if (erroAviso) {
     // Segunda linha de defesa: o próprio canal de aviso caiu. Aqui o log do
     // processo é o que sobra — é para ESTE caso que ele existe, não como rotina.
-    console.error("[waha.ingest] o carimbo falhou E o aviso também", {
+    logger.error("waha.ingest: o carimbo falhou E o aviso também", {
       conversa: convId,
       erro: error.message,
       aviso: erroAviso.message,
@@ -414,7 +415,7 @@ async function handleInbound(
 
   // Idempotência: 23505 = unique (organization_id, external_id) já ingerido.
   if (insertErr && insertErr.code !== "23505") {
-    console.error("[waha.ingest] message insert failed", insertErr.message);
+    logger.error("waha.ingest: message insert failed", { error: insertErr.message });
     return;
   }
   if (insertErr?.code === "23505") {
@@ -437,19 +438,13 @@ async function handleInbound(
 
   await markConversation(admin, session.organization_id, conversationId, "inbound", previewFromMessage(p), now);
 
-  if (p.body && STOP_RX.test(p.body)) {
-    await admin
-      .from("contacts")
-      .update({ is_blocked: true, blocked_reason: "stop_keyword", blocked_at: now })
-      .eq("id", contactId);
-    await audit({
-      action: "contact.blocked",
-      organizationId: session.organization_id,
-      resourceType: "contact",
-      requestId,
-      metadata: { reason: "stop_keyword", contact_id: contactId },
-    });
-  }
+  await blockContactIfStopKeyword(admin, {
+    body: p.body,
+    organizationId: session.organization_id,
+    contactId,
+    requestId,
+    now,
+  });
 
   await audit({
     action: "message.received",
@@ -478,7 +473,7 @@ async function handleInbound(
         p_organization_id: session.organization_id,
       } as never)
       .then(({ error }) => {
-        if (error) console.error("[waha.ingest] emit dispatch_requested failed", error.message);
+        if (error) logger.error("waha.ingest: emit dispatch_requested failed", { error: error.message });
       });
 
     admin
@@ -496,7 +491,7 @@ async function handleInbound(
         p_organization_id: session.organization_id,
       } as never)
       .then(({ error }) => {
-        if (error) console.error("[waha.ingest] emit message.received failed", error.message);
+        if (error) logger.error("waha.ingest: emit message.received failed", { error: error.message });
       });
 
     if (mediaUrlOf(p)) {
@@ -510,7 +505,7 @@ async function handleInbound(
           p_organization_id: session.organization_id,
         } as never)
         .then(({ error }) => {
-          if (error) console.error("[waha.ingest] emit media.persist_requested failed", error.message);
+          if (error) logger.error("waha.ingest: emit media.persist_requested failed", { error: error.message });
         });
     }
   }
@@ -615,7 +610,7 @@ async function handleOutboundFromUserPhone(
     .select("id")
     .maybeSingle();
   if (insertErr && insertErr.code !== "23505") {
-    console.error("[waha.ingest] outbound insert failed", insertErr.message);
+    logger.error("waha.ingest: outbound insert failed", { error: insertErr.message });
     return;
   }
   if (insertErr?.code === "23505") {
@@ -649,7 +644,7 @@ async function handleOutboundFromUserPhone(
         p_organization_id: session.organization_id,
       } as never)
       .then(({ error }) => {
-        if (error) console.error("[waha.ingest] emit media.persist_requested failed", error.message);
+        if (error) logger.error("waha.ingest: emit media.persist_requested failed", { error: error.message });
       });
   }
 }

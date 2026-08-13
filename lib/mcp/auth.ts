@@ -18,6 +18,7 @@ import { createHash } from "node:crypto";
 import type { Actor } from "@/lib/api/handlers/types";
 import type { Role } from "@/lib/auth/types";
 import { ROLE_RANK } from "@/lib/auth/types";
+import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface McpAuthResult {
@@ -117,7 +118,7 @@ export async function validateBearerToken(
     .update({ last_used_at: new Date().toISOString() })
     .eq("id", data.id)
     .then(({ error: updErr }) => {
-      if (updErr) console.error("[mcp.auth] last_used_at update failed", updErr.message);
+      if (updErr) logger.error("mcp.auth: last_used_at update failed", { error: updErr.message });
     });
 
   return {
