@@ -1,15 +1,19 @@
 /**
  * POST /api/v1/lgpd/anonymize
  *
- * Irreversible cascade nullify (Spec 05 §LGPD). Only `admin` role within the
+ * Irreversible cascade redact (Spec 05 §LGPD). Only `admin` role within the
  * tenant or platform_admin can execute. Idempotent: re-anonymizing returns
  * 200 with `action: "already_anonymized"`.
  *
- * Cascade (best-effort sequential — no client-side transaction):
- *   1. contacts: nullify PII, set is_anonymized + anonymized_at, rewrite display_name
- *   2. crm_leads: append " (anonimizado)" to title (preserve PK + history)
- *   3. crm_lead_activities: redact payload to { redacted: true }
- *   4. Storage media deletion deferred to EPIC-08 worker
+ * Delegates the actual cascade to `cascadeRedactContact` — the SAME atomic,
+ * transactional RPC (`fn_lgpd_cascade_redact_contact`) used by the
+ * request-driven LGPD SLA flow (`workers/lgpd-redact-worker.ts`). This route
+ * used to hand-roll a subset of the cascade (contacts + crm_leads +
+ * crm_lead_activities only, non-transactional), leaving conversations,
+ * messages, orders and the contact avatar fully intact with real PII while
+ * still marking `is_anonymized=true` — defeating the point of an
+ * "irreversible" anonymization. There must be exactly one code path that
+ * defines what "anonymized" means.
  */
 import { randomUUID } from "node:crypto";
 import { type NextRequest } from "next/server";
@@ -18,6 +22,7 @@ import { audit } from "@/lib/audit";
 import { ApiError } from "@/lib/api/types";
 import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
+import { cascadeRedactContact } from "@/lib/lgpd/redact-cascade";
 import { lgpdAnonymizeSchema, validateRequest } from "@/lib/schemas";
 import { createClient } from "@/lib/supabase/server";
 
@@ -84,58 +89,35 @@ export async function POST(req: NextRequest): Promise<Response> {
   }
 
   const nowIso = new Date().toISOString();
-  const shortId = existing.id.slice(0, 8);
 
-  // Step 1 — contacts.
-  const { error: c1Err } = await supabase
-    .from("contacts")
-    .update({
-      name: null,
-      display_name: `Contato Anonimizado #${shortId}`,
-      email: null,
-      email_normalized: null,
-      phone_number: null,
-      cpf_encrypted: null,
-      cpf_hash: null,
-      birthdate: null,
-      is_anonymized: true,
-      anonymized_at: nowIso,
-      updated_at: nowIso,
-    })
-    .eq("id", existing.id);
-  if (c1Err) {
-    return fail("internal_error", `contacts: ${c1Err.message}`, 500, { requestId });
+  const cascade = await cascadeRedactContact({
+    organizationId: existing.organization_id,
+    contactId: existing.id,
+    requestId,
+  });
+
+  if (cascade.alreadyAnonymized) {
+    // Corrida: outra requisição venceu a RPC entre o SELECT acima e agora.
+    // `nowIso` foi calculado ANTES da RPC rodar — não é o timestamp real da
+    // anonimização, que pertence à transação vencedora. Busca o valor real
+    // em vez de inventar um.
+    const { data: real } = await supabase
+      .from("contacts")
+      .select("anonymized_at")
+      .eq("id", existing.id)
+      .maybeSingle();
+    return ok(
+      {
+        contact_id: existing.id,
+        anonymized_at: real?.anonymized_at ?? null,
+        action: "already_anonymized",
+      },
+      { requestId },
+    );
   }
 
-  // Step 2 — leads owned by contact (best-effort; non-fatal).
-  const { data: leadRows } = await supabase
-    .from("crm_leads")
-    .select("id, title")
-    .eq("contact_id", existing.id);
-  const redactedLeadIds: string[] = [];
-  for (const row of (leadRows ?? []) as { id: string; title: string | null }[]) {
-    const newTitle = `${(row.title ?? "").slice(0, 20)} (anonimizado)`;
-    const { error: leadErr } = await supabase
-      .from("crm_leads")
-      .update({ title: newTitle })
-      .eq("id", row.id);
-    if (leadErr) {
-      console.error("[lgpd.anonymize] crm_leads update failed", leadErr.message);
-    } else {
-      redactedLeadIds.push(row.id);
-    }
-  }
-
-  // Step 3 — activities (RLS-scoped UPDATE).
-  const { error: actErr } = await supabase
-    .from("crm_lead_activities")
-    .update({ payload: { redacted: true } })
-    .eq("contact_id", existing.id);
-  if (actErr) {
-    console.error("[lgpd.anonymize] crm_lead_activities update failed", actErr.message);
-  }
-
-  // Emit + audit.
+  // Emit (best-effort; a falha aqui não desfaz a cascata, que já foi
+  // aplicada de forma atômica pela RPC acima).
   await supabase
     .rpc("emit_event", {
       p_event_type: "contact.anonymized",
@@ -153,6 +135,11 @@ export async function POST(req: NextRequest): Promise<Response> {
       if (error) console.error("[lgpd.anonymize] emit_event failed", error.message);
     });
 
+  // A RPC já grava seu próprio `lgpd.redact_executed` dentro da transação
+  // (ver fn_lgpd_cascade_redact_contact); este segundo registro amarra a
+  // justificativa do admin e o request desta rota especificamente ao mesmo
+  // contato, com as contagens REAIS devolvidas pela cascata — não uma lista
+  // estática que mentia sobre o que foi de fato redigido.
   await audit({
     action: "lgpd.anonymize_executed",
     actorUserId: user.id,
@@ -163,9 +150,8 @@ export async function POST(req: NextRequest): Promise<Response> {
     metadata: {
       contact_id: existing.id,
       justification: input.justification,
-      redacted_tables: ["contacts", "crm_leads", "crm_lead_activities"],
-      redacted_lead_ids: redactedLeadIds,
-      storage_media_deletion: "deferred_epic_08",
+      redacted_counts: cascade.counts,
+      media_paths_enqueued: cascade.mediaPaths.length,
     },
   });
 

@@ -13,6 +13,7 @@ import { z } from "zod";
 
 import { ok, fail } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
+import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { requireRole } from "@/lib/auth/require-role";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -85,6 +86,14 @@ export async function POST(req: NextRequest): Promise<Response> {
   const authz = await requireRole("admin", { requestId, resource: "org_memory" });
   if (!authz.ok) return authz.response;
   const { user: authUser, org } = authz;
+
+  const rl = await checkRateLimit(`ai_memory_publish:${org.orgId}`, 20, 60);
+  if (!rl.allowed) {
+    return fail("rate_limited", "Muitas publicações de memória em pouco tempo.", 429, {
+      requestId,
+      headers: { "Retry-After": "60" },
+    });
+  }
 
   const body = await req.json().catch(() => null);
   const parsed = postSchema.safeParse(body);

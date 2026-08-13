@@ -25,7 +25,7 @@ import type { NextRequest } from "next/server";
 
 import { ok, fail } from "@/lib/api/wrappers";
 import { DEFAULT_CHANNEL_PROVIDER, getAdapter, type ChannelProvider } from "@/lib/channels";
-import { env } from "@/lib/env";
+import { cronSecretMatches } from "@/lib/auth/cron-secret";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -57,8 +57,7 @@ async function handle(req: NextRequest): Promise<Response> {
 
   const auth = req.headers.get("authorization") ?? "";
   const provided = auth.startsWith("Bearer ") ? auth.slice("Bearer ".length).trim() : "";
-  const accepted = [env.INTERNAL_CRON_SECRET, env.INTERNAL_SECRET].filter(Boolean);
-  if (accepted.length === 0 || !provided || !accepted.includes(provided)) {
+  if (!cronSecretMatches(provided)) {
     return fail("forbidden", "Cron secret missing or invalid.", 403, { requestId });
   }
 

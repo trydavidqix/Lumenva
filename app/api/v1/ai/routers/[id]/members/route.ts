@@ -58,6 +58,28 @@ export async function PUT(req: NextRequest, ctx: RouteCtx): Promise<Response> {
 
   const admin = createAdminClient();
 
+  if (members.length > 0) {
+    const agentIds = [...new Set(members.map((m) => m.agent_id))];
+    const { data: ownedAgents, error: agentsErr } = await admin
+      .from("ai_agents")
+      .select("id")
+      .eq("organization_id", org.orgId)
+      .in("id", agentIds);
+    if (agentsErr) {
+      return fail("internal_error", "Erro ao validar agent_id.", 500, { requestId });
+    }
+    const ownedIds = new Set((ownedAgents ?? []).map((a) => (a as { id: string }).id));
+    const missing = agentIds.filter((agentId) => !ownedIds.has(agentId));
+    if (missing.length > 0) {
+      return fail(
+        "agent_not_found",
+        "agent_id contém ids que não existem nesta organização.",
+        422,
+        { requestId, details: { agent_ids: missing } },
+      );
+    }
+  }
+
   const { data: router, error: routerErr } = await admin
     .from("ai_routers")
     .select("id")

@@ -138,6 +138,7 @@ export async function listLeadsHandler(
   let query = supabase
     .from("crm_leads")
     .select(LEAD_COLS)
+    .eq("organization_id", ctx.organization_id)
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(limit + 1);
@@ -185,6 +186,7 @@ export async function getLeadHandler(
     .from("crm_leads")
     .select(LEAD_COLS)
     .eq("id", leadId)
+    .eq("organization_id", ctx.organization_id)
     .maybeSingle();
   if (error) {
     throw new ApiError(500, "internal_error", undefined, ctx.requestId, error.message);
@@ -343,6 +345,7 @@ export async function updateLeadHandler(
     .from("crm_leads")
     .select("*")
     .eq("id", leadId)
+    .eq("organization_id", ctx.organization_id)
     .maybeSingle();
 
   if (selErr) {
@@ -376,6 +379,7 @@ export async function updateLeadHandler(
     .from("crm_leads")
     .update(patch)
     .eq("id", leadId)
+    .eq("organization_id", ctx.organization_id)
     .select(LEAD_COLS)
     .maybeSingle();
 

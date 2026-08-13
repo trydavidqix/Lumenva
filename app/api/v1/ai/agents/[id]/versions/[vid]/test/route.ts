@@ -20,6 +20,7 @@ import { type NextRequest } from "next/server";
 
 import { ok, fail } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
+import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { env } from "@/lib/env";
 import { requireRole } from "@/lib/auth/require-role";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -42,6 +43,16 @@ export async function POST(req: NextRequest, ctx: Ctx): Promise<Response> {
   const authz = await requireRole("admin", { requestId, resource: "ai_agents" });
   if (!authz.ok) return authz.response;
   const { user: authUser, org: activeOrg } = authz;
+
+  // Chama o runtime real (LLM de verdade) — sem teto, um script repetindo o
+  // POST esgota o orçamento de IA da org sem passar por nenhum outro guard.
+  const rl = await checkRateLimit(`ai_agent_test:${activeOrg.orgId}`, 20, 60);
+  if (!rl.allowed) {
+    return fail("rate_limited", "Muitos testes de agente em pouco tempo.", 429, {
+      requestId,
+      headers: { "Retry-After": "60" },
+    });
+  }
 
   let raw: unknown;
   try {
