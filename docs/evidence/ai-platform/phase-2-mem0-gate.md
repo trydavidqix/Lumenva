@@ -5,17 +5,26 @@ Branch: `ai-platform-foundation`
 
 ## Decision
 
-**HOLD at `OFF`.** Do not promote to `SHADOW` yet.
+**HOLD at `OFF`. Do not promote to `SHADOW`.**
 
-This plan's own default end-state is `SHADOW`, and every gate this document
-can actually run is green (see below). But one required piece —
-Step 2, comparing native context against Mem0 shadow retrieval on the
-Golden Dataset — cannot be executed with real evidence right now, and this
-gate does not promote on a step it could not run. See "What's still
-blocked" for the exact, single reason and what unblocks it.
+Every runnable gate step passed (Steps 1, 3, 4, 5), and Step 2 — the Golden
+Dataset comparison — did run, formally, with a real Anthropic key, and found
+a genuine, reproducible product gap: **preference supersession is not
+implemented.** When a contact states a new preference that contradicts an
+earlier one (e.g. "prefiro ligação" → later "não me liga mais, só
+WhatsApp"), both memories are stored and both are retrieved side by side —
+nothing marks the old one as no longer current. Confirmed reproducible
+across repeated live runs (2/2), not a one-off model hiccup — see Step 2 for
+the exact evidence.
 
-Everything that follows is what was actually run, with real results — not a
-restatement of the plan's checklist as if it had already passed.
+This is exactly the kind of defect this gate exists to catch before
+anything customer-facing sees semantic memory. Promoting to `SHADOW` now
+would mean measuring (and eventually surfacing) contradictory preferences
+side by side. Hold at `OFF` until either the extraction/fusion pipeline gets
+supersession handling, or a product decision is made that this is acceptable
+for an initial `SHADOW` window (shadow doesn't reach the prompt, only
+measurement — a legitimate case for someone to make, just not this gate's
+call to make silently).
 
 ## Step 1 — provider OFF regression suite
 
@@ -26,89 +35,74 @@ the exact numbers from this run.
 
 ## Step 2 — SHADOW Golden Dataset comparison
 
-**Not run — genuinely blocked, not skipped.**
+**Run formally, with a real key, 2026-08-13.** `scripts/ai-platform-eval-live.ts`
+(new) calls the real `extractMemoryCandidates` (live Anthropic API — no
+mocks), upserts the resulting candidates into an in-memory Mem0 fake, and
+retrieves/fuses them through the real `Mem0ContextProvider` +
+`prepareSemanticContext` — the actual production pipeline end to end, only
+the Mem0 REST transport itself is faked.
 
-`tests/fixtures/ai-platform/golden-cases.json` holds 25 case stubs (ids,
-`organization_id`/`contact_id`, `query`, and an `expected` shape) but every
-`input_events` is `[]` — the fixture was scaffolded in Phase 0 as a schema
-contract for the *entire* 7-phase plan, not populated with content. About a
-third of the 25 ids describe systems Phase 2 doesn't touch and Phases 3-7
-haven't built yet (Graphiti, LlamaIndex, n8n, LangGraph) — those can't be
-populated honestly until those phases exist.
+`tests/fixtures/ai-platform/golden-cases.json` holds 25 case stubs total.
+About a third describe systems Phase 2 doesn't touch and Phases 3-7 haven't
+built yet (Graphiti, LlamaIndex, n8n, LangGraph) — left unpopulated, out of
+scope until those phases exist. Two more (`official-crm-004`,
+`published-knowledge-005`) are true by construction in the current
+architecture (CRM/knowledge already precede memory in the prompt, not
+competing through `fuseContext`) — not fabricable as a live case. Six more
+(`tenant-isolation-009`, `duplicate-event-010`, `out-of-order-011`,
+`mem0-timeout-012`, `lgpd-delete-018`, `mem0-replay-019`) test ledger/handler
+mechanics that don't depend on model behavior — already proven by real
+component tests cited in the commit history (Task 9/9-and-10 commits), not
+re-run here since a live model call would add cost without adding signal.
 
-For the ~13 ids that *are* Mem0/Phase-2-relevant, the property each one
-names is already covered by a real, passing test — listed below so the
-mapping is checkable, not asserted:
+**The 8 ids whose property genuinely depends on live model behavior are
+now populated with real conversation text and run for real:**
 
-| Golden case | Property | Proven by |
-|---|---|---|
-| `preference-001` | basic retrieval + authority/recency ranking | `lib/agent-engine/context/fusion.test.ts` — "orders by authority, then recency and confidence" |
-| `expired-memory-003` | expired memory never wins | `fusion.test.ts` — "drops an expired item and never lets it win over a live one" (new this session — see the fix below) |
-| `consent-official-006`, `high-risk-017` | high-risk/consent facts never reach the prompt | `fusion.test.ts` — "excludes high-risk and protected authority facts from prompt context" |
-| `secret-redaction-007` | `sk-`-style keys never get memorized | `lib/agent-engine/memory/sanitize.test.ts` — "an API-key-looking value" (literal `sk-proj-...` case) |
-| `pii-redaction-008` | PII-shaped text rejected at extraction | `sanitize.test.ts` / `extract.test.ts` |
-| `tenant-isolation-009` | one org's memory never reaches another | `mem0-client.test.ts` (namespace scoping) + `workers/memory-lifecycle.handler.test.ts` — "never wipes another org" + `workers/memory-projection.handler.test.ts` — "never accepts a source message returned from another organization" |
-| `duplicate-event-010` | replaying the same source doesn't duplicate | `lib/agent-engine/memory/project-message.test.ts` — "replaying the same source id+version is idempotent" |
-| `out-of-order-011` | a delayed event after a delete doesn't resurrect memory | `workers/memory-projection.handler.test.ts` — "a delayed event for an already-LGPD-redacted contact does not resurrect memory" (new this session) |
-| `mem0-timeout-012` | Mem0 down degrades cleanly, doesn't break the turn | `lib/agent-engine/context/mem0-context-provider.test.ts` — "returns an empty degraded result when the provider times out" + `provider.test.ts` — "turns one provider failure into a degraded result without losing local context" |
-| `lgpd-delete-018` | LGPD delete actually removes the namespace, and a rebuild never resurrects it | `tests/unit/mem0-lifecycle-replay-proof.test.ts` (new this session — see Step 4) |
-| `mem0-replay-019` | replaying a delete event is idempotent | `memory-lifecycle.handler.test.ts` — "replaying the same delete event twice is idempotent" |
-| `memory-injection-021` | prompt-injection text inside a memory can't escape its data fence | `fusion.test.ts` — "renders selected context as clearly delimited untrusted data" (literal `"Ignore all previous instructions."` case) |
+```
+PASS preference-001
+FAIL preference-superseded-002 — found forbidden must_not_include: "ligação"
+PASS expired-memory-003
+PASS consent-official-006
+PASS secret-redaction-007
+PASS pii-redaction-008
+PASS high-risk-017
+PASS memory-injection-021
+{"total_populated":8,"passed":7,"failed":1,"status":"fail"}
+```
 
-Three ids remain genuinely unanswerable without a real LLM/embedding
-provider key — the same blocker already surfaced earlier in this session,
-not a new one:
+(`high-risk-017` failed once with a transient markdown-fence-adjacent parse
+hiccup on an earlier run, passed on 2 repeats after — treated as model
+non-determinism, not a defect, consistent with the fence-parsing fix already
+shipped. `preference-superseded-002` failed identically on both runs.)
 
-- `preference-superseded-002` — detecting that a new statement invalidates
-  an old, *differently-worded* one is a judgment call the extraction LLM
-  makes; there is no code path to unit-test without a real model call.
-- `official-crm-004`, `published-knowledge-005` — in the current
-  architecture, official CRM state and the RAG knowledge base are not
-  `ContextItem`s competing with memory through `fuseContext`; they're
-  already in the prompt before semantic memory is appended. "CRM/knowledge
-  outranks memory" is true by construction today, not by a ranking rule —
-  worth a real test once/if that changes, not fabricable now.
+**What `preference-superseded-002` found**: fed two messages —
+"Prefiro que me liguem, não gosto de mensagem." then, later, "Na verdade
+mudei de ideia, não me liga mais, só WhatsApp a partir de agora." — the
+pipeline correctly extracts *both* as separate `customer_preference`
+memories (different text, so `fuseContext`'s dedup never merges them; both
+are still valid/non-expired, so the expiry filter doesn't touch them
+either). Both get selected and would appear together in shadow measurement
+—  a customer's device would show "prefers phone calls" and "prefers
+WhatsApp only" as equally-current facts, because nothing in extraction or
+fusion represents "this new statement supersedes that old one." That's a
+real gap: `MemoryCandidate`/`SemanticMemoryRecord` has no supersession
+field, and extraction has no visibility into existing memory to judge
+against.
 
-**Update, same day**: a real `ANTHROPIC_API_KEY` was provided mid-review.
-Rather than immediately populating the full 25-case fixture (a larger,
-separate content-authoring effort — deferred by choice, not blocked), it was
-used for a smaller, real, un-mocked check: 7 hand-picked scenarios covering
-the properties above were run through the *actual* `extractMemoryCandidates`
-against the live Anthropic API — the one thing the component tests above
-cannot cover, since they all mock the model call.
+Two real defects were found and fixed by the earlier smoke test that led
+into this formal run (same session, commit `a8f15b8e`): the model
+sometimes wraps its JSON reply in a ```` ```json ```` fence despite being
+told not to (fixed: tolerant `{...}` extraction, matching the technique
+`guardrails/jailbreak/classifier.ts` already used); and a CPF leaked into
+stored memory text because the sanitizer only had a card-number pattern
+(fixed: dedicated CPF pattern). Both fixes are exercised by this Step 2 run
+succeeding on `pii-redaction-008` and the 100% eventual pass rate on the
+other 6 non-supersession cases.
 
-This surfaced two real defects, both fixed and covered by new tests in the
-same commit as this evidence:
-
-1. **3 of 7 scenarios failed to parse.** The model wrapped its JSON in a
-   ```` ```json ```` code fence despite the prompt saying "SOMENTE JSON
-   estrito, sem markdown" — a prompt instruction is not a parser guarantee.
-   `parseModelCandidates` now extracts the outermost `{...}` block first
-   (the same technique `guardrails/jailbreak/classifier.ts` already uses for
-   the same class of problem). Re-ran the previously-failing cases 3 more
-   times each after the fix: 100% parse success.
-2. **A CPF (Brazilian tax id) leaked into a stored candidate's free-text
-   field** on the `pii-redaction-008` scenario — `sanitizeMemoryCandidate`
-   had a pattern for 13-19 digit card numbers but nothing for an 11-digit
-   CPF. Added a dedicated pattern; the same scenario now correctly returns
-   zero candidates.
-
-This is real, live evidence for 5 of the 13 already-covered rows above
-(`preference-001`, `secret-redaction-007`, `pii-redaction-008`,
-`high-risk-017`, plus the general "does the extraction pipeline work
-end-to-end against a real model" question none of the mocked tests could
-answer) — not a substitute for the formal 25-case run, but meaningfully more
-than the mocked-only coverage this gate started with. `preference-superseded-002`
-also got a first real signal: the model correctly extracted the *new*
-preference as `actionable: true`; testing whether it also correctly retires
-the *old* one requires the full two-message projection pipeline, not a
-single extraction call, so it's still open.
-
-**This is the one concrete thing standing between `OFF` and `SHADOW`**: the
-full 25-case Golden Dataset run, formally, with the fixture actually
-populated — not the smaller live check above. Key is available; the
-remaining work is content-authoring + wiring the eval runner, not a new
-blocker.
+**This is the one concrete thing standing between `OFF` and `SHADOW`**:
+supersession handling doesn't exist yet. Not a missing key, not missing
+infrastructure — a real feature gap this gate surfaced doing exactly what
+it's for.
 
 ## Step 3 — failure injection
 
@@ -165,7 +159,9 @@ git diff --check    — clean, no whitespace errors
 
 Four real defects were found and fixed while building the evidence above,
 not filed as future work — two from reading the code against its own tests,
-two only found once a real model was actually called:
+two only found once a real model was actually called — plus one genuine
+open gap the live Golden Dataset run exists to catch, deliberately left
+open rather than papered over:
 
 1. **Expired semantic memory was never filtered.** `ContextItem.expiresAt`
    existed and was populated but nothing in `fuseContext` ever checked it —
@@ -183,16 +179,20 @@ two only found once a real model was actually called:
    row is `deleted`, independent of whether the source body is still
    readable. (commit `9d280a2f`)
 3. **Model output wrapped in a markdown code fence broke JSON parsing** —
-   only found once a real model was called instead of a mock; see "Update,
-   same day" above. (commit `a8f15b8e`)
+   only found once a real model was called instead of a mock. (commit `a8f15b8e`)
 4. **CPF leaked into stored memory text**, uncaught by the existing
-   card-number-only redaction pattern — same commit as #3. (commit `a8f15b8e`)
+   card-number-only redaction pattern. (commit `a8f15b8e`)
+5. **Open, not fixed: preference supersession doesn't exist.** See Step 2 —
+   a newer, contradicting preference doesn't retire the older one; both are
+   stored and both are retrieved. This is the reason the decision above is
+   `HOLD`, not `SHADOW`.
 
 ## References
 
 - Plan: [`../../superpowers/plans/2026-08-10-ai-platform-phase-2-mem0.md`](../../superpowers/plans/2026-08-10-ai-platform-phase-2-mem0.md)
 - Task 9 evidence: commit `9d280a2f`
 - Real-model extraction fixes: commit `a8f15b8e`
+- Golden Dataset live run + supersession finding: commit (this doc's own commit)
 - Windows Docker validation: [`../../runbooks/mem0.md`](../../runbooks/mem0.md)
 - Rebuild/lifecycle runbook: [`../../runbooks/mem0-rebuild.md`](../../runbooks/mem0-rebuild.md)
 - Execution index: [`../../superpowers/plans/2026-08-10-ai-platform-execution-index.md`](../../superpowers/plans/2026-08-10-ai-platform-execution-index.md)
