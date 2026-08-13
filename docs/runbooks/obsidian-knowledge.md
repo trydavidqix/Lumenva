@@ -110,9 +110,11 @@ reclame.
 - Não faz upload para o CRM sozinho — o artefato fica local até um humano
   enviá-lo pela UI.
 - Não fala com Postgres/Supabase, Storage ou qualquer API do CRM.
-- Não roda o scanner sobre o bloco de frontmatter em si — `organization_id` e
-  `agent_id` são UUID v4 já validados por schema (`assertPublishableDocument`)
-  e por isso ficam fora do escopo do scanner de prosa; o corpo da nota
-  (`body`) é o que é varrido, porque é o corpo que vira conteúdo pesquisável
-  no CRM. Não coloque segredo no campo `title` do frontmatter — ele não é
-  varrido pelo scanner de segredos.
+- Não roda o scanner sobre o bloco de frontmatter inteiro —
+  `organization_id`/`agent_id`/`source_id`/`version`/`published_at` são
+  UUID/slug/inteiro/data já validados por schema
+  (`assertPublishableDocument`) e por isso ficam fora do escopo do scanner de
+  prosa (rodar o scanner sobre um UUID v4 dispara falso positivo de
+  telefone). O campo `title`, porém, é texto livre — a única exceção — e por
+  isso **é** varrido junto com o corpo: `title` + `body` formam o texto que o
+  scanner de segredos/PII analisa antes de liberar o export.

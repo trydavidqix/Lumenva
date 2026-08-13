@@ -149,7 +149,26 @@ describe("exportObsidianNote", () => {
     } catch (error) {
       expect(error).toBeInstanceOf(ObsidianExportBlockedError);
       const blocked = error as ObsidianExportBlockedError;
-      expect(blocked.findings).toEqual([{ code: "api_key", line: 3 }]);
+      // Scanned text is `${title}\n${body}`, so body line 3 ("# Runbook",
+      // "", "AWS_ACCESS_KEY_ID=...") shifts to line 4 once title occupies line 1.
+      expect(blocked.findings).toEqual([{ code: "api_key", line: 4 }]);
+    }
+
+    expect(existsSync(outputDir) ? readdirSync(outputDir) : []).toHaveLength(0);
+  });
+
+  it("blocks export and writes no artifact when the note's title (not the body) contains a detectable secret", () => {
+    const { vaultDir, outputDir } = makeWorkspace();
+    const filePath = writeNote(vaultDir, "note.md", buildNote({ title: "Bearer abcd1234efgh" }));
+
+    expect(() => exportObsidianNote({ filePath, outputDir })).toThrow(ObsidianExportBlockedError);
+
+    try {
+      exportObsidianNote({ filePath, outputDir });
+    } catch (error) {
+      expect(error).toBeInstanceOf(ObsidianExportBlockedError);
+      const blocked = error as ObsidianExportBlockedError;
+      expect(blocked.findings).toEqual([{ code: "credential", line: 1 }]);
     }
 
     expect(existsSync(outputDir) ? readdirSync(outputDir) : []).toHaveLength(0);
