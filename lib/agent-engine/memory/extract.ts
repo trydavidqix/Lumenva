@@ -89,10 +89,22 @@ function constrainAuthority(candidate: MemoryCandidate): MemoryCandidate {
   return candidate;
 }
 
+/**
+ * The prompt asks for strict JSON with no markdown, but the model does not
+ * always comply (observed: wrapping the object in a ```json code fence).
+ * Same tolerant-extraction technique as
+ * `guardrails/jailbreak/classifier.ts#parseJailbreakClassification` — pull
+ * the outermost `{...}` out of whatever surrounds it, rather than trusting
+ * the whole response body to already be bare JSON.
+ */
 function parseModelCandidates(text: string): MemoryCandidate[] {
+  const match = /\{[\s\S]*\}/.exec(text);
+  if (match === null) {
+    throw new MemoryExtractionRetryableError();
+  }
   let payload: unknown;
   try {
-    payload = JSON.parse(text);
+    payload = JSON.parse(match[0]);
   } catch {
     throw new MemoryExtractionRetryableError();
   }

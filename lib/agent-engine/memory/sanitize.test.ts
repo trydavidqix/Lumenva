@@ -18,6 +18,8 @@ describe("sanitizeMemoryCandidate", () => {
     ["a card-length sequence that fails Luhn", "Número informado: 1234 5678 9012 3456"],
     ["a CVV", "CVV: 123"],
     ["a CVV without an assignment separator", "CVV 123"],
+    ["a punctuated CPF", "Meu CPF é 123.456.789-00 caso precise pra nota fiscal."],
+    ["a bare CPF", "CPF 12345678900 para nota fiscal."],
     ["an internal secret variable name", "OPENAI_API_KEY=should-not-be-persisted"],
     ["an ambiguous token assignment", "access_token=customer-provided-value"],
   ])("blocks %s", (_caseName, text) => {

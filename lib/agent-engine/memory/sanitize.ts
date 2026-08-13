@@ -22,9 +22,18 @@ const INTERNAL_SECRET_VARIABLE =
 const CREDENTIAL_ASSIGNMENT =
   /\b(?:token|access[_ -]?token|refresh[_ -]?token|auth(?:orization)?[_ -]?token|client[_ -]?secret|private[_ -]?key)\b\s*(?:=|:|é|is)\s*\S+/iu;
 const CARD_NUMBER_CANDIDATE = /(?<!\d)(?:\d[ -]?){13,19}(?!\d)/;
+// CPF (Brazilian tax id): 3-3-3-2 digit grouping, punctuated or bare. L-07
+// requires CPF encrypted at rest and out of logs/dumps/screenshots — a free-text
+// semantic-memory record has neither guarantee, so it's rejected the same way
+// a card number is, not merely masked.
+const CPF_CANDIDATE = /(?<!\d)\d{3}\.?\d{3}\.?\d{3}-?\d{2}(?!\d)/;
 
 function containsCardNumber(text: string): boolean {
   return CARD_NUMBER_CANDIDATE.test(text);
+}
+
+function containsCpf(text: string): boolean {
+  return CPF_CANDIDATE.test(text);
 }
 
 /**
@@ -52,6 +61,9 @@ export function sanitizeMemoryCandidate(input: {
   }
   if (CVV_STATEMENT.test(text) || containsCardNumber(text)) {
     return { allowed: false, reason: "payment_card" };
+  }
+  if (containsCpf(text)) {
+    return { allowed: false, reason: "cpf" };
   }
   if (INTERNAL_SECRET_VARIABLE.test(text)) {
     return { allowed: false, reason: "internal_secret_variable" };
