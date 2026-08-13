@@ -1,8 +1,8 @@
 # Fase 2 — Mem0: estado de implementação
 
-Data: 2026-08-11
+Data: 2026-08-13
 Branch: `ai-platform-foundation`
-Estado: **em curso — não é gate de release**
+Estado: **em curso — gate parcial em `docs/evidence/ai-platform/phase-2-mem0-gate.md`; decisão é `HOLD` em `OFF`**
 
 ## Decisão operacional atual
 
@@ -11,7 +11,7 @@ produção, chamada a provider, mudança em Vercel/Supabase/WAHA/Redis, nem
 promoção para `SHADOW`, `CANARY` ou `ON`. PostgreSQL/Supabase continua a fonte
 de verdade; Mem0 é apenas uma projeção reconstruível.
 
-## Entregue até a Tarefa 8
+## Entregue
 
 | Tarefa | Entrega | Commits principais |
 |---|---|---|
@@ -23,32 +23,39 @@ de verdade; Mem0 é apenas uma projeção reconstruível.
 | 6 | Projeção assíncrona e idempotente de eventos oficiais | `b5bc8bf5`, `a1f42e13` |
 | 7 | Provider de contexto e comparação em shadow | `d5bd0b6b`, `5d2d5cb2` |
 | 8 | Fusão de contexto no prompt só sob rollout explícito e fail-closed | `6f6be4d7`, `7ce49214` |
-
-As revisões independentes das Tarefas 1–8 aprovaram os seus escopos finais. A
-última regressão focada da Tarefa 8 executou 42 testes; typecheck, lint e
-`git diff --check` passaram nessa árvore. Estes resultados não substituem o
-gate completo da fase.
+| 9 | Lifecycle LGPD (delete automático) + script de reconstrução | `9d280a2f` |
+| 10 (parcial) | Gate de release: regressão, failure injection, prova de lifecycle/replay, verificação completa — ver `phase-2-mem0-gate.md` | `33d5de3f` (fix de memória expirada achado no processo) |
 
 ## Pendências obrigatórias
 
-1. Tarefa 9: lifecycle/rebuild e prova de apagamento/reconstrução para LGPD.
-2. Tarefa 10: Golden Dataset em shadow, falhas/outage e decisão `GO` ou `NO-GO`.
-3. ~~Validação no Windows~~ — feita em 2026-08-13. `docker compose config`
-   válido nos dois arquivos; healthcheck do profile `ai-memory` responde
-   `HEALTHY` e `/auth/setup-status` responde `{"needsSetup":true}` num boot
-   limpo, sem intervenção manual. Achado no caminho: a imagem pinada
-   `mem0/mem0-api-server:0.1.117` não existe mais no Docker Hub e `latest` é
-   ARM64-only — sem build amd64 publicado. Caminho adotado: build local a
-   partir do source oficial (commit `96d45b78`), com 3 correções sobre o
-   `server/Dockerfile` deles (dependência `psycopg[binary]` ausente, pasta
-   `/app/history` nunca criada, migração `alembic` nunca executada) — receita
-   completa em `docs/runbooks/mem0.md`. Ainda não validado: confirmação de que
-   o Mem0 OSS em execução respeita `Idempotency-Key` (requer bootstrap com
-   chave de provider real, fora do escopo desta validação de infraestrutura).
+Tarefa 10 está **parcialmente fechada** — ver
+[`phase-2-mem0-gate.md`](phase-2-mem0-gate.md) para o detalhe completo. Falta
+só uma peça, e é a mesma trava de sempre:
 
-Até estas pendências estarem fechadas com evidência, não promover Mem0 para
-`SHADOW`, `CANARY` ou `ON`, não iniciar a Fase 3 e não configurar credenciais
-de provider por conveniência.
+1. **Comparação Golden Dataset em shadow** (Passo 2 da Tarefa 10) não rodou.
+   O fixture de 25 casos nunca foi populado com conteúdo (Fase 0 só criou o
+   contrato de schema); ~13 casos relevantes à Fase 2 já têm a propriedade
+   provada por teste real e citado no gate; 3 casos exigem chamada real a
+   LLM (julgamento de "preferência substituída") ou não se aplicam à
+   arquitetura atual (CRM/knowledge já vencem memória por construção, não
+   por ranking). Sem isso, decisão é **manter `OFF`** — não `SHADOW`.
+
+~~Validação no Windows~~ — feita em 2026-08-13. `docker compose config`
+válido nos dois arquivos; healthcheck do profile `ai-memory` responde
+`HEALTHY` e `/auth/setup-status` responde `{"needsSetup":true}` num boot
+limpo, sem intervenção manual. Achado no caminho: a imagem pinada
+`mem0/mem0-api-server:0.1.117` não existe mais no Docker Hub e `latest` é
+ARM64-only — sem build amd64 publicado. Caminho adotado: build local a
+partir do source oficial (commit `96d45b78`), com 3 correções sobre o
+`server/Dockerfile` deles (dependência `psycopg[binary]` ausente, pasta
+`/app/history` nunca criada, migração `alembic` nunca executada) — receita
+completa em `docs/runbooks/mem0.md`. Ainda não validado: confirmação de que
+o Mem0 OSS em execução respeita `Idempotency-Key` (requer bootstrap com
+chave de provider real, fora do escopo desta validação de infraestrutura).
+
+Até a pendência acima estar fechada com evidência real, não promover Mem0
+para `SHADOW`, `CANARY` ou `ON`, não iniciar a Fase 3 e não configurar
+credenciais de provider por conveniência.
 
 ## Referências operacionais
 
