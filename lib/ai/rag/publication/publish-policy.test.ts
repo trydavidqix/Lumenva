@@ -15,7 +15,7 @@ const rpcMock = vi.fn();
 const insertMock = vi.fn();
 const ingestPolicyFileMock = vi.fn();
 
-let agentRow: { id: string } | null;
+let agentTable: Array<{ id: string; organization_id: string }>;
 let agentErr: { message: string } | null;
 let insertResult: { data: { id: string } | null; error: { message: string } | null };
 
@@ -39,13 +39,27 @@ vi.mock("@/lib/supabase/admin", () => ({
     from: (table: string) => {
       if (table === "ai_agents") {
         return {
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                maybeSingle: async () => ({ data: agentRow, error: agentErr }),
-              }),
-            }),
-          }),
+          // Real `.eq()` narrowing (not a chain that ignores its args) so a
+          // test can prove the organization_id filter is load-bearing: an
+          // agent row that exists for a DIFFERENT org must not match here.
+          select: () => {
+            const filters: Record<string, string> = {};
+            const builder = {
+              eq: (col: string, val: string) => {
+                filters[col] = val;
+                return builder;
+              },
+              maybeSingle: async () => {
+                if (agentErr) return { data: null, error: agentErr };
+                const match =
+                  agentTable.find(
+                    (row) => row.id === filters.id && row.organization_id === filters.organization_id,
+                  ) ?? null;
+                return { data: match, error: null };
+              },
+            };
+            return builder;
+          },
         };
       }
       if (table === "ai_knowledge_sources") {
@@ -80,6 +94,7 @@ import { PdfExtractError } from "@/lib/ai/rag/ingest/policy";
 import { PublishKnowledgePolicyError, publishKnowledgePolicy } from "./publish-policy";
 
 const ORG_ID = "22222222-2222-4222-8222-222222222222";
+const OTHER_ORG_ID = "33333333-3333-4333-8333-333333333333";
 const AGENT_ID = "55555555-5555-4555-8555-555555555555";
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const SOURCE_ID = "66666666-6666-4666-8666-666666666666";
@@ -101,7 +116,7 @@ function baseInput(overrides: Partial<Parameters<typeof publishKnowledgePolicy>[
 
 beforeEach(() => {
   vi.clearAllMocks();
-  agentRow = { id: AGENT_ID };
+  agentTable = [{ id: AGENT_ID, organization_id: ORG_ID }];
   agentErr = null;
   insertResult = { data: { id: SOURCE_ID }, error: null };
   uploadMock.mockResolvedValue({ error: null });
@@ -186,7 +201,6 @@ describe("publishKnowledgePolicy", () => {
   });
 
   it("aceita PDF por extensão mesmo com MIME genérico octet-stream via nome", async () => {
-    agentRow = { id: AGENT_ID };
     const res = await publishKnowledgePolicy(
       baseInput({
         file: { name: "policy.pdf", mimeType: "application/pdf", bytes: Buffer.from("%PDF-1.4") },
@@ -195,8 +209,8 @@ describe("publishKnowledgePolicy", () => {
     expect(res.blobPath.endsWith(".pdf")).toBe(true);
   });
 
-  it("agent não pertence à organização → not_found, sem upload", async () => {
-    agentRow = null;
+  it("agent não existe em lugar nenhum → not_found, sem upload", async () => {
+    agentTable = [];
 
     await expect(publishKnowledgePolicy(baseInput())).rejects.toMatchObject({
       code: "not_found",
@@ -206,8 +220,22 @@ describe("publishKnowledgePolicy", () => {
     expect(uploadMock).not.toHaveBeenCalled();
   });
 
+  it("agent existe mas pertence a OUTRA organização → not_found, sem upload (prova que o filtro organization_id é levado a sério)", async () => {
+    // Same agent id, but owned by a different org than the one in the request.
+    agentTable = [{ id: AGENT_ID, organization_id: OTHER_ORG_ID }];
+
+    await expect(
+      publishKnowledgePolicy(baseInput({ organizationId: ORG_ID })),
+    ).rejects.toMatchObject({
+      code: "not_found",
+      status: 404,
+    });
+
+    expect(uploadMock).not.toHaveBeenCalled();
+  });
+
   it("erro na consulta de agent → internal_error", async () => {
-    agentRow = null;
+    agentTable = [];
     agentErr = { message: "db down" };
 
     await expect(publishKnowledgePolicy(baseInput())).rejects.toMatchObject({
@@ -262,7 +290,7 @@ describe("publishKnowledgePolicy", () => {
   });
 
   it("erros lançados são instâncias de PublishKnowledgePolicyError", async () => {
-    agentRow = null;
+    agentTable = [];
     await expect(publishKnowledgePolicy(baseInput())).rejects.toBeInstanceOf(
       PublishKnowledgePolicyError,
     );
