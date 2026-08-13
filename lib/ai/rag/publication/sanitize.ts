@@ -55,10 +55,11 @@ const JWT_LIKE_VALUE = /\b[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,
 
 // Portuguese phrasing puts "token"/"sessão" in either order ("session
 // token" vs "token de sessão"), so both are covered explicitly instead of
-// relying on one canonical word order. "Sessão" alone is core WhatsApp/WAHA
-// domain vocabulary ("Duração da sessão: 30 minutos.") and appears in
-// legitimate knowledge-base prose constantly, which is exactly why the
-// strict branch below is gated too, not just the natural one.
+// relying on one canonical word order. "Sessão" alone is heavily used in this
+// CRM's domain vocabulary for messaging-channel session lifecycle ("Duração
+// da sessão: 30 minutos.") and appears in legitimate knowledge-base prose
+// constantly, which is exactly why the strict branch below is gated too, not
+// just the natural one.
 const SESSION_KEYWORD =
   "(?:set-cookie|cookie|session(?:[_ -]?(?:id|token|key))?|token\\s+de\\s+sess[aã]o|sess[aã]o(?:[_ -]?(?:id|token|key))?)";
 const SESSION_OR_COOKIE_STRICT_ASSIGNMENT = new RegExp(
