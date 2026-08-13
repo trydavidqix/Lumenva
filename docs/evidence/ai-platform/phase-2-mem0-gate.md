@@ -5,26 +5,26 @@ Branch: `ai-platform-foundation`
 
 ## Decision
 
-**HOLD at `OFF`. Do not promote to `SHADOW`.**
+**Gate passed. `SHADOW` is unblocked** (still requires a separate, explicit
+promotion decision — this gate clears the technical blocker, it doesn't
+flip the flag).
 
-Every runnable gate step passed (Steps 1, 3, 4, 5), and Step 2 — the Golden
-Dataset comparison — did run, formally, with a real Anthropic key, and found
-a genuine, reproducible product gap: **preference supersession is not
-implemented.** When a contact states a new preference that contradicts an
-earlier one (e.g. "prefiro ligação" → later "não me liga mais, só
-WhatsApp"), both memories are stored and both are retrieved side by side —
-nothing marks the old one as no longer current. Confirmed reproducible
-across repeated live runs (2/2), not a one-off model hiccup — see Step 2 for
-the exact evidence.
+Step 2's Golden Dataset run found preference supersession was not
+implemented — the exact defect this gate exists to catch (see "What
+Step 2 found" below). It was fixed the same day: extraction now receives
+the contact's existing memories and can flag which ones a new statement
+supersedes; those get retired (`validUntil = now`) instead of sitting
+side by side with the contradicting new fact forever.
 
-This is exactly the kind of defect this gate exists to catch before
-anything customer-facing sees semantic memory. Promoting to `SHADOW` now
-would mean measuring (and eventually surfacing) contradictory preferences
-side by side. Hold at `OFF` until either the extraction/fusion pipeline gets
-supersession handling, or a product decision is made that this is acceptable
-for an initial `SHADOW` window (shadow doesn't reach the prompt, only
-measurement — a legitimate case for someone to make, just not this gate's
-call to make silently).
+The fix is real but, like the extraction step it extends, LLM-judgment-based
+— not deterministic. Measured across 6 live runs against the real API:
+`preference-superseded-002` now passes 5/6 (83%), up from 0/2 (0%) before
+the fix. That's not "always correct," and this document says so rather than
+rounding up. It's the same class of reliability the rest of extraction
+already has (see `high-risk-017`'s independent, pre-existing ~50% flake on
+JSON formatting, unrelated to this fix, unchanged by it) — good enough to
+unblock `SHADOW` (measurement only, nothing customer-facing), not asserted
+as a reason to skip a real `CANARY`/`ON` evaluation later.
 
 ## Step 1 — provider OFF regression suite
 
@@ -99,10 +99,52 @@ stored memory text because the sanitizer only had a card-number pattern
 succeeding on `pii-redaction-008` and the 100% eventual pass rate on the
 other 6 non-supersession cases.
 
-**This is the one concrete thing standing between `OFF` and `SHADOW`**:
-supersession handling doesn't exist yet. Not a missing key, not missing
-infrastructure — a real feature gap this gate surfaced doing exactly what
-it's for.
+### Resolution: supersession detection, same day
+
+`lib/agent-engine/memory/extract.ts`: `extractMemoryCandidates` now accepts
+`existingMemories` (id+text pairs) and includes them in the prompt; the
+model can put a matched id in a new `supersedes` field on the candidate it's
+replacing. Extraction intersects any `supersedes` ids against the real known
+id set before returning — a hallucinated or unlisted id is dropped, never
+trusted downstream.
+
+`lib/agent-engine/memory/project-message.ts` (the shared core, so this
+applies to the live `message.received` handler *and* `rebuild-mem0.ts`, not
+just one of them): before extraction, searches the contact's existing
+memories (best-effort — a search failure degrades to "nothing known,"
+never blocks projection) and passes them in; after extraction, retires
+every existing record a surviving candidate flagged as superseded by
+setting `validUntil = now` — a normal `upsert`, not a delete, so it stays as
+history and `fuseContext`'s expiry filter (this session's other fix) is
+what actually keeps it out of ranking from here on.
+
+`workers/memory-projection.handler.ts` was refactored to call the shared
+`projectMessage` instead of its own inline duplicate of the same logic —
+otherwise this fix would only have applied to the rebuild path, not the
+live one. (Surfaced its own bug during the refactor: eagerly constructing
+`Mem0Client` before knowing whether a message had a fact to project, which
+throws when `MEM0_BASE_URL` isn't configured — fixed by falling back to
+`NullMemoryPort` when construction fails, matching how the rest of the
+pipeline already tolerates Mem0 being unconfigured. All existing
+`memory-projection.handler.test.ts` cases still pass unmodified — the
+refactor didn't change observable handler behavior other than this fix.)
+
+**Measured effect** (6 live runs against the real API, same script, same
+case):
+
+```
+run 1: FAIL — found forbidden must_not_include: "ligação"
+run 2: PASS
+run 3: PASS
+run 4: PASS
+run 5: PASS
+run 6: PASS
+```
+
+5/6 (83%). Before the fix: 0/2 (0%), both failures identical. Real, large
+improvement — not a claim of perfection. LLM-judged contradiction detection
+will not be deterministic the way the ledger/idempotency guarantees
+elsewhere in this system are, and this document is not asserting otherwise.
 
 ## Step 3 — failure injection
 
@@ -157,11 +199,9 @@ git diff --check    — clean, no whitespace errors
 
 ## What shipped alongside this gate
 
-Four real defects were found and fixed while building the evidence above,
+Five real defects were found and fixed while building the evidence above,
 not filed as future work — two from reading the code against its own tests,
-two only found once a real model was actually called — plus one genuine
-open gap the live Golden Dataset run exists to catch, deliberately left
-open rather than papered over:
+three only found once a real model was actually called:
 
 1. **Expired semantic memory was never filtered.** `ContextItem.expiresAt`
    existed and was populated but nothing in `fuseContext` ever checked it —
@@ -182,17 +222,16 @@ open rather than papered over:
    only found once a real model was called instead of a mock. (commit `a8f15b8e`)
 4. **CPF leaked into stored memory text**, uncaught by the existing
    card-number-only redaction pattern. (commit `a8f15b8e`)
-5. **Open, not fixed: preference supersession doesn't exist.** See Step 2 —
-   a newer, contradicting preference doesn't retire the older one; both are
-   stored and both are retrieved. This is the reason the decision above is
-   `HOLD`, not `SHADOW`.
+5. **Preference supersession didn't exist** — Step 2 found it, same-day fix
+   added it (see "Resolution" above). The reason the decision above changed
+   from `HOLD` to gate-passed within the same session, not across two.
 
 ## References
 
 - Plan: [`../../superpowers/plans/2026-08-10-ai-platform-phase-2-mem0.md`](../../superpowers/plans/2026-08-10-ai-platform-phase-2-mem0.md)
 - Task 9 evidence: commit `9d280a2f`
 - Real-model extraction fixes: commit `a8f15b8e`
-- Golden Dataset live run + supersession finding: commit (this doc's own commit)
+- Golden Dataset live run + supersession finding + fix: commit `a0e8c1e0` (finding) and this doc's own commit (fix + resolution)
 - Windows Docker validation: [`../../runbooks/mem0.md`](../../runbooks/mem0.md)
 - Rebuild/lifecycle runbook: [`../../runbooks/mem0-rebuild.md`](../../runbooks/mem0-rebuild.md)
 - Execution index: [`../../superpowers/plans/2026-08-10-ai-platform-execution-index.md`](../../superpowers/plans/2026-08-10-ai-platform-execution-index.md)

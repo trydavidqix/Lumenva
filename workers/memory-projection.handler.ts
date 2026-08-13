@@ -4,16 +4,23 @@
  * This consumer observes trusted CRM events only. It never participates in the
  * inbound reply path: all provider and extraction failures become retriable
  * event-log results, leaving the WhatsApp response consumer independent.
+ *
+ * Loads the source message/conversation (handler-specific — this is the only
+ * place that knows how a `message.received` event maps to a projectable
+ * message), then hands off to `lib/agent-engine/memory/project-message.ts`
+ * for the actual extract -> sanitize -> ledger -> upsert core, shared with
+ * `scripts/rebuild-mem0.ts` so the two paths can't drift on what counts as
+ * safe/eligible to project — or, since that core also does supersession
+ * detection/retirement, on what counts as "no longer current."
  */
 import type pg from "pg";
 
 import { createPool } from "@/lib/agent-engine/db/pool";
 import { llmEdgeConfigFromEnv, type LlmEdgeConfig } from "@/lib/agent-engine/edge/llm/run-model-call";
-import { extractMemoryCandidates, type MemoryCandidate } from "@/lib/agent-engine/memory/extract";
-import { Mem0Client, Mem0ProviderError } from "@/lib/agent-engine/memory/mem0-client";
-import type { MemoryPort } from "@/lib/agent-engine/memory/port";
-import { sanitizeMemoryCandidate } from "@/lib/agent-engine/memory/sanitize";
-import { beginProjection, markProjectionApplied, markProjectionRetry } from "@/lib/agent-engine/platform/projection-ledger";
+import type { extractMemoryCandidates } from "@/lib/agent-engine/memory/extract";
+import { Mem0Client } from "@/lib/agent-engine/memory/mem0-client";
+import { NullMemoryPort, type MemoryPort } from "@/lib/agent-engine/memory/port";
+import { projectMessage } from "@/lib/agent-engine/memory/project-message";
 import { resolveAiPlatformFeature, type ResolvedAiPlatformFeature } from "@/lib/agent-engine/platform/features";
 import type { EventRow, HandlerResult } from "@/lib/event-log/dispatcher";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -63,45 +70,25 @@ function projectionPool(): pg.Pool {
   return pool;
 }
 
-function retryAt(now: Date): string {
-  return new Date(now.getTime() + 60_000).toISOString();
-}
-
-function errorCode(error: unknown): string {
-  if (error instanceof Mem0ProviderError) return `mem0_${error.kind}`;
-  return "memory_extraction_failed";
-}
-
+/**
+ * `feature.mode !== "off"` for this org is the normal gate for reaching this
+ * code at all — Mem0Client's constructor still validates config eagerly and
+ * throws if it's missing regardless. That combination (feature on for an
+ * org, sidecar never configured instance-wide) is an inconsistent deploy
+ * state, not a reason to fail every message.received event outright — degrade
+ * to the null port project-message.ts already tolerates (search returns
+ * `[]`, upsert is a no-op) instead of throwing before extraction even runs.
+ */
 function defaultMemoryPort(): MemoryPort {
-  return new Mem0Client({
-    baseUrl: process.env.MEM0_BASE_URL ?? "",
-    apiKey: process.env.MEM0_API_KEY ?? "",
-    timeoutMs: Number(process.env.MEM0_TIMEOUT_MS ?? 2_000),
-  });
-}
-
-function candidateRecord(candidate: MemoryCandidate, input: {
-  sourceId: string;
-  sourceVersion: string;
-  organizationId: string;
-  contactId: string;
-  index: number;
-}) {
-  return {
-    id: `memory:${input.sourceId}:${input.index}`,
-    organizationId: input.organizationId,
-    contactId: input.contactId,
-    sourceId: input.sourceId,
-    sourceVersion: input.sourceVersion,
-    type: candidate.type,
-    authorityDomain: candidate.authorityDomain,
-    risk: candidate.risk,
-    actionable: candidate.actionable,
-    confidence: candidate.confidence,
-    validFrom: candidate.validFrom ?? null,
-    validUntil: candidate.validUntil ?? null,
-    text: candidate.text,
-  };
+  try {
+    return new Mem0Client({
+      baseUrl: process.env.MEM0_BASE_URL ?? "",
+      apiKey: process.env.MEM0_API_KEY ?? "",
+      timeoutMs: Number(process.env.MEM0_TIMEOUT_MS ?? 2_000),
+    });
+  } catch {
+    return new NullMemoryPort();
+  }
 }
 
 /** Processes one official message.received event. */
@@ -149,71 +136,22 @@ export async function processMemoryProjection(
     return { consumer_key, status: "skipped", detail: "contact_not_found" };
   }
 
-  const sourceVersion = message.created_at ?? row.id;
   const db = deps.db ?? projectionPool();
-  let safeCandidates: MemoryCandidate[];
-  try {
-    const extract = deps.extract ?? extractMemoryCandidates;
-    const candidates = await extract({
-      db: db as pg.Pool,
-      llmConfig: deps.llmConfig ?? llmEdgeConfigFromEnv({
-        ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
-        OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-        LLM_CACHE_TTL: process.env.LLM_CACHE_TTL,
-      }),
-      organizationId: row.organization_id,
-      contactId: conversation.contact_id,
-      sourceMessageId: message.id,
-      sourceText: message.body.trim(),
-    });
-    safeCandidates = candidates.filter((candidate) =>
-      sanitizeMemoryCandidate({ text: candidate.text, type: candidate.type }).allowed,
-    );
-  } catch {
-    const now = (deps.now ?? (() => new Date()))();
-    return { consumer_key, status: "retry", retry_at: retryAt(now), detail: "memory_extraction_failed" };
-  }
-  if (safeCandidates.length === 0) {
-    return { consumer_key, status: "skipped", detail: "no_safe_candidates" };
-  }
-
-  const idempotencyBase = `memory_projection_v1:${message.id}:${sourceVersion}`;
-  const ledger = await beginProjection(db, {
+  const result = await projectMessage({
+    db: db as pg.Pool,
+    llmConfig: deps.llmConfig ?? llmEdgeConfigFromEnv({
+      ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+      LLM_CACHE_TTL: process.env.LLM_CACHE_TTL,
+    }),
+    memoryPort: deps.memoryPort ?? defaultMemoryPort(),
     organizationId: row.organization_id,
-    projectionType: "memory",
-    provider: "mem0",
-    entityType: "contact",
-    entityId: conversation.contact_id,
-    sourceId: message.id,
-    sourceVersion,
-    idempotencyKey: idempotencyBase,
+    contactId: conversation.contact_id,
+    message: { id: message.id, body: message.body.trim(), created_at: message.created_at },
+    extract: deps.extract,
+    now: deps.now,
   });
-  if (ledger.status === "applied") {
-    return { consumer_key, status: "skipped", detail: "already_applied" };
-  }
-
-  try {
-    const memoryPort = deps.memoryPort ?? defaultMemoryPort();
-    await Promise.all(safeCandidates.map((candidate, index) =>
-      memoryPort.upsert(
-        candidateRecord(candidate, {
-          sourceId: message.id,
-          sourceVersion,
-          organizationId: row.organization_id,
-          contactId: conversation.contact_id!,
-          index,
-        }),
-        `${idempotencyBase}:${index}`,
-      ),
-    ));
-    await markProjectionApplied(db, row.organization_id, ledger.id);
-    return { consumer_key, status: "ok" };
-  } catch (error) {
-    const code = errorCode(error);
-    const now = (deps.now ?? (() => new Date()))();
-    await markProjectionRetry(db, row.organization_id, ledger.id, code, retryAt(now));
-    return { consumer_key, status: "retry", retry_at: retryAt(now), detail: code };
-  }
+  return { consumer_key, ...result };
 }
 
 export const memoryProjectionHandler = {

@@ -8,12 +8,15 @@
  */
 import type pg from "pg";
 
-import { extractMemoryCandidates, type MemoryCandidate } from "@/lib/agent-engine/memory/extract";
+import { extractMemoryCandidates, type ExistingMemoryRef, type MemoryCandidate } from "@/lib/agent-engine/memory/extract";
 import { Mem0ProviderError } from "@/lib/agent-engine/memory/mem0-client";
 import type { MemoryPort } from "@/lib/agent-engine/memory/port";
 import { sanitizeMemoryCandidate } from "@/lib/agent-engine/memory/sanitize";
+import type { SemanticMemoryRecord } from "@/lib/agent-engine/memory/types";
 import { beginProjection, markProjectionApplied, markProjectionRetry } from "@/lib/agent-engine/platform/projection-ledger";
 import type { LlmEdgeConfig } from "@/lib/agent-engine/edge/llm/run-model-call";
+
+const EXISTING_MEMORY_TOP_K = 5;
 
 export type ProjectableMessage = {
   id: string;
@@ -65,10 +68,40 @@ function candidateRecord(candidate: MemoryCandidate, input: {
   };
 }
 
+/**
+ * Best-effort lookup of what's already known about this contact, so
+ * extraction can flag supersession instead of silently duplicating a
+ * contradicted fact. A search failure degrades to "nothing known" — the
+ * same result as today, before supersession detection existed — never a
+ * reason to fail the whole projection.
+ */
+async function lookupExistingMemories(
+  memoryPort: MemoryPort,
+  input: { organizationId: string; contactId: string; query: string },
+): Promise<{ refs: ExistingMemoryRef[]; byId: Map<string, SemanticMemoryRecord> }> {
+  try {
+    const found = await memoryPort.search({ ...input, topK: EXISTING_MEMORY_TOP_K });
+    const records = Array.isArray(found) ? found : [];
+    return {
+      refs: records.map((r) => ({ id: r.id, text: r.text })),
+      byId: new Map(records.map((r) => [r.id, r])),
+    };
+  } catch {
+    return { refs: [], byId: new Map() };
+  }
+}
+
 /** Projects one message. Idempotent: re-running an already-applied source is a no-op. */
 export async function projectMessage(input: ProjectMessageInput): Promise<ProjectMessageResult> {
   const now = (input.now ?? (() => new Date()))();
   const sourceVersion = input.message.created_at ?? input.message.id;
+  const sourceText = input.message.body.trim();
+
+  const existing = await lookupExistingMemories(input.memoryPort, {
+    organizationId: input.organizationId,
+    contactId: input.contactId,
+    query: sourceText,
+  });
 
   let safeCandidates: MemoryCandidate[];
   try {
@@ -79,7 +112,8 @@ export async function projectMessage(input: ProjectMessageInput): Promise<Projec
       organizationId: input.organizationId,
       contactId: input.contactId,
       sourceMessageId: input.message.id,
-      sourceText: input.message.body.trim(),
+      sourceText,
+      existingMemories: existing.refs,
     });
     safeCandidates = candidates.filter((candidate) =>
       sanitizeMemoryCandidate({ text: candidate.text, type: candidate.type }).allowed,
@@ -117,7 +151,7 @@ export async function projectMessage(input: ProjectMessageInput): Promise<Projec
   }
 
   try {
-    await Promise.all(safeCandidates.map((candidate, index) =>
+    const upserts = safeCandidates.map((candidate, index) =>
       input.memoryPort.upsert(
         candidateRecord(candidate, {
           sourceId: input.message.id,
@@ -128,7 +162,22 @@ export async function projectMessage(input: ProjectMessageInput): Promise<Projec
         }),
         `${idempotencyBase}:${index}`,
       ),
-    ));
+    );
+
+    // Retire every existing memory a surviving candidate flagged as
+    // superseded. `candidate.supersedes` only ever contains ids that were
+    // actually in `existing.refs` (extractMemoryCandidates already dropped
+    // anything else) — retiring means setting validUntil to now, not
+    // deleting: the record stays as history, fuseContext's expiry filter
+    // (this session) is what keeps it out of ranking/prompt from here on.
+    const supersededIds = new Set(safeCandidates.flatMap((c) => c.supersedes ?? []));
+    const retires = [...supersededIds].flatMap((id) => {
+      const oldRecord = existing.byId.get(id);
+      if (!oldRecord) return [];
+      return [input.memoryPort.upsert({ ...oldRecord, validUntil: now.toISOString() }, `${idempotencyBase}:retire:${id}`)];
+    });
+
+    await Promise.all([...upserts, ...retires]);
     await markProjectionApplied(input.db, input.organizationId, ledger.id);
     return { status: "ok" };
   } catch (error) {
