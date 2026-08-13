@@ -69,9 +69,46 @@ not a new one:
   outranks memory" is true by construction today, not by a ranking rule —
   worth a real test once/if that changes, not fabricable now.
 
-**This is the one concrete thing standing between `OFF` and `SHADOW`**: a
-provider key, and someone deciding it's worth the cost to run the 3 cases
-above for real plus a live end-to-end pass on the ~10 already-covered ones.
+**Update, same day**: a real `ANTHROPIC_API_KEY` was provided mid-review.
+Rather than immediately populating the full 25-case fixture (a larger,
+separate content-authoring effort — deferred by choice, not blocked), it was
+used for a smaller, real, un-mocked check: 7 hand-picked scenarios covering
+the properties above were run through the *actual* `extractMemoryCandidates`
+against the live Anthropic API — the one thing the component tests above
+cannot cover, since they all mock the model call.
+
+This surfaced two real defects, both fixed and covered by new tests in the
+same commit as this evidence:
+
+1. **3 of 7 scenarios failed to parse.** The model wrapped its JSON in a
+   ```` ```json ```` code fence despite the prompt saying "SOMENTE JSON
+   estrito, sem markdown" — a prompt instruction is not a parser guarantee.
+   `parseModelCandidates` now extracts the outermost `{...}` block first
+   (the same technique `guardrails/jailbreak/classifier.ts` already uses for
+   the same class of problem). Re-ran the previously-failing cases 3 more
+   times each after the fix: 100% parse success.
+2. **A CPF (Brazilian tax id) leaked into a stored candidate's free-text
+   field** on the `pii-redaction-008` scenario — `sanitizeMemoryCandidate`
+   had a pattern for 13-19 digit card numbers but nothing for an 11-digit
+   CPF. Added a dedicated pattern; the same scenario now correctly returns
+   zero candidates.
+
+This is real, live evidence for 5 of the 13 already-covered rows above
+(`preference-001`, `secret-redaction-007`, `pii-redaction-008`,
+`high-risk-017`, plus the general "does the extraction pipeline work
+end-to-end against a real model" question none of the mocked tests could
+answer) — not a substitute for the formal 25-case run, but meaningfully more
+than the mocked-only coverage this gate started with. `preference-superseded-002`
+also got a first real signal: the model correctly extracted the *new*
+preference as `actionable: true`; testing whether it also correctly retires
+the *old* one requires the full two-message projection pipeline, not a
+single extraction call, so it's still open.
+
+**This is the one concrete thing standing between `OFF` and `SHADOW`**: the
+full 25-case Golden Dataset run, formally, with the fixture actually
+populated — not the smaller live check above. Key is available; the
+remaining work is content-authoring + wiring the eval runner, not a new
+blocker.
 
 ## Step 3 — failure injection
 
@@ -126,8 +163,9 @@ git diff --check    — clean, no whitespace errors
 
 ## What shipped alongside this gate
 
-Two real defects were found and fixed while building the evidence above,
-not filed as future work:
+Four real defects were found and fixed while building the evidence above,
+not filed as future work — two from reading the code against its own tests,
+two only found once a real model was actually called:
 
 1. **Expired semantic memory was never filtered.** `ContextItem.expiresAt`
    existed and was populated but nothing in `fuseContext` ever checked it —
@@ -136,19 +174,25 @@ not filed as future work:
    `fuseContext` now takes `now` and drops anything expired before ranking;
    `prepareSemanticContext`/`inbound-turn.ts` thread a single `Date.now()`
    reading through so expiry is judged against one consistent clock read
-   per turn.
+   per turn. (commit `33d5de3f`)
 2. **A ledger row marked `deleted` by an LGPD cascade didn't stop a
    resurrect on its own** — it worked in practice only because the same
    cascade already wipes `messages.body`, so rebuild's source query
    excludes redacted messages regardless. Added a direct second guard:
    `project-message.ts` now refuses to re-project any source whose ledger
    row is `deleted`, independent of whether the source body is still
-   readable.
+   readable. (commit `9d280a2f`)
+3. **Model output wrapped in a markdown code fence broke JSON parsing** —
+   only found once a real model was called instead of a mock; see "Update,
+   same day" above. (commit `a8f15b8e`)
+4. **CPF leaked into stored memory text**, uncaught by the existing
+   card-number-only redaction pattern — same commit as #3. (commit `a8f15b8e`)
 
 ## References
 
 - Plan: [`../../superpowers/plans/2026-08-10-ai-platform-phase-2-mem0.md`](../../superpowers/plans/2026-08-10-ai-platform-phase-2-mem0.md)
 - Task 9 evidence: commit `9d280a2f`
+- Real-model extraction fixes: commit `a8f15b8e`
 - Windows Docker validation: [`../../runbooks/mem0.md`](../../runbooks/mem0.md)
 - Rebuild/lifecycle runbook: [`../../runbooks/mem0-rebuild.md`](../../runbooks/mem0-rebuild.md)
 - Execution index: [`../../superpowers/plans/2026-08-10-ai-platform-execution-index.md`](../../superpowers/plans/2026-08-10-ai-platform-execution-index.md)
