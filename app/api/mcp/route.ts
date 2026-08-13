@@ -15,10 +15,21 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 
 import { createMcpServer } from "@/lib/mcp/server";
 import { McpAuthError, validateBearerToken } from "@/lib/mcp/auth";
+import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 300;
+
+/**
+ * Teto por org: sem ele, um bearer `api_tokens` vazado/guessado chama
+ * qualquer tool (inclusive as de escrita — crm_create_lead, crm_send_whatsapp_message)
+ * quantas vezes quiser por segundo, só com audit depois do fato. 120/min
+ * (2/s) é generoso pro uso legítimo de agente automatizado; um flood
+ * malicioso ainda esbarra nele.
+ */
+const MCP_RATE_LIMIT = 120;
+const MCP_RATE_WINDOW_SEC = 60;
 
 function jsonRpcError(code: number, message: string, status: number): Response {
   return new Response(
@@ -45,6 +56,15 @@ async function handle(req: NextRequest): Promise<Response> {
     }
     const msg = err instanceof Error ? err.message : "auth_failed";
     return jsonRpcError(-32603, msg, 500);
+  }
+
+  const rl = await checkRateLimit(
+    `mcp:${auth.organizationId}`,
+    MCP_RATE_LIMIT,
+    MCP_RATE_WINDOW_SEC,
+  );
+  if (!rl.allowed) {
+    return jsonRpcError(-32000, "rate_limited", 429);
   }
 
   const transport = new WebStandardStreamableHTTPServerTransport({});
