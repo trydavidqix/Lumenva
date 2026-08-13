@@ -2,7 +2,7 @@
 
 Data: 2026-08-13
 Branch: `ai-platform-foundation`
-Estado: **em curso — gate parcial em `docs/evidence/ai-platform/phase-2-mem0-gate.md`; decisão é `HOLD` em `OFF`**
+Estado: **gate da Tarefa 10 fechado — ver `docs/evidence/ai-platform/phase-2-mem0-gate.md`; decisão é `HOLD` em `OFF`, por gap real de produto (não por chave/infra)**
 
 ## Decisão operacional atual
 
@@ -24,21 +24,21 @@ de verdade; Mem0 é apenas uma projeção reconstruível.
 | 7 | Provider de contexto e comparação em shadow | `d5bd0b6b`, `5d2d5cb2` |
 | 8 | Fusão de contexto no prompt só sob rollout explícito e fail-closed | `6f6be4d7`, `7ce49214` |
 | 9 | Lifecycle LGPD (delete automático) + script de reconstrução | `9d280a2f` |
-| 10 (parcial) | Gate de release: regressão, failure injection, prova de lifecycle/replay, verificação completa — ver `phase-2-mem0-gate.md` | `33d5de3f` (fix de memória expirada achado no processo) |
+| 10 | Gate de release completo: regressão, Golden Dataset (rodado de verdade, chave real), failure injection, prova de lifecycle/replay, verificação completa — ver `phase-2-mem0-gate.md` | `33d5de3f`, `a8f15b8e`, gate final |
 
 ## Pendências obrigatórias
 
-Tarefa 10 está **parcialmente fechada** — ver
-[`phase-2-mem0-gate.md`](phase-2-mem0-gate.md) para o detalhe completo. Falta
-só uma peça, e é a mesma trava de sempre:
+Tarefa 10 está **fechada** — ver [`phase-2-mem0-gate.md`](phase-2-mem0-gate.md)
+para o detalhe completo, incluindo o resultado formal do Golden Dataset (7/8
+casos relevantes passaram com o modelo real; 1 revelou gap real de produto).
 
-1. **Comparação Golden Dataset em shadow** (Passo 2 da Tarefa 10) não rodou.
-   O fixture de 25 casos nunca foi populado com conteúdo (Fase 0 só criou o
-   contrato de schema); ~13 casos relevantes à Fase 2 já têm a propriedade
-   provada por teste real e citado no gate; 3 casos exigem chamada real a
-   LLM (julgamento de "preferência substituída") ou não se aplicam à
-   arquitetura atual (CRM/knowledge já vencem memória por construção, não
-   por ranking). Sem isso, decisão é **manter `OFF`** — não `SHADOW`.
+1. **Substituição de preferência (supersession) não existe.** Quando o
+   contato manda uma preferência nova que contradiz uma antiga (ex.: "prefiro
+   ligação" → depois "só WhatsApp, não me liga mais"), as duas memórias ficam
+   guardadas e as duas voltam juntas na busca — nada marca a antiga como
+   superada. Reproduzido 2/2 vezes com o modelo real, não é instabilidade.
+   **Esta é a razão da decisão continuar `HOLD` em `OFF`** — não falta chave
+   nem infraestrutura, falta essa peça de produto.
 
 ~~Validação no Windows~~ — feita em 2026-08-13. `docker compose config`
 válido nos dois arquivos; healthcheck do profile `ai-memory` responde
@@ -53,9 +53,10 @@ completa em `docs/runbooks/mem0.md`. Ainda não validado: confirmação de que
 o Mem0 OSS em execução respeita `Idempotency-Key` (requer bootstrap com
 chave de provider real, fora do escopo desta validação de infraestrutura).
 
-Até a pendência acima estar fechada com evidência real, não promover Mem0
-para `SHADOW`, `CANARY` ou `ON`, não iniciar a Fase 3 e não configurar
-credenciais de provider por conveniência.
+Até a pendência de supersession estar resolvida (ou uma decisão explícita de
+produto aceitar o gap por enquanto), não promover Mem0 para `SHADOW`,
+`CANARY` ou `ON`, não iniciar a Fase 3 e não configurar credenciais de
+provider por conveniência.
 
 ## Referências operacionais
 
