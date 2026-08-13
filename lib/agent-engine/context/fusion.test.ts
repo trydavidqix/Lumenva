@@ -51,6 +51,31 @@ describe("fuseContext", () => {
     expect(result.dropped.map((candidate) => candidate.id)).toEqual(["low"]);
   });
 
+  it("drops an expired item and never lets it win over a live one, even with lower authority", () => {
+    const expired = item({ id: "expired", text: "fact expired", authorityLevel: 90, confidence: 1, expiresAt: "2026-08-01T00:00:00.000Z" });
+    const live = item({ id: "live", text: "fact live", authorityLevel: 10, confidence: 0.1, expiresAt: "2099-01-01T00:00:00.000Z" });
+
+    const result = fuseContext({ maxTokens: 100, items: [expired, live], now: Date.parse("2026-08-10T00:00:00.000Z") });
+
+    expect(result.selected.map((candidate) => candidate.id)).toEqual(["live"]);
+    expect(result.dropped.map((candidate) => candidate.id)).toEqual(["expired"]);
+  });
+
+  it("an item expiring at exactly `now` is treated as expired, not live", () => {
+    const boundary = item({ id: "boundary", expiresAt: "2026-08-10T00:00:00.000Z" });
+
+    const result = fuseContext({ maxTokens: 100, items: [boundary], now: Date.parse("2026-08-10T00:00:00.000Z") });
+
+    expect(result.selected).toEqual([]);
+    expect(result.dropped.map((candidate) => candidate.id)).toEqual(["boundary"]);
+  });
+
+  it("null expiresAt never expires", () => {
+    const result = fuseContext({ maxTokens: 100, items: [item({ expiresAt: null })], now: Date.parse("2099-01-01T00:00:00.000Z") });
+
+    expect(result.selected).toHaveLength(1);
+  });
+
   it("keeps the deterministic token budget and marks overflow as dropped", () => {
     const first = item({ id: "first", text: "a".repeat(8) });
     const second = item({ id: "second", text: "b".repeat(8), sourceId: "message-2" });

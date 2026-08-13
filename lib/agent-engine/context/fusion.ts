@@ -35,11 +35,25 @@ function compareContextItems(left: ContextItem, right: ContextItem): number {
  * Deterministically ranks bounded context. It does not reinterpret risk or
  * authority: the caller decides which selected records are prompt-eligible.
  */
+function isExpired(item: ContextItem, nowMs: number): boolean {
+  if (item.expiresAt === null) return false;
+  const expiry = Date.parse(item.expiresAt);
+  return !Number.isNaN(expiry) && expiry <= nowMs;
+}
+
 export function fuseContext(input: {
   items: ContextItem[];
   maxTokens: number;
+  now?: number;
 }): { selected: ContextItem[]; dropped: ContextItem[] } {
-  const ranked = [...input.items].sort(compareContextItems);
+  const nowMs = input.now ?? Date.now();
+  const live: ContextItem[] = [];
+  const expired: ContextItem[] = [];
+  for (const item of input.items) {
+    (isExpired(item, nowMs) ? expired : live).push(item);
+  }
+
+  const ranked = [...live].sort(compareContextItems);
   const deduped: ContextItem[] = [];
   const duplicates: ContextItem[] = [];
   const seen = new Set<string>();
@@ -55,7 +69,7 @@ export function fuseContext(input: {
   }
 
   const selected: ContextItem[] = [];
-  const dropped = [...duplicates];
+  const dropped = [...expired, ...duplicates];
   let usedTokens = 0;
   for (const candidate of deduped) {
     const cost = estimatedTokens(candidate.text);
@@ -109,14 +123,16 @@ export function renderSemanticContextBlock(items: readonly ContextItem[]): strin
 export function prepareSemanticContext(
   result: Pick<ContextRetrievalResult, "bucket" | "degraded" | "influencePrompt" | "items" | "shadowItems">,
   maxTokens = 300,
+  now?: number,
 ): { fusion: ReturnType<typeof fuseContext>; promptBlock: string } {
   const measuredItems = result.bucket === "shadow" ? result.shadowItems : result.items;
-  const fusion = fuseContext({ items: measuredItems, maxTokens });
+  const fusion = fuseContext({ items: measuredItems, maxTokens, now });
   if (result.bucket !== "candidate" || !result.influencePrompt) return { fusion, promptBlock: "" };
 
   const promptFusion = fuseContext({
     items: promptSafeContextItems(result.items),
     maxTokens,
+    now,
   });
   return { fusion, promptBlock: renderSemanticContextBlock(promptFusion.selected) };
 }
