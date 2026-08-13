@@ -58,7 +58,10 @@ function lerArquivo(arquivo: string): Record<string, string> {
   const caminho = path.join(process.cwd(), arquivo);
   if (!fs.existsSync(caminho)) return {};
   const env: Record<string, string> = {};
-  for (const linha of fs.readFileSync(caminho, "utf8").split("\n")) {
+  // CRLF: split() only removes "\n", leaving a trailing "\r" that JS regex
+  // treats as a line terminator — "$" then never matches, so every line
+  // silently fails to parse on a Windows-authored .env.local.
+  for (const linha of fs.readFileSync(caminho, "utf8").split(/\r?\n/)) {
     const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*)$/.exec(linha);
     if (m) env[m[1]!] = (m[2] ?? "").replace(/^"(.*)"$/, "$1").trim();
   }

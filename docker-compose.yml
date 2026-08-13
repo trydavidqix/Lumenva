@@ -121,7 +121,16 @@ services:
       timeout: 5s
       retries: 5
       start_period: 45s
-    networks: [ai-memory-internal]
+    # `ai-memory-internal` alone (`internal: true`) blocks ALL routing off
+    # that network, inbound AND outbound — the sidecar could reach
+    # mem0-postgres but could never call out to its own configured LLM/
+    # embedding provider (OpenAI/Gemini/whatever), confirmed by
+    # `httpx.ConnectError: Temporary failure in name resolution` when trying.
+    # `default` (the same network `worker` already joins for this same
+    # reason) restores outbound egress without publishing any port — no host
+    # port is opened by joining a network, only by `ports:` above, which
+    # stays loopback-only in dev and absent entirely in prod.
+    networks: [default, ai-memory-internal]
 
   # Banco exclusivo do Mem0; nunca aponta para Supabase nem para o schema CRM.
   mem0-postgres:
