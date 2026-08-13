@@ -79,6 +79,37 @@ describe("scanPublishableKnowledge", () => {
 
       expect(scanPublishableKnowledge(markdown)).toEqual({ allowed: true, findings: [] });
     });
+
+    it.each([
+      [
+        "api_key: prose about how a key is stored, no key present",
+        "A chave da API é armazenada em variável de ambiente segura.",
+      ],
+      [
+        "session_or_cookie: ordinary sentence using 'session is'",
+        "This session is temporary and expires after 24 hours.",
+      ],
+      [
+        "password_or_recovery_code: prose reassurance, no password present",
+        "A senha nunca é compartilhada com ninguém.",
+      ],
+      [
+        "password_or_recovery_code: direct prose statement, no value present",
+        "A senha é armazenada com segurança.",
+      ],
+      [
+        "password_or_recovery_code: recovery-code prose in Portuguese, no code present",
+        "Guarde seu código de recuperação em local seguro.",
+      ],
+      [
+        "password_or_recovery_code: recovery-code prose in English, no code present",
+        "Keep your recovery code somewhere safe and never share it.",
+      ],
+    ])("does not flag %s", (_caseName, line) => {
+      const markdown = markdownWithLine(line, 2);
+
+      expect(scanPublishableKnowledge(markdown)).toEqual({ allowed: true, findings: [] });
+    });
   });
 
   describe("personal contact details", () => {
