@@ -2,14 +2,16 @@
 
 Data: 2026-08-13
 Branch: `ai-platform-foundation`
-Estado: **gate da Tarefa 10 fechado — ver `docs/evidence/ai-platform/phase-2-mem0-gate.md`; decisão é `HOLD` em `OFF`, por gap real de produto (não por chave/infra)**
+Estado: **gate da Tarefa 10 passou — ver `docs/evidence/ai-platform/phase-2-mem0-gate.md`. `SHADOW` está tecnicamente desbloqueado; ainda falta decisão explícita de promoção.**
 
 ## Decisão operacional atual
 
-Mem0 permanece `OFF` por padrão. Não houve servidor Mem0 iniciado, chave de
-produção, chamada a provider, mudança em Vercel/Supabase/WAHA/Redis, nem
-promoção para `SHADOW`, `CANARY` ou `ON`. PostgreSQL/Supabase continua a fonte
-de verdade; Mem0 é apenas uma projeção reconstruível.
+Mem0 permanece `OFF` por padrão — nenhuma promoção foi feita nesta sessão.
+Não houve servidor Mem0 iniciado, mudança em Vercel/Supabase/WAHA/Redis, nem
+promoção para `SHADOW`, `CANARY` ou `ON`; a chave real usada para o Golden
+Dataset ficou só na sessão (nunca em arquivo commitado) e nunca ligou o
+sidecar Mem0 em si. PostgreSQL/Supabase continua a fonte de verdade; Mem0 é
+apenas uma projeção reconstruível.
 
 ## Entregue
 
@@ -24,21 +26,25 @@ de verdade; Mem0 é apenas uma projeção reconstruível.
 | 7 | Provider de contexto e comparação em shadow | `d5bd0b6b`, `5d2d5cb2` |
 | 8 | Fusão de contexto no prompt só sob rollout explícito e fail-closed | `6f6be4d7`, `7ce49214` |
 | 9 | Lifecycle LGPD (delete automático) + script de reconstrução | `9d280a2f` |
-| 10 | Gate de release completo: regressão, Golden Dataset (rodado de verdade, chave real), failure injection, prova de lifecycle/replay, verificação completa — ver `phase-2-mem0-gate.md` | `33d5de3f`, `a8f15b8e`, gate final |
+| 10 | Gate de release completo: regressão, Golden Dataset (rodado de verdade, chave real), failure injection, prova de lifecycle/replay, verificação completa, achado de supersession corrigido no mesmo dia — ver `phase-2-mem0-gate.md` | `33d5de3f`, `a8f15b8e`, `a0e8c1e0`, fix de supersession |
 
 ## Pendências obrigatórias
 
-Tarefa 10 está **fechada** — ver [`phase-2-mem0-gate.md`](phase-2-mem0-gate.md)
-para o detalhe completo, incluindo o resultado formal do Golden Dataset (7/8
-casos relevantes passaram com o modelo real; 1 revelou gap real de produto).
+Tarefa 10 está **fechada, gate passou** — ver
+[`phase-2-mem0-gate.md`](phase-2-mem0-gate.md) para o detalhe completo.
 
-1. **Substituição de preferência (supersession) não existe.** Quando o
-   contato manda uma preferência nova que contradiz uma antiga (ex.: "prefiro
-   ligação" → depois "só WhatsApp, não me liga mais"), as duas memórias ficam
-   guardadas e as duas voltam juntas na busca — nada marca a antiga como
-   superada. Reproduzido 2/2 vezes com o modelo real, não é instabilidade.
-   **Esta é a razão da decisão continuar `HOLD` em `OFF`** — não falta chave
-   nem infraestrutura, falta essa peça de produto.
+~~Substituição de preferência (supersession) não existia~~ — corrigido no
+mesmo dia em que foi achado. `extractMemoryCandidates` agora recebe as
+memórias já conhecidas do contato e pode marcar quais uma frase nova
+substitui; a antiga é aposentada (`validUntil = now`), não apagada.
+Resultado real (6 rodadas com o modelo de verdade): 5/6 corretas (83%),
+contra 0/2 antes do conserto. Não é 100% determinístico — é julgamento de
+IA, igual o resto da extração — mas já é suficiente pra destravar `SHADOW`
+(que é só medição, não aparece pro cliente).
+
+Nenhuma pendência bloqueante restante. Promoção pra `SHADOW`/`CANARY`/`ON`
+segue exigindo decisão explícita de produto (não é automática só porque o
+gate técnico passou), e Fase 3 continua não iniciada até essa decisão.
 
 ~~Validação no Windows~~ — feita em 2026-08-13. `docker compose config`
 válido nos dois arquivos; healthcheck do profile `ai-memory` responde
@@ -53,10 +59,9 @@ completa em `docs/runbooks/mem0.md`. Ainda não validado: confirmação de que
 o Mem0 OSS em execução respeita `Idempotency-Key` (requer bootstrap com
 chave de provider real, fora do escopo desta validação de infraestrutura).
 
-Até a pendência de supersession estar resolvida (ou uma decisão explícita de
-produto aceitar o gap por enquanto), não promover Mem0 para `SHADOW`,
-`CANARY` ou `ON`, não iniciar a Fase 3 e não configurar credenciais de
-provider por conveniência.
+Sem decisão explícita de produto para promoção, não promover Mem0 para
+`SHADOW`, `CANARY` ou `ON`, não iniciar a Fase 3 e não configurar
+credenciais de provider por conveniência.
 
 ## Referências operacionais
 

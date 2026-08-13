@@ -196,6 +196,82 @@ describe("extractMemoryCandidates", () => {
     );
   });
 
+  it("keeps a supersedes id the model referenced, when it's one of the ids it was actually shown", async () => {
+    const runModelCall = vi.fn().mockResolvedValue(modelReply([
+      {
+        type: "preference",
+        authorityDomain: "customer_preference",
+        sensitiveClassification: "none",
+        risk: "low",
+        confidence: 0.9,
+        actionable: true,
+        text: "Prefere WhatsApp, não ligações.",
+        supersedes: ["memory:old:0"],
+      },
+    ]));
+
+    const result = await extractMemoryCandidates(
+      { ...input, existingMemories: [{ id: "memory:old:0", text: "Prefere ligação telefônica." }] },
+      { runModelCall } as never,
+    );
+
+    expect(result[0]?.supersedes).toEqual(["memory:old:0"]);
+  });
+
+  it("drops a supersedes id the model invented — never an id it wasn't actually shown", async () => {
+    const runModelCall = vi.fn().mockResolvedValue(modelReply([
+      {
+        type: "preference",
+        authorityDomain: "customer_preference",
+        sensitiveClassification: "none",
+        risk: "low",
+        confidence: 0.9,
+        actionable: true,
+        text: "Prefere WhatsApp, não ligações.",
+        supersedes: ["memory:old:0", "memory:hallucinated:99"],
+      },
+    ]));
+
+    const result = await extractMemoryCandidates(
+      { ...input, existingMemories: [{ id: "memory:old:0", text: "Prefere ligação telefônica." }] },
+      { runModelCall } as never,
+    );
+
+    expect(result[0]?.supersedes).toEqual(["memory:old:0"]);
+  });
+
+  it("without existingMemories, any supersedes the model still emits is entirely filtered out", async () => {
+    const runModelCall = vi.fn().mockResolvedValue(modelReply([
+      {
+        type: "preference",
+        authorityDomain: "customer_preference",
+        sensitiveClassification: "none",
+        risk: "low",
+        confidence: 0.9,
+        actionable: true,
+        text: "Prefere WhatsApp.",
+        supersedes: ["memory:whatever:0"],
+      },
+    ]));
+
+    const result = await extractMemoryCandidates(input, { runModelCall } as never);
+
+    expect(result[0]?.supersedes).toEqual([]);
+  });
+
+  it("includes known existing memories in the prompt so the model can judge contradiction", async () => {
+    const runModelCall = vi.fn().mockResolvedValue(modelReply([]));
+
+    await extractMemoryCandidates(
+      { ...input, existingMemories: [{ id: "memory:old:0", text: "Prefere ligação telefônica." }] },
+      { runModelCall } as never,
+    );
+
+    const prompt = runModelCall.mock.calls[0]?.[2]?.messages?.[0]?.content as string;
+    expect(prompt).toContain("memory:old:0");
+    expect(prompt).toContain("Prefere ligação telefônica.");
+  });
+
   it("tolerates the model wrapping its JSON in a markdown code fence, despite being told not to", async () => {
     // Observed against the real Anthropic API while validating this: the
     // prompt says "SOMENTE JSON estrito, sem markdown" and the model still

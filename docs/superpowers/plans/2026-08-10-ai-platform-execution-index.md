@@ -11,7 +11,7 @@
 |---|---|---|---|
 | 0 | `GO` | [`phase-0-gate.md`](../../evidence/ai-platform/phase-0-gate.md) | concluída |
 | 1 | `GO` | [`phase-1-gate.md`](../../evidence/ai-platform/phase-1-gate.md) | concluída; LangSmith continua OFF |
-| 2 | `HOLD` em `OFF` | [`phase-2-status.md`](../../evidence/ai-platform/phase-2-status.md), [`phase-2-mem0-gate.md`](../../evidence/ai-platform/phase-2-mem0-gate.md) | Tarefas 1–10 concluídas, gate completo (Golden Dataset rodado com chave real). `HOLD` por gap real de produto (preferência substituída não é detectada), não por chave/infra faltando. Sem promoção de rollout até isso fechar ou decisão explícita de produto |
+| 2 | gate `GO`; `OFF` até decisão de promoção | [`phase-2-status.md`](../../evidence/ai-platform/phase-2-status.md), [`phase-2-mem0-gate.md`](../../evidence/ai-platform/phase-2-mem0-gate.md) | Tarefas 1–10 concluídas, gate completo (Golden Dataset rodado com chave real; achado de supersession corrigido no mesmo dia, 5/6 em runs reais). `SHADOW` tecnicamente desbloqueado; falta decisão explícita de produto pra promover, não mais bloqueio técnico |
 | 3–7 | não iniciadas | — | gate da fase anterior e aprovação humana aplicável |
 
 Esta tabela é um snapshot operacional. Os planos preservam tarefas/checklists originais e não são reescritos como histórico de execução.

@@ -27,7 +27,7 @@ function harness(overrides: Record<string, unknown> = {}) {
     now: () => new Date("2026-08-10T12:01:00.000Z"),
     ...overrides,
   };
-  return { input, query, memoryPort };
+  return { input, query, memoryPort: input.memoryPort };
 }
 
 describe("projectMessage", () => {
@@ -78,6 +78,71 @@ describe("projectMessage", () => {
 
     await expect(projectMessage(input)).resolves.toMatchObject({ status: "retry", detail: "mem0_timeout" });
     expect(JSON.stringify(query.mock.calls)).not.toContain("secret words");
+  });
+
+  it("looks up existing memories and passes them to extraction", async () => {
+    const oldRecord = { id: "memory:old:0", organizationId: orgA, contactId, sourceId: "old-msg", sourceVersion: "v1", type: "preference", authorityDomain: "customer_preference", risk: "low", actionable: true, confidence: 0.9, validFrom: null, validUntil: null, text: "Prefere ligação telefônica." };
+    const extract = vi.fn().mockResolvedValue([]);
+    const memoryPort: MemoryPort = { upsert: vi.fn(), search: vi.fn().mockResolvedValue([oldRecord]), deleteContact: vi.fn(), health: vi.fn() };
+    const { input } = harness({ extract, memoryPort });
+
+    await projectMessage(input);
+
+    expect(memoryPort.search).toHaveBeenCalledWith({ organizationId: orgA, contactId, query: message.body, topK: 5 });
+    expect(extract).toHaveBeenCalledWith(expect.objectContaining({
+      existingMemories: [{ id: "memory:old:0", text: "Prefere ligação telefônica." }],
+    }));
+  });
+
+  it("retires a superseded memory (validUntil = now) alongside upserting the new one, without deleting it", async () => {
+    const oldRecord = { id: "memory:old:0", organizationId: orgA, contactId, sourceId: "old-msg", sourceVersion: "v1", type: "preference", authorityDomain: "customer_preference", risk: "low", actionable: true, confidence: 0.9, validFrom: null, validUntil: null, text: "Prefere ligação telefônica." };
+    const memoryPort: MemoryPort = {
+      upsert: vi.fn().mockResolvedValue(undefined),
+      search: vi.fn().mockResolvedValue([oldRecord]),
+      deleteContact: vi.fn(),
+      health: vi.fn(),
+    };
+    const extract = vi.fn().mockResolvedValue([
+      { type: "preference", authorityDomain: "customer_preference", risk: "low", confidence: 0.9, actionable: true, sensitiveClassification: "none", text: "Prefere WhatsApp, não ligações.", supersedes: ["memory:old:0"] },
+    ]);
+    const { input, memoryPort: port } = harness({ extract, memoryPort });
+
+    await expect(projectMessage(input)).resolves.toEqual({ status: "ok" });
+
+    expect(port.upsert).toHaveBeenCalledTimes(2);
+    const retireCall = (port.upsert as ReturnType<typeof vi.fn>).mock.calls.find(([record]) => record.id === "memory:old:0");
+    expect(retireCall?.[0]).toMatchObject({ id: "memory:old:0", text: "Prefere ligação telefônica.", validUntil: "2026-08-10T12:01:00.000Z" });
+    expect(retireCall?.[1]).toContain("retire:memory:old:0");
+  });
+
+  it("ignores a supersedes id that no longer resolves to a known existing record, without crashing", async () => {
+    const memoryPort: MemoryPort = {
+      upsert: vi.fn().mockResolvedValue(undefined),
+      search: vi.fn().mockResolvedValue([]),
+      deleteContact: vi.fn(),
+      health: vi.fn(),
+    };
+    // extractMemoryCandidates itself would already strip an unknown id — this
+    // proves projectMessage doesn't also assume every supersedes id resolves.
+    const extract = vi.fn().mockResolvedValue([
+      { type: "preference", authorityDomain: "customer_preference", risk: "low", confidence: 0.9, actionable: true, sensitiveClassification: "none", text: "Prefere WhatsApp.", supersedes: ["memory:gone:0"] },
+    ]);
+    const { input, memoryPort: port } = harness({ extract, memoryPort });
+
+    await expect(projectMessage(input)).resolves.toEqual({ status: "ok" });
+    expect(port.upsert).toHaveBeenCalledTimes(1);
+  });
+
+  it("degrades to no known memories when the existing-memory search itself fails", async () => {
+    const memoryPort: MemoryPort = {
+      upsert: vi.fn().mockResolvedValue(undefined),
+      search: vi.fn().mockRejectedValue(new Error("mem0 down")),
+      deleteContact: vi.fn(),
+      health: vi.fn(),
+    };
+    const { input } = harness({ memoryPort });
+
+    await expect(projectMessage(input)).resolves.toEqual({ status: "ok" });
   });
 
   it("replaying the same source id+version is idempotent — no second upsert", async () => {

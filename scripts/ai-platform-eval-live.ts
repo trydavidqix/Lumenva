@@ -22,12 +22,41 @@ import { generateText } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
 
-import { extractMemoryCandidates, type MemoryCandidate } from "@/lib/agent-engine/memory/extract";
+import { extractMemoryCandidates } from "@/lib/agent-engine/memory/extract";
 import { llmEdgeConfigFromEnv } from "@/lib/agent-engine/edge/llm/run-model-call";
 import { Mem0ContextProvider } from "@/lib/agent-engine/context/mem0-context-provider";
 import { prepareSemanticContext } from "@/lib/agent-engine/context/fusion";
+import { projectMessage } from "@/lib/agent-engine/memory/project-message";
 import type { MemoryPort } from "@/lib/agent-engine/memory/port";
 import type { SemanticMemoryRecord } from "@/lib/agent-engine/memory/types";
+
+type LedgerRow = { id: string; organization_id: string; idempotency_key: string; status: string };
+
+/** Minimal in-memory stand-in for the ai_projection_ledger statements project-message.ts issues — same pattern as tests/unit/mem0-lifecycle-replay-proof.test.ts. */
+function fakeLedgerDb() {
+  const rows = new Map<string, LedgerRow>();
+  let seq = 0;
+  return {
+    query: async (sql: string, values: unknown[]) => {
+      if (sql.startsWith("insert into ai_projection_ledger")) {
+        const [organizationId, , , , , , , idempotencyKey] = values as string[];
+        const key = `${organizationId}:${idempotencyKey}`;
+        const existing = rows.get(key);
+        if (existing) return { rows: [{ id: existing.id, status: existing.status }] };
+        const id = `ledger-${++seq}`;
+        rows.set(key, { id, organization_id: organizationId!, idempotency_key: idempotencyKey!, status: "pending" });
+        return { rows: [{ id, status: "pending" }] };
+      }
+      if (sql.includes("status = 'applied'")) {
+        const [id, organizationId] = values as string[];
+        const row = [...rows.values()].find((r) => r.id === id && r.organization_id === organizationId);
+        if (row) row.status = "applied";
+        return { rows: row ? [{ id: row.id, status: row.status }] : [] };
+      }
+      return { rows: [] };
+    },
+  };
+}
 
 const inputEventSchema = z.object({
   text: z.string().min(1),
@@ -72,27 +101,6 @@ function fakeMemoryPort(): MemoryPort {
   };
 }
 
-function candidateToRecord(
-  candidate: MemoryCandidate,
-  input: { organizationId: string; contactId: string; sourceId: string; sourceVersion: string; index: number; forceValidUntil?: string },
-): SemanticMemoryRecord {
-  return {
-    id: `memory:${input.sourceId}:${input.index}`,
-    organizationId: input.organizationId,
-    contactId: input.contactId,
-    sourceId: input.sourceId,
-    sourceVersion: input.sourceVersion,
-    type: candidate.type,
-    authorityDomain: candidate.authorityDomain,
-    risk: candidate.risk,
-    actionable: candidate.actionable,
-    confidence: candidate.confidence,
-    validFrom: candidate.validFrom ?? null,
-    validUntil: input.forceValidUntil ?? candidate.validUntil ?? null,
-    text: candidate.text,
-  };
-}
-
 type CaseResult = {
   id: string;
   ok: boolean;
@@ -104,8 +112,8 @@ type CaseResult = {
 async function runCase(c: z.infer<typeof caseSchema>): Promise<CaseResult> {
   const reasons: string[] = [];
   const memoryPort = fakeMemoryPort();
+  const ledgerDb = fakeLedgerDb();
   const llmConfig = llmEdgeConfigFromEnv({ ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY, OPENAI_API_KEY: undefined, LLM_CACHE_TTL: undefined });
-  const fakeDb = { query: async () => ({ rows: [] }) } as never;
   const model = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })("claude-sonnet-5");
   // extractMemoryCandidates's default runModelCall resolves org-level LLM
   // config (model/budget/provider) from a real `organizations` row via
@@ -120,35 +128,28 @@ async function runCase(c: z.infer<typeof caseSchema>): Promise<CaseResult> {
 
   let candidateCount = 0;
   let extractionErrors = 0;
+  // Sequential, on purpose: message N+1's extraction needs to see what
+  // projecting message N actually stored (that's the whole point of
+  // supersession detection), so these can't run concurrently.
   for (let i = 0; i < c.input_events.length; i++) {
     const event = c.input_events[i]!;
-    try {
-      const candidates = await extractMemoryCandidates(
-        {
-          db: fakeDb,
-          llmConfig,
-          organizationId: c.organization_id,
-          contactId: c.contact_id,
-          sourceMessageId: `eval-${c.id}-${i}`,
-          sourceText: event.text,
-        },
-        { runModelCall: directRunModelCall as never },
-      );
-      for (const [idx, candidate] of candidates.entries()) {
-        const record = candidateToRecord(candidate, {
-          organizationId: c.organization_id,
-          contactId: c.contact_id,
-          sourceId: `eval-${c.id}-${i}`,
-          sourceVersion: new Date(Date.now() + i * 1000).toISOString(),
-          index: idx,
-          forceValidUntil: event.forceValidUntil,
-        });
-        await memoryPort.upsert(record, `eval:${c.id}:${i}:${idx}`);
-        candidateCount++;
-      }
-    } catch (err) {
+    const extractWithOverride = async (extractInput: Parameters<typeof extractMemoryCandidates>[0]) => {
+      const candidates = await extractMemoryCandidates(extractInput, { runModelCall: directRunModelCall as never });
+      return event.forceValidUntil ? candidates.map((cand) => ({ ...cand, validUntil: event.forceValidUntil })) : candidates;
+    };
+    const result = await projectMessage({
+      db: ledgerDb as never,
+      llmConfig,
+      memoryPort,
+      organizationId: c.organization_id,
+      contactId: c.contact_id,
+      message: { id: `eval-${c.id}-${i}`, body: event.text, created_at: new Date(Date.now() + i * 1000).toISOString() },
+      extract: extractWithOverride,
+    });
+    if (result.status === "ok") candidateCount++;
+    else if (result.status !== "skipped") {
       extractionErrors++;
-      reasons.push(`extraction_error[${i}]: ${err instanceof Error ? err.message : String(err)}`);
+      reasons.push(`event[${i}]: ${result.status} — ${result.detail}`);
     }
   }
 
