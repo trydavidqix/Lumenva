@@ -11,7 +11,7 @@
 |---|---|---|---|
 | 0 | `GO` | [`phase-0-gate.md`](../../evidence/ai-platform/phase-0-gate.md) | concluída |
 | 1 | `GO` | [`phase-1-gate.md`](../../evidence/ai-platform/phase-1-gate.md) | concluída; LangSmith continua OFF |
-| 2 | gate `GO`; `OFF` até decisão de promoção | [`phase-2-status.md`](../../evidence/ai-platform/phase-2-status.md), [`phase-2-mem0-gate.md`](../../evidence/ai-platform/phase-2-mem0-gate.md) | Tarefas 1–10 concluídas, gate completo (Golden Dataset rodado com chave real; achado de supersession corrigido no mesmo dia, 5/6 em runs reais). `SHADOW` tecnicamente desbloqueado; falta decisão explícita de produto pra promover, não mais bloqueio técnico |
+| 2 | `GO`, FECHADA | [`phase-2-status.md`](../../evidence/ai-platform/phase-2-status.md), [`phase-2-mem0-gate.md`](../../evidence/ai-platform/phase-2-mem0-gate.md) | Tarefas 1–10 concluídas, gate completo. `SHADOW` verificado ponta a ponta (mensagem real → consumer real → Mem0 real) escopado a 1 org de teste descartável; nenhum tenant real promovido. Sem bloqueio técnico restante para a decisão de produto de promoção real |
 | 3–7 | não iniciadas | — | gate da fase anterior e aprovação humana aplicável |
 
 Esta tabela é um snapshot operacional. Os planos preservam tarefas/checklists originais e não são reescritos como histórico de execução.
