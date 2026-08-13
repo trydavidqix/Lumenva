@@ -196,6 +196,28 @@ describe("extractMemoryCandidates", () => {
     );
   });
 
+  it("tolerates the model wrapping its JSON in a markdown code fence, despite being told not to", async () => {
+    // Observed against the real Anthropic API while validating this: the
+    // prompt says "SOMENTE JSON estrito, sem markdown" and the model still
+    // sometimes wraps the object in a ```json fence. A prompt instruction is
+    // not a parser guarantee.
+    const candidates = [
+      {
+        type: "preference",
+        authorityDomain: "customer_preference",
+        sensitiveClassification: "none",
+        risk: "low",
+        confidence: 0.9,
+        actionable: true,
+        text: "Prefere ser contatado só depois das 18h.",
+      },
+    ];
+    const fenced = `\`\`\`json\n${JSON.stringify({ candidates })}\n\`\`\``;
+    const runModelCall = vi.fn().mockResolvedValue({ result: { text: fenced } });
+
+    await expect(extractMemoryCandidates(input, { runModelCall } as never)).resolves.toEqual(candidates);
+  });
+
   it("returns no candidates when the model finds no durable fact", async () => {
     const runModelCall = vi.fn().mockResolvedValue(modelReply([]));
 
