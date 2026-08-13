@@ -151,3 +151,13 @@ Leia o runbook/spec apropriado antes de alterar.
 Trabalhe no escopo pedido, faça a menor mudança correta, preserve comportamento existente e não transforme uma suposição plausível em regra do produto.
 
 Antes de declarar pronto, aplique a Definition of Done atual de [`CLAUDE.md`](CLAUDE.md) e `pnpm harness:check` quando a mudança tocar instruções/harness.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
