@@ -39,23 +39,27 @@ vi.mock("@/lib/supabase/admin", () => ({
     from: (table: string) => {
       if (table === "ai_agents") {
         return {
-          // Real `.eq()` narrowing (not a chain that ignores its args) so a
-          // test can prove the organization_id filter is load-bearing: an
-          // agent row that exists for a DIFFERENT org must not match here.
+          // Progressive candidate-list narrowing (NOT a "compare against a
+          // possibly-unset filters object" design): each `.eq(col, val)`
+          // filters down from the full agentTable. This makes the mock
+          // mutation-sensitive to a dropped filter — if a real `.eq(...)`
+          // call is removed from the code under test, the candidate list
+          // stays broader (matches MORE rows), exactly like a real Postgres
+          // query with one fewer WHERE clause would. A "compare against
+          // filters.foo" design gets this backwards: an unset filter key
+          // compares as `undefined`, which never equals a real column
+          // value, so it silently narrows to ZERO matches instead of
+          // widening — hiding a dropped filter instead of exposing it.
           select: () => {
-            const filters: Record<string, string> = {};
+            let candidates = agentTable;
             const builder = {
-              eq: (col: string, val: string) => {
-                filters[col] = val;
+              eq: (col: "id" | "organization_id", val: string) => {
+                candidates = candidates.filter((row) => row[col] === val);
                 return builder;
               },
               maybeSingle: async () => {
                 if (agentErr) return { data: null, error: agentErr };
-                const match =
-                  agentTable.find(
-                    (row) => row.id === filters.id && row.organization_id === filters.organization_id,
-                  ) ?? null;
-                return { data: match, error: null };
+                return { data: candidates[0] ?? null, error: null };
               },
             };
             return builder;
