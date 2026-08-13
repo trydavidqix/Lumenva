@@ -2034,6 +2034,7 @@ export async function runAgentTurn(
   let semanticContextBlock = '';
   if (deps.semanticContextProvider !== undefined) {
     try {
+      const semanticContextNow = Date.now();
       const semantic = await deps.semanticContextProvider.retrieve({
         organizationId: tenantId,
         contactId: leadId,
@@ -2043,9 +2044,12 @@ export async function runAgentTurn(
         // to Mem0 as a user or tenant namespace.
         agentId: agentConfig?.agentId ?? job.id,
         query: skillSignal,
-        now: new Date().toISOString(),
+        now: new Date(semanticContextNow).toISOString(),
       });
-      const preparedSemanticContext = prepareSemanticContext(semantic);
+      // Same clock reading as the request `now` above — an item's expiry is
+      // judged against the moment context was requested, not whenever fusion
+      // happens to run a few lines later.
+      const preparedSemanticContext = prepareSemanticContext(semantic, undefined, semanticContextNow);
 
       try {
         await deps.recordContextFusionMetric?.({
