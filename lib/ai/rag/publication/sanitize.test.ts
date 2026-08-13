@@ -65,6 +65,36 @@ describe("scanPublishableKnowledge", () => {
         "-----BEGIN RSA PRIVATE KEY-----",
         "private_key",
       ],
+      [
+        "a real password after filler words and a colon",
+        "A senha do administrador: SuperSecreta123!",
+        "password_or_recovery_code",
+      ],
+      [
+        "a real recovery code after filler words and a colon",
+        "O código de recuperação do usuário: 8842-1193",
+        "password_or_recovery_code",
+      ],
+      [
+        "a purely alphabetic natural-language password statement",
+        "A senha é minhaSenhaSecreta",
+        "password_or_recovery_code",
+      ],
+      [
+        "a purely alphabetic natural-language recovery code statement",
+        "O código de recuperação é ABCDEFGH",
+        "password_or_recovery_code",
+      ],
+      [
+        "a natural-language session token statement in Portuguese",
+        "O token de sessão é 8842abcdef123",
+        "session_or_cookie",
+      ],
+      [
+        "a natural-language session token statement in English",
+        "Session token is abc123session456",
+        "session_or_cookie",
+      ],
     ])("blocks %s with code %s", (_caseName, secretLine, expectedCode) => {
       const markdown = markdownWithLine(secretLine, 2);
 

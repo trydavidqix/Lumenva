@@ -25,6 +25,13 @@ export interface KnowledgeScanResult {
 const PRIVATE_KEY_HEADER =
   /-----BEGIN\s+(?:RSA |EC |DSA |OPENSSH |ENCRYPTED |PGP )?PRIVATE KEY-----/;
 
+// Filler word group shared by strict and natural branches below: real
+// sentences put descriptive words between the keyword and the separator
+// ("a senha do administrador: valor", "o código de recuperação do usuário:
+// valor"), regardless of whether the separator is a literal `:`/`=` or the
+// natural-language "é"/"is".
+const FILLER_WORDS = "(?:\\s+[A-Za-zÀ-ÿ]+){0,4}";
+
 // Two separator shapes on purpose: an explicit `:`/`=` is an unambiguous
 // assignment signal on its own, but "é"/"is" are ordinary Portuguese/English
 // words — "a chave da API é armazenada..." or "this session is temporary"
@@ -33,34 +40,56 @@ const PRIVATE_KEY_HEADER =
 // looksCredentialShaped), while the strict `:`/`=` branch does not.
 const API_KEY_STRICT_ASSIGNMENT =
   /\b(?:api[_ -]?key|apikey|chave\s+(?:da|de)\s+api)\b\s*(?:=|:)\s*\S+/iu;
-const API_KEY_NATURAL_ASSIGNMENT =
-  /\b(?:api[_ -]?key|apikey|chave\s+(?:da|de)\s+api)\b(?:\s+[A-Za-zÀ-ÿ]+){0,4}\s*(?:é|is)\s+(\S+)/iu;
+const API_KEY_NATURAL_ASSIGNMENT = new RegExp(
+  `\\b(?:api[_ -]?key|apikey|chave\\s+(?:da|de)\\s+api)\\b${FILLER_WORDS}\\s*(?:é|is)\\s+(\\S+)`,
+  "iu",
+);
 const API_KEY_LIKE_VALUE =
   /\b(?:sk|rk|pk|ghp|gho|ghu|ghs|ghr|github_pat|xox[baprs])[-_][A-Za-z0-9_-]{10,}\b|\b(?:AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35})\b/;
 
 const BEARER_TOKEN = /\bbearer\s+\S+/iu;
 const JWT_LIKE_VALUE = /\b[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/;
 
-// No natural-language ("é"/"is") branch here: none of this category's
-// legitimate fixtures need it, and "this session is temporary" is exactly
-// the ordinary-prose sentence shape that branch would misfire on.
-const SESSION_OR_COOKIE_ASSIGNMENT =
-  /\b(?:set-cookie|cookie|session(?:[_ -]?(?:id|token|key))?)\b\s*(?:=|:)\s*\S+/iu;
+// Portuguese phrasing puts "token"/"sessão" in either order ("session
+// token" vs "token de sessão"), so both are covered explicitly instead of
+// relying on one canonical word order.
+const SESSION_KEYWORD =
+  "(?:set-cookie|cookie|session(?:[_ -]?(?:id|token|key))?|token\\s+de\\s+sess[aã]o|sess[aã]o(?:[_ -]?(?:id|token|key))?)";
+const SESSION_OR_COOKIE_STRICT_ASSIGNMENT = new RegExp(
+  `\\b${SESSION_KEYWORD}\\b\\s*(?:=|:)\\s*\\S+`,
+  "iu",
+);
+// Gated the same way as the other natural-language branches (see
+// looksCredentialShaped): "this session is temporary" must not match, but
+// "session token is abc123session456" must.
+const SESSION_OR_COOKIE_NATURAL_ASSIGNMENT = new RegExp(
+  `\\b${SESSION_KEYWORD}\\b\\s*(?:é|is)\\s+(\\S+)`,
+  "iu",
+);
 
 // Assignment-shaped on purpose (keyword ... separator ... value), not a bare
 // keyword ban: a support knowledge base legitimately contains prose like
 // "como redefinir sua senha", and a blanket ban on the word would make that
-// unpublishable. A handful of words are allowed between the keyword and the
-// separator to cover phrasing like "a senha do administrador é ...". See
-// API_KEY above for why the "é"/"is" branch additionally validates the value.
-const PASSWORD_STRICT_ASSIGNMENT =
-  /\b(?:password|passwd|senha|passcode)\b\s*(?:=|:)\s*\S+/iu;
-const PASSWORD_NATURAL_ASSIGNMENT =
-  /\b(?:password|passwd|senha|passcode)\b(?:\s+[A-Za-zÀ-ÿ]+){0,4}\s*(?:é|is)\s+(\S+)/iu;
-const RECOVERY_CODE_STRICT_ASSIGNMENT =
-  /\b(?:recovery[ -]?code|backup[ -]?code|c[oó]digo\s+de\s+recupera[cç][aã]o)\b\s*(?:=|:)\s*\S+/iu;
-const RECOVERY_CODE_NATURAL_ASSIGNMENT =
-  /\b(?:recovery[ -]?code|backup[ -]?code|c[oó]digo\s+de\s+recupera[cç][aã]o)\b(?:\s+[A-Za-zÀ-ÿ]+){0,4}\s*(?:é|is)\s+(\S+)/iu;
+// unpublishable. Filler words are allowed between the keyword and *either*
+// separator shape to cover phrasing like "a senha do administrador: valor"
+// and "a senha do administrador é valor". See API_KEY above for why the
+// "é"/"is" branch additionally validates the value.
+const PASSWORD_STRICT_ASSIGNMENT = new RegExp(
+  `\\b(?:password|passwd|senha|passcode)\\b${FILLER_WORDS}\\s*(?:=|:)\\s*\\S+`,
+  "iu",
+);
+const PASSWORD_NATURAL_ASSIGNMENT = new RegExp(
+  `\\b(?:password|passwd|senha|passcode)\\b${FILLER_WORDS}\\s*(?:é|is)\\s+(\\S+)`,
+  "iu",
+);
+const RECOVERY_CODE_STRICT_ASSIGNMENT = new RegExp(
+  `\\b(?:recovery[ -]?code|backup[ -]?code|c[oó]digo\\s+de\\s+recupera[cç][aã]o)\\b${FILLER_WORDS}\\s*(?:=|:)\\s*\\S+`,
+  "iu",
+);
+const RECOVERY_CODE_NATURAL_ASSIGNMENT = new RegExp(
+  `\\b(?:recovery[ -]?code|backup[ -]?code|c[oó]digo\\s+de\\s+recupera[cç][aã]o)\\b${FILLER_WORDS}\\s*(?:é|is)\\s+(\\S+)`,
+  "iu",
+);
 
 const ENV_ASSIGNMENT_LINE = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*\S+/;
 const ENV_SECRET_KEY_HINT =
@@ -73,13 +102,26 @@ const CONTACT_DIRECTORY_MARKER =
   /<!--\s*knowledge-content-type\s*:\s*contact-directory\s*-->/i;
 
 // The "é"/"is" natural-language branches only fire when the captured token
-// itself looks like a credential (has a digit, or is quoted/backtick-wrapped)
-// rather than an ordinary word like "armazenada" or "temporary".
+// itself looks like a credential rather than an ordinary dictionary word
+// like "armazenada" or "temporary". A digit or quoting is an easy signal,
+// but a real secret can also be purely alphabetic ("minhaSenhaSecreta",
+// "ABCDEFGH") — those are still distinguishable from ordinary prose words
+// by shape: a long unspaced run of only uppercase letters is not how
+// Portuguese/English sentences write real words, and an internal lowercase
+// -> uppercase transition (camelCase/PascalCase-with-inner-caps) doesn't
+// happen in ordinary prose either (simple Title-Case, one leading capital,
+// is excluded on purpose so this doesn't fire on every capitalized word).
 function looksCredentialShaped(value: string): boolean {
   if (/^[`"'].+[`"']$/.test(value)) {
     return true;
   }
-  return /\d/.test(value);
+  if (/\d/.test(value)) {
+    return true;
+  }
+  if (/^[A-Z]{6,}$/.test(value)) {
+    return true;
+  }
+  return /[a-z].*[A-Z]/.test(value);
 }
 
 function matchesNaturalAssignment(pattern: RegExp, line: string): boolean {
@@ -102,7 +144,10 @@ function scanLine(line: string): string | null {
   if (BEARER_TOKEN.test(line) || JWT_LIKE_VALUE.test(line)) {
     return "credential";
   }
-  if (SESSION_OR_COOKIE_ASSIGNMENT.test(line)) {
+  if (
+    SESSION_OR_COOKIE_STRICT_ASSIGNMENT.test(line) ||
+    matchesNaturalAssignment(SESSION_OR_COOKIE_NATURAL_ASSIGNMENT, line)
+  ) {
     return "session_or_cookie";
   }
   if (
