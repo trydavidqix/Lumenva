@@ -175,7 +175,15 @@ services:
       retries: 5
       start_period: 45s
     logging: *default-logging
-    networks: [ai-memory-internal]
+    # `ai-memory-internal` alone (`internal: true`) blocks ALL routing off
+    # that network, inbound AND outbound — the sidecar could reach
+    # mem0-postgres but could never call out to its own configured LLM/
+    # embedding provider, confirmed by `httpx.ConnectError: Temporary
+    # failure in name resolution` when trying. `internal` (this compose's
+    # regular app network — same one `worker`/`app` already join) restores
+    # outbound egress without publishing any port; no `ports:` exists on
+    # this service in prod at all, so nothing becomes reachable that wasn't.
+    networks: [internal, ai-memory-internal]
 
   # Armazenamento interno do Mem0, separado completamente do Supabase/CRM.
   mem0-postgres:

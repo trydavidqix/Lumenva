@@ -144,14 +144,13 @@ export class Mem0Client implements MemoryPort {
   async deleteContact(input: { organizationId: string; contactId: string }): Promise<void> {
     const parsedInput = memoryContactInputSchema.parse(input);
     const userId = namespaceFor(parsedInput.organizationId, parsedInput.contactId);
-    const response = await this.request("/memories", "DELETE", {
-      user_id: userId,
-      filters: {
-        user_id: userId,
-        organization_id: parsedInput.organizationId,
-        contact_id: parsedInput.contactId,
-      },
-    });
+    // Mem0's DELETE /memories reads user_id/run_id/agent_id as query params
+    // (FastAPI function params), not a JSON body — a body-only request 400s
+    // with "At least one identifier is required." even with a valid payload.
+    const response = await this.request(
+      `/memories?user_id=${encodeURIComponent(userId)}`,
+      "DELETE",
+    );
     this.parseResponse(deleteResponseSchema, response);
   }
 
