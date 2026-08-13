@@ -25,6 +25,7 @@
 set -uo pipefail
 set -e
 CHAVE_CPF=""; CHAVE_WAHA=""; CHAVE_AI=""
+TOKEN_REDIS="${E2E_SRH_TOKEN:-e2e-placeholder-nao-e-segredo}"
 
 cd "$(dirname "$0")/.."
 
@@ -105,7 +106,7 @@ WAHA_API_BASE_URL=http://127.0.0.1:3999
 WAHA_API_KEY=e2e-placeholder-nao-e-segredo
 WAHA_WEBHOOK_BASE_URL=http://127.0.0.1:3001
 UPSTASH_REDIS_REST_URL=http://127.0.0.1:3998
-UPSTASH_REDIS_REST_TOKEN=e2e-placeholder-nao-e-segredo
+UPSTASH_REDIS_REST_TOKEN=$TOKEN_REDIS
 NEXT_TELEMETRY_DISABLED=1
 EOF
 
