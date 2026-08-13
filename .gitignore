@@ -52,6 +52,11 @@ supabase/.branches/
 # Epic executor (skill artifacts)
 .epic-executor/
 
+# Obsidian knowledge export artifacts (scripts/obsidian-export.ts) — sanitized
+# but still pending human review/upload via the CRM knowledge UI; never
+# committed, same reasoning as the rest of this file's generated/local dirs.
+.local/
+
 # Claude Code harness artifacts (scheduled tasks lock, settings locais, etc)
 # gov-loop: agents/ e commands/ são maquinaria versionada do loop.
 # rules/ contém doutrina modular compartilhada e também viaja com o repo.

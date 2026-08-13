@@ -28,6 +28,7 @@
     "test:invariants": "bash scripts/test-db.sh",
     "test:harness": "node --test scripts/check-harness-consistency.test.mjs",
     "lint:channels": "tsx scripts/lint-channels.ts",
+    "knowledge:obsidian:export": "tsx scripts/obsidian-export.ts",
     "ai:eval:local": "tsx scripts/ai-platform-eval.ts",
     "ai:eval:live": "tsx scripts/ai-platform-eval-live.ts",
     "ai:eval:langsmith": "tsx scripts/ai-platform-eval-langsmith.ts",
