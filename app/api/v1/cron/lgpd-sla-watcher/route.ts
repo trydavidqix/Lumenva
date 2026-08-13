@@ -17,7 +17,8 @@ import { randomUUID } from "node:crypto";
 import type { NextRequest } from "next/server";
 
 import { ok, fail } from "@/lib/api/wrappers";
-import { env } from "@/lib/env";
+import { cronSecretMatches } from "@/lib/auth/cron-secret";
+import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
 import { triggerSlaAlarm } from "@/lib/lgpd/sla-alarm";
@@ -46,13 +47,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   const auth = req.headers.get("authorization") ?? "";
   const provided = auth.startsWith("Bearer ") ? auth.slice("Bearer ".length).trim() : "";
 
-  const cronSecret = env.INTERNAL_CRON_SECRET;
-  const fallbackSecret = env.INTERNAL_SECRET;
-  const accepted: string[] = [];
-  if (cronSecret) accepted.push(cronSecret);
-  if (fallbackSecret) accepted.push(fallbackSecret);
-
-  if (accepted.length === 0 || !provided || !accepted.includes(provided)) {
+  if (!cronSecretMatches(provided)) {
     return fail("forbidden", "Cron secret missing or invalid.", 403, { requestId });
   }
 
@@ -88,7 +83,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     .limit(SCAN_LIMIT);
 
   if (queryError) {
-    console.error("[lgpd-sla-watcher] query failed", queryError.message);
+    logger.error("lgpd-sla-watcher: query failed", { error: queryError.message });
     return fail("internal_error", "Failed to query lgpd_requests.", 500, { requestId });
   }
 
@@ -151,7 +146,10 @@ export async function GET(req: NextRequest): Promise<Response> {
       }
     } catch (err) {
       errorsCount++;
-      console.error("[lgpd-sla-watcher] triggerSlaAlarm threw for request", row.id, err);
+      logger.error("lgpd-sla-watcher: triggerSlaAlarm threw for request", {
+        request_id: row.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 

@@ -16,6 +16,7 @@ import type { NextRequest, NextResponse } from "next/server";
 import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { ARCHIVED_AT, queryTolerantToMissingArchived } from "@/lib/channels/archived";
+import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { dispatchWahaEvent, type WahaEnvelope } from "@/lib/waha/ingest";
 import { authenticateWahaWebhook } from "@/lib/waha/webhook-auth";
@@ -128,7 +129,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     await dispatchWahaEvent(admin, session, envelope, requestId);
   } catch (err) {
-    console.error("[waha.webhook] handler failed", err);
+    logger.error("waha.webhook: handler failed", {
+      error: err instanceof Error ? err.message : String(err),
+      requestId,
+    });
   }
 
   return ok({ accepted: true }, { requestId });
