@@ -1,9 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  RssHubClient,
-  RssHubClientError,
-} from "@/lib/content-os/providers/rsshub/client";
+import { RssHubClient } from "@/lib/content-os/providers/rsshub/client";
+import type { RssHubClientError } from "@/lib/content-os/providers/rsshub/client";
 import { RSSHubIntelligenceProvider } from "@/lib/content-os/providers/rsshub/provider";
 
 describe("RSSHub intelligence provider", () => {
