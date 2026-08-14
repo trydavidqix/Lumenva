@@ -67,8 +67,8 @@ branch:
    provider-name doc leak, added missing storage-upload-error coverage
    (remaining Minors from the review, 9 of the 10 total).
 5. `f564ae0e` — fixed the 10th Minor: a `lint:channels` violation
-   (`lib/messaging/stop-keyword.ts` comment naming "WAHA" outside the channel
-   boundary) that `origin/main`'s own bug-sweep merge (`4691624c`) had
+   (`lib/messaging/stop-keyword.ts` comment naming a channel provider outside
+   the channel boundary) that `origin/main`'s own bug-sweep merge (`4691624c`) had
    introduced before this branch ever merged it in. Pre-existing and unrelated
    to Phase 3, but caught while re-running this gate's verification suite and
    fixed as a comment-only reword (no logic change) so the gate could report a

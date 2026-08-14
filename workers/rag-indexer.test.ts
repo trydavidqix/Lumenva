@@ -525,6 +525,13 @@ describe("rag-indexer — knowledge_source.updated (FAQ path)", () => {
     // Per-item chunking (resolveIngestionNodes) still runs once per item —
     // only the underlying feature-flag lookup is cached/shared.
     expect(resolveIngestionNodesMock).toHaveBeenCalledTimes(2);
+    // Both per-item calls receive the SAME cached resolveFeature closure —
+    // if the hoist forgot to thread it through, each item would get its own
+    // fresh closure (or none), silently reintroducing a per-item lookup.
+    const firstResolveFeature = resolveIngestionNodesMock.mock.calls[0]?.[0]?.resolveFeature;
+    const secondResolveFeature = resolveIngestionNodesMock.mock.calls[1]?.[0]?.resolveFeature;
+    expect(firstResolveFeature).toBeInstanceOf(Function);
+    expect(secondResolveFeature).toBe(firstResolveFeature);
     // Both items were actually indexed — hoisting the resolution doesn't
     // drop or skip any item.
     expect(state.chunkUpserts).toHaveLength(2);
