@@ -8,6 +8,7 @@ import { NextRequest } from "next/server";
 
 import { requireRole } from "@/lib/auth/require-role";
 import { fail } from "@/lib/api/wrappers";
+import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import {
   publishKnowledgePolicy,
   PublishKnowledgePolicyError,
@@ -24,6 +25,7 @@ import type { AuthUser } from "@/lib/auth/types";
  */
 
 vi.mock("@/lib/auth/require-role", () => ({ requireRole: vi.fn() }));
+vi.mock("@/lib/ai/dispatcher/rate-limit", () => ({ checkRateLimit: vi.fn() }));
 vi.mock("@/lib/ai/rag/publication/publish-policy", async () => {
   const actual = await vi.importActual<typeof PublishPolicyModule>(
     "@/lib/ai/rag/publication/publish-policy",
@@ -76,6 +78,12 @@ function postReq(opts: {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(checkRateLimit).mockResolvedValue({
+    allowed: true,
+    count: 1,
+    limit: 20,
+    window_sec: 60,
+  });
 });
 
 describe("POST /api/v1/ai/knowledge/sources/upload", () => {
@@ -87,6 +95,26 @@ describe("POST /api/v1/ai/knowledge/sources/upload", () => {
     const { POST } = await import("./route");
     const res = await POST(postReq({ agentId: AGENT_ID, name: "Política" }));
     expect(res.status).toBe(401);
+    expect(publishKnowledgePolicy).not.toHaveBeenCalled();
+  });
+
+  it("acima do limite de rate limit → 429 rate_limited com Retry-After, sem chamar o serviço", async () => {
+    mockAuthzOk();
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: false,
+      count: 21,
+      limit: 20,
+      window_sec: 60,
+    });
+
+    const { POST } = await import("./route");
+    const res = await POST(postReq({ agentId: AGENT_ID, name: "Política" }));
+
+    expect(res.status).toBe(429);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("rate_limited");
+    expect(res.headers.get("Retry-After")).toBe("60");
+    expect(checkRateLimit).toHaveBeenCalledWith(`ai_knowledge_upload:${ORG_ID}`, 20, 60);
     expect(publishKnowledgePolicy).not.toHaveBeenCalled();
   });
 
