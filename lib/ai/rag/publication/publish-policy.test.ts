@@ -213,6 +213,19 @@ describe("publishKnowledgePolicy", () => {
     expect(res.blobPath.endsWith(".pdf")).toBe(true);
   });
 
+  it("upload no storage falha → internal_error, sem insert/emit e sem tentar limpar (nada foi de fato enviado)", async () => {
+    uploadMock.mockResolvedValue({ error: { message: "bucket unreachable" } });
+
+    await expect(publishKnowledgePolicy(baseInput())).rejects.toMatchObject({
+      code: "internal_error",
+      status: 500,
+    });
+
+    expect(insertMock).not.toHaveBeenCalled();
+    expect(rpcMock).not.toHaveBeenCalled();
+    expect(removeMock).not.toHaveBeenCalled();
+  });
+
   it("agent não existe em lugar nenhum → not_found, sem upload", async () => {
     agentTable = [];
 

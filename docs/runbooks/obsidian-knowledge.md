@@ -41,15 +41,15 @@ de ISO-8601 faz o comando recusar a exportação sem escrever nada em disco.
    `REVIEW`, a nota é apenas rascunho — não roda o comando ainda.
 2. Quando a nota estiver pronta, mude `status: PUBLISHED` no frontmatter e
    salve.
-3. Rode o export a partir da raiz do repositório:
+3. **Revise visualmente o conteúdo da nota antes de rodar o export no próximo
+   passo** — veja a seção "Limite conhecido do scanner" abaixo. O scanner
+   automático é uma camada de defesa em profundidade, não o único controle.
+4. Rode o export a partir da raiz do repositório:
 
    ```bash
    pnpm knowledge:obsidian:export -- --file <caminho-absoluto-ou-relativo-da-nota.md>
    ```
 
-4. **Revise visualmente o conteúdo da nota antes do passo 3** — veja a seção
-   "Limite conhecido do scanner" abaixo. O scanner automático é uma camada de
-   defesa em profundidade, não o único controle.
 5. Se o comando recusar por `status` não-`PUBLISHED`, corrija o frontmatter na
    origem e repita. Se recusar por segredo/PII detectado, o erro mostra
    apenas o `code` e a `line` do achado (nunca o valor) — abra a nota, vá até
