@@ -312,6 +312,10 @@ vi.mock("@/lib/ai/rag/ingestion/resolve-adapter", () => ({
   resolveIngestionNodes: vi.fn(),
 }));
 
+vi.mock("@/lib/agent-engine/platform/features", () => ({
+  resolveAiPlatformFeature: vi.fn(async () => ({ mode: "off", config: {}, killed: false })),
+}));
+
 vi.mock("@/lib/nuvemshop/api-client", () => ({
   NuvemshopApiClient: class {
     async get() {
@@ -329,8 +333,10 @@ vi.mock("@/lib/nuvemshop/api-client", () => ({
 import { processRagIndexer } from "@/workers/rag-indexer";
 import { embedText } from "@/lib/ai/embed";
 import { resolveIngestionNodes } from "@/lib/ai/rag/ingestion/resolve-adapter";
+import { resolveAiPlatformFeature } from "@/lib/agent-engine/platform/features";
 
 const resolveIngestionNodesMock = vi.mocked(resolveIngestionNodes);
+const resolveAiPlatformFeatureMock = vi.mocked(resolveAiPlatformFeature);
 
 function node(text: string, position: number, extra: Record<string, string | number | boolean | null> = {}): IngestionNode {
   return {
@@ -389,6 +395,8 @@ function productEvent(overrides: Partial<EventRow> = {}): EventRow {
 beforeEach(() => {
   resetState();
   resolveIngestionNodesMock.mockReset();
+  resolveAiPlatformFeatureMock.mockClear();
+  resolveAiPlatformFeatureMock.mockResolvedValue({ mode: "off", config: {}, killed: false });
   vi.mocked(embedText).mockClear();
 });
 
@@ -430,8 +438,12 @@ describe("rag-indexer — knowledge_source.updated (FAQ path)", () => {
     // The only content ever written is what resolveIngestionNodes.nodes carried —
     // the shadow comparison object is never read for content by the indexer.
     expect(state.chunkUpserts[0]?.["content"]).toBe("native-answer");
+    // `ingestion_mode` describes what's actually persisted in this row's
+    // content — always "native" in shadow mode, since shadow only ever
+    // writes the native adapter's output. `resolver_mode` separately
+    // records that the resolver ran under "shadow" for this document.
     expect(state.chunkUpserts[0]).toMatchObject({
-      metadata: expect.objectContaining({ ingestion_mode: "shadow" }),
+      metadata: expect.objectContaining({ ingestion_mode: "native", resolver_mode: "shadow" }),
     });
     expect(state.activateCalls).toHaveLength(1);
   });
@@ -484,8 +496,40 @@ describe("rag-indexer — knowledge_source.updated (FAQ path)", () => {
 
     expect(state.chunkUpserts).toHaveLength(2);
     for (const row of state.chunkUpserts) {
-      expect((row["metadata"] as Record<string, unknown>)["ingestion_mode"]).toBe("llamaindex");
+      const metadata = row["metadata"] as Record<string, unknown>;
+      expect(metadata["ingestion_mode"]).toBe("llamaindex");
+      expect(metadata["resolver_mode"]).toBe("llamaindex");
     }
+  });
+
+  it("N>1 FAQ items: resolves the feature/adapter ONCE for the whole event, not once per item, and indexes every item", async () => {
+    state.faqItems = [
+      { knowledge_source_id: sourceId, question: "Qual o prazo de troca?", answer: "Até 7 dias." },
+      { knowledge_source_id: sourceId, question: "Como rastreio meu pedido?", answer: "Pelo link enviado por e-mail." },
+    ];
+    resolveIngestionNodesMock
+      .mockResolvedValueOnce(selection("native", [node("chunk-item-1", 0)]))
+      .mockResolvedValueOnce(selection("native", [node("chunk-item-2", 0)]));
+
+    const result = await processRagIndexer(faqEvent());
+
+    expect(result.status).toBe("ok");
+    // Feature/adapter resolution happens ONCE per EVENT, not once per item —
+    // resolveAiPlatformFeature costs 2 Supabase round trips per call, so N
+    // items must cost 1 lookup, not N (previously 2N extra DB round trips).
+    expect(resolveAiPlatformFeatureMock).toHaveBeenCalledTimes(1);
+    expect(resolveAiPlatformFeatureMock).toHaveBeenCalledWith({
+      organizationId: orgA,
+      feature: "llamaindex",
+    });
+    // Per-item chunking (resolveIngestionNodes) still runs once per item —
+    // only the underlying feature-flag lookup is cached/shared.
+    expect(resolveIngestionNodesMock).toHaveBeenCalledTimes(2);
+    // Both items were actually indexed — hoisting the resolution doesn't
+    // drop or skip any item.
+    expect(state.chunkUpserts).toHaveLength(2);
+    expect(state.chunkUpserts.map((c) => c["content"])).toEqual(["chunk-item-1", "chunk-item-2"]);
+    expect(state.activateCalls).toHaveLength(1);
   });
 
   it("uses the adapter-provided content hash instead of recomputing it, when present", async () => {
@@ -549,7 +593,11 @@ describe("rag-indexer — nuvemshop.product_synced (product path)", () => {
     expect(state.chunkUpserts).toHaveLength(1);
     expect(state.chunkUpserts[0]).toMatchObject({
       organization_id: orgA,
-      metadata: expect.objectContaining({ ingestion_mode: "native", product_id: "product-1" }),
+      metadata: expect.objectContaining({
+        ingestion_mode: "native",
+        resolver_mode: "native",
+        product_id: "product-1",
+      }),
     });
     expect(state.activateCalls).toHaveLength(1);
     for (const table of ["ai_agents", "tenant_integrations", "ai_knowledge_versions", "ai_chunks"]) {

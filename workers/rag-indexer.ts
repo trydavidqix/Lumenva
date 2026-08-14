@@ -22,8 +22,15 @@ import {
   markVersionFailed,
   activateVersion,
 } from "@/lib/ai/rag/version";
-import { resolveIngestionNodes, type IngestionSelectionResult } from "@/lib/ai/rag/ingestion/resolve-adapter";
+import {
+  resolveIngestionNodes,
+  type IngestionAdapterFailure,
+  type IngestionAdapterMode,
+  type IngestionSelectionResult,
+  type ShadowIngestionComparison,
+} from "@/lib/ai/rag/ingestion/resolve-adapter";
 import type { IngestionNode } from "@/lib/ai/rag/ingestion/port";
+import { resolveAiPlatformFeature, type ResolvedAiPlatformFeature } from "@/lib/agent-engine/platform/features";
 import type { EventRow, HandlerResult } from "@/lib/event-log/dispatcher";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NuvemshopApiClient } from "@/lib/nuvemshop/api-client";
@@ -57,6 +64,53 @@ function skip(reason: string): SkipResult {
 function resolveNodeContentHash(node: IngestionNode): string {
   const fromAdapter = node.metadata["contentHash"];
   return typeof fromAdapter === "string" ? fromAdapter : computeContentHash(node.text);
+}
+
+/**
+ * Shared best-effort telemetry callbacks for `resolveIngestionNodes`, used by
+ * both the product-listing and FAQ reindex handlers. Extracted so the
+ * console.warn wiring isn't duplicated verbatim between the two call sites
+ * (pure dedup — same messages/behavior as before).
+ */
+function createIngestionTelemetryCallbacks(organizationId: string): {
+  recordAdapterFailure: (failure: IngestionAdapterFailure) => void;
+  recordShadowComparison: (comparison: ShadowIngestionComparison) => void;
+} {
+  return {
+    recordAdapterFailure: (failure) => {
+      console.warn(
+        `[rag-indexer] ingestion adapter fallback (${failure.mode}) for org ${organizationId}: ${failure.reason}`,
+      );
+    },
+    recordShadowComparison: (comparison) => {
+      console.warn(
+        `[rag-indexer] ingestion shadow comparison for org ${organizationId}: ` +
+          `native=${comparison.nativeNodeCount} llamaindex=${comparison.llamaIndexNodeCount} ` +
+          `delta=${comparison.nodeCountDelta} textMatches=${comparison.textMatches} ` +
+          `degraded=${comparison.degraded}${comparison.reason ? ` reason=${comparison.reason}` : ""}`,
+      );
+    },
+  };
+}
+
+/**
+ * Chunk metadata provenance fields, split so each describes a different
+ * thing: `ingestion_mode` is what's actually persisted in this row's
+ * `content` (only ever "native" or "llamaindex" — shadow mode always writes
+ * the native adapter's output, per resolveIngestionNodes's contract), while
+ * `resolver_mode` is what mode the resolver ran under for this document,
+ * which can additionally be "shadow". Collapsing both into one
+ * `ingestion_mode: selection.mode` field made shadow-mode rows claim
+ * `ingestion_mode: "shadow"` even though the content in the row was always
+ * native's output — misleading for anyone querying provenance later.
+ */
+function resolveChunkModeFields(
+  mode: IngestionAdapterMode,
+): { ingestion_mode: "native" | "llamaindex"; resolver_mode: IngestionAdapterMode } {
+  return {
+    ingestion_mode: mode === "llamaindex" ? "llamaindex" : "native",
+    resolver_mode: mode,
+  };
 }
 
 /**
@@ -194,6 +248,12 @@ async function handleProductSynced(
   // resolution call itself throws (e.g. feature-flag lookup error), no
   // version has been created yet, so the currently active version is
   // untouched — same safety as a chunking failure today.
+  // Shadow mode's whole purpose is measuring the adopt/reject signal for
+  // llamaindex — without telemetry the worker pays double chunking cost and
+  // produces zero observable output. Counts/booleans only, per
+  // ShadowIngestionComparison's own contract: never tenant text.
+  const telemetry = createIngestionTelemetryCallbacks(row.organization_id);
+
   let selection: IngestionSelectionResult;
   try {
     selection = await resolveIngestionNodes({
@@ -207,23 +267,8 @@ async function handleProductSynced(
           title: `Produto ${productId}`,
         },
       },
-      recordAdapterFailure: (failure) => {
-        console.warn(
-          `[rag-indexer] ingestion adapter fallback (${failure.mode}) for org ${row.organization_id}: ${failure.reason}`,
-        );
-      },
-      // Shadow mode's whole purpose is measuring the adopt/reject signal for
-      // llamaindex — without this the worker pays double chunking cost and
-      // produces zero observable output. Counts/booleans only, per
-      // ShadowIngestionComparison's own contract: never tenant text.
-      recordShadowComparison: (comparison) => {
-        console.warn(
-          `[rag-indexer] ingestion shadow comparison for org ${row.organization_id}: ` +
-            `native=${comparison.nativeNodeCount} llamaindex=${comparison.llamaIndexNodeCount} ` +
-            `delta=${comparison.nodeCountDelta} textMatches=${comparison.textMatches} ` +
-            `degraded=${comparison.degraded}${comparison.reason ? ` reason=${comparison.reason}` : ""}`,
-        );
-      },
+      recordAdapterFailure: telemetry.recordAdapterFailure,
+      recordShadowComparison: telemetry.recordShadowComparison,
     });
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
@@ -285,7 +330,7 @@ async function handleProductSynced(
           metadata: {
             source_type: "nuvemshop_product",
             product_id: productId,
-            ingestion_mode: selection.mode,
+            ...resolveChunkModeFields(selection.mode),
           },
         },
         {
@@ -383,20 +428,41 @@ async function handleKnowledgeSourceUpdated(
   }[];
   if (items.length === 0) return skip("no_content_to_index");
 
+  // Feature/adapter selection is resolved ONCE for the whole event, not once
+  // per FAQ item: resolveAiPlatformFeature does 2 Supabase round trips per
+  // call, so resolving inside the loop cost 2N extra DB round trips for N
+  // items, a flag lookup failure on item 50 aborted the whole reindex, and a
+  // flag flipped mid-loop could tag chunks of the SAME knowledge version with
+  // mixed ingestion_mode provenance. Chunking itself (adapter.normalize)
+  // still runs per item below via resolveIngestionNodes — only the
+  // feature-flag lookup is cached and reused for every item, via the
+  // `resolveFeature` override that returns the same resolution every time.
+  let resolvedFeature: ResolvedAiPlatformFeature;
+  try {
+    resolvedFeature = await resolveAiPlatformFeature({
+      organizationId: row.organization_id,
+      feature: "llamaindex",
+    });
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    return { type: "error", detail: `ingestion_resolution_failed: ${detail}` };
+  }
+  const resolveFeatureOnce = async (): Promise<ResolvedAiPlatformFeature> => resolvedFeature;
+  const telemetry = createIngestionTelemetryCallbacks(row.organization_id);
+
   // Um chunk por par pergunta/resposta: a unidade de recuperação é a resposta
   // inteira. O adaptador de ingestão só sub-divide quando a resposta é longa
   // demais para um chunk — assim uma FAQ curta nunca é picada no meio. Cada
-  // item resolve o adaptador individualmente (mesma granularidade de antes,
-  // quando cada item ia direto para `chunkText`); se a resolução falhar por
-  // qualquer motivo antes da versão nova existir, a versão ativa atual
-  // permanece intocada.
+  // item ainda passa pelo adaptador individualmente (mesma granularidade de
+  // antes, quando cada item ia direto para `chunkText`) — apenas a resolução
+  // do feature flag acima é compartilhada entre todos os itens.
   const porFonte = new Map(sources.map((s) => [s.id, s]));
   const pedacos: {
     content: string;
     sourceId: string;
     sourceType: string;
     node: IngestionNode;
-    ingestionMode: string;
+    resolverMode: IngestionAdapterMode;
   }[] = [];
   for (const it of items) {
     const fonte = porFonte.get(it.knowledge_source_id);
@@ -415,19 +481,9 @@ async function handleKnowledgeSourceUpdated(
             title: fonte.name,
           },
         },
-        recordAdapterFailure: (failure) => {
-          console.warn(
-            `[rag-indexer] ingestion adapter fallback (${failure.mode}) for org ${row.organization_id}: ${failure.reason}`,
-          );
-        },
-        recordShadowComparison: (comparison) => {
-          console.warn(
-            `[rag-indexer] ingestion shadow comparison for org ${row.organization_id}: ` +
-              `native=${comparison.nativeNodeCount} llamaindex=${comparison.llamaIndexNodeCount} ` +
-              `delta=${comparison.nodeCountDelta} textMatches=${comparison.textMatches} ` +
-              `degraded=${comparison.degraded}${comparison.reason ? ` reason=${comparison.reason}` : ""}`,
-          );
-        },
+        resolveFeature: resolveFeatureOnce,
+        recordAdapterFailure: telemetry.recordAdapterFailure,
+        recordShadowComparison: telemetry.recordShadowComparison,
       });
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
@@ -439,7 +495,7 @@ async function handleKnowledgeSourceUpdated(
         sourceId: fonte.id,
         sourceType: fonte.source_type,
         node,
-        ingestionMode: selection.mode,
+        resolverMode: selection.mode,
       });
     }
   }
@@ -479,7 +535,7 @@ async function handleKnowledgeSourceUpdated(
         content_hash: contentHash,
         token_count: estimateTokens(p.content),
         embedding: embedding as unknown as string,
-        metadata: { source_type: p.sourceType, ingestion_mode: p.ingestionMode },
+        metadata: { source_type: p.sourceType, ...resolveChunkModeFields(p.resolverMode) },
       },
       // Ver comentario no caminho de produto: esta e a constraint que existe.
       { onConflict: "knowledge_source_id,kb_version_id,position", ignoreDuplicates: true },
