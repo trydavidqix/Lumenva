@@ -5,6 +5,20 @@ import type { ChangeDetectionClientError } from "@/lib/content-os/providers/chan
 import { ChangeDetectionIntelligenceProvider } from "@/lib/content-os/providers/changedetection/provider";
 
 describe("changedetection.io intelligence provider", () => {
+  it("returns the remote watch ID when provisioning a watch", async () => {
+    const client = new ChangeDetectionClient({
+      baseUrl: "https://changedetection.internal",
+      apiKey: "private-api-key",
+      fetch: vi.fn<typeof fetch>().mockResolvedValue(
+        new Response(JSON.stringify({ uuid: "watch-created" }), { status: 201 }),
+      ),
+    });
+
+    await expect(
+      client.createWatch({ url: "https://competitor.example/pricing", title: "Pricing" }),
+    ).resolves.toBe("watch-created");
+  });
+
   it("maps the latest changed snapshot to a deterministic signal using x-api-key", async () => {
     const fetchMock = vi.fn<typeof fetch>()
       .mockResolvedValueOnce(

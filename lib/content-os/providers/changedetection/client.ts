@@ -103,8 +103,16 @@ export class ChangeDetectionClient {
     this.fetchFn = options.fetch ?? fetch;
   }
 
-  async createWatch(input: ChangeDetectionWatchInput): Promise<void> {
-    await this.request("watch", { method: "POST", body: input });
+  async createWatch(input: ChangeDetectionWatchInput): Promise<string> {
+    const response = await this.request("watch", { method: "POST", body: input });
+    const created = await this.readJson(response, (value) => {
+      if (!isRecord(value) || typeof value.uuid !== "string") {
+        throw new ChangeDetectionClientError("invalid_response");
+      }
+      return value.uuid;
+    });
+
+    return created;
   }
 
   async updateWatch(watchId: string, input: Partial<ChangeDetectionWatchInput>): Promise<void> {
