@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 export const contentEventNames = [
+  "content.source_collection_requested",
+  "content.competitor_check_requested",
   "content.signal.collected",
   "content.opportunity.created",
   "content.idea.created",
