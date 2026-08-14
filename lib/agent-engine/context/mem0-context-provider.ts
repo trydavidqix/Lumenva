@@ -23,6 +23,18 @@ const authorityLevels: Record<AuthorityDomain, number> = {
   customer_preference: 40,
 };
 
+/**
+ * Reads this provider's canonical authority-level mapping. Exported (as a
+ * narrow accessor rather than the map itself) so callers building a
+ * ContextItem for another domain — e.g. a published knowledge document —
+ * can rank it against Mem0 output using the SAME live constant this file
+ * assigns to Mem0 records, instead of a mirrored literal that would drift
+ * silently if this map ever changes.
+ */
+export function getAuthorityLevel(domain: AuthorityDomain): number {
+  return authorityLevels[domain];
+}
+
 export interface Mem0ShadowMetric {
   provider: "mem0";
   latencyMs: number;
