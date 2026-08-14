@@ -1,23 +1,39 @@
 # Phase 3 (Knowledge / Obsidian / LlamaIndex) — release gate
 
-Date: 2026-08-14
+Date: 2026-08-14 (original gate); re-verified 2026-08-14 after a merge + fix
+wave (see "Post-review fix wave" below).
 Branch: `ai-platform-foundation`
-Commit range: `8735d69a..f29bffac` (Task 1 through Task 8, this plan's own commits)
+Original commit range: `8735d69a..f29bffac` (Task 1 through Task 8, this
+plan's own commits)
+Re-verification HEAD: `f564ae0e` (`origin/main` merged in at `fa5090a5`, then
+fix-wave commits `c3432ba6`, `0683131a`, `f04b0e6f`, then unrelated
+`lint:channels` fix `f564ae0e`)
 Gate commit: recorded below, after this document is committed.
 
 ## Decision
 
-**GO, with one explicit, named gap** (Step 3 coverage — see below; zero P0
-failures found anywhere in this gate). All four required properties (native-only baseline, DRAFT/REVIEW export
-block, PUBLISHED export→search path, LlamaIndex shadow/failure isolation) are
-proven by real, freshly re-run test suites on this final tree, and the full
-Step 5 verification suite is green: `typecheck`, `lint`, `test:unit`,
+**GO — no caveats remaining beyond the one explicit, named Step 3 gap**
+(zero P0/P1 findings open anywhere in this gate). All four required
+properties (native-only baseline, DRAFT/REVIEW export block, PUBLISHED
+export→search path, LlamaIndex shadow/failure isolation) are proven by real,
+freshly re-run test suites on the current, merged HEAD (`f564ae0e`), and the
+full Step 5 verification suite is green: `typecheck`, `lint`, `test:unit`,
 `test:db`, `ai:eval:local`, `build`, and `git diff --check` (working tree)
 all passed with real command output captured below. `lint:channels` was also
 run as a bonus check (not in the brief's literal Step 5 list, but required by
-`CLAUDE.md`'s own gate list) and is clean.
+`CLAUDE.md`'s own gate list) and is clean — including on this re-verification,
+where it caught and blocked on a real pre-existing violation the `origin/main`
+merge brought in (see "Post-review fix wave").
 
-One explicit, named gap: Step 3 ("export → upload → index") is proven in two
+This supersedes the original 2026-08-14 gate run, which was later found by a
+final whole-branch review to have been run on a tree 65 commits behind
+`origin/main`, plus two Important findings. All of that is now resolved — see
+"Post-review fix wave" below — and this re-verification is real, freshly
+executed evidence on the current tree, not a re-statement of the original
+run's numbers.
+
+One explicit, named gap carried forward unchanged (not something the fix wave
+was asked to address): Step 3 ("export → upload → index") is proven in two
 real halves — export+search and upload+event-emission — but no single
 automated test chains them together, because production itself doesn't
 either: the Obsidian export CLI deliberately stops at a local artifact, and a
@@ -28,6 +44,42 @@ but it means "export→upload→index" as one continuous *automated* code path
 has never been exercised end-to-end in a single run — flagged as a residual
 gap rather than rounded up to full coverage.
 
+## Post-review fix wave
+
+After the original gate was recorded, a final whole-branch review found the
+gate's verification had run on a tree 65 commits behind `origin/main`, plus
+**2 Important and 10 Minor findings**. All were fixed, in order, on this
+branch:
+
+1. `fa5090a5` — merged `origin/main` in, resolving the staleness. The
+   rate-limit code the reviewer flagged as at-risk in the merge (Important 1)
+   survived the merge intact.
+2. `c3432ba6` — covered the 429 rate-limit path with a real test (Important 1)
+   and restored the pre-extraction file-size check ordering (Minor: buffer-
+   before-validation regression).
+3. `0683131a` — hoisted the FAQ-reindex feature/adapter resolution to run once
+   per event instead of once per item (Important 2 — the untested per-item
+   DB-query loop in `workers/rag-indexer.ts`), plus fixed shadow-mode
+   `ingestion_mode` mislabeling and deduplicated a telemetry callback (Minors).
+4. `f04b0e6f` — fixed a vacuous golden-suite assertion, corrected a fake that
+   discarded production's real `version_number`, added a missing
+   secret-shape characterization test, fixed runbook step-ordering and a
+   provider-name doc leak, added missing storage-upload-error coverage
+   (remaining Minors from the review, 9 of the 10 total).
+5. `f564ae0e` — fixed the 10th Minor: a `lint:channels` violation
+   (`lib/messaging/stop-keyword.ts` comment naming "WAHA" outside the channel
+   boundary) that `origin/main`'s own bug-sweep merge (`4691624c`) had
+   introduced before this branch ever merged it in. Pre-existing and unrelated
+   to Phase 3, but caught while re-running this gate's verification suite and
+   fixed as a comment-only reword (no logic change) so the gate could report a
+   genuinely clean `lint:channels` run.
+
+This re-verification (Step 5 below, run fresh on `f564ae0e`) confirms all of
+the above fixes hold on the current tree: the rate-limit test passes, the FAQ
+reindex path resolves the feature flag once per event (proven by the new
+2-item test in `workers/rag-indexer.test.ts`), and `lint:channels` is clean
+with zero new violations.
+
 ## Step 1 — native-only mode matches baseline
 
 `workers/rag-indexer.ts` routes chunk generation through
@@ -35,7 +87,7 @@ gap rather than rounded up to full coverage.
 default (`off`), the resolver's `off` branch returns the native adapter's
 output unchanged — same chunker, same metadata contract as pre-Phase-3.
 
-Re-run fresh on this tree:
+Re-run fresh on the current, merged, fix-wave HEAD (`f564ae0e`):
 
 ```
 pnpm vitest run workers/rag-indexer.test.ts
@@ -43,17 +95,21 @@ pnpm vitest run workers/rag-indexer.test.ts
 
 ```
 Test Files  1 passed (1)
-     Tests  11 passed (11)
+     Tests  12 passed (12)
 ```
 
-This is the same file/assertions Task 7 built specifically to prove this
-property (see `"feature off: uses the native adapter's output and activates
-the new version"` and the equivalent product-path test) — re-run now, not
-re-derived from memory, and green on the final Task 8 tree.
+12 tests, not the original 11 — the fix wave (`0683131a`, Important 2) added
+`"N>1 FAQ items: resolves the feature/adapter ONCE for the whole event, not
+once per item, and indexes every item"`, which is itself a property this gate
+cares about (see "Post-review fix wave"). This is the same file/assertions
+Task 7 built specifically to prove the native-only baseline (see `"feature
+off: uses the native adapter's output and activates the new version"` and the
+equivalent product-path test) — re-run now, not re-derived from memory, and
+green on the current tree.
 
 ## Step 2 — Obsidian DRAFT/REVIEW cannot export
 
-Re-run fresh:
+Re-run fresh on `f564ae0e`:
 
 ```
 pnpm vitest run tests/unit/obsidian-export.test.ts tests/unit/knowledge-publication-golden.test.ts
@@ -63,6 +119,11 @@ pnpm vitest run tests/unit/obsidian-export.test.ts tests/unit/knowledge-publicat
 Test Files  2 passed (2)
      Tests  21 passed (21)
 ```
+
+Same count as the original gate — the fix wave's golden-suite changes
+(Minors 4/5: fixed a vacuous assertion and a fake that discarded production's
+real `version_number`) corrected what existing assertions checked, not how
+many tests exist.
 
 Direct proof lives in `tests/unit/obsidian-export.test.ts`: `"refuses a DRAFT
 note"`, `"refuses a REVIEW note"`, `"refuses an ARCHIVED note"` — each calls
@@ -78,7 +139,7 @@ becomes retrievable."
 
 ## Step 3 — PUBLISHED export→upload→index path
 
-Re-run fresh (same command as Step 2, scenario 1 of the same file):
+Re-run fresh on `f564ae0e` (same command as Step 2, scenario 1 of the same file):
 
 ```
 pnpm vitest run tests/unit/knowledge-publication-golden.test.ts
@@ -117,11 +178,15 @@ pnpm vitest run lib/ai/rag/publication/publish-policy.test.ts
 
 ```
 Test Files  1 passed (1)
-     Tests  12 passed (12)
+     Tests  13 passed (13)
 ```
 
-This file's first test — `"uploads, valida extração, insere a fonte e emite
-knowledge_source.updated"` — proves upload→validate→insert→emit for real.
+13 tests, not the original 12 — the fix wave (`c3432ba6` restored the
+pre-extraction file-size ordering; `f04b0e6f`/Minor 11 added
+`"upload no storage falha → internal_error, sem insert/emit e sem tentar
+limpar"`). This file's first test — `"uploads, valida extração, insere a
+fonte e emite knowledge_source.updated"` — proves upload→validate→insert→emit
+for real.
 Combined with `workers/rag-indexer.test.ts`'s proof that
 `handleKnowledgeSourceUpdated` correctly consumes that same event type and
 indexes via `resolveIngestionNodes`, **both halves of the chain are proven
@@ -143,7 +208,7 @@ coverage as complete.
 
 ## Step 4 — LlamaIndex shadow failure cannot replace active knowledge
 
-Re-run fresh:
+Re-run fresh on `f564ae0e`:
 
 ```
 pnpm vitest run lib/ai/rag/ingestion/llamaindex-adapter.test.ts lib/ai/rag/ingestion/resolve-adapter.test.ts
@@ -160,8 +225,13 @@ pnpm vitest run workers/rag-indexer.test.ts
 
 ```
 Test Files  1 passed (1)
-     Tests  11 passed (11)
+     Tests  12 passed (12)
 ```
+
+(`rag-indexer.test.ts` is 12 here for the same reason as Step 1 — the fix
+wave's new N>1 FAQ-items test; `llamaindex-adapter.test.ts`/
+`resolve-adapter.test.ts` are unchanged at 24, since the fix wave's change to
+`workers/rag-indexer.ts` did not touch the adapter/resolver files themselves.)
 
 Two independent properties, both re-proven on this tree:
 
@@ -194,63 +264,53 @@ stays active) and a soft adapter-level failure in canary/on (native output is
 substituted transparently, old version is never touched because a new one
 successfully activates on native content instead).
 
-## Step 5 — full verification
+## Step 5 — full verification (re-verification on `f564ae0e`)
 
-Run 2026-08-14, this branch, this Windows machine (8 GB host, Docker Desktop
-29.6.2, multiple other dev processes — 2 concurrent `next dev` servers, a
-Playwright MCP server, the Mem0/channel-messaging Docker containers from
-Phase 2/Phase-0 work — already running throughout):
+Re-run 2026-08-14, this branch at HEAD `f564ae0e`, this Windows machine (8 GB
+host, Docker Desktop, other dev processes — a `next dev` server, mem0/
+channel-messaging containers — running throughout):
 
 | Command | Result |
 |---|---|
-| `pnpm typecheck` | PASS — `tsc --noEmit`, 0 errors. |
-| `pnpm lint` | PASS — exit 0, 0 errors, 200 pre-existing warnings (all in files this phase never touched — `no-console` in seed/sonda scripts, `@typescript-eslint/consistent-type-imports` in test files, unrelated unused-var lint in test fixtures). |
-| `pnpm lint:channels` | PASS (bonus, not in the brief's literal Step 5 list but required by `CLAUDE.md`) — `ok (61 arquivos de dívida conhecida, nenhum novo)`. |
-| `pnpm test:unit` | PASS — 321 test files, 3278 tests, exit code 0, 983.93s. **See "test:unit had to be restarted" below — the first attempt stalled and was killed/rerun; this number is from the successful rerun.** |
-| `pnpm test:db` | PASS — 72 test files, 480 tests passed + 1 skipped, exit code 0, 243.05s. Disposable `pgvector/pgvector:pg17` container via `scripts/test-db.sh`, torn down on exit (`==> teardown: removendo container deskcomm-test-db-10191`). Baseline install + idempotent update both applied; the `ERROR`/`NOTICE` lines visible mid-run are the RLS-isolation and idempotency assertions' own expected negative-path output (e.g. `new row violates row-level security policy`, `already exists, skipping`), not failures — the suite's own summary line, `==> test:db verde`, confirms pass. |
-| `pnpm ai:eval:local` | PASS — `{"total":30,"duplicate_ids":0,"p0_failures":0,"status":"pass"}`. |
-| `pnpm build` | PASS — exit code 0. `next build` (Turbopack, Next.js 16.3.0): `Compiled successfully in 88s`, TypeScript finished in 57s, all routes/pages collected. The `[env] No AI_GATEWAY_API_KEY...`/`No OPENAI_API_KEY...`/`IMPERSONATE_COOKIE_SECRET not set...` lines are the platform's documented graceful-degradation warnings for optional envs, not build errors — consistent with the self-host doctrine that a missing optional env must degrade a feature, not break the build. |
-| `git diff --check` (working tree) | PASS — exit code 0, no output (no uncommitted changes at the time of this check). |
+| `pnpm typecheck` | PASS — `tsc --noEmit`, 0 errors, no output. |
+| `pnpm lint` | PASS — exit 0, 0 errors, 200 pre-existing warnings (identical count to the original gate; confirmed none are in files this phase or the fix wave touched — `no-console` in seed/sonda scripts, `@typescript-eslint/consistent-type-imports` in test files, unrelated unused-var lint in test fixtures). |
+| `pnpm lint:channels` | PASS — `lint-channels: ok (61 arquivos de dívida conhecida, nenhum novo)`. This is the check that was failing before `f564ae0e` (see "Post-review fix wave") — confirmed clean on this re-verification. |
+| `pnpm test:unit` | PASS — **321 test files, 3287 tests**, exit code 0, 1192.40s (`Start at 19:25:23`, `transform 15.25s, setup 147.01s, import 291.06s, tests 49.45s, environment 581.63s`). 3287 vs. the original gate's 3278 — the 9 extra are the fix wave's new tests (429 rate-limit path, N>1 FAQ-items feature-resolution-once test, sanitize.test.ts secret-shape characterization, storage-upload-error coverage, etc.). **See "test:unit needed a kill-and-restart" below — the first attempt on this re-verification crashed outright (not just stalled) and was restarted once; this number is from the clean restart.** |
+| `pnpm test:db` | PASS — 72 test files, 480 tests passed + 1 skipped, exit code 0, 306.73s (`==> test:db verde`). Disposable `pgvector/pgvector:pg17` container via `scripts/test-db.sh`, torn down on exit (`==> teardown: removendo container deskcomm-test-db-11989`). Baseline install + idempotent update both applied; the `ERROR`/`NOTICE`/`WARNING` lines visible mid-run (e.g. `new row for relation "system_version" violates check constraint`, `duplicate key value violates unique constraint`) are the suite's own expected negative-path assertions, not failures — the summary line confirms pass. Identical file/test counts to the original gate. |
+| `pnpm ai:eval:local` | PASS — `{"total":30,"duplicate_ids":0,"p0_failures":0,"status":"pass"}`. Identical to the original gate. |
+| `pnpm build` | PASS — exit code 0. `next build` (Turbopack, Next.js 16.3.0): `Compiled successfully in 2.7min`, TypeScript finished in 83s, 43/43 static pages generated, all routes/pages collected. The `[env] No AI_GATEWAY_API_KEY...`/`No OPENAI_API_KEY...`/`IMPERSONATE_COOKIE_SECRET not set...` lines are the same documented graceful-degradation warnings for optional envs as the original gate, not build errors. |
+| `git diff --check` (working tree) | PASS — exit code 0, no output. |
 
-**`git diff --check` over the branch range** (extra, since the working-tree
-check is trivially clean on a fully-committed branch and the brief invited
-judgment on which range to use): `git diff --check main...HEAD` exits **2**
-with 10 trailing-whitespace findings, all inside
+**`git diff --check origin/main...HEAD`** (branch vs. current main, re-run
+against the now-merged tree): exits **2** with the same **10** trailing-
+whitespace findings as the original gate, in the same four files —
 `docs/superpowers/plans/2026-08-10-ai-platform-execution-index.md`,
 `docs/superpowers/plans/2026-08-10-ai-platform-phase-0-foundation.md`,
 `docs/superpowers/specs/2026-08-10-ai-platform-master-design.md`, and
-`docs/superpowers/specs/2026-08-10-ai-platform-qa-release-gates.md`. All four
-files were last touched by commits `6e99e0dc`/`9d685a6f`/`a3d2928c`/`6a33f016`
-("add master architecture spec" / "add QA and release gates" / "add phase 0
-foundation plan" / "add execution index") — verified via
-`git log --oneline -- <files>` — which predate this phase's own commit range
-(`8735d69a..f29bffac`) entirely; no Phase 3 commit touches any of these four
-files. The trailing whitespace is Markdown's two-space hard-break syntax in
-planning prose, pre-existing since Phase 0, unrelated to this phase's own
-diff. Reported per the doctrine that a pre-existing, unrelated failure must
-still be disclosed, not silently treated as blocking or silently omitted —
-**not fixed here**, since fixing unrelated files is out of this task's scope
-(`CLAUDE.md`: "não corrija automaticamente" for out-of-scope issues found
-during a task). Not counted as a Step 5 failure for this gate because it is
-outside this phase's own change set and the literal `git diff --check`
-command (working tree) is what the brief's exact command list specifies.
+`docs/superpowers/specs/2026-08-10-ai-platform-qa-release-gates.md`. Diffed
+line-for-line against the original gate's list: identical findings, nothing
+new. These predate this phase's own commits entirely (Phase 0 planning docs,
+Markdown two-space hard-break syntax) and remain unrelated to Phase 3 or the
+fix wave — **not fixed here**, out of scope per `CLAUDE.md`'s "não corrija
+automaticamente" for unrelated issues found during a task.
 
-### `test:unit` had to be restarted — real finding, not hidden
+### `test:unit` needed a kill-and-restart during this re-verification too
 
-The first `pnpm test:unit` run was started, redirected to a log file, and
-appeared to make no visible progress for an extended period. Direct
-inspection (`Get-Process`/`Get-CimInstance Win32_Process`) showed the actual
-`vitest.mjs` process's CPU time had gone flat (not increasing across a
-9-minute re-check window) while the process itself was still alive — genuinely
-stalled, not merely slow or output-buffered, on this loaded 8 GB host running
-several other concurrent Node processes (two `next dev` servers, a Playwright
-MCP process, Mem0/channel-messaging Docker containers). It was killed
-(`Stop-Process -Id 2468,...`) and restarted fresh; the second run's CPU time
-climbed normally and it completed in 983.93s with a clean 321/3278 pass. This
-is recorded as a real environmental observation (resource contention on this
-machine can stall a single-worker Vitest run), not swept under the rug — the
-number reported above is from the successful, verified-progressing rerun, not
-the stalled attempt.
+The first `pnpm test:unit` attempt on this re-verification did not merely
+stall — it crashed outright after processing exactly one test file
+(`lib/ui/icons.test.ts`), terminating with `ELIFECYCLE Command failed with
+exit code 4294967295` (a killed/crashed-process exit signature, not a normal
+failure exit). Direct process inspection confirmed a competing memory-heavy
+process set (stray mem0/channel-messaging containers) was contending for RAM
+on this 8 GB host. Those were stopped, the crashed process tree was killed,
+and `pnpm test:unit` was restarted fresh. The restart's CPU climbed normally
+throughout and completed cleanly at 321/3287 passed, exit 0, 1192.40s — the
+number reported above is from that clean restart, not the crashed attempt.
+This is the same class of environmental finding the original gate recorded
+(resource contention on this host can take down a single vitest run) — here
+it manifested as an outright crash rather than a silent stall, but the
+resolution and disclosure discipline are the same: killed, restarted once,
+and the real number reported is from the verified-clean rerun.
 
 ## What shipped across Phase 3 (for context, not re-derived here)
 
@@ -266,30 +326,36 @@ suites rather than re-deriving their history.
 ## Release Gate
 
 ```
-Decision: GO (with one named, explicit gap — see Step 3)
-Commit range: 8735d69a..f29bffac
-Tests executed:
-- pnpm vitest run workers/rag-indexer.test.ts -> 11/11 passed
+Decision: GO (with one named, explicit gap — see Step 3; unchanged from original gate)
+Original commit range: 8735d69a..f29bffac
+Re-verification HEAD: f564ae0e (origin/main merged at fa5090a5, fix wave
+  c3432ba6/0683131a/f04b0e6f, unrelated lint:channels fix f564ae0e)
+Tests executed (fresh reruns on f564ae0e):
+- pnpm vitest run workers/rag-indexer.test.ts -> 12/12 passed (was 11/11; +1 fix-wave test)
 - pnpm vitest run tests/unit/obsidian-export.test.ts tests/unit/knowledge-publication-golden.test.ts -> 21/21 passed
-- pnpm vitest run lib/ai/rag/publication/publish-policy.test.ts -> 12/12 passed
+- pnpm vitest run tests/unit/knowledge-publication-golden.test.ts -> 6/6 passed
+- pnpm vitest run lib/ai/rag/publication/publish-policy.test.ts -> 13/13 passed (was 12/12; +1 fix-wave test)
 - pnpm vitest run lib/ai/rag/ingestion/llamaindex-adapter.test.ts lib/ai/rag/ingestion/resolve-adapter.test.ts -> 24/24 passed
-- pnpm typecheck -> pass
-- pnpm lint -> pass (0 errors, 200 pre-existing warnings)
-- pnpm lint:channels -> pass
-- pnpm test:unit -> pass (321 files, 3278 tests; first attempt stalled and was restarted, see above)
-- pnpm test:db -> pass (72 files, 480 passed + 1 skipped)
-- pnpm ai:eval:local -> pass (30 cases, 0 duplicate ids, 0 P0 failures)
-- pnpm build -> pass
+- pnpm typecheck -> pass, 0 errors
+- pnpm lint -> pass (0 errors, 200 pre-existing warnings, identical to original gate)
+- pnpm lint:channels -> pass, clean (this is the check f564ae0e fixed — was failing pre-fix)
+- pnpm test:unit -> pass (321 files, 3287 tests, 1192.40s; +9 tests vs original 3278, all from the fix wave; first attempt on this re-verification crashed from RAM contention and was restarted once, see Step 5)
+- pnpm test:db -> pass (72 files, 480 passed + 1 skipped, 306.73s; identical counts to original gate)
+- pnpm ai:eval:local -> pass (30 cases, 0 duplicate ids, 0 P0 failures; identical to original gate)
+- pnpm build -> pass (Compiled successfully in 2.7min, 43/43 static pages, exit 0)
 - git diff --check (working tree) -> pass, clean
-- git diff --check (branch vs main) -> 10 pre-existing whitespace findings in Phase-0 docs, unrelated to this phase, not blocking
+- git diff --check (origin/main...HEAD) -> 10 pre-existing whitespace findings in Phase-0 docs, unrelated to this phase, identical list to original gate, not blocking
 Metrics:
 - ai:eval:local baseline (Phase 2 gate): 25 cases, 0 P0 -> candidate (this gate): 30 cases, 0 P0
 P0 open: 0
-P1 open: 0
+P1 open: 0 (both Important findings from the whole-branch review are fixed and re-confirmed — see "Post-review fix wave")
 Residual P2:
-- Step 3's export->upload->index path is proven in two halves, not one continuous automated run (architectural: a human bridges export and upload by design, per docs/runbooks/obsidian-knowledge.md)
+- Step 3's export->upload->index path is proven in two halves, not one continuous automated run (architectural: a human bridges export and upload by design, per docs/runbooks/obsidian-knowledge.md) — unchanged, not something the fix wave was asked to address
 - 200 pre-existing lint warnings, unrelated to this phase
 - 10 pre-existing trailing-whitespace findings in Phase-0 planning docs, unrelated to this phase
+Fixed since original gate (see "Post-review fix wave" for detail):
+- 2 Important findings (429 rate-limit path merge risk; untested per-item FAQ-reindex DB-query loop)
+- 10 Minor findings (buffer-before-validation ordering, vacuous golden-suite assertion, fake version_number, shadow-mode ingestion_mode mislabeling, runbook citation/ordering, provider-name doc leak, duplicated telemetry callback, missing storage-upload-error coverage, and a pre-existing lint:channels violation surfaced by re-running this gate)
 Human actions required:
 - None to keep llamaindex/obsidian features at their default OFF/native state.
 - A human must still manually upload any exported Obsidian artifact via the knowledge UI, per the documented (not automated) publication flow — this is expected operation, not a follow-up task.
