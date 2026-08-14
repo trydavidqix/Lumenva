@@ -158,7 +158,7 @@ import { ObsidianExportBlockedError, exportObsidianNote } from "../../scripts/ob
 import { citationsFromHits, searchKnowledge } from "@/lib/agent-engine/agent/search-knowledge";
 import { activateVersion, createKnowledgeVersion, markVersionReady } from "@/lib/ai/rag/version";
 import { fuseContext, promptSafeContextItems } from "@/lib/agent-engine/context/fusion";
-import { Mem0ContextProvider } from "@/lib/agent-engine/context/mem0-context-provider";
+import { Mem0ContextProvider, getAuthorityLevel } from "@/lib/agent-engine/context/mem0-context-provider";
 import { contextItemSchema, type ContextItem } from "@/lib/agent-engine/platform/contracts";
 import type { MemoryPort } from "@/lib/agent-engine/memory/port";
 import type { SemanticMemoryRecord } from "@/lib/agent-engine/memory/types";
@@ -500,19 +500,27 @@ describe("Mem0 preference cannot override PUBLISHED policy", () => {
     expect(mem0Item.authorityLevel).toBe(40);
     expect(mem0Item.authorityDomain).toBe("customer_preference");
 
+    // Direct guard on the ordering itself, independent of fuseContext's
+    // ranking algorithm: if product_policy's real authority level ever drops
+    // to or below customer_preference's, this fails loudly right here,
+    // rather than relying solely on the downstream selected[0] assertion.
+    expect(getAuthorityLevel("product_policy")).toBeGreaterThan(mem0Item.authorityLevel);
+
     // No separate KnowledgeContextProvider exists yet in this phase to derive
     // a product_policy ContextItem from a real call, so the published fact is
-    // constructed directly and validated through the REAL contextItemSchema —
-    // mirroring the same authorityLevel (70) that
-    // mem0-context-provider.ts's authorityLevels map assigns to
-    // "product_policy" (vs. customer_preference's 40, just asserted above via
-    // a real call), rather than inventing an arbitrary number. This is a
-    // documented judgment call: see task-8-report.md.
+    // constructed directly and validated through the REAL contextItemSchema.
+    // Its authorityLevel is read from the REAL exported getAuthorityLevel()
+    // accessor (mem0-context-provider.ts) instead of a mirrored literal: a
+    // hardcoded 70 here would only fail this test if customer_preference's
+    // live value rose above it, never if product_policy's own live value
+    // dropped below customer_preference's — exactly the regression this
+    // scenario exists to catch. Reading both sides from the same live
+    // constant closes that gap.
     const knowledgeItem: ContextItem = contextItemSchema.parse({
       id: "knowledge-refund-policy-v2",
       provider: "knowledge_base",
       authorityDomain: "product_policy",
-      authorityLevel: 70,
+      authorityLevel: getAuthorityLevel("product_policy"),
       confidence: 0.95,
       occurredAt: "2026-08-10T12:00:00.000Z",
       expiresAt: null,
