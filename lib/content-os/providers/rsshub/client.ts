@@ -123,7 +123,7 @@ export class RssHubClient {
     }
 
     const relativeRoute = route.slice(1);
-    const [pathname] = relativeRoute.split("?", 1);
+    const pathname = relativeRoute.split("?", 1)[0] ?? "";
     if (
       pathname.split("/").some((segment) => segment === "." || segment === "..")
     ) {
