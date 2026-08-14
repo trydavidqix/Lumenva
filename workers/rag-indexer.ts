@@ -212,6 +212,18 @@ async function handleProductSynced(
           `[rag-indexer] ingestion adapter fallback (${failure.mode}) for org ${row.organization_id}: ${failure.reason}`,
         );
       },
+      // Shadow mode's whole purpose is measuring the adopt/reject signal for
+      // llamaindex — without this the worker pays double chunking cost and
+      // produces zero observable output. Counts/booleans only, per
+      // ShadowIngestionComparison's own contract: never tenant text.
+      recordShadowComparison: (comparison) => {
+        console.warn(
+          `[rag-indexer] ingestion shadow comparison for org ${row.organization_id}: ` +
+            `native=${comparison.nativeNodeCount} llamaindex=${comparison.llamaIndexNodeCount} ` +
+            `delta=${comparison.nodeCountDelta} textMatches=${comparison.textMatches} ` +
+            `degraded=${comparison.degraded}${comparison.reason ? ` reason=${comparison.reason}` : ""}`,
+        );
+      },
     });
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
@@ -406,6 +418,14 @@ async function handleKnowledgeSourceUpdated(
         recordAdapterFailure: (failure) => {
           console.warn(
             `[rag-indexer] ingestion adapter fallback (${failure.mode}) for org ${row.organization_id}: ${failure.reason}`,
+          );
+        },
+        recordShadowComparison: (comparison) => {
+          console.warn(
+            `[rag-indexer] ingestion shadow comparison for org ${row.organization_id}: ` +
+              `native=${comparison.nativeNodeCount} llamaindex=${comparison.llamaIndexNodeCount} ` +
+              `delta=${comparison.nodeCountDelta} textMatches=${comparison.textMatches} ` +
+              `degraded=${comparison.degraded}${comparison.reason ? ` reason=${comparison.reason}` : ""}`,
           );
         },
       });
