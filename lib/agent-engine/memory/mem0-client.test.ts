@@ -143,17 +143,10 @@ describe("Mem0Client", () => {
     await client().deleteContact({ organizationId: record.organizationId, contactId: record.contactId });
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("http://mem0.internal/memories");
+    expect(url).toBe("http://mem0.internal/memories?user_id=org%3Aorg-1%3Acontact%3Acontact-1");
     expect(init.method).toBe("DELETE");
     expect(init.headers).toMatchObject({ "X-API-Key": apiKey });
-    expect(JSON.parse(String(init.body))).toEqual({
-      user_id: "org:org-1:contact:contact-1",
-      filters: {
-        user_id: "org:org-1:contact:contact-1",
-        organization_id: "org-1",
-        contact_id: "contact-1",
-      },
-    });
+    expect(init.body).toBeUndefined();
   });
 
   it("checks the OSS root endpoint and returns a measured healthy status", async () => {
