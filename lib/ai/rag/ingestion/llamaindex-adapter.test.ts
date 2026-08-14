@@ -1,10 +1,55 @@
 import { Document, MarkdownNodeParser, SentenceSplitter } from "llamaindex";
-import { describe, expect, it } from "vitest";
+import type * as NodeHttp from "node:http";
+import type * as NodeHttps from "node:https";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { computeContentHash } from "@/lib/ai/rag/chunker";
 
 import { LlamaIndexIngestionAdapter } from "./llamaindex-adapter";
 import type { IngestionDocument } from "./port";
+
+// node:http / node:https export namespaces are non-configurable under ESM, so
+// vi.spyOn(http, "request") throws "Module namespace is not configurable" —
+// vi.mock is the supported way to intercept them. Declared via vi.hoisted so
+// the spies are reachable both from the hoisted vi.mock factories below and
+// from the assertions inside the test itself. Every intercepted call also
+// throws, so an unexpected call fails loudly instead of reaching the network.
+const { httpRequestSpy, httpGetSpy, httpsRequestSpy, httpsGetSpy } = vi.hoisted(() => ({
+  httpRequestSpy: vi.fn(),
+  httpGetSpy: vi.fn(),
+  httpsRequestSpy: vi.fn(),
+  httpsGetSpy: vi.fn(),
+}));
+
+vi.mock("node:http", async (importOriginal) => {
+  const actual = await importOriginal<typeof NodeHttp>();
+  return {
+    ...actual,
+    request: (...args: unknown[]) => {
+      httpRequestSpy(...args);
+      throw new Error("unexpected network call via node:http request");
+    },
+    get: (...args: unknown[]) => {
+      httpGetSpy(...args);
+      throw new Error("unexpected network call via node:http get");
+    },
+  };
+});
+
+vi.mock("node:https", async (importOriginal) => {
+  const actual = await importOriginal<typeof NodeHttps>();
+  return {
+    ...actual,
+    request: (...args: unknown[]) => {
+      httpsRequestSpy(...args);
+      throw new Error("unexpected network call via node:https request");
+    },
+    get: (...args: unknown[]) => {
+      httpsGetSpy(...args);
+      throw new Error("unexpected network call via node:https get");
+    },
+  };
+});
 
 const baseMetadata = {
   organizationId: "org-7f3c",
@@ -172,5 +217,43 @@ describe("LlamaIndexIngestionAdapter", () => {
 
     expect(nodes.map((n) => n.text)).toEqual(expected);
     expect(nodes.length).toBeGreaterThan(defaultCount);
+  });
+
+  describe("network isolation", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    /**
+     * Regression guard, not just current-state documentation: MarkdownNodeParser
+     * and SentenceSplitter are local/regex/tokenizer-only today (verified by
+     * source audit of the installed `llamaindex` package), but nothing else in
+     * this suite would catch a future dependency bump silently introducing a
+     * network call (e.g. a default tokenizer becoming remote). Every network
+     * primitive normalize()'s dependencies could plausibly reach for is spied
+     * on and asserted unused; fetch is additionally made to throw so a call
+     * fails the test loudly instead of actually reaching the network.
+     */
+    it("never touches the network while chunking plain Markdown", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(() => {
+        throw new Error("unexpected network call via global fetch");
+      });
+      httpRequestSpy.mockClear();
+      httpGetSpy.mockClear();
+      httpsRequestSpy.mockClear();
+      httpsGetSpy.mockClear();
+
+      const adapter = new LlamaIndexIngestionAdapter();
+      const document: IngestionDocument = { text: longPolicyText, metadata: baseMetadata };
+
+      const nodes = await adapter.normalize(document);
+
+      expect(nodes.length).toBeGreaterThan(0);
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(httpRequestSpy).not.toHaveBeenCalled();
+      expect(httpGetSpy).not.toHaveBeenCalled();
+      expect(httpsRequestSpy).not.toHaveBeenCalled();
+      expect(httpsGetSpy).not.toHaveBeenCalled();
+    });
   });
 });
