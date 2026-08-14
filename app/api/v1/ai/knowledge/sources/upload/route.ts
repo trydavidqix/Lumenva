@@ -20,7 +20,11 @@ import { z } from "zod";
 import { ok, fail } from "@/lib/api/wrappers";
 import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { requireRole } from "@/lib/auth/require-role";
-import { publishKnowledgePolicy, PublishKnowledgePolicyError } from "@/lib/ai/rag/publication/publish-policy";
+import {
+  publishKnowledgePolicy,
+  PublishKnowledgePolicyError,
+  MAX_POLICY_FILE_BYTES,
+} from "@/lib/ai/rag/publication/publish-policy";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +78,15 @@ export async function POST(req: NextRequest): Promise<Response> {
   const agentId = agentIdParsed.data;
   const name = nameParsed.data;
   const file = fileEntry;
+
+  // --- File size check (before buffering) ---
+  // Reject oversized files using the File/Blob's reported size *before*
+  // materializing the full buffer in memory — buffering first would let an
+  // oversized upload consume memory before it's rejected.
+  if (file.size > MAX_POLICY_FILE_BYTES) {
+    return fail("payload_too_large", "Arquivo excede o limite de 20MB.", 413, { requestId });
+  }
+
   const fileBuffer = Buffer.from(await file.arrayBuffer());
 
   try {
