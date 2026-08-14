@@ -18,6 +18,7 @@ import { randomUUID } from "node:crypto";
 import { type NextRequest } from "next/server";
 import { z } from "zod";
 import { ok, fail } from "@/lib/api/wrappers";
+import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { requireRole } from "@/lib/auth/require-role";
 import { publishKnowledgePolicy, PublishKnowledgePolicyError } from "@/lib/ai/rag/publication/publish-policy";
 
@@ -33,6 +34,16 @@ export async function POST(req: NextRequest): Promise<Response> {
   const authz = await requireRole("manager", { requestId, resource: "ai_knowledge" });
   if (!authz.ok) return authz.response;
   const { user: authUser, org: activeOrg } = authz;
+
+  // Extração de PDF é I/O pesado por request; sem teto, upload repetido vira
+  // custo/DoS sem passar por nenhum outro guard.
+  const rl = await checkRateLimit(`ai_knowledge_upload:${activeOrg.orgId}`, 20, 60);
+  if (!rl.allowed) {
+    return fail("rate_limited", "Muitos uploads em pouco tempo.", 429, {
+      requestId,
+      headers: { "Retry-After": "60" },
+    });
+  }
 
   // --- Parse multipart ---
   let formData: FormData;

@@ -138,6 +138,11 @@ export const AUTH_LIMITS = {
   signup: { ip: 20, windowSec: 3600 },
   reset: { ip: 30, id: 3, windowSec: 3600 },
   invite_accept: { ip: 60, windowSec: 3600 },
+  // Por CONTA, não por cookie: um cookie é escrito pelo próprio cliente, então um
+  // atacante com sessão AAL1 válida (senha já comprometida/vazada) simplesmente
+  // omitia o cookie a cada chamada da Server Action e reiniciava o contador,
+  // tornando o bloqueio de força bruta do TOTP inexistente na prática.
+  mfa: { ip: 30, id: 3, windowSec: 60 },
 } satisfies Record<string, AuthRateLimits>;
 
 export const __LOGIN_IP_DEFAULT_PARA_TESTE = LOGIN_IP_DEFAULT;

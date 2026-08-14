@@ -108,8 +108,13 @@ export async function GET(req: NextRequest) {
   }
 
   if (q) {
+    // Vírgula/parêntese são delimitadores do próprio DSL do `.or()` do
+    // PostgREST — sem remover, um termo de busca com essas caracteres injeta
+    // cláusulas OR extras contra colunas arbitrárias da mesma tabela. Mesmo
+    // escape de app/api/v1/ai/followups/queue/route.ts.
+    const safeQ = q.replace(/[%_]/g, (m) => `\\${m}`).replace(/[,()]/g, " ");
     query = query.or(
-      `display_name.ilike.%${q}%,slug::text.ilike.%${q}%,cnpj.ilike.%${q}%`,
+      `display_name.ilike.%${safeQ}%,slug::text.ilike.%${safeQ}%,cnpj.ilike.%${safeQ}%`,
     );
   }
 
