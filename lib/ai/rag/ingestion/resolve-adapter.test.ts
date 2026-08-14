@@ -91,6 +91,71 @@ describe("resolveIngestionNodes", () => {
     expect(nativeAdapter.normalize).not.toHaveBeenCalled();
   });
 
+  it("fails open to the native adapter's output when the LlamaIndex adapter throws in canary mode", async () => {
+    const nativeAdapter = fakeAdapter([nodeAt("native-chunk")]);
+    const llamaIndexAdapter: KnowledgeIngestionPort = {
+      normalize: vi.fn().mockRejectedValue(new Error("llamaindex boom")),
+    };
+    const recordAdapterFailure = vi.fn();
+
+    const result = await resolveIngestionNodes({
+      organizationId,
+      document,
+      resolveFeature: vi.fn().mockResolvedValue({ mode: "canary", config: {}, killed: false }),
+      nativeAdapter,
+      llamaIndexAdapter,
+      recordAdapterFailure,
+    });
+
+    expect(result).toEqual({
+      mode: "native",
+      nodes: [nodeAt("native-chunk")],
+      fallback: { mode: "canary", reason: "llamaindex_adapter_unavailable" },
+    });
+    expect(nativeAdapter.normalize).toHaveBeenCalledWith(document);
+    expect(recordAdapterFailure).toHaveBeenCalledWith({ mode: "canary", reason: "llamaindex_adapter_unavailable" });
+  });
+
+  it("fails open to the native adapter's output when the LlamaIndex adapter throws in on mode", async () => {
+    const nativeAdapter = fakeAdapter([nodeAt("native-chunk")]);
+    const llamaIndexAdapter: KnowledgeIngestionPort = {
+      normalize: vi.fn().mockRejectedValue(new Error("llamaindex boom")),
+    };
+
+    const result = await resolveIngestionNodes({
+      organizationId,
+      document,
+      resolveFeature: vi.fn().mockResolvedValue({ mode: "on", config: {}, killed: false }),
+      nativeAdapter,
+      llamaIndexAdapter,
+    });
+
+    expect(result).toEqual({
+      mode: "native",
+      nodes: [nodeAt("native-chunk")],
+      fallback: { mode: "on", reason: "llamaindex_adapter_unavailable" },
+    });
+  });
+
+  it("never lets a failing adapter-failure recorder block the canary/on native fallback", async () => {
+    const nativeAdapter = fakeAdapter([nodeAt("native-chunk")]);
+    const llamaIndexAdapter: KnowledgeIngestionPort = {
+      normalize: vi.fn().mockRejectedValue(new Error("llamaindex boom")),
+    };
+
+    const result = await resolveIngestionNodes({
+      organizationId,
+      document,
+      resolveFeature: vi.fn().mockResolvedValue({ mode: "on", config: {}, killed: false }),
+      nativeAdapter,
+      llamaIndexAdapter,
+      recordAdapterFailure: vi.fn().mockRejectedValue(new Error("telemetry sink down")),
+    });
+
+    expect(result.mode).toBe("native");
+    expect(result.nodes).toEqual([nodeAt("native-chunk")]);
+  });
+
   it("runs both adapters in shadow mode but only ever returns the native adapter's nodes", async () => {
     const nativeAdapter = fakeAdapter([nodeAt("native-chunk", 0)]);
     const llamaIndexAdapter = fakeAdapter([nodeAt("llamaindex-chunk-a", 0), nodeAt("llamaindex-chunk-b", 1)]);
