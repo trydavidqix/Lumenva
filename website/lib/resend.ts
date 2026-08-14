@@ -19,12 +19,13 @@ export async function sendContactEmails(request: ContactRequest): Promise<void> 
     from,
     to: ["contato@lumenva.pt"],
     replyTo: request.email,
-    subject: `Novo contato: ${request.name}`,
+    subject: `Novo contacto: ${request.name}`,
     text: [
       `Nome: ${request.name}`,
       `Empresa: ${request.company}`,
       `E-mail: ${request.email}`,
       `WhatsApp: ${request.whatsapp}`,
+      ...(request.message ? [`Mensagem: ${request.message}`] : []),
     ].join("\n"),
   });
 
@@ -35,8 +36,8 @@ export async function sendContactEmails(request: ContactRequest): Promise<void> 
   const acknowledgement = await resend.emails.send({
     from,
     to: [request.email],
-    subject: "Recebemos sua solicitação — Lumenva",
-    text: `Olá, ${request.name}. Recebemos sua solicitação e retornaremos em breve.`,
+    subject: "Lumenva: recebemos a sua solicitação",
+    text: `Olá, ${request.name}. Recebemos a sua solicitação e entraremos em contacto brevemente.`,
   });
 
   if (acknowledgement.error) {

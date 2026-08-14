@@ -1,0 +1,90 @@
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.board {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.column {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.columnHeader {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: space-between;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.columnLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card {
+  display: grid;
+  gap: 0.125rem;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.cardTitle {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.cardMeta {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+}
+
+.panelTitle {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.action {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--color-ink);
+}
+
+.actionTitle {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.actionMeta {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+}
+
+@media (min-width: 30rem) {
+  .stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 40rem) {
+  .board {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

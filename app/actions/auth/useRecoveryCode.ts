@@ -56,15 +56,46 @@ export async function useRecoveryCode(
   const { email, code } = parsed.data;
 
   // 1) Resolve user by email via admin API. Generic error if missing.
-  const { data: list, error: listErr } = await admin.auth.admin.listUsers({
-    page: 1,
-    perPage: 200,
-  });
-  if (listErr) {
-    await delay(200);
-    return { ok: false, error: "invalid_or_used" };
+  //
+  // Varre o diretório inteiro até achar (ou esgotar), não só a 1ª página: um
+  // `perPage: 200` fixo fazia contas criadas depois das primeiras 200 do
+  // diretório perderem a recuperação de conta pra sempre — indistinguível de
+  // "conta não existe" pra quem estava do lado de cá. Mesmo teto de páginas
+  // de `app/api/v1/admin/users/route.ts` (falha alto em vez de mentir que a
+  // conta não existe quando o diretório é grande demais pra varrer).
+  const MAX_PAGES = 50;
+  const PER_PAGE = 200;
+  let targetUser: { id: string } | null = null;
+  let page = 1;
+  let directoryExhausted = false;
+
+  while (!targetUser && !directoryExhausted) {
+    const { data: list, error: listErr } = await admin.auth.admin.listUsers({
+      page,
+      perPage: PER_PAGE,
+    });
+    if (listErr) {
+      await delay(200);
+      return { ok: false, error: "invalid_or_used" };
+    }
+    const found = list.users.find((u) => u.email?.toLowerCase() === email);
+    if (found) {
+      targetUser = found;
+      break;
+    }
+    if (list.users.length === 0) {
+      directoryExhausted = true;
+      break;
+    }
+    if (page >= MAX_PAGES) {
+      // Diretório grande demais pra varrer nesta requisição: falha alto em
+      // vez de tratar em silêncio como "conta não existe".
+      await delay(200);
+      return { ok: false, error: "service_unavailable" };
+    }
+    page += 1;
   }
-  const targetUser = list.users.find((u) => u.email?.toLowerCase() === email);
+
   if (!targetUser) {
     await delay(200);
     return { ok: false, error: "invalid_or_used" };

@@ -11,6 +11,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { fail } from "@/lib/api/wrappers";
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
+import { logger } from "@/lib/logger";
 import { fetchWahaMedia } from "@/lib/messaging/media/waha-source";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -67,7 +68,7 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
       return response;
     }
     if (signErr) {
-      console.error("[messages.media] createSignedUrl failed", signErr.message);
+      logger.error("messages.media: createSignedUrl failed", { error: signErr.message });
     }
   }
 

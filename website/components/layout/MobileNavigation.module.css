@@ -1,3 +1,31 @@
+.menuIcon,
+.menuIcon::before,
+.menuIcon::after {
+  background: currentColor;
+  content: "";
+  display: block;
+  height: 1px;
+  width: 1.125rem;
+}
+
+.menuIcon {
+  position: relative;
+}
+
+.menuIcon::before,
+.menuIcon::after {
+  left: 0;
+  position: absolute;
+}
+
+.menuIcon::before {
+  top: -0.375rem;
+}
+
+.menuIcon::after {
+  top: 0.375rem;
+}
+
 .backdrop {
   background: color-mix(in srgb, var(--color-ink) 22%, transparent);
   inset: 0;
@@ -10,6 +38,7 @@
   border-left: 1px solid var(--color-border);
   box-shadow: var(--shadow-panel);
   display: grid;
+  grid-template-rows: auto 1fr auto;
   gap: var(--space-6);
   inset: 0 0 0 auto;
   max-width: min(100%, 24rem);
@@ -22,12 +51,7 @@
 .dialogHeader {
   align-items: center;
   display: flex;
-  justify-content: space-between;
-}
-
-.dialogTitle {
-  font-size: 1rem;
-  font-weight: 800;
+  justify-content: flex-end;
 }
 
 .closeButton {
@@ -53,6 +77,68 @@
   color: var(--color-accent);
 }
 
-.cta {
-  align-self: end;
+.solutionsGroup {
+  display: grid;
+}
+
+.solutionsRow {
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+}
+
+.solutionsRow .link {
+  border-bottom: none;
+  flex: 1 1 auto;
+}
+
+.solutionsToggle {
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  height: 2.75rem;
+  justify-content: center;
+  width: 2.75rem;
+}
+
+.solutionsChevron {
+  border-bottom: 2px solid var(--color-ink);
+  border-right: 2px solid var(--color-ink);
+  height: 0.5rem;
+  transform: rotate(45deg);
+  transition: transform var(--duration-fast) var(--ease-standard);
+  width: 0.5rem;
+}
+
+.solutionsChevron[data-open="true"] {
+  transform: rotate(-135deg);
+}
+
+.solutionsPanel {
+  display: grid;
+  gap: var(--space-1);
+  padding-block: var(--space-2);
+}
+
+.solutionLink {
+  color: var(--color-text-muted);
+  font-weight: 600;
+  min-height: 2.75rem;
+  align-items: center;
+  display: flex;
+  padding-inline-start: var(--space-4);
+  text-decoration: none;
+}
+
+.solutionLink:hover {
+  color: var(--color-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .solutionsChevron {
+    transition: none;
+  }
 }

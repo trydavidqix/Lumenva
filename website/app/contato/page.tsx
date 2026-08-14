@@ -1,7 +1,10 @@
+import { Bot, Database } from "lucide-react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ContactForm } from "@/components/sections/ContactForm";
+import { ContactInfoCard } from "@/components/sections/ContactInfoCard";
 import { ProseFAQ } from "@/components/sections/ProseFAQ";
 import { ServiceHero } from "@/components/sections/ServiceHero";
+import { N8nIcon, WhatsAppIcon } from "@/components/ui/BrandIcons";
 import { JsonLd } from "@/components/ui/JsonLd";
 import type { FaqItem } from "@/content/faq";
 import { createPageMetadata } from "@/lib/metadata";
@@ -9,31 +12,31 @@ import { breadcrumbSchema, faqSchema } from "@/lib/schema";
 import styles from "@/components/sections/InnerPages.module.css";
 
 const description =
-  "Conheça a Lumenva e converse sobre agentes de IA, automações, CRM e self-hosting para a sua operação.";
+  "Conheça a Lumenva e converse sobre agentes de IA, automações e CRM para a sua operação.";
 const breadcrumbs = [
   { name: "Início", path: "/" },
-  { name: "Contato", path: "/contato" },
+  { name: "Contacto", path: "/contato" },
 ] as const;
 const contactFaq: readonly FaqItem[] = [
   {
-    question: "O que é a Lumenva?",
+    question: "Como funciona a demonstração?",
     answer:
-      "Lumenva é a identidade pública de um AI Sales OS open source e self-hosted para vendas e suporte pelo WhatsApp.",
+      "Preenche o formulário e a nossa equipa entra em contacto para perceber o contexto da sua operação e mostrar a Lumenva aplicada ao seu caso.",
   },
   {
-    question: "Onde a plataforma é executada?",
+    question: "Que informação preciso de dar?",
     answer:
-      "A Lumenva é self-hosted e pode ser executada na infraestrutura da própria operação.",
+      "Nome, empresa, e-mail e WhatsApp. A mensagem é opcional, mas ajuda a preparar a conversa.",
   },
   {
-    question: "Qual é o canal principal?",
+    question: "Os meus dados ficam seguros?",
     answer:
-      "O WhatsApp é o canal primário da Lumenva para operações de vendas e suporte.",
+      "Sim. Os dados enviados são usados apenas para responder ao seu pedido, conforme a nossa Política de Privacidade.",
   },
 ];
 
 export const metadata = createPageMetadata({
-  title: "Solicitar demonstração",
+  title: "Agendar demonstração",
   description,
   path: "/contato",
 });
@@ -49,25 +52,26 @@ export default function ContactPage() {
         title="Vamos conversar sobre a sua operação."
         description={description}
         capabilities={[
-          "Agentes de IA",
-          "Automações",
-          "CRM",
-          "Self-hosting",
+          { icon: Bot, label: "Agentes de IA" },
+          { icon: N8nIcon, label: "Automações" },
+          { icon: Database, label: "CRM" },
+          { icon: WhatsAppIcon, label: "WhatsApp" },
         ]}
         ctaHref="#demonstracao"
       />
       <section className={styles.sectionAlt} id="demonstracao" aria-labelledby="demo-shell-title">
-        <div className="site-shell">
+        <div className={`site-shell ${styles.contactLayout}`}>
           <div className={styles.contactShell}>
             <h2 className={styles.sectionTitle} id="demo-shell-title">
-              Entre em contato
+              Entre em contacto
             </h2>
             <p className={styles.sectionCopy}>
-              Conte o que você está buscando. Nossa equipe retorna para entender
-              o contexto e apresentar a melhor forma de aplicar a Lumenva.
+              Diga-nos o que procura. A nossa equipa entra em contacto para perceber
+              o contexto e mostrar a melhor forma de aplicar a Lumenva.
             </p>
             <ContactForm />
           </div>
+          <ContactInfoCard />
         </div>
       </section>
       <ProseFAQ

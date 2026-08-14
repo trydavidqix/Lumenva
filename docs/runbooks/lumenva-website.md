@@ -2,7 +2,7 @@
 type: runbook
 project: Lumenva website
 status: active
-last_updated: 2026-08-10
+last_updated: 2026-08-12
 ---
 
 # Lumenva website — operação
@@ -18,6 +18,8 @@ last_updated: 2026-08-10
 | Formulário | `POST /api/contact` validado e com limite de 5 pedidos por IP a cada hora |
 | Confirmação ao visitante | enviada por Resend |
 | Aviso interno | enviado para `contato@lumenva.pt` e encaminhado pela Cloudflare para `lumenva.group@gmail.com` |
+| `robots.txt` / `sitemap.xml` | gerados por `app/robots.ts` / `app/sitemap.ts` (Next.js `MetadataRoute`); confirme `200` em ambos após deploy |
+| Proteção de deploy Vercel | SSO Protection ativa, mas com exceção `all_except_custom_domains` — `lumenva.pt` fica público; os domínios `*.vercel.app` do projeto exigem login e não devem ser usados como alvo de auditoria/crawler |
 
 ## Domínio e DNS
 
@@ -76,3 +78,15 @@ Se a confirmação chega ao visitante, mas o aviso interno não chega ao Gmail:
 
 Em 2026-08-10, este cenário foi testado de ponta a ponta: o bloqueio automático gerado antes
 da criação da regra de encaminhamento foi removido, e os dois e-mails foram entregues.
+
+## Incidente conhecido: `NEXT_PUBLIC_SITE_URL` desalinhado (2026-08-12)
+
+A variável `NEXT_PUBLIC_SITE_URL` em Production estava a apontar para o domínio de preview
+da Vercel (`lumenva-website-*.vercel.app`) em vez de `https://lumenva.pt`. Isto propagava-se
+para `canonical`, `og:url` e todo o JSON-LD (Organization/BreadcrumbList) em cada página —
+o domínio público ficava a declarar-se a si mesmo como não-canónico.
+
+Sintoma para detetar isto no futuro: `curl -s https://lumenva.pt/<qualquer-rota> | grep
+canonical` deve devolver sempre `lumenva.pt`, nunca um domínio `*.vercel.app`. Corrigido via
+`vercel env rm/add NEXT_PUBLIC_SITE_URL production` seguido de novo deploy `--prod`. Confirme
+sempre este valor depois de qualquer redeploy manual ou mudança de projeto na Vercel.

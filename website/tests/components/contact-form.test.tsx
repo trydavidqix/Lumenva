@@ -18,8 +18,8 @@ test("submits the completed form and announces success", async () => {
   await user.type(screen.getByLabelText(/empresa/i), "Lumenva");
   await user.type(screen.getByLabelText(/e-mail/i), "ana@example.com");
   await user.type(screen.getByLabelText(/whatsapp/i), "+351910000000");
-  await user.click(screen.getByRole("checkbox", { name: /autorizo o contato/i }));
-  await user.click(screen.getByRole("button", { name: /enviar solicitação/i }));
+  await user.click(screen.getByRole("checkbox", { name: /autorizo o contacto/i }));
+  await user.click(screen.getByRole("button", { name: /agendar demonstração/i }));
 
-  expect(await screen.findByText(/recebemos sua solicitação/i)).toBeVisible();
+  expect(await screen.findByText(/recebemos a sua solicitação/i)).toBeVisible();
 });
