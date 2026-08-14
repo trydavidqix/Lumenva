@@ -13,7 +13,7 @@
 import { isEmbeddingProviderConfigured } from "@/lib/ai/gateway";
 import { embedText } from "@/lib/ai/embed";
 import { acquireDebounce } from "@/lib/ai/rag/debounce";
-import { chunkText, computeContentHash } from "@/lib/ai/rag/chunker";
+import { computeContentHash } from "@/lib/ai/rag/chunker";
 import { estimateTokens } from "@/lib/ai/runtime/history";
 import { formatProductForRag, type NuvemshopProduct } from "@/lib/ai/rag/format-product";
 import {
@@ -22,6 +22,8 @@ import {
   markVersionFailed,
   activateVersion,
 } from "@/lib/ai/rag/version";
+import { resolveIngestionNodes, type IngestionSelectionResult } from "@/lib/ai/rag/ingestion/resolve-adapter";
+import type { IngestionNode } from "@/lib/ai/rag/ingestion/port";
 import type { EventRow, HandlerResult } from "@/lib/event-log/dispatcher";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NuvemshopApiClient } from "@/lib/nuvemshop/api-client";
@@ -44,6 +46,17 @@ type ProcessResult = SkipResult | ErrorResult | OkResult;
 
 function skip(reason: string): SkipResult {
   return { type: "skip", reason };
+}
+
+/**
+ * Both the native and LlamaIndex adapters stamp `contentHash` on every node's
+ * metadata (lib/ai/rag/ingestion/{native,llamaindex}-adapter.ts). Recomputing
+ * here is a defensive fallback only, in case a future adapter omits it — the
+ * indexer must never fail a write over a missing hash.
+ */
+function resolveNodeContentHash(node: IngestionNode): string {
+  const fromAdapter = node.metadata["contentHash"];
+  return typeof fromAdapter === "string" ? fromAdapter : computeContentHash(node.text);
 }
 
 /**
@@ -173,9 +186,41 @@ async function handleProductSynced(
   }
 
   const text = formatProductForRag(product);
-  const chunks = chunkText(text);
 
-  if (chunks.length === 0) {
+  // Chunk generation is delegated to the pluggable ingestion port so the
+  // llamaindex adapter (Task 6) can be swapped in per-tenant behind the
+  // feature gate without touching this lifecycle. `resolveIngestionNodes`
+  // already fails open to the native adapter on canary/on failure; if the
+  // resolution call itself throws (e.g. feature-flag lookup error), no
+  // version has been created yet, so the currently active version is
+  // untouched — same safety as a chunking failure today.
+  let selection: IngestionSelectionResult;
+  try {
+    selection = await resolveIngestionNodes({
+      organizationId: row.organization_id,
+      document: {
+        text,
+        metadata: {
+          organizationId: row.organization_id,
+          sourceId: productId,
+          sourceVersion: row.id,
+          title: `Produto ${productId}`,
+        },
+      },
+      recordAdapterFailure: (failure) => {
+        console.warn(
+          `[rag-indexer] ingestion adapter fallback (${failure.mode}) for org ${row.organization_id}: ${failure.reason}`,
+        );
+      },
+    });
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    return { type: "error", detail: `ingestion_resolution_failed: ${detail}` };
+  }
+
+  const nodes = selection.nodes;
+
+  if (nodes.length === 0) {
     return skip("no_chunks_generated");
   }
 
@@ -194,10 +239,11 @@ async function handleProductSynced(
   const admin = createAdminClient();
   let successCount = 0;
 
-  for (let i = 0; i < chunks.length; i++) {
-    const content = chunks[i] ?? "";
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i]!;
+    const content = node.text;
     if (!content) continue;
-    const contentHash = computeContentHash(content);
+    const contentHash = resolveNodeContentHash(node);
 
     let embedding: number[];
     try {
@@ -227,6 +273,7 @@ async function handleProductSynced(
           metadata: {
             source_type: "nuvemshop_product",
             product_id: productId,
+            ingestion_mode: selection.mode,
           },
         },
         {
@@ -325,16 +372,55 @@ async function handleKnowledgeSourceUpdated(
   if (items.length === 0) return skip("no_content_to_index");
 
   // Um chunk por par pergunta/resposta: a unidade de recuperação é a resposta
-  // inteira. `chunkText` só entra quando a resposta é longa demais para um
-  // chunk — assim uma FAQ curta nunca é picada no meio.
+  // inteira. O adaptador de ingestão só sub-divide quando a resposta é longa
+  // demais para um chunk — assim uma FAQ curta nunca é picada no meio. Cada
+  // item resolve o adaptador individualmente (mesma granularidade de antes,
+  // quando cada item ia direto para `chunkText`); se a resolução falhar por
+  // qualquer motivo antes da versão nova existir, a versão ativa atual
+  // permanece intocada.
   const porFonte = new Map(sources.map((s) => [s.id, s]));
-  const pedacos: { content: string; sourceId: string; sourceType: string }[] = [];
+  const pedacos: {
+    content: string;
+    sourceId: string;
+    sourceType: string;
+    node: IngestionNode;
+    ingestionMode: string;
+  }[] = [];
   for (const it of items) {
     const fonte = porFonte.get(it.knowledge_source_id);
     if (!fonte) continue;
     const texto = `Pergunta: ${it.question}\nResposta: ${it.answer}`;
-    for (const c of chunkText(texto)) {
-      pedacos.push({ content: c, sourceId: fonte.id, sourceType: fonte.source_type });
+    let selection: IngestionSelectionResult;
+    try {
+      selection = await resolveIngestionNodes({
+        organizationId: row.organization_id,
+        document: {
+          text: texto,
+          metadata: {
+            organizationId: row.organization_id,
+            sourceId: fonte.id,
+            sourceVersion: row.id,
+            title: fonte.name,
+          },
+        },
+        recordAdapterFailure: (failure) => {
+          console.warn(
+            `[rag-indexer] ingestion adapter fallback (${failure.mode}) for org ${row.organization_id}: ${failure.reason}`,
+          );
+        },
+      });
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      return { type: "error", detail: `ingestion_resolution_failed: ${detail}` };
+    }
+    for (const node of selection.nodes) {
+      pedacos.push({
+        content: node.text,
+        sourceId: fonte.id,
+        sourceType: fonte.source_type,
+        node,
+        ingestionMode: selection.mode,
+      });
     }
   }
   if (pedacos.length === 0) return skip("no_chunks_generated");
@@ -353,7 +439,7 @@ async function handleKnowledgeSourceUpdated(
   const gravadosPorFonte = new Map<string, number>();
   for (let i = 0; i < pedacos.length; i++) {
     const p = pedacos[i]!;
-    const contentHash = computeContentHash(p.content);
+    const contentHash = resolveNodeContentHash(p.node);
     let embedding: number[];
     try {
       const r = await embedText(p.content, { organizationId: row.organization_id });
@@ -373,7 +459,7 @@ async function handleKnowledgeSourceUpdated(
         content_hash: contentHash,
         token_count: estimateTokens(p.content),
         embedding: embedding as unknown as string,
-        metadata: { source_type: p.sourceType },
+        metadata: { source_type: p.sourceType, ingestion_mode: p.ingestionMode },
       },
       // Ver comentario no caminho de produto: esta e a constraint que existe.
       { onConflict: "knowledge_source_id,kb_version_id,position", ignoreDuplicates: true },
