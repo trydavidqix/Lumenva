@@ -15,7 +15,10 @@ describe("AI platform LangSmith-compatible evaluation runner", () => {
   it("derives stable synthetic example IDs and input/output keys from the golden dataset", () => {
     const examples = createSyntheticExamples(loadGoldenCases());
 
-    expect(examples).toHaveLength(25);
+    // Not a fixed snapshot count — see tests/unit/ai-platform-eval.test.ts's
+    // comment: the golden fixture is designed to grow (schema .min(25)) and
+    // has already grown once. Only the first case's identity is pinned below.
+    expect(examples.length).toBeGreaterThanOrEqual(25);
     expect(examples[0]).toMatchObject({
       id: "00000000-0000-4000-8000-000000000101",
       inputs: {
@@ -31,7 +34,7 @@ describe("AI platform LangSmith-compatible evaluation runner", () => {
     });
     expect(Object.keys(examples[0]!.inputs)).toEqual(["case_id", "organization_id", "contact_id", "query"]);
     expect(Object.keys(examples[0]!.outputs)).toEqual(["must_include", "must_not_include", "authority_domain", "risk", "fallback_required"]);
-    expect(new Set(examples.map((example) => example.id)).size).toBe(25);
+    expect(new Set(examples.map((example) => example.id)).size).toBe(examples.length);
   });
 
   it("returns the deterministic evaluator keys in a stable order and detects unsafe output", () => {
@@ -69,8 +72,11 @@ describe("AI platform LangSmith-compatible evaluation runner", () => {
 
     const summary = await runLangSmithEvaluation({ client, judge });
 
+    // total mirrors the golden fixture's current length (loaded by
+    // runLangSmithEvaluation itself when no `cases` override is given) rather
+    // than a pinned literal — see the growth-not-a-snapshot comment above.
     expect(summary).toMatchObject({
-      total: 25,
+      total: loadGoldenCases().length,
       failed: 0,
       uploaded: false,
       llm_judge_ran: false,
