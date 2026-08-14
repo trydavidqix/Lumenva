@@ -3,8 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 import {
   ContentSourceService,
   ContentOsNotFoundError,
+  ContentOsValidationError,
   type IntelligenceRepository,
 } from "@/lib/content-os/intelligence/source-service";
+import { listSourceCatalog } from "@/lib/content-os/intelligence/source-catalog";
 import { CompetitorService } from "@/lib/content-os/intelligence/competitor-service";
 
 type Source = Awaited<ReturnType<IntelligenceRepository["createSource"]>>;
@@ -119,5 +121,35 @@ describe("Content OS intelligence services", () => {
     expect(provision).toHaveBeenCalledOnce();
     expect(monitor).toMatchObject({ status: "failed", providerMonitorId: null });
     expect(repository.monitors).toHaveLength(1);
+  });
+
+  it("creates an approved GitHub release source from the curated catalog", async () => {
+    const repository = repositoryFixture();
+    const service = new ContentSourceService(repository);
+    const source = await service.createFromCatalog({
+      organizationId: "org-a",
+      catalogKey: "github-openai-agents-python-releases",
+    });
+
+    expect(source).toMatchObject({
+      organizationId: "org-a",
+      provider: "rsshub",
+      sourceType: "news",
+      configuration: {
+        route: "/github/openai/openai-agents-python/releases",
+        sourceUrl: "https://github.com/openai/openai-agents-python/releases",
+      },
+    });
+    expect(repository.sources).toHaveLength(2);
+  });
+
+  it("rejects catalog keys outside the approved source list", async () => {
+    const repository = repositoryFixture();
+    const service = new ContentSourceService(repository);
+
+    await expect(
+      service.createFromCatalog({ organizationId: "org-a", catalogKey: "https://attacker.example/feed" }),
+    ).rejects.toBeInstanceOf(ContentOsValidationError);
+    expect(listSourceCatalog().every((source) => source.configuration.route.startsWith("/github/"))).toBe(true);
   });
 });
