@@ -79,11 +79,13 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
-    # Mantém o worker na rede padrão (WAHA) e adiciona a rede privada opcional
-    # usada pelo sidecar Mem0. O profile ai-memory continua desativado por padrão.
+    # Mantém o worker na rede padrão (WAHA) e adiciona as redes privadas opcionais
+    # usadas pelos sidecars Mem0/Graphiti. Os profiles ai-memory/ai-graph continuam
+    # desativados por padrão.
     networks:
       - default
       - ai-memory-internal
+      - ai-graph-internal
 
   # Projeção semântica opcional. Nunca inicia com `docker compose up`: exige
   # explicitamente `--profile ai-memory` e só fica acessível pelo loopback no
@@ -151,11 +153,86 @@ services:
       retries: 10
     networks: [ai-memory-internal]
 
+  # Projeção temporal/relacional opcional (Graphiti + FalkorDB, Fase 4). Nunca
+  # inicia com `docker compose up`: exige `--profile ai-graph` explicitamente.
+  # A feature (rollout mode) continua 'off' no CRM até decisão de promoção —
+  # subir o sidecar não liga nada por si.
+  #
+  # NÃO VALIDADO: os nomes de env do container graphiti abaixo (FALKORDB_*,
+  # OPENAI_API_KEY, MODEL_NAME, EMBEDDER_MODEL_NAME, SEMAPHORE_LIMIT, a porta
+  # 8000 e o path /healthcheck) são o melhor palpite a partir da documentação
+  # pública do graphiti-core/zepai — não foram confirmados contra a imagem
+  # `zepai/graphiti:0.22.1` pinada (sem acesso a registry/execução real nesta
+  # estação). A Task 4 do plano da Fase 4 inspeciona o OpenAPI publicado antes
+  # de implementar o client; não habilite este profile fora de um teste
+  # isolado até essa verificação.
+  falkordb:
+    image: falkordb/falkordb-server:v4.20.1-alpine
+    profiles: ["ai-graph"]
+    restart: unless-stopped
+    environment:
+      # Redis puro por baixo do módulo de grafo — sem senha, qualquer processo
+      # na mesma rede docker autentica. REDIS_ARGS é a forma padrão de repassar
+      # flags extra pro redis-server nas imagens da família redis-stack/FalkorDB.
+      REDIS_ARGS: "--requirepass ${GRAPHITI_FALKORDB_PASSWORD:?set GRAPHITI_FALKORDB_PASSWORD in managed runtime secrets}"
+    volumes:
+      - falkordb-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${GRAPHITI_FALKORDB_PASSWORD}", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks: [ai-graph-internal]
+
+  graphiti:
+    image: zepai/graphiti:0.22.1
+    profiles: ["ai-graph"]
+    restart: unless-stopped
+    environment:
+      FALKORDB_HOST: falkordb
+      FALKORDB_PORT: "6379"
+      FALKORDB_PASSWORD: ${GRAPHITI_FALKORDB_PASSWORD:?set GRAPHITI_FALKORDB_PASSWORD in managed runtime secrets}
+      # Segredo compartilhado: o app envia o mesmo valor (GRAPHITI_API_KEY em
+      # lib/env.ts) pra autenticar contra este serviço.
+      GRAPHITI_API_KEY: ${GRAPHITI_API_KEY:?set GRAPHITI_API_KEY in managed runtime secrets}
+      # Credencial de PLATAFORMA pro LLM/embedder do próprio sidecar Python —
+      # nunca a BYOK de um tenant (ai_provider_credentials). Escopo isolado,
+      # entregue via Infisical/runtime env conforme doc/runbook.
+      OPENAI_API_KEY: ${GRAPHITI_LLM_API_KEY:?set GRAPHITI_LLM_API_KEY in managed runtime secrets}
+      MODEL_NAME: ${GRAPHITI_LLM_MODEL:-gpt-4.1-mini}
+      EMBEDDER_MODEL_NAME: ${GRAPHITI_EMBEDDER_MODEL:-text-embedding-3-small}
+      # Cada episódio pode disparar várias chamadas de LLM (extração de
+      # entidade + resolução de relação). Default baixo pra não estourar rate
+      # limit/custo numa instalação self-host pequena.
+      SEMAPHORE_LIMIT: ${GRAPHITI_INGESTION_CONCURRENCY:-2}
+    depends_on:
+      falkordb:
+        condition: service_healthy
+    # Loopback-only, só pra depuração local do adapter (Task 4). Produção não
+    # publica porta nenhuma deste serviço (ver docker-compose.prod.yml).
+    ports:
+      - "127.0.0.1:${GRAPHITI_DEV_PORT:-8890}:8000"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthcheck', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+    # ai-graph-internal sozinha (internal: true) bloqueia TODO roteamento pra
+    # fora dessa rede, inclusive saída — o sidecar precisa alcançar o provider
+    # de LLM/embedder configurado. `default` (a mesma rede que `worker` já usa
+    # pelo mesmo motivo) restaura egress sem publicar porta nenhuma extra.
+    networks: [default, ai-graph-internal]
+
 volumes:
   waha-data:
   waha-media:
   mem0-postgres-data:
+  falkordb-data:
 
 networks:
   ai-memory-internal:
+    internal: true
+  ai-graph-internal:
     internal: true
