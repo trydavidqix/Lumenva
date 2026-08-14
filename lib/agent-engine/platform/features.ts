@@ -18,7 +18,7 @@ export type ResolvedAiPlatformFeature = {
 const killSwitches: Record<AiPlatformFeature, boolean> = {
   langsmith: env.AI_PLATFORM_KILL_LANGSMITH,
   mem0: env.AI_PLATFORM_KILL_MEM0,
-  llamaindex: false,
+  llamaindex: env.AI_PLATFORM_KILL_LLAMAINDEX,
   graphiti: env.AI_PLATFORM_KILL_GRAPHITI,
   external_guardrails: env.AI_PLATFORM_KILL_EXTERNAL_GUARDRAILS,
   n8n: env.AI_PLATFORM_KILL_N8N,

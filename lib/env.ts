@@ -99,6 +99,7 @@ const schema = z.object({
   // AI Platform Foundation — all external providers start disabled; a kill
   // switch wins over any tenant or global database flag.
   AI_PLATFORM_KILL_MEM0: z.enum(["true", "false"]).optional().default("false").transform((v) => v === "true"),
+  AI_PLATFORM_KILL_LLAMAINDEX: z.enum(["true", "false"]).optional().default("false").transform((v) => v === "true"),
   AI_PLATFORM_KILL_GRAPHITI: z.enum(["true", "false"]).optional().default("false").transform((v) => v === "true"),
   AI_PLATFORM_KILL_LANGSMITH: z.enum(["true", "false"]).optional().default("false").transform((v) => v === "true"),
   AI_PLATFORM_KILL_EXTERNAL_GUARDRAILS: z.enum(["true", "false"]).optional().default("false").transform((v) => v === "true"),
