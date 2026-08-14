@@ -198,8 +198,8 @@ successfully activates on native content instead).
 
 Run 2026-08-14, this branch, this Windows machine (8 GB host, Docker Desktop
 29.6.2, multiple other dev processes — 2 concurrent `next dev` servers, a
-Playwright MCP server, the Mem0/WAHA Docker containers from Phase 2/Phase-0
-work — already running throughout):
+Playwright MCP server, the Mem0/channel-messaging Docker containers from
+Phase 2/Phase-0 work — already running throughout):
 
 | Command | Result |
 |---|---|
@@ -244,7 +244,7 @@ inspection (`Get-Process`/`Get-CimInstance Win32_Process`) showed the actual
 9-minute re-check window) while the process itself was still alive — genuinely
 stalled, not merely slow or output-buffered, on this loaded 8 GB host running
 several other concurrent Node processes (two `next dev` servers, a Playwright
-MCP process, Mem0/WAHA Docker containers). It was killed
+MCP process, Mem0/channel-messaging Docker containers). It was killed
 (`Stop-Process -Id 2468,...`) and restarted fresh; the second run's CPU time
 climbed normally and it completed in 983.93s with a clean 321/3278 pass. This
 is recorded as a real environmental observation (resource contention on this

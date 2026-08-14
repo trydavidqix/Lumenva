@@ -110,6 +110,21 @@ describe("scanPublishableKnowledge", () => {
       expect(scanPublishableKnowledge(markdown)).toEqual({ allowed: true, findings: [] });
     });
 
+    // Accepted 2026-08-13 trade-off, not a bug: looksCredentialShaped()
+    // requires a digit, a 6+ run of uppercase letters, or an internal
+    // lowercase-then-uppercase transition (see the comment above that
+    // function) — a short, purely alphabetic, all-lowercase value like
+    // "hunterx" has none of those signals and passes undetected. This scanner
+    // is defense-in-depth only; human review of Obsidian notes before
+    // PUBLISHED status remains required and is the actual control for this
+    // shape of secret. This test exists so the gap has an executable anchor
+    // instead of only living in this comment and the runbook.
+    it("does not flag a short, purely alphabetic, no-digit password value (accepted scanner gap)", () => {
+      const result = scanPublishableKnowledge("Senha: hunterx");
+
+      expect(result.allowed).toBe(true);
+    });
+
     it.each([
       [
         "api_key: prose about how a key is stored, no key present",

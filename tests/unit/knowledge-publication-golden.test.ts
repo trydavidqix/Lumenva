@@ -119,8 +119,15 @@ function makeVersionAdmin() {
           select: () => ({
             single: async () => {
               const id = `version-${versionState.nextSeq++}`;
-              const versionNumber = versionState.maxVersionNumber + 1;
-              versionState.maxVersionNumber = versionNumber;
+              // Thread through the version_number PRODUCTION actually
+              // computed and sent (lib/ai/rag/version.ts:44-56), instead of
+              // recomputing it here from versionState.maxVersionNumber — a
+              // real Postgres insert().select().single() returns exactly
+              // what was inserted, and recomputing independently would make
+              // this test validate the fake's arithmetic instead of
+              // production's.
+              const versionNumber = row["version_number"] as number;
+              versionState.maxVersionNumber = Math.max(versionState.maxVersionNumber, versionNumber);
               versionState.versions.set(id, { status: "building" });
               versionState.insertedVersions.push({ id, ...row });
               return { data: { id, version_number: versionNumber }, error: null };
@@ -365,8 +372,15 @@ describe("archived/draft copy is never indexed", () => {
     );
 
     expect(out.ok).toBe(true);
-    const answer = out.ok ? (out.results[0]?.content ?? "") : "";
-    assertMatchesExpectation(answer, goldenCase("knowledge-draft-never-indexed-027").expected);
+    // The real assertion: retrieval against the pool (empty because nothing
+    // was ever exported) returns ZERO results — no chunk referencing the
+    // draft note's source. `assertMatchesExpectation(out.results[0]?.content
+    // ?? "", ...)` used to run here, but with no results that's always ""
+    // against an empty must_include and a must_not_include fragment that can
+    // never appear in "" either — vacuously true regardless of whether the
+    // gate actually worked. Asserting on the real side effect (zero results)
+    // is what this scenario needs to prove instead.
+    if (out.ok) expect(out.results).toHaveLength(0);
   });
 });
 
