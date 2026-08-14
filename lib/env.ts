@@ -115,6 +115,25 @@ const schema = z.object({
     z.coerce.number().int().positive().optional().default(2_000),
   ),
 
+  // Graphiti is an optional temporal/relationship graph projection (Phase 4,
+  // FalkorDB-backed, docker-compose profile `ai-graph`). Declaring its
+  // connection here does not activate the provider — AI_PLATFORM_KILL_GRAPHITI
+  // above plus the per-org rollout mode gate that separately. LLM/EMBEDDER
+  // provider+model only label what the sidecar itself was configured with (a
+  // platform-owned credential delivered via Infisical/runtime env to the
+  // container, never a tenant's ai_provider_credentials BYOK key) — see
+  // docs/runbooks/graphiti.md.
+  GRAPHITI_BASE_URL: z.string().url().optional().or(z.literal("")).default(""),
+  GRAPHITI_API_KEY: z.string().optional().default(""),
+  GRAPHITI_TIMEOUT_MS: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.coerce.number().int().positive().optional().default(2_000),
+  ),
+  GRAPHITI_LLM_PROVIDER: z.string().optional().default(""),
+  GRAPHITI_LLM_MODEL: z.string().optional().default(""),
+  GRAPHITI_EMBEDDER_PROVIDER: z.string().optional().default(""),
+  GRAPHITI_EMBEDDER_MODEL: z.string().optional().default(""),
+
   // LangSmith is optional observability only. The endpoint is deliberately not
   // validated here: a malformed optional endpoint must disable tracing safely,
   // not prevent the CRM from booting (see external-tracing-config.ts).
