@@ -44,6 +44,17 @@ interface HarnessState {
   chunkUpserts: Record<string, unknown>[];
   activateCalls: Record<string, unknown>[];
   chunkUpsertShouldError: boolean;
+  /**
+   * Every `.eq(column, value)` call the code under test made, tagged with the
+   * table it was made against (plus an `ai_chunks` entry synthesized from the
+   * upsert row's `organization_id` field, since that table is written via
+   * upsert rather than filtered via `.eq()`). This is what makes the
+   * "org filters unchanged" assertions below actually load-bearing: deleting
+   * a real `.eq("organization_id", ...)` call from workers/rag-indexer.ts or
+   * lib/ai/rag/version.ts would leave a gap here that the test can catch,
+   * instead of the fake client silently accepting any filter arguments.
+   */
+  filters: { table: string; column: string; value: unknown }[];
 }
 
 let state: HarnessState;
@@ -72,7 +83,13 @@ function resetState() {
     chunkUpserts: [],
     activateCalls: [],
     chunkUpsertShouldError: false,
+    filters: [],
   };
+}
+
+/** Records a `.eq(column, value)` call against `table` and returns the same builder shape supplied. */
+function trackEq(table: string, column: string, value: unknown) {
+  state.filters.push({ table, column, value });
 }
 
 function makeAdmin() {
@@ -81,17 +98,23 @@ function makeAdmin() {
       if (table === "ai_agents") {
         return {
           select: () => ({
-            eq: () => ({
-              eq: () => ({
-                order: () => ({
-                  order: () => ({
-                    limit: () => ({
-                      maybeSingle: async () => ({ data: state.agent, error: null }),
+            eq: (c1: string, v1: unknown) => {
+              trackEq(table, c1, v1);
+              return {
+                eq: (c2: string, v2: unknown) => {
+                  trackEq(table, c2, v2);
+                  return {
+                    order: () => ({
+                      order: () => ({
+                        limit: () => ({
+                          maybeSingle: async () => ({ data: state.agent, error: null }),
+                        }),
+                      }),
                     }),
-                  }),
-                }),
-              }),
-            }),
+                  };
+                },
+              };
+            },
           }),
         };
       }
@@ -99,13 +122,22 @@ function makeAdmin() {
       if (table === "tenant_integrations") {
         return {
           select: () => ({
-            eq: () => ({
-              eq: () => ({
-                eq: () => ({
-                  maybeSingle: async () => ({ data: state.tenantIntegration, error: null }),
-                }),
-              }),
-            }),
+            eq: (c1: string, v1: unknown) => {
+              trackEq(table, c1, v1);
+              return {
+                eq: (c2: string, v2: unknown) => {
+                  trackEq(table, c2, v2);
+                  return {
+                    eq: (c3: string, v3: unknown) => {
+                      trackEq(table, c3, v3);
+                      return {
+                        maybeSingle: async () => ({ data: state.tenantIntegration, error: null }),
+                      };
+                    },
+                  };
+                },
+              };
+            },
           }),
         };
       }
@@ -113,19 +145,32 @@ function makeAdmin() {
       if (table === "ai_knowledge_sources") {
         return {
           select: () => ({
-            eq: () => ({
-              eq: () => ({
-                eq: async () => ({ data: state.sources, error: null }),
-              }),
-            }),
+            eq: (c1: string, v1: unknown) => {
+              trackEq(table, c1, v1);
+              return {
+                eq: (c2: string, v2: unknown) => {
+                  trackEq(table, c2, v2);
+                  return {
+                    eq: async (c3: string, v3: unknown) => {
+                      trackEq(table, c3, v3);
+                      return { data: state.sources, error: null };
+                    },
+                  };
+                },
+              };
+            },
           }),
           update: (patch: Record<string, unknown>) => ({
-            eq: () => ({
-              eq: async () => {
-                state.sourceUpdates.push(patch);
-                return { error: null };
-              },
-            }),
+            eq: (c1: string, v1: unknown) => {
+              trackEq(table, c1, v1);
+              return {
+                eq: async (c2: string, v2: unknown) => {
+                  trackEq(table, c2, v2);
+                  state.sourceUpdates.push(patch);
+                  return { error: null };
+                },
+              };
+            },
           }),
         };
       }
@@ -133,11 +178,14 @@ function makeAdmin() {
       if (table === "ai_faq_items") {
         return {
           select: () => ({
-            eq: () => ({
-              in: () => ({
-                order: async () => ({ data: state.faqItems, error: null }),
-              }),
-            }),
+            eq: (c1: string, v1: unknown) => {
+              trackEq(table, c1, v1);
+              return {
+                in: () => ({
+                  order: async () => ({ data: state.faqItems, error: null }),
+                }),
+              };
+            },
           }),
         };
       }
@@ -147,29 +195,44 @@ function makeAdmin() {
           select: (cols: string) => {
             if (cols.includes("version_number")) {
               return {
-                eq: () => ({
-                  eq: () => ({
-                    order: () => ({
-                      limit: () => ({
-                        maybeSingle: async () => ({
-                          data: { version_number: state.maxVersionNumber },
-                          error: null,
+                eq: (c1: string, v1: unknown) => {
+                  trackEq(table, c1, v1);
+                  return {
+                    eq: (c2: string, v2: unknown) => {
+                      trackEq(table, c2, v2);
+                      return {
+                        order: () => ({
+                          limit: () => ({
+                            maybeSingle: async () => ({
+                              data: { version_number: state.maxVersionNumber },
+                              error: null,
+                            }),
+                          }),
                         }),
-                      }),
-                    }),
-                  }),
-                }),
+                      };
+                    },
+                  };
+                },
               };
             }
             // activateVersion's tenant pre-check: select("id")...maybeSingle()
             return {
-              eq: () => ({
-                eq: () => ({
-                  eq: () => ({
-                    maybeSingle: async () => ({ data: { id: state.nextVersionId }, error: null }),
-                  }),
-                }),
-              }),
+              eq: (c1: string, v1: unknown) => {
+                trackEq(table, c1, v1);
+                return {
+                  eq: (c2: string, v2: unknown) => {
+                    trackEq(table, c2, v2);
+                    return {
+                      eq: (c3: string, v3: unknown) => {
+                        trackEq(table, c3, v3);
+                        return {
+                          maybeSingle: async () => ({ data: { id: state.nextVersionId }, error: null }),
+                        };
+                      },
+                    };
+                  },
+                };
+              },
             };
           },
           insert: (row: Record<string, unknown>) => ({
@@ -184,12 +247,16 @@ function makeAdmin() {
             }),
           }),
           update: (patch: Record<string, unknown>) => ({
-            eq: () => ({
-              eq: async () => {
-                state.versionUpdates.push(patch);
-                return { error: null };
-              },
-            }),
+            eq: (c1: string, v1: unknown) => {
+              trackEq(table, c1, v1);
+              return {
+                eq: async (c2: string, v2: unknown) => {
+                  trackEq(table, c2, v2);
+                  state.versionUpdates.push(patch);
+                  return { error: null };
+                },
+              };
+            },
           }),
         };
       }
@@ -198,6 +265,11 @@ function makeAdmin() {
         return {
           upsert: (row: Record<string, unknown>) => {
             state.chunkUpserts.push(row);
+            if ("organization_id" in row) {
+              // ai_chunks has no .eq() filter — organization_id in the write
+              // payload IS its entire tenant boundary under service role.
+              trackEq(table, "organization_id", row["organization_id"]);
+            }
             return Promise.resolve(
               state.chunkUpsertShouldError ? { error: { message: "boom" } } : { error: null },
             );
@@ -277,6 +349,11 @@ function node(text: string, position: number, extra: Record<string, string | num
 
 function selection(mode: IngestionSelectionResult["mode"], nodes: IngestionNode[], rest: Partial<IngestionSelectionResult> = {}): IngestionSelectionResult {
   return { mode, nodes, ...rest };
+}
+
+/** Asserts `table` was filtered/written by `("organization_id", orgA)` at least once. */
+function expectOrgFiltered(table: string) {
+  expect(state.filters).toContainEqual({ table, column: "organization_id", value: orgA });
 }
 
 function faqEvent(overrides: Partial<EventRow> = {}): EventRow {
@@ -438,7 +515,24 @@ describe("rag-indexer — knowledge_source.updated (FAQ path)", () => {
       expect.objectContaining({ organizationId: orgB }),
     );
     expect(state.chunkUpserts[0]).toMatchObject({ organization_id: orgA });
-    expect(state.sourceUpdates[0]).toMatchObject({}); // last_index_* patch, no org field to leak
+    // last_index_* patch from the per-source status update — real fields,
+    // not an assertion that matches literally anything.
+    expect(state.sourceUpdates[0]).toMatchObject({ last_index_status: "success", chunks_count: 1 });
+
+    // Every table this handler touches was actually filtered/written under
+    // orgA, and no filter anywhere carried orgB or another value — this is
+    // what makes the property load-bearing: a future change that drops
+    // `.eq("organization_id", ...)` from ai_agents/ai_knowledge_sources/
+    // ai_faq_items/ai_knowledge_versions (workers/rag-indexer.ts or
+    // lib/ai/rag/version.ts) would fail one of these assertions.
+    for (const table of ["ai_agents", "ai_knowledge_sources", "ai_faq_items", "ai_knowledge_versions", "ai_chunks"]) {
+      expectOrgFiltered(table);
+    }
+    const orgFilters = state.filters.filter((f) => f.column === "organization_id");
+    expect(orgFilters.length).toBeGreaterThanOrEqual(5);
+    for (const f of orgFilters) {
+      expect(f.value).toBe(orgA);
+    }
   });
 });
 
@@ -458,6 +552,9 @@ describe("rag-indexer — nuvemshop.product_synced (product path)", () => {
       metadata: expect.objectContaining({ ingestion_mode: "native", product_id: "product-1" }),
     });
     expect(state.activateCalls).toHaveLength(1);
+    for (const table of ["ai_agents", "tenant_integrations", "ai_knowledge_versions", "ai_chunks"]) {
+      expectOrgFiltered(table);
+    }
   });
 
   it("zero nodes from the resolver skips before any version is created", async () => {
