@@ -1,6 +1,7 @@
 # Content OS Foundation Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Reconciled:** 2026-08-14 against the merged `origin/main` baseline. Foundation changes remain isolated to this branch.
 
 **Goal:** Criar o bounded context Content OS, o schema base, os quatro provider contracts e o modelo de jobs/eventos partilhado pelos restantes módulos.
 
@@ -36,7 +37,7 @@
 - `tests/unit/content-os-jobs.test.ts`.
 - `tests/invariants/content-os-schema.test.ts`.
 - `tests/invariants/content-os-rls.test.ts`.
-- `supabase/migrations/20260810235000_content_os_foundation.sql`.
+- `supabase/migrations/20260814120000_0118_content_os_foundation.sql`.
 
 **Modify**
 - `supabase/baseline.sql`.
@@ -254,7 +255,7 @@ git commit -m "feat(content-os): add provider registry"
 ### Task 4: Foundation schema
 
 **Files:**
-- Create: `supabase/migrations/20260810235000_content_os_foundation.sql`
+- Create: `supabase/migrations/20260814120000_0118_content_os_foundation.sql`
 - Modify: `supabase/baseline.sql`
 - Modify: `supabase/migrations/MANIFEST.md`
 - Test: `tests/invariants/content-os-schema.test.ts`
@@ -327,7 +328,7 @@ Copy the final idempotent baseline form to `supabase/baseline.sql` and add the m
 
 - [ ] **Step 6: Regenerate DB types**
 
-Use the repository's established Supabase type-generation command/path. Verify the generated diff rather than editing `lib/database.types.ts` by hand.
+Run `supabase gen types typescript --linked > lib/database.types.ts` only after the migration is applied to the linked development database. Inspect the generated diff and keep only Content OS schema changes when the shared development database contains unrelated branch migrations; never hand-edit the generated file.
 
 - [ ] **Step 7: Run DB tests and verify GREEN**
 
@@ -340,7 +341,7 @@ Expected: schema + RLS invariants PASS, including two-tenant isolation.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add supabase/migrations/20260810235000_content_os_foundation.sql supabase/baseline.sql supabase/migrations/MANIFEST.md lib/database.types.ts tests/invariants/content-os-schema.test.ts tests/invariants/content-os-rls.test.ts
+git add supabase/migrations/20260814120000_0118_content_os_foundation.sql supabase/baseline.sql supabase/migrations/MANIFEST.md lib/database.types.ts tests/invariants/content-os-schema.test.ts tests/invariants/content-os-rls.test.ts
 git commit -m "feat(content-os): add foundation schema"
 ```
 
