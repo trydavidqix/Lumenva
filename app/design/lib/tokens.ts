@@ -2,8 +2,8 @@
 // "Soft-tech / calmo" — neutros desaturados (greige/warm-gray), accent não-saturado.
 // 5-Constraint Rule applied: Shape, Color (exact hex), Typography, Motion, Layout.
 
-export type PaletteId = "sage" | "clay" | "mist" | "plum" | "olive";
-export type TypoId = "bricolage-jakarta" | "fraunces-manrope" | "atkinson" | "source-plex";
+export type PaletteId = "lumenva" | "clay" | "mist" | "plum" | "olive";
+export type TypoId = "bricolage-jakarta" | "fraunces-manrope" | "system-ui" | "source-plex";
 export type DensityId = "aerada" | "equilibrada" | "compacta";
 export type ThemeId = "light" | "dark";
 
@@ -38,32 +38,34 @@ export type PaletteDef = {
 // ─── Palettes ──────────────────────────────────────────────────────────────
 
 export const PALETTES: Record<PaletteId, PaletteDef> = {
-  sage: {
-    id: "sage",
-    name: "Sage",
-    description: "Verde-erva desaturado. Calmo, confiável, vegetal.",
+  lumenva: {
+    id: "lumenva",
+    name: "Lumenva",
+    description: "Preto, cinzento e branco. Identidade única da marca — sem família cromática de accent.",
+    // Marca não tem accent cromático: o "accent" é a própria escala de cinza da marca.
     accent: {
-      50: "#f3f6f1", 100: "#e4ebe0", 200: "#c8d6c1", 300: "#a4ba9a",
-      400: "#82a077", 500: "#67885d", 600: "#506d48", 700: "#41573b",
-      800: "#374731", 900: "#2f3c2b", 950: "#171f15",
+      50: "#fafafa", 100: "#f5f5f7", 200: "#e8e8ed", 300: "#d2d2d7",
+      400: "#aeaeb2", 500: "#8e8e93", 600: "#6e6e73", 700: "#48484a",
+      800: "#3a3a3c", 900: "#2c2c2e", 950: "#1c1c1e",
     },
     neutralLight: {
-      50: "#faf9f6", 100: "#f3f1ec", 200: "#e7e3da", 300: "#d2cdbf",
-      400: "#a9a395", 500: "#7d786c", 600: "#5d594f", 700: "#46433b",
-      800: "#2e2c26", 900: "#1c1a16", 950: "#0e0d0a",
+      50: "#fafafa", 100: "#f5f5f7", 200: "#e8e8ed", 300: "#d2d2d7",
+      400: "#aeaeb2", 500: "#8e8e93", 600: "#6e6e73", 700: "#48484a",
+      800: "#3a3a3c", 900: "#2c2c2e", 950: "#1c1c1e",
     },
     neutralDark: {
-      50: "#f5f4ef", 100: "#e6e4dc", 200: "#bbb8ac", 300: "#8e8b7f",
-      400: "#605e54", 500: "#444239", 600: "#33312a", 700: "#272620",
-      800: "#1d1c17", 900: "#161510", 950: "#0c0b08",
+      50: "#f5f5f7", 100: "#e8e8ed", 200: "#aeaeb2", 300: "#8e8e93",
+      400: "#6e6e73", 500: "#48484a", 600: "#3a3a3c", 700: "#2c2c2e",
+      800: "#1c1c1e", 900: "#111111", 950: "#111111",
     },
     states: {
-      light: { success: "#5a8a5f", warning: "#b07a2b", error: "#a94a3c", info: "#4a7a93" },
-      dark:  { success: "#82a077", warning: "#d09455", error: "#c87263", info: "#7da9bf" },
+      // info não recebe hue própria (evita 4ª família cromática): usa o cinza mais escuro do texto.
+      light: { success: "#2e7d46", warning: "#a9660b", error: "#b3261e", info: "#48484a" },
+      dark:  { success: "#5fb37a", warning: "#e0973b", error: "#ff6259", info: "#aeaeb2" },
     },
     surfaces: {
-      light: { bg: "#faf9f6", surface: "#ffffff", surfaceElevated: "#f5f3ee", text: "#1c1a16", textMuted: "#5d594f", border: "#e7e3da" },
-      dark:  { bg: "#161510", surface: "#1d1c17", surfaceElevated: "#272620", text: "#f5f4ef", textMuted: "#8e8b7f", border: "#33312a" },
+      light: { bg: "#f5f5f7", surface: "#ffffff", surfaceElevated: "#fafafa", text: "#111111", textMuted: "#6e6e73", border: "#e8e8ed" },
+      dark:  { bg: "#111111", surface: "#1c1c1e", surfaceElevated: "#2c2c2e", text: "#f5f5f7", textMuted: "#aeaeb2", border: "#3a3a3c" },
     },
   },
   clay: {
@@ -207,12 +209,12 @@ export const TYPOS: Record<TypoId, { name: string; display: string; body: string
     description: "Serif quente com SOFT/WONK + sans humanista.",
     scale: 1.333,
   },
-  "atkinson": {
-    name: "Atkinson Hyperlegible",
-    display: '"Atkinson Hyperlegible", system-ui, sans-serif',
-    body: '"Atkinson Hyperlegible", system-ui, sans-serif',
+  "system-ui": {
+    name: "System UI (Lumenva)",
+    display: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    body: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     mono: '"JetBrains Mono", ui-monospace, monospace',
-    description: "Acessibilidade-first. Glifos diferenciados, mesma família display+body.",
+    description: "Fonte nativa do SO. Zero custo de carregamento, renderização Apple-real em Mac, self-host coerente em qualquer OS.",
     scale: 1.2,
   },
   "source-plex": {

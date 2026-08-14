@@ -1,5 +1,5 @@
-/** Validação do upload outbound (Onda 2). Allowlist por categoria + cap 50MB. */
-import { MAX_MEDIA_BYTES } from "@/lib/messaging/media/types";
+/** Validação do upload outbound (Onda 2). Allowlist por categoria + cap 16MB (W-08). */
+import { MAX_OUTBOUND_MEDIA_BYTES } from "@/lib/messaging/media/types";
 
 export type MessageKind = "image" | "video" | "audio" | "document";
 
@@ -37,8 +37,8 @@ export function validateOutboundMedia(mime: string, sizeBytes: number): Ok | Fai
   if (!sizeBytes || sizeBytes <= 0) {
     return { ok: false, code: "validation_failed", message: "Arquivo vazio." };
   }
-  if (sizeBytes > MAX_MEDIA_BYTES) {
-    return { ok: false, code: "payload_too_large", message: "Arquivo acima de 50MB." };
+  if (sizeBytes > MAX_OUTBOUND_MEDIA_BYTES) {
+    return { ok: false, code: "payload_too_large", message: "Arquivo acima de 16MB." };
   }
   const base = mime.split(";")[0]!.trim().toLowerCase();
   if (base.startsWith("image/")) return { ok: true, kind: "image" };

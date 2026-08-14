@@ -19,7 +19,7 @@ test("mobile navigation exposes every public route", async () => {
     ).toHaveAttribute("href", item.href);
   }
   expect(
-    within(dialog).getByRole("link", { name: /solicitar demonstração/i }),
+    within(dialog).getByRole("link", { name: /agendar demonstração/i }),
   ).toHaveAttribute("href", "/contato");
 });
 
@@ -55,7 +55,7 @@ test("mobile navigation contains Tab focus and makes outside content inert", asy
     name: /^fechar menu$/i,
   });
   const demoLink = within(dialog).getByRole("link", {
-    name: /solicitar demonstração/i,
+    name: /agendar demonstração/i,
   });
 
   expect(closeButton).toHaveFocus();

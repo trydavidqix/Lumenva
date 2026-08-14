@@ -18,6 +18,7 @@ import { type NextRequest } from "next/server";
 import { z } from "zod";
 
 import { ok, fail } from "@/lib/api/wrappers";
+import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { requireRole } from "@/lib/auth/require-role";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSkillsPool } from "@/lib/ai/skills/db";
@@ -47,6 +48,16 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<Response> {
   const authz = await requireRole("manager", { requestId, resource: "ai_routers" });
   if (!authz.ok) return authz.response;
   const { org } = authz;
+
+  // classifyIntent chama o LLM de verdade — sem teto aqui, repetir o POST
+  // esgota orçamento de IA da org sem passar por nenhum outro guard.
+  const rl = await checkRateLimit(`ai_router_test:${org.orgId}`, 20, 60);
+  if (!rl.allowed) {
+    return fail("rate_limited", "Muitos testes de router em pouco tempo.", 429, {
+      requestId,
+      headers: { "Retry-After": "60" },
+    });
+  }
 
   let rawBody: unknown;
   try {

@@ -1,0 +1,85 @@
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.agentGrid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.agentCard {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.agentHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--color-ink);
+}
+
+.agentName {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.agentRole {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+}
+
+.agentFooter {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.agentStatus {
+  overflow: hidden;
+  padding: 0.125rem var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agentStatus[data-active="true"] {
+  background: var(--color-ink);
+  color: var(--color-white);
+}
+
+.panelLabel {
+  margin: 0 0 0.25rem;
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.panelText {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.8125rem;
+}
+
+@media (min-width: 30rem) {
+  .stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 40rem) {
+  .agentGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

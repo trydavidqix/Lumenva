@@ -2,6 +2,12 @@
 @import "../styles/layout.css";
 @import "../styles/motion.css";
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 html {
   background: var(--color-white);
   color: var(--color-ink);
@@ -54,6 +60,7 @@ svg,
 canvas {
   display: block;
   max-width: 100%;
+  height: auto;
 }
 
 h1,
@@ -93,6 +100,18 @@ p {
 
 .skip-link:focus-visible {
   transform: translateY(0);
+}
+
+.visually-hidden {
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
 
 ::selection {

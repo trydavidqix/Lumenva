@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useMemo, useState } from "react";
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
+import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBoard } from "@/hooks/kanban/useBoard";
@@ -191,7 +192,13 @@ export function KanbanBoard({
       );
 
       if (Number.isNaN(newPosition)) {
-        // Collision — Wave 8 will handle global rebalance. For now, abort silently.
+        // Colisão de posição fracionária: dois cards vizinhos com o mesmo
+        // position_in_stage esgotam a precisão do midpoint. Rebalance global
+        // ainda não existe (fora de escopo aqui) — sem o toast, o usuário via
+        // o card simplesmente "não se mover", sem nenhuma pista do porquê.
+        toast.error(
+          "Não foi possível mover o card para essa posição exata. Tente soltá-lo em outro ponto da coluna.",
+        );
         return;
       }
 

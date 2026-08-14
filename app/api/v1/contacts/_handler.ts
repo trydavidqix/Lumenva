@@ -334,6 +334,7 @@ export async function patchContactHandler(
     .from("contacts")
     .select("id, organization_id, is_anonymized, tags")
     .eq("id", contactId)
+    .eq("organization_id", ctx.organization_id)
     .maybeSingle();
 
   if (selErr) {
@@ -387,6 +388,7 @@ export async function patchContactHandler(
     .from("contacts")
     .update(patch)
     .eq("id", contactId)
+    .eq("organization_id", ctx.organization_id)
     .select(SELECT_COLS)
     .maybeSingle();
 

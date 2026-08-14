@@ -8,7 +8,8 @@ import { type NextRequest } from "next/server";
 
 import { fail, ok } from "@/lib/api/wrappers";
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
-import { extFromMime, MAX_MEDIA_BYTES } from "@/lib/messaging/media/types";
+import { logger } from "@/lib/logger";
+import { extFromMime, MAX_OUTBOUND_MEDIA_BYTES } from "@/lib/messaging/media/types";
 import { validateOutboundMedia } from "@/lib/messaging/media/upload-validation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -47,8 +48,8 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<Response> {
   // o corpo inteiro. 1MB de slack pro overhead de multipart; o check
   // autoritativo continua o file.size pós-parse (Content-Length pode mentir).
   const declared = Number(req.headers.get("content-length") ?? 0);
-  if (declared > MAX_MEDIA_BYTES + 1_048_576) {
-    return fail("payload_too_large", "Arquivo acima de 50MB.", 413, { requestId });
+  if (declared > MAX_OUTBOUND_MEDIA_BYTES + 1_048_576) {
+    return fail("payload_too_large", "Arquivo acima de 16MB.", 413, { requestId });
   }
 
   const form = await req.formData().catch(() => null);
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<Response> {
     .from("whatsapp-media")
     .upload(storagePath, buffer, { contentType: mime, upsert: false });
   if (upErr) {
-    console.error("[conversations.media] upload failed", upErr.message);
+    logger.error("conversations.media: upload failed", { error: upErr.message });
     return fail("internal_error", "Erro ao subir o arquivo.", 500, { requestId });
   }
 

@@ -23,6 +23,7 @@ import { fail } from "@/lib/api/wrappers";
 import { parseMetaWebhook, verificationChallenge, verifyMetaSignature } from "@/lib/channels/meta/webhook";
 import { ingestMetaInbound } from "@/lib/channels/meta/ingest";
 import { metaSessionByWebhookToken } from "@/lib/channels/meta/session";
+import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -90,12 +91,12 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
       // A metade que faltava: mensagem do contato vira linha no inbox, move lead,
       // acorda o agente — e carimba `last_inbound_at`, que é o que ABRE a janela
       // de 24h que o gate da Fase 4 calcula.
-      const r = await ingestMetaInbound(admin, e);
+      const r = await ingestMetaInbound(admin, e, requestId);
       desfechos.push(r.status);
       if (r.status === "failed" || r.status === "no_session") {
         // 2xx continua (a Meta re-entregaria em loop), mas a falha NÃO fica muda:
         // vai ao log estruturado e ao corpo da resposta.
-        console.error("[meta.ingest] inbound não ingerido", {
+        logger.error("meta.ingest: inbound não ingerido", {
           status: r.status,
           reason: r.status === "failed" ? r.reason : undefined,
           external_id: e.externalId,

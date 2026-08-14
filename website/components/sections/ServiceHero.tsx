@@ -1,11 +1,23 @@
+import type { ComponentType, ReactNode, SVGProps } from "react";
+import { demoCta } from "@/content/site";
 import { Button } from "@/components/ui/Button";
 import styles from "./InnerPages.module.css";
+
+export type ServiceHeroIcon = ComponentType<
+  SVGProps<SVGSVGElement> & { size?: number; strokeWidth?: number }
+>;
+
+export interface ServiceHeroChip {
+  readonly icon: ServiceHeroIcon;
+  readonly label: string;
+}
 
 export interface ServiceHeroProps {
   readonly eyebrow: string;
   readonly title: string;
   readonly description: string;
-  readonly capabilities: readonly string[];
+  readonly capabilities: readonly ServiceHeroChip[];
+  readonly visual?: ReactNode;
   readonly ctaHref?: `/${string}` | `#${string}`;
 }
 export function ServiceHero({
@@ -14,10 +26,11 @@ export function ServiceHero({
   description,
   eyebrow,
   title,
+  visual,
 }: Readonly<ServiceHeroProps>) {
   return (
     <section className={styles.hero} aria-labelledby="service-title">
-      <div className={`site-shell ${styles.heroInner}`}>
+      <div className={`site-shell ${styles.heroInner} ${visual ? "" : styles.heroInnerNoVisual}`}>
         <div className={styles.heroCopy}>
           <p className={styles.eyebrow}>{eyebrow}</p>
           <h1 className={styles.title} id="service-title">
@@ -25,19 +38,18 @@ export function ServiceHero({
           </h1>
           <p className={styles.description}>{description}</p>
           <Button className={styles.heroAction} href={ctaHref} variant="primary">
-            Solicitar demonstração
+            {demoCta.label}
           </Button>
+          <ul className={styles.chipRow} aria-label="Capacidades principais">
+            {capabilities.map(({ icon: Icon, label }) => (
+              <li className={styles.chip} key={label}>
+                <Icon aria-hidden="true" size={16} strokeWidth={1.8} />
+                {label}
+              </li>
+            ))}
+          </ul>
         </div>
-        <ol className={styles.capabilityList} aria-label="Capacidades principais">
-          {capabilities.map((capability, index) => (
-            <li className={styles.capabilityItem} key={capability}>
-              <span className={styles.capabilityIndex} aria-hidden="true">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <span>{capability}</span>
-            </li>
-          ))}
-        </ol>
+        {visual ? <div className={styles.heroVisual}>{visual}</div> : null}
       </div>
     </section>
   );

@@ -21,7 +21,7 @@ Quando duas decisões parecem igualmente boas, esta lista é a tiebreaker:
 1. **Clarity > decoration.** Se um elemento não comunica, ele sai. Sombras decorativas, gradients, ícones que repetem o label — fora.
 2. **Calm > vibrant.** Saturação alta cansa; contraste calibrado é mais legível que contraste máximo. Nenhum accent passa de stop 600 em áreas grandes.
 3. **Consistency > novelty.** Uma escolha boa repetida 100 vezes é melhor que 100 escolhas únicas. Componentes têm variants finitos e nomeados.
-4. **Accessibility > aesthetic.** WCAG AA é piso, não teto. Atkinson Hyperlegible foi escolhida pela disambiguação de glifos. Focus rings sempre 2px visíveis.
+4. **Accessibility > aesthetic.** WCAG AA é piso, não teto. A fonte de sistema garante renderização nativa e legível em qualquer SO self-hosted. Focus rings sempre 2px visíveis.
 5. **Intentional density.** Aerada é default; densidade só comprime quando o conteúdo justifica (tabela de dados). Whitespace não é desperdício, é respiração.
 
 ## Estrutura da documentação
@@ -38,7 +38,7 @@ Leia 00 → 09 sequencial uma vez. Depois consulte por demanda via tabela do `RE
 
 ## Versionamento
 
-- **v1.0 — locked em 2026-04-28.** As 5 escolhas (Sage, Atkinson, Aerada, Phosphor, IBM Plex Mono) estão fechadas até v2.0. PRs que tentem trocar uma delas precisam de RFC.
+- **v2.0 — 2026-08-11.** Paleta Lumenva (preto/cinza/branco) e tipografia system-ui substituem Sage e Atkinson Hyperlegible, por decisão de identidade visual aprovada em `docs/superpowers/specs/2026-08-10-lumenva-identidade-visual-design.md`. Aerada, Phosphor e IBM Plex Mono permanecem lockados desde v1.0 (2026-04-28); trocá-los ainda exige RFC.
 - Patches são aceitos para: novos ícones, novos exemplos de microcopy, ajustes de hex em ±2 pontos de luminosidade quando WCAG falhar, novos componentes derivados.
 - Histórico de mudanças vai em `CHANGELOG.md` quando houver primeira mudança.
 

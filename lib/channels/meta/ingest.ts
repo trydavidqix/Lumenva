@@ -23,6 +23,8 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { blockContactIfStopKeyword } from "@/lib/messaging/stop-keyword";
+
 import { ARCHIVED_AT, queryTolerantToMissingArchived } from "../archived";
 import { phoneLookupVariants } from "../phone-variants";
 import type { InboundMessageEvent } from "./webhook";
@@ -91,6 +93,7 @@ function previewOf(e: InboundMessageEvent): string {
 export async function ingestMetaInbound(
   admin: Admin,
   e: InboundMessageEvent,
+  requestId: string,
 ): Promise<IngestOutcome> {
   const sessao = await sessionByPhoneNumberId(admin, e.phoneNumberId);
   // Sem sessão: a mensagem é de um número que não administramos. Devolver 200 (o
@@ -164,6 +167,17 @@ export async function ingestMetaInbound(
     p_preview: previewOf(e),
     p_at: e.sentAt.toISOString(),
   } as never);
+
+  // Opt-out (STOP/PARAR/SAIR/UNSUBSCRIBE/CANCELAR) — o canal WAHA já fazia isso;
+  // faltava aqui, o que deixava metade do produto sem honrar opt-out.
+  if (e.type === "text") {
+    await blockContactIfStopKeyword(admin, {
+      body: e.text,
+      organizationId: orgId,
+      contactId: contactId as string,
+      requestId,
+    });
+  }
 
   return {
     status: "ingested",

@@ -1,8 +1,7 @@
 export const site = {
   siteName: "Lumenva",
   description:
-    "Lumenva é um AI Sales OS open source e self-hosted para vendas e suporte pelo WhatsApp.",
-  githubUrl: "https://github.com/melgarafael/DeskcommCRM",
+    "Lumenva é a plataforma de atendimento e vendas com IA que une agentes, automações e CRM, com o WhatsApp como canal principal.",
 } as const;
 
 export type NavigationItem = Readonly<{
@@ -19,6 +18,13 @@ export type PublicRoute = NavigationItem &
 
 export const publicRoutes: readonly PublicRoute[] = [
   {
+    label: "Produto",
+    href: "/produto",
+    slug: "produto",
+    heading: "Produto",
+    description: "Como agentes de IA, automações e CRM trabalham juntos na Lumenva.",
+  },
+  {
     label: "Soluções",
     href: "/solucoes",
     slug: "solucoes",
@@ -26,25 +32,32 @@ export const publicRoutes: readonly PublicRoute[] = [
     description: "Uma visão geral das soluções da Lumenva para vendas e suporte no WhatsApp.",
   },
   {
-    label: "Inteligência artificial",
-    href: "/inteligencia-artificial",
-    slug: "inteligencia-artificial",
-    heading: "Inteligência artificial",
-    description: "Agentes de IA para vendas e suporte no WhatsApp.",
+    label: "Atendimento com IA",
+    href: "/solucoes/atendimento-com-ia",
+    slug: "atendimento-com-ia",
+    heading: "Atendimento com IA",
+    description: "Automatize o atendimento sem perder o toque humano.",
   },
   {
-    label: "Automações",
-    href: "/automacoes",
-    slug: "automacoes",
-    heading: "Automações",
-    description: "Automações conectam eventos do CRM a ações da operação.",
+    label: "Vendas & CRM",
+    href: "/solucoes/vendas-crm",
+    slug: "vendas-crm",
+    heading: "Vendas & CRM",
+    description: "Organize o funil e feche mais negócios com previsibilidade.",
   },
   {
-    label: "CRM",
-    href: "/crm",
-    slug: "crm",
-    heading: "CRM",
-    description: "Um núcleo de CRM configurável para diferentes operações.",
+    label: "Agentes de IA",
+    href: "/solucoes/agentes-de-ia",
+    slug: "agentes-de-ia",
+    heading: "Agentes de IA",
+    description: "Crie agentes de IA que atendem, qualificam e executam tarefas por si.",
+  },
+  {
+    label: "Automação de Processos",
+    href: "/solucoes/automacao-de-processos",
+    slug: "automacao-de-processos",
+    heading: "Automação de Processos",
+    description: "Automatize processos e escale a operação com mais controlo.",
   },
   {
     label: "Integrações",
@@ -65,10 +78,10 @@ export const publicRoutes: readonly PublicRoute[] = [
     href: "/sobre",
     slug: "sobre",
     heading: "Sobre a Lumenva",
-    description: "Lumenva é um AI Sales OS open source e self-hosted para vendas e suporte pelo WhatsApp.",
+    description: "Lumenva é a plataforma de atendimento e vendas com IA que une agentes, automações e CRM.",
   },
   {
-    label: "Contato",
+    label: "Contacto",
     href: "/contato",
     slug: "contato",
     heading: "Solicitar demonstração",
@@ -76,14 +89,101 @@ export const publicRoutes: readonly PublicRoute[] = [
   },
 ];
 
-export const navigation: readonly NavigationItem[] = publicRoutes.map(
-  ({ href, label }) => ({ href, label }),
-);
+export type SolutionMenuItem = Readonly<{
+  label: string;
+  href: `/${string}`;
+  description: string;
+  icon: "atendimento" | "vendas" | "agentes" | "automacao";
+}>;
+
+export const solutionsMenu: readonly SolutionMenuItem[] = [
+  {
+    label: "Atendimento com IA",
+    href: "/solucoes/atendimento-com-ia",
+    description: "Inbox, resumo e resposta sugerida com handoff para a equipa.",
+    icon: "atendimento",
+  },
+  {
+    label: "Vendas & CRM",
+    href: "/solucoes/vendas-crm",
+    description: "Pipeline, propostas e próximas ações num só lugar.",
+    icon: "vendas",
+  },
+  {
+    label: "Agentes de IA",
+    href: "/solucoes/agentes-de-ia",
+    description: "Agentes especializados por função, com supervisão humana.",
+    icon: "agentes",
+  },
+  {
+    label: "Automação de Processos",
+    href: "/solucoes/automacao-de-processos",
+    description: "Workflows que ligam WhatsApp, CRM e tarefas da operação.",
+    icon: "automacao",
+  },
+] as const;
+
+export const navigation: readonly NavigationItem[] = [
+  { label: "Produto", href: "/produto" },
+  { label: "Soluções", href: "/solucoes" },
+  { label: "Integrações", href: "/integracoes" },
+  { label: "Contacto", href: "/contato" },
+] as const;
+
+export const footerNavigation: readonly NavigationItem[] = [
+  ...navigation,
+  ...solutionsMenu.map(({ href, label }) => ({ href, label })),
+  { label: "Sobre", href: "/sobre" },
+  { label: "Projetos", href: "/projetos" },
+] as const;
+
+export type LegalFooterLink = Readonly<{
+  label: string;
+  href: string;
+  external?: boolean;
+}>;
+
+export const legalNavigation: readonly LegalFooterLink[] = [
+  { label: "Informação Legal", href: "/informacao-legal" },
+  { label: "Política de Privacidade", href: "/politica-de-privacidade" },
+  {
+    label: "Livro de Reclamações",
+    href: "https://www.livroreclamacoes.pt/Inicio/",
+    external: true,
+  },
+] as const;
 
 export const demoCta = {
-  label: "Solicitar demonstração",
+  label: "Agendar demonstração",
   href: "/contato",
 } as const;
+
+export const contactDetails = {
+  email: "contato@lumenva.pt",
+  phone: "+351 910 293 287",
+  whatsappHref: "https://wa.me/351910293287",
+  address: "Porto",
+} as const;
+
+export type SocialLink = Readonly<{
+  label: string;
+  href: string;
+  icon: "whatsapp" | "facebook" | "instagram";
+}>;
+
+export const socialLinks: readonly SocialLink[] = [
+  { label: "WhatsApp", href: contactDetails.whatsappHref, icon: "whatsapp" },
+  {
+    label: "Facebook",
+    href: "https://www.facebook.com/profile.php?id=61592131762439",
+    icon: "facebook",
+  },
+  {
+    label: "Instagram",
+    href: "https://www.instagram.com/lumenva.group/",
+    icon: "instagram",
+  },
+] as const;
 
 export const shellContent = {
   primaryNavigationLabel: "Navegação principal",
@@ -92,7 +192,6 @@ export const shellContent = {
   closeMenuLabel: "Fechar menu",
   closeMenuBackdropLabel: "Fechar menu ao clicar fora",
   skipToContentLabel: "Ir para o conteúdo principal",
-  githubLabel: "Ver no GitHub",
 } as const;
 
-export const { siteName, description, githubUrl } = site;
+export const { siteName, description } = site;
