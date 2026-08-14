@@ -1,9 +1,9 @@
 /**
  * Detecção de opt-out (STOP/PARAR/SAIR/UNSUBSCRIBE/CANCELAR) e bloqueio do
- * contato — compartilhado entre TODOS os canais inbound (WAHA e WhatsApp
- * Cloud API/Meta). Antes cada canal tinha sua própria cópia (ou nenhuma): o
- * canal Meta nunca checava STOP, então opt-out só funcionava em metade do
- * produto. Ver `.claude/rules/whatsapp-waha.md`.
+ * contato — compartilhado entre TODOS os canais inbound configurados para
+ * WhatsApp. Antes cada canal tinha sua própria cópia (ou nenhuma): um dos
+ * canais nunca checava STOP, então opt-out só funcionava em metade do
+ * produto. Ver `docs/doctrine/restricao-de-canal.md`.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
