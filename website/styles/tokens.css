@@ -1,16 +1,19 @@
 :root {
-  /* Color */
-  --color-accent: #0066CC;
-  --color-accent-hover: #0071E3;
-  --color-accent-on-dark: #2997FF;
-  --color-ink: #1D1D1F;
+  /* Color — Lumenva neutral palette (black / gray / white only, no chroma) */
+  --color-accent: #111111;
+  --color-accent-hover: #2C2C2E;
+  --color-accent-on-dark: #F5F5F7;
+  --color-ink: #111111;
+  --color-gray: #6E6E73;
   --color-white: #FFFFFF;
   --color-surface: #F5F5F7;
-  --color-surface-subtle: #FAFAFC;
+  --color-surface-subtle: #FAFAFA;
+  --color-surface-alt: #E8E8ED;
   --color-black: #000000;
-  --color-text-muted: color-mix(in srgb, var(--color-ink) 68%, transparent);
-  --color-border: color-mix(in srgb, var(--color-ink) 14%, transparent);
-  --color-focus-ring: color-mix(in srgb, var(--color-accent) 38%, transparent);
+  --color-text-muted: var(--color-gray);
+  --color-border: #D2D2D7;
+  --color-border-subtle: #E8E8ED;
+  --color-focus-ring: color-mix(in srgb, var(--color-accent) 45%, transparent);
 
   /* Typography */
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;

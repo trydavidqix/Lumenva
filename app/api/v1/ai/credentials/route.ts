@@ -15,6 +15,7 @@ import { z } from "zod";
 
 import { ok, fail } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
+import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { requireRole } from "@/lib/auth/require-role";
 import { bufToBytea, encryptKey } from "@/lib/crypto/aes_gcm";
 import { validateProviderKey, type Provider } from "@/lib/ai/provider-validators";
@@ -56,6 +57,15 @@ export async function POST(req: NextRequest): Promise<Response> {
   const authz = await requireRole("admin", { requestId, resource: "ai_credentials" });
   if (!authz.ok) return authz.response;
   const { user: authUser, org: activeOrg } = authz;
+
+  // Cada credencial nova dispara validação outbound contra o provider.
+  const rl = await checkRateLimit(`ai_credentials_create:${activeOrg.orgId}`, 20, 60);
+  if (!rl.allowed) {
+    return fail("rate_limited", "Muitas credenciais criadas em pouco tempo.", 429, {
+      requestId,
+      headers: { "Retry-After": "60" },
+    });
+  }
 
   let rawBody: unknown;
   try {

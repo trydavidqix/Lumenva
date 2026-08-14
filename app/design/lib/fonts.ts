@@ -3,7 +3,6 @@ import {
   Plus_Jakarta_Sans,
   Fraunces,
   Manrope,
-  Atkinson_Hyperlegible,
   Source_Serif_4,
   IBM_Plex_Sans,
   IBM_Plex_Mono,
@@ -38,13 +37,6 @@ export const manrope = Manrope({
   variable: "--font-manrope",
 });
 
-export const atkinson = Atkinson_Hyperlegible({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  display: "swap",
-  variable: "--font-atkinson",
-});
-
 export const sourceSerif = Source_Serif_4({
   subsets: ["latin"],
   display: "swap",
@@ -76,7 +68,6 @@ export const allFontVariables = [
   jakarta.variable,
   fraunces.variable,
   manrope.variable,
-  atkinson.variable,
   sourceSerif.variable,
   plexSans.variable,
   plexMono.variable,

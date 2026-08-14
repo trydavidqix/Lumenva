@@ -4,7 +4,15 @@
  * interface de fetch e o resto do sistema não muda (spec Onda 0).
  */
 
-export const MAX_MEDIA_BYTES = 52_428_800; // 50MB — espelha file_size_limit do bucket
+export const MAX_MEDIA_BYTES = 52_428_800; // 50MB — espelha file_size_limit do bucket (mídia INBOUND)
+
+/**
+ * Teto de mídia OUTBOUND (business rule W-08): ">16MB é rejeitada na UI/API
+ * antes de subir" — distinto e mais estrito que `MAX_MEDIA_BYTES` (que rege
+ * o que o bucket aceita ao baixar mídia recebida do WhatsApp, sem teto de
+ * negócio equivalente).
+ */
+export const MAX_OUTBOUND_MEDIA_BYTES = 16 * 1_048_576; // 16MB
 
 export interface FetchedMedia {
   buffer: Buffer;

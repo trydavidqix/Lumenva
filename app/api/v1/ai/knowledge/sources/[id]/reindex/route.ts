@@ -15,6 +15,7 @@ import { randomUUID } from "node:crypto";
 import { type NextRequest } from "next/server";
 import { z } from "zod";
 import { ok, fail } from "@/lib/api/wrappers";
+import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { requireRole } from "@/lib/auth/require-role";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -38,6 +39,16 @@ export async function POST(
   const authz = await requireRole("manager", { requestId, resource: "ai_knowledge" });
   if (!authz.ok) return authz.response;
   const { org: activeOrg } = authz;
+
+  // Cada chamada dispara reprocessamento (embedding) no worker; sem teto, um
+  // clique repetido/script vira custo sem passar por nenhum outro guard.
+  const rl = await checkRateLimit(`ai_knowledge_reindex:${activeOrg.orgId}`, 20, 60);
+  if (!rl.allowed) {
+    return fail("rate_limited", "Muitos reindex em pouco tempo.", 429, {
+      requestId,
+      headers: { "Retry-After": "60" },
+    });
+  }
 
   // Body é opcional; se vier, valida.
   if (req.headers.get("content-length") && req.headers.get("content-length") !== "0") {

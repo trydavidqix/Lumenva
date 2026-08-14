@@ -16,7 +16,6 @@
   max-width: 46rem;
 }
 
-.eyebrow,
 .index,
 .kind {
   color: var(--color-accent);
@@ -24,6 +23,14 @@
   font-size: var(--font-size-label);
   font-weight: 700;
   letter-spacing: 0.06em;
+}
+
+.eyebrow {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .sectionTitle {
@@ -237,6 +244,7 @@
 }
 
 .finalCtaAction {
+  align-self: start;
   justify-self: start;
 }
 

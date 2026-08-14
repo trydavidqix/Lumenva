@@ -21,6 +21,7 @@ import { revalidatePath } from "next/cache";
 
 import { audit } from "@/lib/audit";
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
+import { logger } from "@/lib/logger";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -263,7 +264,9 @@ export async function publishAgentAction(
       },
     })
     .then(({ error }) => {
-      if (error) console.error("[saveAgentDraftAction/publish] event_log error", error.message);
+      if (error) {
+        logger.error("saveAgentDraftAction/publish: event_log error", { error: error.message });
+      }
     });
 
   void audit({
@@ -455,7 +458,9 @@ export async function revertToVersionAction(
       },
     })
     .then(({ error }) => {
-      if (error) console.error("[revertToVersionAction/event_log] error", error.message);
+      if (error) {
+        logger.error("revertToVersionAction/event_log: error", { error: error.message });
+      }
     });
 
   void audit({

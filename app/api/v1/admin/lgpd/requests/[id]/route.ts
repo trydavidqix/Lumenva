@@ -7,6 +7,7 @@
  */
 import { randomUUID } from "node:crypto";
 import type { NextRequest } from "next/server";
+import { z } from "zod";
 
 import { ok, fail } from "@/lib/api/wrappers";
 import { requirePlatformAdmin } from "@/lib/auth/requirePlatformAdmin";
@@ -14,6 +15,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
+
+const paramsSchema = z.object({ id: z.string().uuid() });
 
 export async function GET(
   _req: NextRequest,
@@ -28,7 +31,12 @@ export async function GET(
     return fail("forbidden", "Platform admin required.", 403, { requestId });
   }
 
-  const { id } = await params;
+  const rawParams = await params;
+  const parsedParams = paramsSchema.safeParse(rawParams);
+  if (!parsedParams.success) {
+    return fail("invalid_request", "id inválido.", 400, { requestId });
+  }
+  const { id } = parsedParams.data;
   const admin = createAdminClient();
 
   // Fetch lgpd_request (no org filter — cross-tenant intentional)

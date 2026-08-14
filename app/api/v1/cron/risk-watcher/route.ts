@@ -35,7 +35,7 @@ import { randomUUID } from "node:crypto";
 import type { NextRequest } from "next/server";
 
 import { ok, fail } from "@/lib/api/wrappers";
-import { env } from "@/lib/env";
+import { cronSecretMatches } from "@/lib/auth/cron-secret";
 import { logger } from "@/lib/logger";
 import { venceReativacoes } from "@/lib/leads/reactivation";
 import { observaTravessias } from "@/lib/leads/risk-worker";
@@ -46,13 +46,30 @@ export const dynamic = "force-dynamic";
 /** Teto de orgs por invocação — a próxima passada pega o resto. */
 const ORG_LIMIT = 50;
 
+/**
+ * Fisher–Yates. Sem isto, `.slice(0, ORG_LIMIT)` sobre uma lista sem ORDER BY
+ * pega deterministicamente o mesmo subconjunto de orgs a cada passada — acima
+ * de ORG_LIMIT orgs com lead aberto, as "de trás" nunca esfriam nem reativam,
+ * silenciosamente. Embaralhar dá cobertura estatisticamente justa ao longo de
+ * várias passadas (roda a cada 15min) sem precisar de cursor/coluna nova.
+ */
+function embaralhado<T>(arr: T[]): T[] {
+  const out = arr.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = out[i]!;
+    out[i] = out[j]!;
+    out[j] = tmp;
+  }
+  return out;
+}
+
 async function handle(req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
 
   const auth = req.headers.get("authorization") ?? "";
   const provided = auth.startsWith("Bearer ") ? auth.slice("Bearer ".length).trim() : "";
-  const accepted = [env.INTERNAL_CRON_SECRET, env.INTERNAL_SECRET].filter(Boolean);
-  if (accepted.length === 0 || !provided || !accepted.includes(provided)) {
+  if (!cronSecretMatches(provided)) {
     return fail("forbidden", "Cron secret missing or invalid.", 403, { requestId });
   }
 
@@ -67,9 +84,17 @@ async function handle(req: NextRequest): Promise<Response> {
     return fail("internal_error", "Failed to list organizations.", 500, { requestId });
   }
 
-  const orgs = [
+  const orgsElegiveis = [
     ...new Set(((rows ?? []) as Array<{ organization_id: string }>).map((r) => r.organization_id)),
-  ].slice(0, ORG_LIMIT);
+  ];
+  const orgs = embaralhado(orgsElegiveis).slice(0, ORG_LIMIT);
+  if (orgsElegiveis.length > orgs.length) {
+    logger.info("[risk-watcher] teto de orgs por rodada atingido", {
+      orgs_elegiveis: orgsElegiveis.length,
+      orgs_processadas: orgs.length,
+      requestId,
+    });
+  }
 
   let travessias = 0;
   let esfriaram = 0;

@@ -147,10 +147,38 @@ describe("o workflow do e2e honra o contrato de ambiente que a suíte exige", ()
     // browser: servidor falando com um banco e cliente com outro, no mesmo
     // teste. O `e2e:build` existe para exportar o `.env.e2e` antes do build.
     const buildPuro = COMANDOS.some((l) => /^run: pnpm build$/.test(l) || /^pnpm build$/.test(l));
-    expect(
-      buildPuro,
-      "o workflow do e2e builda com o env errado — use `pnpm e2e:build`",
-    ).toBe(false);
+    expect(buildPuro, "o workflow do e2e builda com o env errado — use `pnpm e2e:build`").toBe(
+      false,
+    );
     expect(packageJson.scripts["e2e:build"]).toBeTruthy();
+  });
+
+  it("o Redis REST de teste existe e fica pronto antes de a suíte começar", () => {
+    // O `.env.e2e` aponta o SDK @upstash/redis para 127.0.0.1:3998. Sem um
+    // serviço REST compatível nessa porta, cada chamada cai no fallback em
+    // memória e a navegação do E2E esbarra no 429 do próprio produto.
+    expect(workflow).toMatch(/services:\s*[\s\S]*?redis:/);
+    expect(workflow).toMatch(/services:\s*[\s\S]*?srh:/);
+    expect(workflow).toMatch(/SRH_TOKEN:\s*\$\{\{ env\.E2E_SRH_TOKEN \}\}/);
+    expect(workflow).toMatch(/SRH_CONNECTION_STRING:\s*redis:\/\/redis:6379/);
+    expect(workflow).toMatch(/3998:80/);
+    // O SRH implementa o protocolo REST no corpo da requisição, não em rotas
+    // como `/ping`. A sonda precisa usar o próprio cliente que o CRM usa.
+    expect(workflow).toMatch(/require\(["']@upstash\/redis["']\)/);
+    expect(workflow).toMatch(/new Redis\(\{\s*url:\s*["']http:\/\/127\.0\.0\.1:3998["']/);
+    expect(workflow).toMatch(/redis\.ping\(\)/);
+    const gerador = fs.readFileSync(path.join(RAIZ, "scripts/gerar-env-e2e.sh"), "utf8");
+    expect(gerador).toMatch(/TOKEN_REDIS="\$\{E2E_SRH_TOKEN:-e2e-placeholder-nao-e-segredo\}"/);
+  });
+
+  it("verifica as telas de IA antes da carga acumulada da suíte", () => {
+    // `olhar-telas-do-epico` escuta erros do console. Rodá-lo depois de dezenas
+    // de cenários que chamam APIs compartilhadas o faz diagnosticar a carga da
+    // própria suíte (429), e não a saúde das telas. Ele precisa abrir o ciclo.
+    const telas = primeiroIndice(/playwright test --workers=1 olhar-telas-do-epico\.spec\.ts/);
+    const carga = primeiroIndice(/agente-novo-e-uso\.spec\.ts/);
+    expect(telas, "a verificação visual das telas de IA não roda isoladamente").toBeGreaterThan(-1);
+    expect(carga, "a segunda parte com carga acumulada deixou de existir").toBeGreaterThan(-1);
+    expect(telas, "as telas de IA precisam rodar antes da carga acumulada").toBeLessThan(carga);
   });
 });

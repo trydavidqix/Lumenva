@@ -86,6 +86,11 @@ export function BulkActionBar({
   };
 
   const runTagAdd = () => {
+    // Mesmo guard das outras ações (Mover/Atribuir/Excluir): sem ele, um
+    // duplo-clique/duplo-Enter dispara duas mutações sobrepostas, e cada
+    // uma pode emitir seu próprio `lead.tag_added` — automação com esse
+    // trigger dispararia em dobro (ex.: mensagem de WhatsApp duplicada).
+    if (bulk.isPending) return;
     const t = tagInput.trim();
     if (!t) return;
     bulk.mutate(
@@ -169,7 +174,7 @@ export function BulkActionBar({
                   }
                 }}
               />
-              <Button size="sm" onClick={runTagAdd} disabled={!tagInput.trim()}>
+              <Button size="sm" onClick={runTagAdd} disabled={!tagInput.trim() || bulk.isPending}>
                 Adicionar
               </Button>
             </div>
