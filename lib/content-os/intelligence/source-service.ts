@@ -1,3 +1,5 @@
+import { getSourceCatalogEntry } from "./source-catalog";
+
 export type ContentSourceRecord = {
   id: string;
   organizationId: string;
@@ -85,6 +87,24 @@ export class ContentSourceService {
     }
 
     return this.repository.createSource(input);
+  }
+
+  async createFromCatalog(input: {
+    organizationId: string;
+    catalogKey: string;
+  }): Promise<ContentSourceRecord> {
+    const source = getSourceCatalogEntry(input.catalogKey);
+    if (!source) {
+      throw new ContentOsValidationError("Content source catalog key is not approved");
+    }
+
+    return this.create({
+      organizationId: input.organizationId,
+      name: source.name,
+      provider: source.provider,
+      sourceType: source.sourceType,
+      configuration: source.configuration,
+    });
   }
 
   async setStatus(input: {
