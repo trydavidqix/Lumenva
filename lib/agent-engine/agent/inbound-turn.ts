@@ -552,6 +552,46 @@ async function retrieveContextBlock(input: {
   }
 }
 
+/**
+ * Retrieves the Mem0 (`semanticContextProvider`) and Graphiti
+ * (`graphContextProvider`) prompt-suffix blocks CONCURRENTLY via
+ * `Promise.all` — never one `await`ed after the other. Extracted as its own
+ * seam (rather than left inline at the `runAgentTurn` call site) specifically
+ * so this concurrency guarantee is unit-testable without exercising the rest
+ * of the turn (DB pool, CRM/LLM config, etc.): see
+ * `retrieve-optional-context-blocks.test.ts`, which fails/hangs if a future
+ * refactor accidentally serializes the two providers again.
+ */
+export async function retrieveOptionalContextBlocks(input: {
+  semanticContextProvider: ContextProvider | undefined;
+  graphContextProvider: ContextProvider | undefined;
+  buildRequest: (nowMs: number) => ContextProviderRequest;
+  recordMetric: InboundTurnDeps['recordContextFusionMetric'];
+  log: Logger;
+  now?: () => number;
+}): Promise<{ semanticContextBlock: string; graphContextBlock: string }> {
+  const now = input.now ?? Date.now;
+  const [semanticContextBlock, graphContextBlock] = await Promise.all([
+    retrieveContextBlock({
+      provider: input.semanticContextProvider,
+      buildRequest: input.buildRequest,
+      recordMetric: input.recordMetric,
+      metricProvider: 'mem0',
+      log: input.log,
+      now,
+    }),
+    retrieveContextBlock({
+      provider: input.graphContextProvider,
+      buildRequest: input.buildRequest,
+      recordMetric: input.recordMetric,
+      metricProvider: 'graphiti',
+      log: input.log,
+      now,
+    }),
+  ]);
+  return { semanticContextBlock, graphContextBlock };
+}
+
 /** Checkpoint mais recente do lead — a memória que atravessa sessões. */
 export async function latestCheckpoint(
   db: Queryable,
@@ -2104,24 +2144,13 @@ export async function runAgentTurn(
     query: skillSignal,
     now: new Date(nowMs).toISOString(),
   });
-  const [semanticContextBlock, graphContextBlock] = await Promise.all([
-    retrieveContextBlock({
-      provider: deps.semanticContextProvider,
-      buildRequest: contextRequestFor,
-      recordMetric: deps.recordContextFusionMetric,
-      metricProvider: 'mem0',
-      log: runLog,
-      now: Date.now,
-    }),
-    retrieveContextBlock({
-      provider: deps.graphContextProvider,
-      buildRequest: contextRequestFor,
-      recordMetric: deps.recordContextFusionMetric,
-      metricProvider: 'graphiti',
-      log: runLog,
-      now: Date.now,
-    }),
-  ]);
+  const { semanticContextBlock, graphContextBlock } = await retrieveOptionalContextBlocks({
+    semanticContextProvider: deps.semanticContextProvider,
+    graphContextProvider: deps.graphContextProvider,
+    buildRequest: contextRequestFor,
+    recordMetric: deps.recordContextFusionMetric,
+    log: runLog,
+  });
   // Sufixos por-lead (situacionais, voláteis — depois do prefixo cacheável F2-17): corpos de
   // skill casadas (F3-09) + hint do classificador (F3-11) + instrução de split (F4-xx, quando
   // split_messages está on — Onda 4). Vazios são omitidos.
