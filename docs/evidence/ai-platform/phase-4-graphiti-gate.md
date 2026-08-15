@@ -248,12 +248,16 @@ constrained host RAM. This session's own memory reading during Step 6
 between roughly 400 MB and 1.9 GB over the course of the gate run, on an
 8 GB host already running a `next dev` server and other project worktree
 processes — the same class of contention the Phase 3 gate's `test:unit`
-crash was traced to. Task 3/4 already performed a live round-trip
-verification of this exact `neo4j`+`graphiti` pairing earlier in this plan
+crash was traced to. Task 3/4 already performed a live health/connectivity
+check of this exact `neo4j`+`graphiti` pairing earlier in this plan
 (`.superpowers/sdd/2026-08-10-ai-platform-phase-4-graphiti/task-3-neo4j-swap-report.md`
 — both containers reached `healthy`, no crash-loop, real Cypher queries
-executed against Neo4j) — repeating that live check here would not add new
-signal proportional to the RAM risk on this run, so it was not repeated.
+executed against Neo4j). That check did NOT include a completed
+write→search round trip: `POST /search` returned `500` because the
+intentionally-dummy `GRAPHITI_LLM_API_KEY` failed OpenAI auth, and the
+source report states plainly the round trip "was not proven." Repeating
+even the narrower health/connectivity check here would not add new signal
+proportional to the RAM risk on this run, so it was not repeated.
 This is a judgment call disclosed per the brief's own instruction, not a
 skipped requirement.
 
@@ -447,7 +451,7 @@ Residual/deferred (not blocking SHADOW):
 Human actions required:
 - None to keep Graphiti at its default OFF/native state.
 - A human/compliance owner must decide how to handle the disclosed per-contact-redaction gap before any future canary/on promotion.
-Rollback verified: yes — graphiti defaults to off (no ai_platform_features row = off, per lib/agent-engine/platform/features.ts), AI_PLATFORM_KILL_GRAPHITI kill switch exists and is checked before any per-org rollout mode, and GraphitiContextProvider degrades to an empty/disabled result on any failure rather than breaking a turn.
+Rollback verified: yes — graphiti defaults to off (no ai_platform_feature_flags row = off, per lib/agent-engine/platform/features.ts), AI_PLATFORM_KILL_GRAPHITI kill switch exists and is checked before any per-org rollout mode, and GraphitiContextProvider degrades to an empty/disabled result on any failure rather than breaking a turn.
 ```
 
 ## References
