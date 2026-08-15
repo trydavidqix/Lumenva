@@ -132,6 +132,47 @@ describe("GraphitiClient", () => {
       expect(fetchMock).not.toHaveBeenCalled();
     });
 
+    it("blocks an episode whose body contains a secret-shaped string before making any request", async () => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+
+      const secretEpisode = { ...episode, body: "OPENAI_API_KEY=should-not-be-persisted" };
+      await expect(client().addEpisode(secretEpisode, "graph:event-1:1")).rejects.toMatchObject({
+        kind: "sanitization",
+      });
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("blocks an episode whose name or sourceDescription contains a secret-shaped string before making any request", async () => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+
+      await expect(
+        client().addEpisode({ ...episode, name: "token=credential-value" }, "graph:event-1:1"),
+      ).rejects.toMatchObject({ kind: "sanitization" });
+      await expect(
+        client().addEpisode(
+          { ...episode, sourceDescription: "export using access_token=customer-provided-value" },
+          "graph:event-1:1",
+        ),
+      ).rejects.toMatchObject({ kind: "sanitization" });
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("sends a clean episode through unchanged", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ message: "queued", success: true }), { status: 202 }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+
+      await client().addEpisode(episode, "graph:event-1:1");
+
+      expect(fetchMock).toHaveBeenCalledOnce();
+      const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+      const body = JSON.parse(String(init.body));
+      expect(body.messages[0].content).toBe(episode.body);
+    });
+
     it("throws when Graphiti reports ingestion failure in an otherwise well-formed response", async () => {
       vi.stubGlobal(
         "fetch",

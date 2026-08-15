@@ -79,6 +79,59 @@ describe("mapGraphFact", () => {
     });
   });
 
+  describe("keyword-recall regression cases (review finding: realistic phrasing bypassed the original narrower patterns)", () => {
+    it("maps 'saldo devedor' payment phrasing to commercial_status/high, not the neutral fallback", () => {
+      const item = mapGraphFact(fact({ text: "Cliente possui saldo devedor pendente de regularização." }));
+
+      expect(item.authorityDomain).toBe("commercial_status");
+      expect(item.risk).toBe("high");
+      expect(item.actionable).toBe(false);
+    });
+
+    it("maps 'permitiu o uso' consent phrasing to consent/high, not the neutral fallback", () => {
+      const item = mapGraphFact(fact({ text: "Cliente permitiu o uso do número para futuras campanhas." }));
+
+      expect(item.authorityDomain).toBe("consent");
+      expect(item.risk).toBe("high");
+      expect(item.actionable).toBe(false);
+    });
+
+    it("maps 'autorizou o uso dos dados' consent phrasing to consent/high", () => {
+      const item = mapGraphFact(fact({ text: "Cliente autorizou o uso dos dados para marketing." }));
+
+      expect(item.authorityDomain).toBe("consent");
+      expect(item.risk).toBe("high");
+    });
+
+    it("maps 'concordou em receber' consent phrasing to consent/high", () => {
+      const item = mapGraphFact(fact({ text: "Cliente concordou em receber promoções por WhatsApp." }));
+
+      expect(item.authorityDomain).toBe("consent");
+      expect(item.risk).toBe("high");
+    });
+
+    it("maps 'pagamento em atraso' payment phrasing to commercial_status/high", () => {
+      const item = mapGraphFact(fact({ text: "Pagamento em atraso há dois meses." }));
+
+      expect(item.authorityDomain).toBe("commercial_status");
+      expect(item.risk).toBe("high");
+    });
+
+    it("maps 'débito em aberto' payment phrasing to commercial_status/high", () => {
+      const item = mapGraphFact(fact({ text: "Cliente está com débito em aberto no financeiro." }));
+
+      expect(item.authorityDomain).toBe("commercial_status");
+      expect(item.risk).toBe("high");
+    });
+
+    it("maps 'assinou o contrato' / renovação automática phrasing to legal/high", () => {
+      const item = mapGraphFact(fact({ text: "Cliente assinou o contrato com renovação automática." }));
+
+      expect(item.authorityDomain).toBe("legal");
+      expect(item.risk).toBe("high");
+    });
+  });
+
   describe("customer preference / relationship facts may map lower risk", () => {
     it("maps an ordinary preference fact to customer_preference/low risk with derived authority", () => {
       const item = mapGraphFact(
@@ -116,12 +169,26 @@ describe("mapGraphFact", () => {
     });
   });
 
-  it("falls back to the adapter-supplied domain when no protected keyword matches", () => {
-    const item = mapGraphFact(fact({ text: "Cliente demonstrou interesse pelo plano avançado.", authorityDomain: "behavior" }));
+  describe("the uninformative 'behavior' adapter default gets the paranoid ceiling, not a lenient default", () => {
+    it("maps unmatched text under the 'behavior' fallback to risk:high, since that value is Graphiti's known-uninformative sentinel, not a real classification", () => {
+      const item = mapGraphFact(
+        fact({ text: "Cliente demonstrou interesse pelo plano avançado.", authorityDomain: "behavior" }),
+      );
 
-    expect(item.authorityDomain).toBe("behavior");
-    expect(item.risk).toBe("medium");
-    expect(item.actionable).toBe(false);
+      expect(item.authorityDomain).toBe("behavior");
+      expect(item.risk).toBe("high");
+      expect(item.actionable).toBe(false);
+    });
+
+    it("still maps a genuinely non-behavior, non-protected explicit domain (e.g. operational_state) to its own medium tier", () => {
+      const item = mapGraphFact(
+        fact({ text: "Sessão do WhatsApp reconectada às 10h.", authorityDomain: "operational_state" }),
+      );
+
+      expect(item.authorityDomain).toBe("operational_state");
+      expect(item.risk).toBe("medium");
+      expect(item.actionable).toBe(false);
+    });
   });
 
   it("passes confidence through unchanged for downstream ranking", () => {
