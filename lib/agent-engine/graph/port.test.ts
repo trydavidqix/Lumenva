@@ -11,7 +11,7 @@ const validEpisode: GraphEpisode = {
   name: "whatsapp-message",
   body: "Cliente perguntou sobre prazo de entrega.",
   sourceType: "message",
-  sourceDescription: "waha inbound message",
+  sourceDescription: "whatsapp inbound message",
   referenceTime: "2026-08-10T12:00:00Z",
 };
 
