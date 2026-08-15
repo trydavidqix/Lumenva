@@ -5,15 +5,16 @@
 **Master spec:** `docs/superpowers/specs/2026-08-10-ai-platform-master-design.md`  
 **QA gates:** `docs/superpowers/specs/2026-08-10-ai-platform-qa-release-gates.md`
 
-## Estado de execução em 2026-08-14
+## Estado de execução em 2026-08-15
 
 | Fase | Estado | Evidência atual | Limite para avançar |
 |---|---|---|---|
 | 0 | `GO` | [`phase-0-gate.md`](../../evidence/ai-platform/phase-0-gate.md) | concluída |
 | 1 | `GO` | [`phase-1-gate.md`](../../evidence/ai-platform/phase-1-gate.md) | concluída; LangSmith continua OFF |
 | 2 | `GO`, FECHADA | [`phase-2-status.md`](../../evidence/ai-platform/phase-2-status.md), [`phase-2-mem0-gate.md`](../../evidence/ai-platform/phase-2-mem0-gate.md) | Tarefas 1–10 concluídas, gate completo. `SHADOW` verificado ponta a ponta (mensagem real → consumer real → Mem0 real) escopado a 1 org de teste descartável; nenhum tenant real promovido. Sem bloqueio técnico restante para a decisão de produto de promoção real |
-| 3 | `GO`, FECHADA | [`phase-3-knowledge-gate.md`](../../evidence/ai-platform/phase-3-knowledge-gate.md) | Tarefas 1–9 concluídas via subagent-driven-development (implementação + review por task + fix rounds), seguidas de revisão final whole-branch (2 Important + 10 Minor, todos corrigidos), re-verificação completa na árvore mesclada (`typecheck`/`lint`/`lint:channels`/`test:unit` 321/321·3287/3287/`test:db` 72/72·480+1 skip/`ai:eval:local`/`build` todos verdes) e re-review escopada do fix wave (13/13 endereçado, zero breakage). `native` continua default; LlamaIndex OFF/SHADOW por feature flag. Mesclada em `main` local em 2026-08-14 (commit `2b9bd3a6`); não publicada em `origin/main` |
-| 4–7 | não iniciadas | — | gate da fase anterior e aprovação humana aplicável |
+| 3 | `GO`, FECHADA | [`phase-3-knowledge-gate.md`](../../evidence/ai-platform/phase-3-knowledge-gate.md) | Tarefas 1–9 concluídas via subagent-driven-development (implementação + review por task + fix rounds), seguidas de revisão final whole-branch (2 Important + 10 Minor, todos corrigidos), re-verificação completa na árvore mesclada (`typecheck`/`lint`/`lint:channels`/`test:unit` 321/321·3287/3287/`test:db` 72/72·480+1 skip/`ai:eval:local`/`build` todos verdes) e re-review escopada do fix wave (13/13 endereçado, zero breakage). `native` continua default; LlamaIndex OFF/SHADOW por feature flag. Publicada em `origin/main` |
+| 4 | `GO`, FECHADA | [`phase-4-graphiti-gate.md`](../../evidence/ai-platform/phase-4-graphiti-gate.md) | Tarefas 1–10 concluídas via subagent-driven-development, seguidas de revisão final whole-branch ("With fixes": 5 Important, todos corrigidos e re-verificados por sabotagem real), re-verificação completa (`typecheck`/`lint`/`lint:channels`/`test:unit` 332/332·3457/3457/`test:db` 72/72·480+1 skip todos verdes). Desvio de arquitetura aprovado pelo humano: sidecar trocado de FalkorDB para Neo4j (imagem oficial do Graphiti só suporta Neo4j — confirmado por issue pública upstream getzep/graphiti#749). Limitação LGPD conhecida e documentada: redact por contato não remove fatos já projetados no Neo4j (API do Graphiti só deleta grupo inteiro) — decisão de compliance pendente antes de habilitar `SHADOW` para tenant real. Caminho de leitura (`GraphitiContextProvider`) ainda não conectado no worker de produção — nenhuma métrica de `SHADOW` é coletada hoje. Fica em `SHADOW`/OFF por padrão (nenhuma linha em `ai_platform_feature_flags` = off). Publicada em `origin/main` |
+| 5–7 | não iniciadas | — | gate da fase anterior e aprovação humana aplicável |
 
 Esta tabela é um snapshot operacional. Os planos preservam tarefas/checklists originais e não são reescritos como histórico de execução.
 
