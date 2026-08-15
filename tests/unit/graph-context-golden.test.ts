@@ -27,6 +27,28 @@
  * Each scenario below is a distinct, humanly-meaningful case from the Phase 4
  * plan's binding list (task-9-brief.md Step 1), not one generic case
  * relabeled six times.
+ *
+ * All 6 fixture rows this suite reads (`graph-*-031`..`graph-*-036`) are
+ * deliberately stored with EMPTY `input_events`, matching the precedent set
+ * by the pre-existing `tenant-isolation-009` stub
+ * (`docs/evidence/ai-platform/phase-2-mem0-gate.md` lines 48-56). This is not
+ * an oversight: `scripts/ai-platform-eval-live.ts` only ever exercises the
+ * Mem0 extraction+fusion pipeline (`extractMemoryCandidates`,
+ * `Mem0ContextProvider`) — it has no Graphiti/GraphFact code path at all, and
+ * its `populated` filter (`input_events.length > 0 || expect_zero_candidates`)
+ * decides which fixture rows get projected through that REAL, real-cost,
+ * real-API pipeline. If these 6 rows carried the same fact text used below,
+ * that text would run through Mem0 extraction instead of Graphiti — asserting
+ * nothing about the Graphiti-specific behavior (`mapGraphFact`,
+ * `GraphitiContextProvider`) this suite exists to prove, while still being
+ * able to produce a misleading PASS/FAIL against `expected.must_include`/
+ * `must_not_include` for reasons unrelated to any real Graphiti defect (a
+ * concrete case: `graph-tenant-isolation-035`'s two-org scenario cannot be
+ * represented at all by this fixture row's single `organization_id` field,
+ * so both "org A" and "org B" text would collapse into the same tenant if
+ * ever populated). Keeping `input_events` empty makes `ai-platform-eval-live.ts`
+ * naturally skip all 6 rows; the real proof of every one of these scenarios
+ * lives entirely in this file's real function calls below.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
