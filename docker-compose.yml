@@ -153,61 +153,84 @@ services:
       retries: 10
     networks: [ai-memory-internal]
 
-  # Projeção temporal/relacional opcional (Graphiti + FalkorDB, Fase 4). Nunca
+  # Projeção temporal/relacional opcional (Graphiti + Neo4j, Fase 4). Nunca
   # inicia com `docker compose up`: exige `--profile ai-graph` explicitamente.
   # A feature (rollout mode) continua 'off' no CRM até decisão de promoção —
   # subir o sidecar não liga nada por si.
   #
-  # VALIDADO na Task 4 (inspeção ao vivo + leitura do código-fonte empacotado
-  # em `zepai/graphiti:0.22.0`, já que a tag `0.22.1` originalmente pinada
-  # NÃO EXISTE no registry — corrigida para `0.22.0`, a última tag publicada):
-  # - rotas reais: `POST /messages` (fila assíncrona, 202 Accepted — não prova
-  #   escrita, só enfileiramento), `POST /search`, `DELETE /group/{group_id}`,
-  #   `DELETE /episode/{uuid}`, `DELETE /entity-edge/{uuid}`, `GET /healthcheck`
-  #   (porta interna 8000 e path `/healthcheck` confirmados corretos);
-  # - `EMBEDDER_MODEL_NAME` estava com nome errado — corrigido abaixo para
-  #   `EMBEDDING_MODEL_NAME`, o nome real lido por `graph_service/config.py`;
-  # - `SEMAPHORE_LIMIT`/`GRAPHITI_INGESTION_CONCURRENCY` não é lido por essa
-  #   versão da imagem (a fila de ingestão é um único worker assíncrono sem
-  #   limite configurável) — mantido como no-op documentado, não remove por
-  #   não ser uma correção de nome e por poder ser honrado por outra versão;
-  # - `GRAPHITI_API_KEY` NÃO é validado por esse servidor: não há nenhum
-  #   middleware/dependency de auth em `main.py`/`zep_graphiti.py` desta
-  #   imagem. O isolamento real hoje é a rede `ai-graph-internal`
-  #   (`internal: true`), não a API key. Mantido no compose para never regress
-  #   quando uma versão com auth for adotada, mas o comentário anterior que
-  #   afirmava autenticação via essa key estava incorreto — corrigido abaixo;
-  # - ACHADO CRÍTICO, NÃO CORRIGIDO AQUI (fora do escopo de um adapter REST):
-  #   o servidor empacotado nesta imagem só fala com Neo4j. `config.py` exige
-  #   `NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD` (`Settings` do Pydantic falha
-  #   o boot sem eles) e `zep_graphiti.py` instancia `Graphiti(uri=neo4j_uri,
-  #   user=neo4j_user, password=neo4j_password)` — não existe caminho de
-  #   código para um driver FalkorDB nesta imagem/versão. Os env `FALKORDB_*`
-  #   abaixo são ignorados (`extra='ignore'` no Settings) e o container atual
-  #   entra em crash-loop na inicialização por falta das variáveis Neo4j. Este
-  #   sidecar FalkorDB + a wiring `FALKORDB_*` do container `graphiti` NÃO
-  #   FUNCIONA como está — decisão pendente (trocar o sidecar por Neo4j, ou
-  #   localizar/buildar uma imagem Graphiti com driver FalkorDB) antes de
-  #   habilitar `ai-graph` fora de teste isolado. O client TypeScript da Task 4
-  #   (`lib/agent-engine/graph/graphiti-client.ts`) fala o contrato HTTP real
-  #   documentado acima, que independe de qual grafo roda atrás do Graphiti.
-  falkordb:
-    image: falkordb/falkordb-server:v4.20.1-alpine
+  # HISTÓRICO: a Task 3 original wireou este sidecar em FalkorDB. A Task 4
+  # (inspeção ao vivo + leitura do código-fonte empacotado em
+  # `zepai/graphiti:0.22.0`) descobriu um defeito de arquitetura: o REST
+  # server desta imagem (`graph_service`) só fala com Neo4j —
+  # `graph_service/config.py` define `Settings` com os campos obrigatórios
+  # `neo4j_uri`/`neo4j_user`/`neo4j_password` e NENHUM campo FalkorDB. Os
+  # `FALKORDB_*` que a Task 3 configurava eram silenciosamente ignorados
+  # (`extra='ignore'` no Pydantic Settings) e o container `graphiti` entrava
+  # em crash-loop por falta das variáveis Neo4j.
+  #
+  # Decisão explícita do parceiro humano: trocar o sidecar por Neo4j em vez
+  # de FalkorDB (Community Edition — grátis, sem serviço pago obrigatório,
+  # conforme invariante 9 de self-host). Esta task de correção troca o
+  # sidecar e valida ao vivo:
+  # - `NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD` confirmados lendo
+  #   `graph_service/config.py` e `zep_graphiti.py` (`Graphiti(uri, user,
+  #   password)`) diretamente de dentro da imagem `zepai/graphiti:0.22.0` —
+  #   são exatamente os nomes que `Settings` exige (case-insensitive via
+  #   pydantic-settings);
+  # - `neo4j:5.26.0` confirmado puxável do Docker Hub, Community Edition por
+  #   padrão (sem sufixo `-enterprise`, sem aceite de licença exigido);
+  # - o par `neo4j` + `graphiti` foi subido ao vivo nesta task com envs dummy
+  #   de dev: ambos chegaram a `healthy`, sem crash-loop, e `graphiti`
+  #   executou queries Cypher reais contra o Neo4j (confirmado nos logs). O
+  #   round-trip completo (`POST /messages` -> `POST /search` encontrando o
+  #   fato) NÃO foi provado nesta rodada: `/search` falhou com
+  #   `openai.AuthenticationError` (401) porque o `GRAPHITI_LLM_API_KEY` de
+  #   teste era intencionalmente falso (nunca uma credencial paga real) — a
+  #   falha é do embedder, não da conexão com o Neo4j. Detalhe completo em
+  #   `.superpowers/sdd/2026-08-10-ai-platform-phase-4-graphiti/task-3-neo4j-swap-report.md`;
+  # - `GRAPHITI_API_KEY` continua sem NENHUM middleware de auth nesta imagem
+  #   (achado da Task 4, reconfirmado nesta task) — o isolamento real é a
+  #   rede `ai-graph-internal` (`internal: true`), não essa key. Mantida em
+  #   `lib/env.ts`/compose só para never-regress se uma versão futura da
+  #   imagem adicionar auth; nenhum comentário abaixo afirma que ela
+  #   autentica algo hoje.
+  #
+  # O client TypeScript (`lib/agent-engine/graph/graphiti-client.ts`) fala o
+  # contrato HTTP do Graphiti (`/messages`, `/search`, `/group/{id}`,
+  # `/healthcheck`), que independe de qual grafo roda atrás dele — o arquivo
+  # não tem nenhum código específico de FalkorDB ou Neo4j e não precisou
+  # mudar nesta troca.
+  neo4j:
+    image: neo4j:5.26.0
     profiles: ["ai-graph"]
     restart: unless-stopped
     environment:
-      # Redis puro por baixo do módulo de grafo — sem senha, qualquer processo
-      # na mesma rede docker autentica. REDIS_ARGS é a forma padrão de repassar
-      # flags extra pro redis-server nas imagens da família redis-stack/FalkorDB.
-      REDIS_ARGS: "--requirepass ${GRAPHITI_FALKORDB_PASSWORD:?set GRAPHITI_FALKORDB_PASSWORD in managed runtime secrets}"
+      # Community Edition (tag sem sufixo -enterprise) não exige aceite de
+      # licença. `NEO4J_AUTH=neo4j/<senha>` é a forma padrão da imagem
+      # oficial de setar a auth inicial — só tem efeito na primeira
+      # inicialização do volume de dados (comportamento da própria imagem,
+      # não deste compose).
+      NEO4J_AUTH: neo4j/${GRAPHITI_NEO4J_PASSWORD:?set GRAPHITI_NEO4J_PASSWORD in managed runtime secrets}
     volumes:
-      - falkordb-data:/data
+      - neo4j-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${GRAPHITI_FALKORDB_PASSWORD}", "ping"]
+      # `/` (porta HTTP 7474) responde 200 com JSON de discovery SEM auth
+      # nesta imagem — confirmado ao vivo nesta task. Evita colocar a senha
+      # na string do healthcheck (diferente do padrão anterior do FalkorDB,
+      # que expunha a senha em texto claro via `docker inspect`).
+      test: ["CMD", "wget", "-q", "-O-", "--tries=1", "http://127.0.0.1:7474"]
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 20s
+      start_period: 45s
+    # SEM `ports:` de propósito: testado ao vivo nesta task e confirmado que
+    # Docker NÃO publica porta de host para um container cuja única rede é
+    # `internal: true` (`docker port` fica vazio mesmo com `ports:`
+    # declarado) — publicar exigiria também juntar `default`, o que daria
+    # egress desnecessário a um datastore puro. Pra inspecionar o grafo
+    # manualmente em dev, use
+    # `docker compose exec neo4j cypher-shell -u neo4j -p "$GRAPHITI_NEO4J_PASSWORD"`
+    # (ver docs/runbooks/graphiti.md).
     networks: [ai-graph-internal]
 
   graphiti:
@@ -215,9 +238,9 @@ services:
     profiles: ["ai-graph"]
     restart: unless-stopped
     environment:
-      FALKORDB_HOST: falkordb
-      FALKORDB_PORT: "6379"
-      FALKORDB_PASSWORD: ${GRAPHITI_FALKORDB_PASSWORD:?set GRAPHITI_FALKORDB_PASSWORD in managed runtime secrets}
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: ${GRAPHITI_NEO4J_PASSWORD:?set GRAPHITI_NEO4J_PASSWORD in managed runtime secrets}
       # Não validado pelo servidor nesta versão da imagem (ver nota acima) —
       # mantido para never-regress quando uma versão com auth for adotada. O
       # app envia o mesmo valor (GRAPHITI_API_KEY em lib/env.ts) em X-Api-Key.
@@ -235,7 +258,7 @@ services:
       # limite de concorrência configurável) — mantido como no-op documentado.
       SEMAPHORE_LIMIT: ${GRAPHITI_INGESTION_CONCURRENCY:-2}
     depends_on:
-      falkordb:
+      neo4j:
         condition: service_healthy
     # Loopback-only, só pra depuração local do adapter (Task 4). Produção não
     # publica porta nenhuma deste serviço (ver docker-compose.prod.yml).
@@ -257,7 +280,7 @@ volumes:
   waha-data:
   waha-media:
   mem0-postgres-data:
-  falkordb-data:
+  neo4j-data:
 
 networks:
   ai-memory-internal:

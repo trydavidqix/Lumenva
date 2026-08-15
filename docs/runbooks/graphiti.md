@@ -1,17 +1,17 @@
-# Graphiti + FalkorDB: operação do sidecar opcional
+# Graphiti + Neo4j: operação do sidecar opcional
 
 ## Limites e estado seguro
 
 Graphiti é uma projeção temporal/relacional reconstruível, nunca a fonte de
 verdade do CRM. O estado oficial continua no PostgreSQL do CRM (`crm_leads`,
-`crm_lead_activities`, `contacts`, mensagens etc.); Graphiti/FalkorDB só
+`crm_lead_activities`, `contacts`, mensagens etc.); Graphiti/Neo4j só
 existem para acelerar consultas de contexto que o Postgres também
 comprovaria por replay. Se o volume for apagado, o CRM continua operando —
 a reconstrução (rebuild/replay) é entregue por uma task posterior da Fase 4,
 não por este runbook.
 
 O profile `ai-graph` vem desligado: `docker compose up -d` **não** inicia
-`falkordb` nem `graphiti`. Subir os serviços manualmente também não liga a
+`neo4j` nem `graphiti`. Subir os serviços manualmente também não liga a
 feature no produto — o rollout mode (`off` → `shadow` → …) é uma decisão
 separada, gated por `AI_PLATFORM_KILL_GRAPHITI` (vence sobre qualquer flag) e
 pela feature flag por organização.
@@ -22,34 +22,95 @@ enquanto a feature estiver `off`/`shadow` — essa é uma doutrina do
 vale repetir aqui porque quem opera o sidecar precisa saber que ele nunca é
 autoritativo.
 
-Não publique a API do Graphiti, o browser do FalkorDB ou a porta Redis por
+Não publique a API do Graphiti nem a interface HTTP/Bolt do Neo4j por
 Caddy. Em produção nenhum dos dois serviços declara `ports:` — só `app` e
-`worker` alcançam `graphiti` pela rede interna `ai-graph-internal`. Em
-desenvolvimento a API REST do Graphiti fica disponível em
-`127.0.0.1:${GRAPHITI_DEV_PORT:-8890}` apenas para depuração local do adapter
-(Task 4); FalkorDB não publica porta nem em dev.
+`worker` alcançam `graphiti` (e `graphiti` alcança `neo4j`) pela rede interna
+`ai-graph-internal`. Em desenvolvimento a API REST do Graphiti fica
+disponível em `127.0.0.1:${GRAPHITI_DEV_PORT:-8890}` apenas para depuração
+local do adapter (Task 4).
 
-## Estado de verificação das imagens (leia antes de habilitar)
+O `neo4j` **não** publica porta nenhuma, nem em dev: testado ao vivo nesta
+task, confirmou-se que Docker não publica porta de host pra um container
+cuja única rede é `internal: true` (`docker port` fica vazio mesmo com
+`ports:` declarado no compose), e juntar a rede `default` só pra viabilizar
+o publish daria egress desnecessário a um datastore puro. Pra inspecionar o
+grafo manualmente em dev, entre no container:
 
-As tags abaixo são as pinadas pelo plano da Fase 4 e foram usadas como estão,
-sem confirmação contra o registry nesta tarefa (ambiente sem acesso à
-internet/Docker Hub):
+```bash
+docker compose --profile ai-graph exec neo4j cypher-shell -u neo4j -p "$GRAPHITI_NEO4J_PASSWORD"
+```
 
-- `zepai/graphiti:0.22.1`
-- `falkordb/falkordb-server:v4.20.1-alpine`
+## Histórico: por que FalkorDB virou Neo4j
 
-Do mesmo modo, os nomes de variável de ambiente do container `graphiti`
-(`FALKORDB_HOST`, `FALKORDB_PORT`, `FALKORDB_PASSWORD`, `GRAPHITI_API_KEY`,
-`OPENAI_API_KEY`, `MODEL_NAME`, `EMBEDDER_MODEL_NAME`, `SEMAPHORE_LIMIT`), a
-porta interna `8000` e o path de healthcheck `/healthcheck` são o melhor
-palpite a partir da documentação pública do `graphiti-core`/`zepai` — **não
-foram confirmados rodando a imagem real**. A Task 4 do plano
-(`docs/superpowers/plans/2026-08-10-ai-platform-phase-4-graphiti.md`) inspeciona
-o OpenAPI publicado pela imagem pinada antes de implementar o client HTTP; use
-esse passo para corrigir qualquer nome de env/porta/path divergente aqui e
-neste runbook antes de habilitar `--profile ai-graph` fora de um teste
-isolado e descartável. Trate este runbook como scaffolding de infraestrutura,
-não como receita validada em produção.
+O plano original da Fase 4 (Task 3) wireou este sidecar em FalkorDB
+(`falkordb/falkordb-server`). A Task 4 (implementação do adapter REST)
+descobriu, inspecionando o container `zepai/graphiti:0.22.0` ao vivo e lendo
+seu código-fonte empacotado, um defeito de arquitetura: o REST server desta
+imagem (`graph_service`) só fala com Neo4j.
+
+```python
+# graph_service/config.py, dentro da imagem zepai/graphiti:0.22.0
+class Settings(BaseSettings):
+    openai_api_key: str
+    openai_base_url: str | None = Field(None)
+    model_name: str | None = Field(None)
+    embedding_model_name: str | None = Field(None)
+    neo4j_uri: str
+    neo4j_user: str
+    neo4j_password: str
+
+    model_config = SettingsConfigDict(env_file='.env', extra='ignore')
+```
+
+Não existe nenhum campo FalkorDB em `Settings`, e `extra='ignore'` faz o
+Pydantic descartar silenciosamente qualquer env desconhecida — os
+`FALKORDB_*` que a Task 3 configurava nunca chegavam ao processo. Sem
+`NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD`, `Settings()` falha a validação e o
+container `graphiti` entra em crash-loop na inicialização.
+
+Decisão explícita do parceiro humano: trocar o sidecar por **Neo4j Community
+Edition** (gratuita, sem serviço pago obrigatório — invariante 9 de
+self-host) em vez de procurar/buildar uma imagem Graphiti alternativa com
+driver FalkorDB. Este runbook documenta a topologia corrigida.
+
+O client TypeScript (`lib/agent-engine/graph/graphiti-client.ts`) fala o
+contrato HTTP do Graphiti (`POST /messages`, `POST /search`,
+`DELETE /group/{id}`, `GET /healthcheck`), que independe de qual grafo roda
+atrás do serviço — o arquivo não tinha (e continua sem ter) nenhum código
+específico de FalkorDB ou Neo4j; não precisou de nenhuma mudança nesta troca.
+
+## Estado de verificação das imagens
+
+- `neo4j:5.26.0`: confirmado puxável do Docker Hub. É Community Edition por
+  padrão (tags sem sufixo `-enterprise` são Community e não exigem aceite de
+  licença); `cypher-shell` e `wget` estão presentes na imagem.
+- `NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD`: confirmados lendo
+  `graph_service/config.py` e `graph_service/zep_graphiti.py`
+  (`Graphiti(uri, user, password)`) diretamente de dentro da imagem
+  `zepai/graphiti:0.22.0` — são exatamente os nomes que `Settings` exige
+  (pydantic-settings casa env vars com o nome do campo, case-insensitive).
+- Healthcheck do Neo4j (`wget` contra `http://127.0.0.1:7474`, sem auth):
+  confirmado ao vivo — a imagem responde `200` com um JSON de discovery
+  (`bolt_direct`, `neo4j_version`, `neo4j_edition`, etc.) mesmo sem
+  credenciais, então o healthcheck não precisa embutir a senha (diferente do
+  padrão anterior do FalkorDB, que expunha a senha em texto claro via
+  `docker inspect`).
+- `neo4j-admin database backup` **não existe** no Community Edition desta
+  imagem — `neo4j-admin database --help` só lista `check`, `dump`, `import`,
+  `info`, `load`, `migrate`, `upload`. Confirmado rodando `--help` dentro da
+  imagem. Ver seção de Backup abaixo.
+- Round-trip `graphiti` + `neo4j`: os dois serviços subiram e ficaram
+  `healthy` sem crash-loop, e `graphiti` executou queries Cypher reais
+  contra o Neo4j (confirmado nos logs) — prova de que a conexão
+  `NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD` funciona. O round-trip completo
+  (`POST /messages` seguido de `POST /search` encontrando o fato) **não**
+  foi provado nesta verificação: `/search` retornou `500` com
+  `openai.AuthenticationError` porque a credencial de LLM/embedder usada era
+  intencionalmente falsa (nunca uma credencial paga real nesta verificação).
+  Detalhe completo em
+  `.superpowers/sdd/2026-08-10-ai-platform-phase-4-graphiti/task-3-neo4j-swap-report.md`
+  — consulte esse arquivo para o veredito mais recente em vez de presumir
+  sucesso a partir deste runbook.
 
 ## Segredos antes do bootstrap
 
@@ -58,10 +119,15 @@ Guarde estes valores somente no runtime gerido (Infisical, conforme
 `.env.example`:
 
 ```text
-GRAPHITI_FALKORDB_PASSWORD=<senha longa e exclusiva do FalkorDB>
+GRAPHITI_NEO4J_PASSWORD=<senha longa e exclusiva do Neo4j>
 GRAPHITI_API_KEY=<segredo compartilhado app<->graphiti — mesmo valor nos dois lados>
 GRAPHITI_LLM_API_KEY=<credencial de PLATAFORMA pro LLM/embedder do sidecar>
 ```
+
+`GRAPHITI_NEO4J_PASSWORD` vira a senha do usuário `neo4j` via
+`NEO4J_AUTH=neo4j/<senha>` (formato padrão da imagem oficial) — só tem
+efeito na primeira inicialização do volume `neo4j-data`; trocar a variável
+depois de o volume já existir não muda a senha do banco.
 
 `GRAPHITI_LLM_API_KEY` é a credencial que o container `graphiti` usa para
 chamar o provider de LLM/embedder configurado (`GRAPHITI_LLM_PROVIDER` /
@@ -72,8 +138,11 @@ BYOK por tenant se tornar um requisito real mais adiante, a solução é um
 broker de credencial escopado — não expor esta variável a mais de um tenant.
 
 `GRAPHITI_API_KEY` também precisa ser refletida em `.env`/runtime do **app**
-(contrato em `lib/env.ts`), já que é o mesmo valor que autentica as chamadas
-do adapter (Task 4) contra o serviço.
+(contrato em `lib/env.ts`), já que é o mesmo valor que o adapter (Task 4)
+envia em `X-Api-Key`. Vale repetir: esta imagem do Graphiti não valida essa
+key no servidor (não há middleware de auth) — o isolamento real é a rede
+`ai-graph-internal`. A variável é mantida para never-regress se uma versão
+futura da imagem adotar autenticação de verdade.
 
 Variáveis não sensíveis já têm default em `.env.example`:
 
@@ -95,32 +164,39 @@ credencial de provider sem essa decisão.
 
 Cada episódio ingerido pode disparar várias chamadas de LLM (extração de
 entidade, resolução de relação/aresta). `GRAPHITI_INGESTION_CONCURRENCY`
-(mapeada para `SEMAPHORE_LIMIT` dentro do container) começa em `2` —
-conservador de propósito para não estourar rate limit/custo numa instalação
-self-host pequena. Só suba esse número com medição real de throughput e
-custo; não aumente "porque parece lento" sem dado.
+(mapeada para `SEMAPHORE_LIMIT` dentro do container, hoje um no-op
+documentado nesta versão da imagem) começa em `2` — conservador de
+propósito para não estourar rate limit/custo numa instalação self-host
+pequena. Só suba esse número com medição real de throughput e custo; não
+aumente "porque parece lento" sem dado.
 
 ## Iniciar e validar no Windows
 
-Antes de subir, valide o YAML (não inicia contêiner nenhum):
+Antes de subir, valide o YAML (não inicia contêiner nenhum; use `--services`
+pra nunca imprimir segredo interpolado):
 
 ```bash
-docker compose config
-docker compose -f docker-compose.prod.yml config
+docker compose config --services
+docker compose -f docker-compose.prod.yml config --services
 ```
 
-Desenvolvimento (porta da API só em loopback; FalkorDB nunca publica porta):
+Desenvolvimento (porta da API do Graphiti só em loopback; Neo4j publica
+Bolt/browser em loopback opcionalmente, nunca em produção):
 
 ```bash
-docker compose --profile ai-graph up -d falkordb graphiti
-curl --fail http://127.0.0.1:8890/healthcheck   # path não confirmado — ver seção acima
+docker compose --profile ai-graph up -d neo4j graphiti
+curl --fail http://127.0.0.1:8890/healthcheck
 docker compose --profile ai-graph ps
 ```
+
+O Neo4j Community pode levar 30–60s pra aceitar conexões no primeiro boot de
+um volume novo; dê um `start_period`/espera adequada antes de considerar o
+serviço travado.
 
 Produção self-hosted (sem porta pública nenhuma):
 
 ```bash
-docker compose -f docker-compose.prod.yml --env-file .env --profile ai-graph up -d falkordb graphiti
+docker compose -f docker-compose.prod.yml --env-file .env --profile ai-graph up -d neo4j graphiti
 docker compose -f docker-compose.prod.yml --profile ai-graph ps
 docker compose -f docker-compose.prod.yml logs --tail=100 graphiti
 ```
@@ -131,38 +207,61 @@ decisão separada descrita acima.
 
 ## Backup, parar e recuperação
 
-Faça um dump/snapshot do FalkorDB antes de atualizar a imagem ou mudar a
-configuração do sidecar. FalkorDB é Redis-compatível; use `SAVE`/`BGSAVE` ou
-copie o volume:
+Neo4j Community Edition **não tem backup online/hot** — `neo4j-admin
+database backup` (que copiaria o banco com o servidor rodando) é recurso
+exclusivo do Enterprise Edition. `neo4j-admin database --help` dentro da
+imagem `neo4j:5.26.0` só lista `check`, `dump`, `import`, `info`, `load`,
+`migrate`, `upload`; `dump` explicitamente recusa rodar contra um banco
+"mounted in a running Neo4j server". Não trate isso como uma limitação deste
+runbook — é uma restrição real da edição gratuita da imagem.
+
+Duas opções honestas, nenhuma delas "hot":
+
+**Opção 1 — parar o container e copiar o volume (mais simples, recomendada):**
 
 ```bash
-docker compose --profile ai-graph exec falkordb redis-cli -a "$GRAPHITI_FALKORDB_PASSWORD" BGSAVE
+docker compose --profile ai-graph stop neo4j
+docker run --rm -v <nome-do-volume-neo4j-data>:/data -v "$PWD":/backup alpine \
+  tar czf /backup/neo4j-data-$(date +%Y%m%d).tar.gz -C /data .
+docker compose --profile ai-graph start neo4j
 ```
 
-Guarde o backup cifrado fora do host, com acesso restrito. Como o grafo é
-derivado/reconstruível (replay a partir do Postgres, entregue em task
-posterior), este backup é conveniência operacional para evitar
+Como o grafo é derivado/reconstruível (replay a partir do Postgres, entregue
+em task posterior), isso é conveniência operacional para evitar
 reprocessamento, não uma cópia de dados oficiais.
+
+**Opção 2 — `neo4j-admin database dump` com o Neo4j parado dentro do mesmo
+container** (gera um arquivo `.dump` portátil, útil se for migrar/restaurar
+em outro host):
+
+```bash
+docker compose --profile ai-graph stop neo4j
+docker compose --profile ai-graph run --rm --entrypoint neo4j-admin neo4j \
+  database dump neo4j --to-path=/data/backups
+docker compose --profile ai-graph start neo4j
+```
+
+Guarde o backup cifrado fora do host, com acesso restrito.
 
 Para desativar sem apagar dados: mantenha a feature Graphiti em `off`, use
 `AI_PLATFORM_KILL_GRAPHITI=true` se for uma contenção imediata e pare somente
 os serviços do profile — não use `docker compose down -v`.
 
 ```bash
-docker compose --profile ai-graph stop graphiti falkordb
+docker compose --profile ai-graph stop graphiti neo4j
 ```
 
 ## Wipe e reconstrução completos
 
 Uma limpeza remove todo o grafo (entidades, arestas, episódios) de todos os
 tenants. Só faça isso após aprovação explícita e depois de confirmar que o
-nome do volume é o volume exclusivo `falkordb-data` listado pelo Compose.
+nome do volume é o volume exclusivo `neo4j-data` listado pelo Compose.
 
 ```bash
-docker compose --profile ai-graph stop graphiti falkordb
-docker volume ls --format '{{.Name}}' | findstr falkordb-data
+docker compose --profile ai-graph stop graphiti neo4j
+docker volume ls --format '{{.Name}}' | findstr neo4j-data
 # Após confirmar visualmente o volume exclusivo acima:
-docker volume rm <nome-exato-do-volume-falkordb-data>
+docker volume rm <nome-exato-do-volume-neo4j-data>
 ```
 
 Recriar o sidecar não recria dados do CRM. O rebuild/replay a partir das
