@@ -18,6 +18,7 @@ import { mediaDeriveHandler } from "@/workers/media-derive-worker.handler";
 import { memoryProjectionHandler } from "@/workers/memory-projection.handler";
 import { memoryLifecycleHandler } from "@/workers/memory-lifecycle.handler";
 import { graphProjectionHandler } from "@/workers/graph-projection.handler";
+import { graphLifecycleHandler } from "@/workers/graph-lifecycle.handler";
 import { registerHandler } from "@/lib/event-log/dispatcher";
 
 let _registered = false;
@@ -37,5 +38,6 @@ export function ensureHandlersRegistered(): void {
   registerHandler(memoryProjectionHandler);
   registerHandler(memoryLifecycleHandler);
   registerHandler(graphProjectionHandler);
+  registerHandler(graphLifecycleHandler);
   _registered = true;
 }
