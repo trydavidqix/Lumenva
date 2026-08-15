@@ -286,7 +286,7 @@ describe("rebuildTenant (Task 8 Step 1 purge/rebuild proof)", () => {
     const admin = fakeAdmin([msg]);
     const graphPort = fakeGraphPort();
 
-    const deps: RebuildDeps = { db: db as never, admin, graphPort, resolveFeature: fakeResolveFeature("off") };
+    const deps: RebuildDeps = { db: db as never, admin, graphPort, resolveStoredMode: fakeResolveFeature("off") };
     const summary = await rebuildTenant(deps, { organizationId: orgA });
 
     expect(summary).toEqual({
@@ -305,7 +305,7 @@ describe("rebuildTenant (Task 8 Step 1 purge/rebuild proof)", () => {
     const db = fakeGraphLedgerDb([msg]);
     const admin = fakeAdmin([msg]);
     const graphPort = fakeGraphPort();
-    const deps: RebuildDeps = { db: db as never, admin, graphPort, resolveFeature: fakeResolveFeature("shadow") };
+    const deps: RebuildDeps = { db: db as never, admin, graphPort, resolveStoredMode: fakeResolveFeature("shadow") };
 
     const first = await rebuildTenant(deps, { organizationId: orgA });
     expect(first.applied).toBe(1);
@@ -327,7 +327,7 @@ describe("rebuildTenant (Task 8 Step 1 purge/rebuild proof)", () => {
     const db = fakeGraphLedgerDb([msgA, msgB]);
     const admin = fakeAdmin([msgA, msgB]);
     const graphPort = fakeGraphPort();
-    const deps: RebuildDeps = { db: db as never, admin, graphPort, resolveFeature: fakeResolveFeature("off") };
+    const deps: RebuildDeps = { db: db as never, admin, graphPort, resolveStoredMode: fakeResolveFeature("off") };
 
     // Seed both orgs with an applied episode first.
     await rebuildTenant(deps, { organizationId: orgA });
@@ -384,7 +384,7 @@ describe("rebuildTenant (Task 8 Step 1 purge/rebuild proof)", () => {
     // only flips 'applied' rows, never 'deleted' ones, so the same
     // idempotency key still resolves to the tombstoned row.
     const rebuildAfterPurge = await rebuildTenant(
-      { db: db as never, admin, graphPort, resolveFeature: fakeResolveFeature("shadow") },
+      { db: db as never, admin, graphPort, resolveStoredMode: fakeResolveFeature("shadow") },
       { organizationId: orgA },
     );
     expect(rebuildAfterPurge.applied).toBe(0);
@@ -416,11 +416,34 @@ describe("rebuildTenant (Task 8 Step 1 purge/rebuild proof)", () => {
     expect(ledgerRow?.status).toBe("applied");
 
     const rebuilt = await rebuildTenant(
-      { db: db as never, admin, graphPort, resolveFeature: fakeResolveFeature("shadow") },
+      { db: db as never, admin, graphPort, resolveStoredMode: fakeResolveFeature("shadow") },
       { organizationId: orgA },
     );
     expect(rebuilt).toMatchObject({ applied: 1, skipped: 0, retried: 0, ledgerReset: 1 });
     expect(graphPort.episodes(orgA)).toHaveLength(1);
+  });
+
+  it("downgrades an org stored at 'on' to 'shadow' even though `resolveStoredMode` is the ONLY mode-read this function can see — proving a kill-switch-masked read (which would report 'off' and cause a silent no-op) is structurally never consulted for this decision (Finding 2 regression; unmasking itself is proven directly in lib/agent-engine/platform/features.test.ts's 'under an active kill switch' block)", async () => {
+    const db = fakeGraphLedgerDb([]);
+    const admin = fakeAdmin([]);
+    const graphPort = fakeGraphPort();
+
+    // fakeResolveFeature("on") plays the role of the real
+    // `resolveStoredAiPlatformFeatureMode` under an active kill switch: per
+    // features.test.ts, that function reports the org's true stored mode
+    // ('on') regardless of AI_PLATFORM_KILL_GRAPHITI. Before the fix,
+    // rebuild-graphiti.ts read `resolveAiPlatformFeature` instead, which
+    // WOULD have masked this same stored 'on' row down to 'off', making
+    // `downgradeIfEscalated` see "already off" and no-op — leaving the org
+    // stored at 'on' after an unverified purge+rebuild.
+    const summary = await rebuildTenant(
+      { db: db as never, admin, graphPort, resolveStoredMode: fakeResolveFeature("on") },
+      { organizationId: orgA },
+    );
+
+    expect(summary.featureModeBefore).toBe("on");
+    expect(summary.featureModeAfter).toBe("shadow");
+    expect(db.featureFlagWrites).toEqual([{ organizationId: orgA, mode: "shadow" }]);
   });
 
   it("never escalates rollout: downgrades on/canary to shadow, leaves off/shadow completely untouched", async () => {
@@ -430,7 +453,7 @@ describe("rebuildTenant (Task 8 Step 1 purge/rebuild proof)", () => {
 
     for (const mode of ["off", "shadow"] as const) {
       const summary = await rebuildTenant(
-        { db: db as never, admin, graphPort, resolveFeature: fakeResolveFeature(mode) },
+        { db: db as never, admin, graphPort, resolveStoredMode: fakeResolveFeature(mode) },
         { organizationId: orgA },
       );
       expect(summary.featureModeBefore).toBe(mode);
@@ -440,7 +463,7 @@ describe("rebuildTenant (Task 8 Step 1 purge/rebuild proof)", () => {
 
     for (const mode of ["on", "canary"] as const) {
       const summary = await rebuildTenant(
-        { db: db as never, admin, graphPort, resolveFeature: fakeResolveFeature(mode) },
+        { db: db as never, admin, graphPort, resolveStoredMode: fakeResolveFeature(mode) },
         { organizationId: orgA },
       );
       expect(summary.featureModeBefore).toBe(mode);
@@ -457,11 +480,51 @@ describe("rebuildTenant (Task 8 Step 1 purge/rebuild proof)", () => {
     const db = fakeGraphLedgerDb([msgX, msgY]);
     const admin = fakeAdmin([msgX, msgY]);
     const graphPort = fakeGraphPort();
-    const deps: RebuildDeps = { db: db as never, admin, graphPort, resolveFeature: fakeResolveFeature("off") };
+    const deps: RebuildDeps = { db: db as never, admin, graphPort, resolveStoredMode: fakeResolveFeature("off") };
 
     const summary = await rebuildTenant(deps, { organizationId: orgA, contactId });
 
     expect(summary.applied).toBe(1);
     expect(graphPort.episodes(orgA)).toHaveLength(1);
+  });
+
+  it("--contact rebuild does NOT purge the whole org — the OTHER contact's already-projected episode and 'applied' ledger row survive completely untouched (Finding 1 regression)", async () => {
+    const msgX = message({ id: "msg-x", contact_id: contactId, body: "Prefere contato pela manhã." });
+    const msgY = message({ id: "msg-y", contact_id: contactIdB, body: "Prefere contato à noite." });
+    const db = fakeGraphLedgerDb([msgX, msgY]);
+    const admin = fakeAdmin([msgX, msgY]);
+    const graphPort = fakeGraphPort();
+    const deps: RebuildDeps = { db: db as never, admin, graphPort, resolveStoredMode: fakeResolveFeature("off") };
+
+    // Seed BOTH contacts' projections first via a whole-org rebuild, so
+    // there is something real for a buggy whole-org purge to destroy.
+    await rebuildTenant(deps, { organizationId: orgA });
+    expect(graphPort.episodes(orgA)).toHaveLength(2);
+    const beforeStatuses = [...db.rows.values()].filter((r) => r.organization_id === orgA).map((r) => r.status);
+    expect(beforeStatuses).toEqual(["applied", "applied"]);
+
+    // Now run a --contact-scoped rebuild targeting ONLY `contactId` (msg-x).
+    // Before the fix, `rebuildTenant` called `deps.graphPort.deleteOrganization()`
+    // unconditionally BEFORE the ledger reset narrowed to contactId, wiping
+    // BOTH contacts' episodes from the graph store even though only
+    // contactId's ledger row was reset/replayed — leaving contactIdB's
+    // ledger row still saying 'applied' while its graph data was gone.
+    const summary = await rebuildTenant(deps, { organizationId: orgA, contactId });
+
+    expect(summary.applied).toBe(1);
+    expect(summary.ledgerReset).toBe(1);
+
+    // contactIdB's episode must still be present and queryable in the graph
+    // store — not just "the ledger wasn't reset", the underlying data
+    // genuinely survives.
+    const episodesAfter = graphPort.episodes(orgA);
+    expect(episodesAfter).toHaveLength(2);
+    expect(episodesAfter.some((episode) => episode.body === msgY.body)).toBe(true);
+    expect(episodesAfter.some((episode) => episode.body === msgX.body)).toBe(true);
+
+    const contactBLedgerRow = [...db.rows.values()].find((row) => row.source_id === msgY.id);
+    expect(contactBLedgerRow?.status).toBe("applied");
+    const contactALedgerRow = [...db.rows.values()].find((row) => row.source_id === msgX.id);
+    expect(contactALedgerRow?.status).toBe("applied");
   });
 });

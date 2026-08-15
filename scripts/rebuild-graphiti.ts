@@ -17,10 +17,26 @@
  * and `workers/graph-lifecycle.handler.ts` are that deferred work.
  *
  * Sequence:
- *   1. read (kill switch + per-org rollout mode) before touching anything —
- *      recorded so step 6 can decide correctly.
- *   2. purge: `GraphContextPort.deleteOrganization(organizationId)` deletes
- *      the whole Neo4j group for the tenant.
+ *   1. read the org's STORED rollout mode before touching anything, via
+ *      `resolveStoredAiPlatformFeatureMode` — deliberately NOT
+ *      `resolveAiPlatformFeature`, which masks its `mode` to `"off"`
+ *      whenever `AI_PLATFORM_KILL_GRAPHITI` is active. Step 6's "never
+ *      escalate rollout" guarantee must hold even while the kill switch is
+ *      up: an org stored at `on`/`canary` must still be downgraded to
+ *      `shadow` by this rebuild, not silently left alone because the
+ *      kill-switch-masked read happened to look like `"off"`.
+ *   2. purge — ONLY for a whole-org rebuild (no `--contact` given):
+ *      `GraphContextPort.deleteOrganization(organizationId)` deletes the
+ *      whole Neo4j group for the tenant. When `--contact` IS given, this
+ *      step is skipped entirely — `GraphContextPort`/Graphiti's real REST
+ *      API has no per-contact delete route (confirmed in Task 4/8, only
+ *      `DELETE /group/{group_id}`), so calling `deleteOrganization` for a
+ *      single-contact rebuild would silently destroy every OTHER contact's
+ *      already-projected graph data in the same org while their ledger rows
+ *      still say `applied`. Instead, a `--contact` rebuild relies on
+ *      Graphiti's own `MERGE`-based upsert (keyed on the message's stable
+ *      idempotency key/uuid, confirmed in Task 4) to naturally refresh that
+ *      one contact's episodes on replay, without touching anyone else's.
  *   3. reset the ledger: every 'applied' graph/graphiti ledger row for this
  *      org (optionally scoped further to one contact) becomes
  *      replay-eligible again (`status='pending'`). Rows already 'deleted'
@@ -41,11 +57,12 @@
  *   5. compare counts: the printed JSON line reports applied/skipped/
  *      retried/ledgerReset counts for the operator to sanity-check against
  *      the pre-purge state before deciding to promote the feature mode.
- *   6. never escalate rollout: if the org's REAL stored mode was `on` or
- *      `canary`, force it down to `shadow` (a purge+rebuild that has not
- *      been re-verified must not keep serving live/canary traffic
- *      automatically). If it was already `off`/`shadow`, it is left
- *      untouched. This script never writes `on` or `canary`.
+ *   6. never escalate rollout: if the org's REAL stored mode (from step 1)
+ *      was `on` or `canary`, force it down to `shadow` (a purge+rebuild that
+ *      has not been re-verified must not keep serving live/canary traffic
+ *      automatically, and an active kill switch must not defeat this). If
+ *      it was already `off`/`shadow`, it is left untouched. This script
+ *      never writes `on` or `canary`.
  *
  * Usage:
  *   pnpm exec tsx scripts/rebuild-graphiti.ts --org <organization_id> --confirm-purge
@@ -54,8 +71,12 @@
  * No `--all-orgs`: `deleteOrganization` is destructive per tenant (interface
  * doctrine for this task is "tenant-scoped purge/rebuild by default") — a
  * global purge+rebuild loop across every tenant is not offered as a single
- * command. `--confirm-purge` is required because, unlike `rebuild-mem0.ts`,
- * this script itself deletes provider-side data before rebuilding it.
+ * command. `--confirm-purge` is required unconditionally (including for a
+ * `--contact`-scoped run, which — see step 2 above — performs no purge at
+ * all) because, unlike `rebuild-mem0.ts`, a whole-org run of this script
+ * deletes provider-side data before rebuilding it, and requiring the same
+ * flag for both modes keeps the CLI contract simple and predictable rather
+ * than conditionally destructive.
  *
  * Only aggregate counts are printed — no message text, no episode text.
  */
@@ -64,7 +85,7 @@ import type pg from "pg";
 import { createPool } from "@/lib/agent-engine/db/pool";
 import { GraphitiClient } from "@/lib/agent-engine/graph/graphiti-client";
 import type { GraphContextPort } from "@/lib/agent-engine/graph/port";
-import { resolveAiPlatformFeature, type ResolvedAiPlatformFeature } from "@/lib/agent-engine/platform/features";
+import { resolveStoredAiPlatformFeatureMode, type StoredAiPlatformFeatureMode } from "@/lib/agent-engine/platform/features";
 import type { FeatureMode } from "@/lib/agent-engine/platform/contracts";
 import { processGraphProjection, type GraphProjectionDeps } from "@/workers/graph-projection.handler";
 import type { EventRow } from "@/lib/event-log/dispatcher";
@@ -79,7 +100,12 @@ export type RebuildDeps = {
   db: Queryable;
   admin: GraphProjectionDeps["admin"];
   graphPort: GraphContextPort;
-  resolveFeature?: (input: { organizationId: string; feature: "graphiti" }) => Promise<ResolvedAiPlatformFeature>;
+  /**
+   * Reads the org's STORED rollout mode, ignoring the kill switch — see the
+   * file header's step 1 for why this must never be the kill-switch-masked
+   * `resolveAiPlatformFeature`. Defaults to `resolveStoredAiPlatformFeatureMode`.
+   */
+  resolveStoredMode?: (input: { organizationId: string; feature: "graphiti" }) => Promise<StoredAiPlatformFeatureMode>;
   processProjection?: typeof processGraphProjection;
 };
 
@@ -178,14 +204,25 @@ async function downgradeIfEscalated(
 
 /** Purges, resets the ledger, and replays one tenant (optionally one contact within it). */
 export async function rebuildTenant(deps: RebuildDeps, target: RebuildTarget): Promise<RebuildSummary> {
-  const resolveFeature = deps.resolveFeature ?? resolveAiPlatformFeature;
+  const resolveStoredMode = deps.resolveStoredMode ?? resolveStoredAiPlatformFeatureMode;
 
-  // Step 1: read before touching anything.
-  const resolved = await resolveFeature({ organizationId: target.organizationId, feature: "graphiti" });
+  // Step 1: read the org's STORED mode before touching anything — never the
+  // kill-switch-masked resolver (see this function's/the file's header
+  // comment: step 6's "never escalate rollout" guarantee must hold even
+  // while AI_PLATFORM_KILL_GRAPHITI is active).
+  const resolved = await resolveStoredMode({ organizationId: target.organizationId, feature: "graphiti" });
   const featureModeBefore = resolved.mode;
 
-  // Step 2: purge tenant group.
-  await deps.graphPort.deleteOrganization(target.organizationId);
+  // Step 2: purge tenant group — ONLY for a whole-org rebuild. A
+  // `--contact`-scoped rebuild must NEVER call `deleteOrganization`: there is
+  // no per-contact delete route on `GraphContextPort`/Graphiti's real API, so
+  // doing so would silently destroy every other contact's already-projected
+  // graph data in this org while their ledger rows still say `applied`.
+  // Replay's own MERGE-based upsert (idempotency key = message uuid) is what
+  // refreshes the targeted contact's episodes instead.
+  if (!target.contactId) {
+    await deps.graphPort.deleteOrganization(target.organizationId);
+  }
 
   // Step 3: reset ledger (LGPD-deleted rows are excluded by construction).
   const ledgerReset = await resetAppliedGraphLedger(deps.db, target);

@@ -123,7 +123,6 @@ export async function processGraphLifecycle(
   }
 
   const db = deps.db ?? lifecyclePool();
-  const graphPort = deps.graphPort ?? defaultGraphPort();
   // Trusted tenant identity: the dispatcher-verified event row, never the
   // payload — a spoofed `organization_id` inside the payload can never
   // redirect which org's graph gets purged.
@@ -134,6 +133,18 @@ export async function processGraphLifecycle(
 
   try {
     if (scope === "tenant") {
+      // Constructed lazily, INSIDE the try block, and only on the one path
+      // that actually needs a provider call. `new GraphitiClient(...)`
+      // throws synchronously on a half-configured adapter (e.g.
+      // `GRAPHITI_BASE_URL` set but `GRAPHITI_API_KEY` missing — a plausible
+      // self-host misconfiguration). Outside a try block that throw would
+      // escape the handler entirely and the dispatcher would record
+      // `status:"error"` (a dead end) instead of a retry-eligible result.
+      // Matches `graph-projection.handler.ts`'s discipline of never letting
+      // adapter construction throw uncaught out of the handler — the
+      // contact-scope branch below never even needs a graph port, so it is
+      // never constructed for that path at all.
+      const graphPort = deps.graphPort ?? defaultGraphPort();
       await graphPort.deleteOrganization(organizationId);
       await markOrganizationGraphProjectionsDeleted(db, organizationId);
       return { consumer_key, status: "ok", detail: "tenant_group_purged" };

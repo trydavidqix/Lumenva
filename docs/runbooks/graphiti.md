@@ -22,6 +22,21 @@ enquanto a feature estiver `off`/`shadow` — essa é uma doutrina do
 vale repetir aqui porque quem opera o sidecar precisa saber que ele nunca é
 autoritativo.
 
+**O que realmente sai do sistema quando a feature está ligada (qualquer modo
+que não `off`, incluindo `shadow`):** `workers/graph-projection.handler.ts`
+grava (`addEpisode`) no sidecar Graphiti sempre que o modo do tenant é
+diferente de `off` — `shadow` já é um caminho completo de escrita/egress, não
+apenas medição. Isso significa que o conteúdo real de mensagens do tenant é
+enviado ao container `graphiti`, processado por um subprocessador de
+LLM/embedder externo (`GRAPHITI_LLM_PROVIDER`/`GRAPHITI_EMBEDDER_PROVIDER`) e
+persistido no Neo4j. `shadow` garante apenas que o fato resultante não chega
+ao prompt (`influencePrompt:false`) — não garante que nenhum dado pessoal
+saiu do sistema nem que ele pode ser apagado seletivamente depois (ver
+`docs/runbooks/graphiti-rebuild.md` sobre a lacuna de redação por contato).
+A decisão de compliance sobre habilitar Graphiti para um tenant real precisa
+considerar este fato de fluxo de dados **antes** de ligar `shadow` para
+aquele tenant, não apenas antes de uma eventual promoção a `canary`/`on`.
+
 Não publique a API do Graphiti nem a interface HTTP/Bolt do Neo4j por
 Caddy. Em produção nenhum dos dois serviços declara `ports:` — só `app` e
 `worker` alcançam `graphiti` (e `graphiti` alcança `neo4j`) pela rede interna
