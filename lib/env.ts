@@ -116,13 +116,18 @@ const schema = z.object({
   ),
 
   // Graphiti is an optional temporal/relationship graph projection (Phase 4,
-  // FalkorDB-backed, docker-compose profile `ai-graph`). Declaring its
-  // connection here does not activate the provider — AI_PLATFORM_KILL_GRAPHITI
-  // above plus the per-org rollout mode gate that separately. LLM/EMBEDDER
-  // provider+model only label what the sidecar itself was configured with (a
-  // platform-owned credential delivered via Infisical/runtime env to the
-  // container, never a tenant's ai_provider_credentials BYOK key) — see
-  // docs/runbooks/graphiti.md.
+  // Neo4j-backed, docker-compose profile `ai-graph`). Originally wired to
+  // FalkorDB; swapped to Neo4j because the packaged REST server in
+  // `zepai/graphiti:0.22.0` only speaks Neo4j (graph_service/config.py has
+  // no FalkorDB fields at all) — see docs/runbooks/graphiti.md. None of
+  // these 7 app-facing vars are database-specific (the Neo4j connection
+  // details live only inside the sidecar container's own env, not here), so
+  // none needed to change in the swap. Declaring a connection here does not
+  // activate the provider — AI_PLATFORM_KILL_GRAPHITI above plus the per-org
+  // rollout mode gate that separately. LLM/EMBEDDER provider+model only
+  // label what the sidecar itself was configured with (a platform-owned
+  // credential delivered via Infisical/runtime env to the container, never a
+  // tenant's ai_provider_credentials BYOK key) — see docs/runbooks/graphiti.md.
   GRAPHITI_BASE_URL: z.string().url().optional().or(z.literal("")).default(""),
   GRAPHITI_API_KEY: z.string().optional().default(""),
   GRAPHITI_TIMEOUT_MS: z.preprocess(
