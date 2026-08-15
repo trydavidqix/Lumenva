@@ -266,6 +266,10 @@ docker volume rm <nome-exato-do-volume-neo4j-data>
 
 Recriar o sidecar não recria dados do CRM. O rebuild/replay a partir das
 fontes oficiais e a purga por tenant (`deleteOrganization` do
-`GraphContextPort`, LGPD) são entregues por uma task posterior do plano da
-Fase 4 (`scripts/rebuild-graphiti.ts`, lifecycle worker) — até lá, não trate
-este sidecar como tendo ciclo de vida por tenant automatizado.
+`GraphContextPort`, LGPD) são entregues por `scripts/rebuild-graphiti.ts` e
+`workers/graph-lifecycle.handler.ts` (Fase 4, Task 8) — detalhes
+operacionais em `docs/runbooks/graphiti-rebuild.md`. A purga automática por
+LGPD cobre hoje apenas o escopo `tenant` (grupo inteiro do Neo4j); redação
+de um único contato só marca o ledger, sem remover os episódios já gravados
+desse contato do grafo compartilhado do tenant — limitação real do
+contrato de API do Graphiti, documentada no runbook de rebuild.
