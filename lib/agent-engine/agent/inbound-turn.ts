@@ -36,7 +36,7 @@ import type { ChannelAdapter, ChannelSendResult } from '../channel-adapter';
 import type { AiTraceSpan, AiTracer } from '../obs/ai-tracing';
 import { opaqueTenantId } from '../obs/external-redaction';
 import { withFields, type Logger } from '../obs/logger';
-import type { ContextProvider } from '../context/provider';
+import type { ContextProvider, ContextProviderRequest } from '../context/provider';
 import { prepareSemanticContext } from '../context/fusion';
 import { getLeadContext, type LeadContext, type LeadContextResult } from '../edge/crm/get-lead-context';
 import { citationsFromHits, searchKnowledge } from './search-knowledge';
@@ -481,17 +481,75 @@ export interface InboundTurnDeps {
    */
   sleep?: (ms: number) => Promise<void>;
   /**
-   * Optional semantic-memory provider. Omitting it preserves the exact legacy
-   * prompt path; rollout state is still resolved inside the provider.
+   * Optional semantic-memory provider (Phase 2, Mem0). Omitting it preserves the
+   * exact legacy prompt path; rollout state is still resolved inside the provider.
    */
   semanticContextProvider?: ContextProvider;
+  /**
+   * Optional temporal-graph provider (Phase 4, Graphiti) — the graph-read sibling
+   * of `semanticContextProvider`. Retrieved CONCURRENTLY with it (Promise.all), never
+   * serialized after it: an optional provider's latency/failure must not compound
+   * with another optional provider's. Omitting it preserves the exact legacy prompt
+   * path; rollout state is still resolved inside the provider.
+   */
+  graphContextProvider?: ContextProvider;
   /** Counts-only telemetry for fusion comparisons; it must never affect a turn. */
   recordContextFusionMetric?: (metric: {
+    provider: 'mem0' | 'graphiti';
     bucket: 'shadow' | 'candidate' | 'disabled';
     selectedCount: number;
     droppedCount: number;
     degraded: boolean;
   }) => void | Promise<void>;
+}
+
+/**
+ * Retrieves ONE optional context provider (Mem0 or Graphiti) and turns its
+ * result into a prompt-suffix block, fully isolated from every other optional
+ * provider. Callers `Promise.all` this per provider (never `await` it back to
+ * back) so one provider's latency never compounds with another's. This
+ * function itself never throws/rejects: any provider failure — including a
+ * typed error like `GraphitiProviderError` — degrades to an empty block plus
+ * a warn log, matching the "optional context is best-effort" contract both
+ * providers already promise from inside `retrieve()`.
+ */
+async function retrieveContextBlock(input: {
+  provider: ContextProvider | undefined;
+  buildRequest: (nowMs: number) => ContextProviderRequest;
+  recordMetric: InboundTurnDeps['recordContextFusionMetric'];
+  metricProvider: 'mem0' | 'graphiti';
+  log: Logger;
+  now: () => number;
+}): Promise<string> {
+  if (input.provider === undefined) return '';
+  try {
+    const requestedAt = input.now();
+    const result = await input.provider.retrieve(input.buildRequest(requestedAt));
+    // Same clock reading as the request `now` above — an item's expiry is
+    // judged against the moment context was requested, not whenever fusion
+    // happens to run a few lines later.
+    const prepared = prepareSemanticContext(result, undefined, requestedAt);
+
+    try {
+      await input.recordMetric?.({
+        provider: input.metricProvider,
+        bucket: result.bucket,
+        selectedCount: prepared.fusion.selected.length,
+        droppedCount: prepared.fusion.dropped.length,
+        degraded: result.degraded,
+      });
+    } catch {
+      // Observability cannot block a customer reply.
+    }
+
+    return prepared.promptBlock;
+  } catch {
+    // Optional context is a best-effort enhancement. No provider failure,
+    // including malformed output, may change the normal agent path or expose
+    // provider details in a prompt/log/error.
+    input.log.warn('contexto semântico indisponível — turno segue sem ele', { provider: input.metricProvider });
+    return '';
+  }
 }
 
 /** Checkpoint mais recente do lead — a memória que atravessa sessões. */
@@ -2028,48 +2086,42 @@ export async function runAgentTurn(
     projeta: projetaContexto,
     entregues,
   });
-  // Mem0 context is deliberately opt-in at the dependency boundary. The
-  // provider resolves the tenant feature itself: off does no request, shadow
-  // is measured only, and only canary/on can contribute a prompt suffix.
-  let semanticContextBlock = '';
-  if (deps.semanticContextProvider !== undefined) {
-    try {
-      const semanticContextNow = Date.now();
-      const semantic = await deps.semanticContextProvider.retrieve({
-        organizationId: tenantId,
-        contactId: leadId,
-        conversationId: input.conversationId,
-        // Context providers require an opaque valid id. A published agent id is
-        // preferred; the trusted job id is a per-run fallback and is never sent
-        // to Mem0 as a user or tenant namespace.
-        agentId: agentConfig?.agentId ?? job.id,
-        query: skillSignal,
-        now: new Date(semanticContextNow).toISOString(),
-      });
-      // Same clock reading as the request `now` above — an item's expiry is
-      // judged against the moment context was requested, not whenever fusion
-      // happens to run a few lines later.
-      const preparedSemanticContext = prepareSemanticContext(semantic, undefined, semanticContextNow);
-
-      try {
-        await deps.recordContextFusionMetric?.({
-          bucket: semantic.bucket,
-          selectedCount: preparedSemanticContext.fusion.selected.length,
-          droppedCount: preparedSemanticContext.fusion.dropped.length,
-          degraded: semantic.degraded,
-        });
-      } catch {
-        // Observability cannot block a customer reply.
-      }
-
-      semanticContextBlock = preparedSemanticContext.promptBlock;
-    } catch {
-      // Optional context is a best-effort enhancement. No provider failure,
-      // including malformed output, may change the normal agent path or expose
-      // provider details in a prompt/log/error.
-      runLog.warn('contexto semântico indisponível — turno segue sem ele');
-    }
-  }
+  // Optional semantic-memory (Mem0, Phase 2) and temporal-graph (Graphiti,
+  // Phase 4) context are deliberately opt-in at the dependency boundary. Each
+  // provider resolves its own tenant feature/rollout mode internally: off does
+  // no request, shadow is measured only, and only canary/on can contribute a
+  // prompt suffix. Retrieved CONCURRENTLY via Promise.all — never one after
+  // the other — so an optional provider's latency/failure can never compound
+  // with another optional provider's.
+  const contextRequestFor = (nowMs: number): ContextProviderRequest => ({
+    organizationId: tenantId,
+    contactId: leadId,
+    conversationId: input.conversationId,
+    // Context providers require an opaque valid id. A published agent id is
+    // preferred; the trusted job id is a per-run fallback and is never sent
+    // to Mem0/Graphiti as a user or tenant namespace.
+    agentId: agentConfig?.agentId ?? job.id,
+    query: skillSignal,
+    now: new Date(nowMs).toISOString(),
+  });
+  const [semanticContextBlock, graphContextBlock] = await Promise.all([
+    retrieveContextBlock({
+      provider: deps.semanticContextProvider,
+      buildRequest: contextRequestFor,
+      recordMetric: deps.recordContextFusionMetric,
+      metricProvider: 'mem0',
+      log: runLog,
+      now: Date.now,
+    }),
+    retrieveContextBlock({
+      provider: deps.graphContextProvider,
+      buildRequest: contextRequestFor,
+      recordMetric: deps.recordContextFusionMetric,
+      metricProvider: 'graphiti',
+      log: runLog,
+      now: Date.now,
+    }),
+  ]);
   // Sufixos por-lead (situacionais, voláteis — depois do prefixo cacheável F2-17): corpos de
   // skill casadas (F3-09) + hint do classificador (F3-11) + instrução de split (F4-xx, quando
   // split_messages está on — Onda 4). Vazios são omitidos.
@@ -2091,9 +2143,14 @@ export async function runAgentTurn(
         `Se a mensagem dele responde a isso, chame provide_case_update com este case_id e a informação recebida — ` +
         `NÃO diga que já repassou/avisou o responsável sem chamar a tool.`
       : '';
-  const openingSuffixes = [matchedSkillsBlock, stageHintBlock, splitHint, caseAwaitingLeadBlock, semanticContextBlock].filter(
-    (b) => b !== '',
-  );
+  const openingSuffixes = [
+    matchedSkillsBlock,
+    stageHintBlock,
+    splitHint,
+    caseAwaitingLeadBlock,
+    semanticContextBlock,
+    graphContextBlock,
+  ].filter((b) => b !== '');
   const openingText =
     openingSuffixes.length === 0 ? openingBase : `${openingBase}\n\n${openingSuffixes.join('\n\n')}`;
   // Onda 3 (aprimoramento): mídia inbound recente vira part nativa (image/file) SÓ para
