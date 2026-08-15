@@ -317,8 +317,16 @@ describe("n8n -> CRM (inbound): mcp:write é exigido por toda tool mutante", () 
 });
 
 // ---------------------------------------------------------------------------
-// Nenhum código n8n-específico importa lib/supabase/admin (vale vazio hoje).
+// Nenhum código n8n-específico importa lib/supabase/admin.
 // ---------------------------------------------------------------------------
+//
+// A Task 1 introduziu este describe block ANTES de qualquer código n8n
+// existir, com um teste-tripwire que ficava vacuamente verdadeiro até o dia
+// em que Tasks 2/3 adicionassem arquivos reais — esse dia chegou
+// (lib/automation/n8n/envelope.ts, lib/automation/actions/n8n-webhook.ts).
+// O tripwire foi removido; o teste abaixo ("quando arquivos n8n existirem...")
+// já cobria a mesma propriedade contra arquivos reais desde a Task 1 e
+// continua sendo o guard vivo.
 
 describe("nenhum código n8n-específico importa lib/supabase/admin para mutação direta de tabela de negócio", () => {
   function n8nProductionFiles(): string[] {
@@ -328,7 +336,7 @@ describe("nenhum código n8n-específico importa lib/supabase/admin para mutaç�
   it("guarda de vacuidade: o detector de import reconhece um import REAL de lib/supabase/admin", () => {
     // lib/mcp/auth.ts importa o admin client legitimamente (auth.ts não é
     // n8n-específico) — prova que a regex abaixo não está cega antes de
-    // confiar no resultado vazio da varredura n8n.
+    // confiar no resultado da varredura n8n.
     const src = readFileSync(join(REPO_ROOT, "lib/mcp/auth.ts"), "utf8");
     expect(/from\s+["']@\/lib\/supabase\/admin["']/.test(src)).toBe(true);
   });
@@ -339,14 +347,11 @@ describe("nenhum código n8n-específico importa lib/supabase/admin para mutaç�
     expect(/n8n/i.test("lib/automation/actions/call-webhook.ts")).toBe(false);
   });
 
-  it("hoje: nenhum arquivo n8n-específico existe em lib/, app/ ou workers/ (vacuamente verdadeiro por design da Task 1)", () => {
-    // Este teste é o que a Task 1 pede explicitamente: rodar ANTES de
-    // qualquer código n8n existir. A lista vazia É o resultado correto agora
-    // — o valor do teste é o dia em que deixar de ser vazia.
-    expect(n8nProductionFiles()).toEqual([]);
+  it("guarda de sinal: pelo menos um arquivo n8n-específico real existe (a varredura abaixo não é vacuamente verdadeira)", () => {
+    expect(n8nProductionFiles().length).toBeGreaterThan(0);
   });
 
-  it("quando arquivos n8n existirem, nenhum pode importar lib/supabase/admin", () => {
+  it("nenhum arquivo n8n-específico importa lib/supabase/admin", () => {
     const offenders = n8nProductionFiles().filter((f) =>
       /from\s+["']@\/lib\/supabase\/admin["']/.test(readFileSync(f, "utf8")),
     );
