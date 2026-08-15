@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { sanitizeGraphEpisode } from "./episode-sanitize";
 import { graphGroupId } from "./namespace";
 import type { GraphContextPort } from "./port";
 import {
@@ -18,7 +19,13 @@ export interface GraphitiClientConfig {
   timeoutMs: number;
 }
 
-type GraphitiProviderErrorKind = "configuration" | "http" | "invalid_response" | "request" | "timeout";
+type GraphitiProviderErrorKind =
+  | "configuration"
+  | "http"
+  | "invalid_response"
+  | "request"
+  | "sanitization"
+  | "timeout";
 
 export class GraphitiProviderError extends Error {
   constructor(readonly kind: GraphitiProviderErrorKind, message: string) {
@@ -138,9 +145,30 @@ export class GraphitiClient implements GraphContextPort {
     }
   }
 
+  /**
+   * `sanitizeGraphEpisode` (Task 5) is the outbound secret-blocking gate this
+   * port's own doctrine comment requires ("adapters ingest curated/sanitized
+   * event text, never secrets/raw credentials"). It is invoked here, inside
+   * the adapter, rather than left to be called by whichever future caller
+   * happens to project events into Graphiti — a check that lives only at a
+   * call site can be silently skipped by the next caller that forgets it; a
+   * check inside the one method that actually reaches the network cannot be.
+   * Fails closed like its Mem0 (Phase 2/3) counterpart: a blocked episode is
+   * never partially redacted and sent, it is rejected outright before any
+   * request is built.
+   */
   async addEpisode(episode: GraphEpisode, idempotencyKey: string): Promise<void> {
     const parsedEpisode = graphEpisodeSchema.parse(episode);
     z.string().min(1).parse(idempotencyKey);
+
+    const sanitized = sanitizeGraphEpisode(parsedEpisode);
+    if (!sanitized.allowed) {
+      throw new GraphitiProviderError(
+        "sanitization",
+        `Graphiti episode blocked before egress: ${sanitized.reason}`,
+      );
+    }
+
     const groupId = this.trustedGroupId(parsedEpisode.organizationId);
 
     const response = await this.request("/messages", "POST", {
