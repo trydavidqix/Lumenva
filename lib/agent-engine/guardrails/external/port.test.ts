@@ -190,7 +190,7 @@ describe("NoopExternalGuardrailPort", () => {
     port = new NoopExternalGuardrailPort();
 
     // Track global fetch/http calls if any were made
-    const fetchSpy = vi.spyOn(global, "fetch" as any);
+    const fetchSpy = vi.spyOn(global, "fetch");
 
     const request: ExternalGuardrailRequest = {
       organizationId: "org-123",
@@ -202,9 +202,7 @@ describe("NoopExternalGuardrailPort", () => {
     await port.validate(request);
 
     // Should not have called fetch
-    if (fetchSpy) {
-      expect(fetchSpy).not.toHaveBeenCalled();
-    }
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("should handle empty text", async () => {
