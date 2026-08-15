@@ -26,8 +26,18 @@ One architecture correction and one disclosed upstream API limitation are
 carried into this decision explicitly rather than smoothed over — see
 "Architecture deviation: FalkorDB → Neo4j" and "Known limitation:
 per-contact LGPD redaction cannot remove already-projected Graphiti facts"
-below. Neither blocks `SHADOW` (measurement-only, nothing customer-facing);
-both are pre-existing conditions, not new findings from this gate.
+below. Both are pre-existing conditions, not new findings from this gate.
+Neither blocks `SHADOW` as this phase's shipped/default state (no
+`ai_platform_feature_flags` row exists for any tenant, so `graphiti`
+resolves to `off` platform-wide) — but see the corrected LGPD reasoning
+below: the per-contact redaction gap is **not** resolved merely by
+`SHADOW`'s prompt-safety property, and must be explicitly weighed by a
+compliance owner before `SHADOW` is turned on for any real tenant, not only
+before a future `canary`/`on` promotion. A separate, disclosed gap — the
+read/context-provider path is not wired into the running worker in
+production — means no `SHADOW` metrics are actually being collected today
+even where the write path is theoretically live; see "Known limitation: the
+Graphiti read path is not wired into production" below.
 
 ## Architecture deviation: FalkorDB → Neo4j (disclosed, human-approved)
 
@@ -405,16 +415,73 @@ Mem0 — documented, not silently papered over"), `docs/runbooks/graphiti-rebuil
 "Wipe e reconstrução completos" section. Escalated to the human project
 owner during Task 8 for awareness.
 
-**Why this does not block `SHADOW`:** the feature is measurement-only at
-`SHADOW` — no graph fact reaches a prompt or influences a decision
+**Correction (this fix wave): the argument below originally conflated two
+different questions — prompt-influence risk and erasure/LGPD obligation —
+and used the wrong one to justify `SHADOW`. Restated accurately:**
+
+*What IS true, and independently verified:* at `SHADOW`, no graph fact
+reaches a prompt or influences a decision
 (`GraphitiContextProvider.retrieve()` routes shadow-mode results to
-`shadowItems`, never `items`; `influencePrompt` stays `false`). A contact's
-residual facts sitting in Neo4j under `SHADOW` are not exposed to that
-contact, another tenant, or any automated action — they are inert data
-awaiting either a future per-entity delete capability or a full tenant
-purge. This gap would need to be closed (or explicitly risk-accepted by the
-compliance owner) before any promotion to `canary`/`on`, where graph facts
-would start reaching prompts; it is not a `SHADOW`-blocking condition.
+`shadowItems`, never `items`; `influencePrompt` stays `false`, and there is
+no other consumer of `search()` in this codebase today). A contact's
+residual facts sitting in Neo4j under `SHADOW` are not disclosed to that
+contact, another tenant, or any automated action via the prompt path.
+
+*What is NOT true, and was the actual reasoning error:* this does **not**
+mean `SHADOW` is "measurement-only" in the sense of creating no real,
+retained personal data. `processGraphProjection`
+(`workers/graph-projection.handler.ts`) writes to Graphiti whenever the
+org's mode is anything other than `"off"` — `SHADOW` is a full write/egress
+path. Enabling Graphiti at `SHADOW` for a real tenant means that tenant's
+message content is genuinely sent to the Graphiti sidecar, processed by an
+external LLM/embedder subprocessor
+(`GRAPHITI_LLM_PROVIDER`/`GRAPHITI_EMBEDDER_PROVIDER`), and persisted in
+Neo4j — not merely measured and discarded. Combined with the disclosed
+whole-group-only delete limitation above, a contact who exercises LGPD
+erasure while their org is at `SHADOW` leaves residue that cannot be
+selectively removed from Neo4j, regardless of whether that residue ever
+reaches a prompt. Prompt-safety and data-retention/erasure are separate
+properties; only the first was actually proven by this phase's tests.
+
+**Correct compliance framing:** the decision point for the per-contact
+redaction gap above is **before `SHADOW` is enabled for any real tenant**,
+not "before canary/on" as previously implied here. `SHADOW`'s prompt-safety
+guarantee does not resolve the LGPD question — it only means a residual
+fact cannot influence a reply while `SHADOW` holds. This phase still ends at
+`SHADOW` as its default/shipped state (no tenant is enabled by default —
+`graphiti` has no `ai_platform_feature_flags` row, so it resolves to `off`
+platform-wide per `lib/agent-engine/platform/features.ts`), but a human/
+compliance owner must explicitly weigh this data-flow fact — not just the
+prompt-safety property — before turning `SHADOW` on for any specific
+organization, not only before a future `canary`/`on` promotion.
+
+## Known limitation: the Graphiti read path is not wired into production (disclosed, this fix wave)
+
+Stated plainly, not glossed over: **nothing outside test files constructs
+`GraphitiContextProvider` today.** `InboundTurnDeps.graphContextProvider`
+(`lib/agent-engine/agent/inbound-turn.ts`) is never populated by any real
+caller in the running application — only by test harnesses
+(`lib/agent-engine/context/graphiti-context-provider.test.ts`,
+`lib/agent-engine/agent/retrieve-optional-context-blocks.test.ts`). This
+means that even where the write path is live for an org (`SHADOW` or
+higher), **no `SHADOW`-mode read/metrics are actually being collected in a
+real deployment today** — a reader of this gate could reasonably have
+assumed shadow measurement was happening in production because the provider
+exists and is fully tested; it is not exercised outside tests.
+
+This is inherited, not a Phase 4 regression: Phase 2's `semanticContextProvider`
+(Mem0) has the identical gap, undisclosed at the time of that phase's gate.
+Both context providers are fully implemented, fully unit-tested, and neither
+is instantiated by the process that actually handles an inbound turn in
+production.
+
+**Follow-up required, out of scope for this fix wave:** wire
+`GraphitiContextProvider` (and, ideally in the same pass,
+`Mem0ContextProvider`) into the real `InboundTurnDeps` construction path used
+by the production worker/route entrypoint, so `SHADOW`-mode metrics
+genuinely start accumulating. Track this as a named Phase 5 (or earlier,
+operator-approved out-of-band) task — do not treat this gate's `SHADOW`
+decision as implying measurement is already underway.
 
 ## Release Gate
 
@@ -443,15 +510,17 @@ Global Constraints verified:
 - No secrets/raw credentials ingested: sanitizeGraphEpisode wired into GraphitiClient.addEpisode(), reject-not-redact (episode-sanitize.test.ts).
 P0 open: 0
 P1 open: 0
-Residual/deferred (not blocking SHADOW):
-- Per-contact LGPD redaction cannot remove already-projected Graphiti facts from Neo4j (upstream API limitation, whole-group-only delete) — must be resolved or explicitly risk-accepted before any canary/on promotion.
+Residual/deferred (not blocking SHADOW as this phase's shipped/default OFF state):
+- Per-contact LGPD redaction cannot remove already-projected Graphiti facts from Neo4j (upstream API limitation, whole-group-only delete). CORRECTED this fix wave: this must be resolved or explicitly risk-accepted BEFORE SHADOW is enabled for any real tenant, not only before canary/on — SHADOW is a full write/egress path (message content reaches an external LLM/embedder subprocessor and is persisted in Neo4j), and its prompt-safety property does not resolve the erasure/LGPD question.
+- The Graphiti read path (GraphitiContextProvider) is not wired into any production entrypoint — disclosed this fix wave. No SHADOW-mode metrics are actually being collected today regardless of an org's stored mode. Inherited from Phase 2's identical Mem0 gap. Tracked as a named follow-up task, not fixed in this wave.
 - Stale "FalkorDB" wording in doc comments (port.ts:13,20, types.ts:10,13, namespace.ts:7, graphiti-client.ts:122) — harmless, doc-only, deferred to a future doc pass.
 - 201 pre-existing lint warnings, unrelated to this phase.
 - Live neo4j+graphiti round-trip smoke test not repeated in this gate (already proven live in Task 3/4; RAM-constrained host, judged non-redundant risk not worth repeating — see "Live-stack decision").
 Human actions required:
 - None to keep Graphiti at its default OFF/native state.
-- A human/compliance owner must decide how to handle the disclosed per-contact-redaction gap before any future canary/on promotion.
-Rollback verified: yes — graphiti defaults to off (no ai_platform_feature_flags row = off, per lib/agent-engine/platform/features.ts), AI_PLATFORM_KILL_GRAPHITI kill switch exists and is checked before any per-org rollout mode, and GraphitiContextProvider degrades to an empty/disabled result on any failure rather than breaking a turn.
+- A human/compliance owner must decide how to handle the disclosed per-contact-redaction gap BEFORE enabling SHADOW for any specific real organization — not deferred until a future canary/on promotion.
+- Wiring GraphitiContextProvider (and Mem0ContextProvider) into the real production entrypoint is required before SHADOW measurement claims can be made for any org — tracked as follow-up work, not done in this phase.
+Rollback verified: yes — graphiti defaults to off (no ai_platform_feature_flags row = off, per lib/agent-engine/platform/features.ts), AI_PLATFORM_KILL_GRAPHITI kill switch exists and is checked before any per-org rollout mode (and, per this fix wave, rebuild-graphiti.ts's own escalation-downgrade decision now reads the STORED mode directly rather than the kill-switch-masked one, so it cannot be defeated by an active kill switch), and GraphitiContextProvider degrades to an empty/disabled result on any failure rather than breaking a turn.
 ```
 
 ## References

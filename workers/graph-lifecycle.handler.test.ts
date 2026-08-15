@@ -152,4 +152,33 @@ describe("graph lifecycle handler", () => {
     expect(result).toMatchObject({ status: "retry", detail: "graph_lifecycle_failed" });
     expect(JSON.stringify(result)).not.toContain("secret-internal-host");
   });
+
+  it("a half-configured adapter (GRAPHITI_BASE_URL set, GRAPHITI_API_KEY missing — a plausible self-host mistake) degrades to a retry-eligible result instead of the returned promise rejecting (Finding 5 regression)", async () => {
+    // No `graphPort` override in deps — this deliberately exercises the REAL
+    // `defaultGraphPort()` construction path (`new GraphitiClient(...)`),
+    // not a mock. `GraphitiClient`'s constructor throws synchronously on
+    // invalid config. Before the fix, that construction happened OUTSIDE the
+    // handler's try block, so the promise this function returns would
+    // REJECT — the event-log dispatcher treats a rejected promise as
+    // `status:"error"` (a dead end), not `status:"retry"`. After the fix,
+    // construction happens inside the try block on the one branch that
+    // needs it, so the same misconfiguration must resolve (not reject) with
+    // a retry-eligible result, exactly like the sibling
+    // `graph-projection.handler.ts` degrades gracefully on the same class of
+    // misconfiguration.
+    vi.stubEnv("GRAPHITI_BASE_URL", "http://graphiti:8000");
+    vi.stubEnv("GRAPHITI_API_KEY", "");
+    try {
+      const query = vi.fn().mockResolvedValue({ rows: [{ id: "ledger-1", status: "deleted" }] });
+      const deps = { graphitiConfigured: true, db: { query } };
+
+      await expect(processGraphLifecycle(event(), deps)).resolves.toMatchObject({
+        status: "retry",
+        detail: "graphiti_configuration",
+      });
+      expect(query).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 });

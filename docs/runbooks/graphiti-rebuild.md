@@ -52,10 +52,24 @@ script), `scripts/rebuild-graphiti.ts` performs the **full purge + rebuild
 sequence itself**, because tenant-scoped purge is a first-class capability
 of this script (and of the automatic lifecycle handler above):
 
-1. **read** — resolves the org's current `graphiti` feature mode (kill
-   switch + per-org/global rollout) before touching anything.
-2. **purge** — `GraphContextPort.deleteOrganization(organizationId)` deletes
-   the whole Neo4j group for the tenant.
+1. **read** — resolves the org's STORED `graphiti` rollout mode
+   (`resolveStoredAiPlatformFeatureMode`) before touching anything.
+   Deliberately **not** the kill-switch-aware resolver
+   (`resolveAiPlatformFeature`), which masks its result to `"off"` whenever
+   `AI_PLATFORM_KILL_GRAPHITI` is active — using that masked value here would
+   make step 6's "never escalate rollout" guarantee silently no-op for an
+   org stored at `on`/`canary` while the kill switch happens to be up,
+   leaving it stored at `on`/`canary` after an unverified purge+rebuild.
+2. **purge** — ONLY for a whole-org rebuild (no `--contact` given):
+   `GraphContextPort.deleteOrganization(organizationId)` deletes the whole
+   Neo4j group for the tenant. A `--contact`-scoped rebuild performs **no
+   purge at all** — `GraphContextPort`/Graphiti's real API has no
+   per-contact delete route (only `DELETE /group/{group_id}`), so purging
+   the whole org for a single contact's rebuild would silently destroy
+   every other contact's already-projected graph data while their ledger
+   rows still say `applied`. A `--contact` rebuild instead relies on
+   Graphiti's own `MERGE`-based upsert (keyed on the message's stable
+   idempotency key) to refresh just that contact's episodes on replay.
 3. **reset the ledger** — every `applied` graph/`graphiti` ledger row for
    this org (optionally scoped further to one contact) becomes
    replay-eligible again (`status='pending'`). Rows already `deleted` — an
@@ -81,17 +95,21 @@ of this script (and of the automatic lifecycle handler above):
    always a separate, explicit operator decision.
 
 ```bash
-# One tenant (the default and only supported scope):
+# One tenant (default scope) — purges the WHOLE org group, then rebuilds:
 pnpm exec tsx scripts/rebuild-graphiti.ts --org <organization_id> --confirm-purge
 
-# One contact within a tenant:
+# One contact within a tenant — NO purge; only that contact's ledger is
+# reset and replayed, relying on Graphiti's uuid-keyed upsert to refresh its
+# episodes without touching any other contact's data:
 pnpm exec tsx scripts/rebuild-graphiti.ts --org <organization_id> --contact <contact_id> --confirm-purge
 ```
 
-`--confirm-purge` is required on every invocation — unlike `rebuild-mem0.ts`
-(which never deletes provider-side data itself), this script's own step 2
-deletes the tenant's entire Graphiti group before rebuilding it, so running
-it without an explicit flag is refused.
+`--confirm-purge` is required on every invocation, including a
+`--contact`-scoped one that performs no purge at all — unlike
+`rebuild-mem0.ts` (which never deletes provider-side data itself), a
+whole-org run of this script's own step 2 deletes the tenant's entire
+Graphiti group before rebuilding it, and requiring the same flag for both
+modes keeps the CLI contract simple rather than conditionally destructive.
 
 There is no `--all-orgs` flag. `deleteOrganization` is destructive per
 tenant, and this task's interface doctrine is "tenant-scoped purge/rebuild
@@ -118,7 +136,11 @@ the Graphiti provider are faked as plain in-memory stand-ins:
 
 1. Org A purge (`rebuildTenant` or the LGPD lifecycle handler) never touches
    org B's episodes or ledger rows — proven by seeding both orgs and purging
-   only one.
+   only one. Within a single org, a `--contact`-scoped rebuild never touches
+   the OTHER contact's episodes/ledger rows either — proven by seeding both
+   contacts first, then running a `--contact`-scoped rebuild targeting only
+   one and asserting the other contact's episode is still present in the
+   graph store and its ledger row still says `applied`.
 2. Replay is stable and duplicate replay produces no duplicate graph nodes —
    two full purge+rebuild passes over the same source converge on exactly
    one episode (Graphiti's uuid-keyed `MERGE` semantics, exercised through
@@ -137,7 +159,10 @@ the Graphiti provider are faked as plain in-memory stand-ins:
    official Postgres source.
 5. `rebuildTenant` never escalates rollout: `on`/`canary` is downgraded to
    `shadow`; `off`/`shadow` is left with zero writes to
-   `ai_platform_feature_flags`.
+   `ai_platform_feature_flags`. This decision reads the org's STORED mode
+   (`resolveStoredAiPlatformFeatureMode`), so an active
+   `AI_PLATFORM_KILL_GRAPHITI` kill switch can never mask an `on`/`canary`
+   org into looking like `off` and defeating the downgrade.
 
 This sequence is what distinguishes "rebuild" (recovers projection state
 that should exist) from "resurrect" (recreates data an LGPD deletion
