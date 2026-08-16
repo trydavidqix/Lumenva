@@ -8,18 +8,22 @@
  * Server generates thread_id and side_effect_key (never from client).
  * Feature gating: OFF → 404, SHADOW → creates run but no approval/send, ON/CANARY → full workflow.
  */
-import { NextRequest, NextResponse } from 'next/server';
-import { getUser } from '@/lib/auth/server';
+import { NextRequest } from 'next/server';
+import { loadAuthUser, resolveActiveOrg } from '@/lib/auth/server';
 import { fail, ok } from '@/lib/api/wrappers';
-import { audit } from '@/lib/audit';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
     // Auth: manager+
-    const user = await getUser();
+    const user = await loadAuthUser();
     if (!user) {
       return fail('unauthorized', 'Authentication required', 401);
+    }
+
+    const activeOrg = await resolveActiveOrg(user);
+    if (!activeOrg) {
+      return fail('invalid_state', 'No active organization', 400);
     }
 
     // TODO: Verify manager+ role via user_organizations
@@ -28,35 +32,21 @@ export async function POST(request: NextRequest) {
     const { contact_id, conversation_id, lead_id } = body;
 
     if (!contact_id) {
-      return fail('invalid_input', 'contact_id required');
+      return fail('invalid_input', 'contact_id required', 400);
     }
 
     // TODO: Implement createProposalWorkflowRun
-    // 1. Verify contact/conversation/lead belong to user's org
+    // 1. Verify contact/conversation/lead belong to activeOrg
     // 2. Check feature flag (OFF/SHADOW/ON/CANARY)
     // 3. Create ai_workflow_runs row (generatesuuidv4 thread_id server-side)
     // 4. Audit: workflow.created
     // 5. Return { run_id, thread_id, status }
 
-    const supabase = createAdminClient();
-    const org = user.raw_user_meta_data?.organization_id;
-
-    if (!org) {
-      return fail('invalid_state', 'No organization in user context');
-    }
-
     // Placeholder: would call createProposalWorkflowRun here
     const runId = crypto.randomUUID();
     const threadId = crypto.randomUUID();
 
-    await audit(supabase, {
-      organization_id: org,
-      action: 'workflow.created',
-      resource_type: 'ai_workflow_runs',
-      resource_id: runId,
-      user_id: user.id,
-      metadata: { contact_id },
-    });
+    logger.info('workflow.created stub', { org: activeOrg.orgId, user_id: user.id, run_id: runId });
 
     return ok({
       run_id: runId,

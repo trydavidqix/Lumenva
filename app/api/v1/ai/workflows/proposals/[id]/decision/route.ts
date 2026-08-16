@@ -8,11 +8,10 @@
  * Routes to LangGraph graph resumption (humanDecision input).
  * Idempotency: second decision after completed returns 409 or accepted per spec.
  */
-import { NextRequest, NextResponse } from 'next/server';
-import { getUser } from '@/lib/auth/server';
+import type { NextRequest } from 'next/server';
+import { loadAuthUser, resolveActiveOrg } from '@/lib/auth/server';
 import { fail, ok } from '@/lib/api/wrappers';
-import { audit } from '@/lib/audit';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { logger } from '@/lib/logger';
 
 export async function POST(
   request: NextRequest,
@@ -20,30 +19,28 @@ export async function POST(
 ) {
   try {
     // Auth: manager+
-    const user = await getUser();
+    const user = await loadAuthUser();
     if (!user) {
       return fail('unauthorized', 'Authentication required', 401);
+    }
+
+    const activeOrg = await resolveActiveOrg(user);
+    if (!activeOrg) {
+      return fail('invalid_state', 'No active organization', 400);
     }
 
     // TODO: Verify manager+ role
 
     const runId = params.id;
     const body = await request.json();
-    const { decision, reason, body: editBody } = body;
+    const { decision, reason: _reason, body: _editBody } = body;
 
     if (!decision) {
-      return fail('invalid_input', 'decision required (approve|reject|edit)');
+      return fail('invalid_input', 'decision required (approve|reject|edit)', 400);
     }
 
     if (!['approve', 'reject', 'edit'].includes(decision)) {
-      return fail('invalid_input', 'decision must be approve|reject|edit');
-    }
-
-    const supabase = createAdminClient();
-    const org = user.raw_user_meta_data?.organization_id;
-
-    if (!org) {
-      return fail('invalid_state', 'No organization in user context');
+      return fail('invalid_input', 'decision must be approve|reject|edit', 400);
     }
 
     // TODO: Implement resume logic
@@ -55,14 +52,7 @@ export async function POST(
     // 6. Audit: workflow.{approved|rejected|edited}
     // 7. Return { run_id, status, updated_at }
 
-    await audit(supabase, {
-      organization_id: org,
-      action: `workflow.${decision}`,
-      resource_type: 'ai_workflow_runs',
-      resource_id: runId,
-      user_id: user.id,
-      metadata: { decision },
-    });
+    logger.info(`workflow.${decision} stub`, { org: activeOrg.orgId, run_id: runId, user_id: user.id });
 
     // Placeholder response
     return ok({
