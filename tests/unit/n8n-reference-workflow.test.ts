@@ -26,10 +26,20 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
+import type { ActionCtx } from "@/lib/automation/types";
+
+// I3 fix: executeN8nWebhook now gates on the "n8n" AI Platform feature
+// before delivering — this suite is about envelope/signing/idempotency
+// behavior, not the gate, so the feature is fixed to "on" here. Same seam as
+// lib/automation/actions/n8n-webhook.test.ts and
+// lib/agent-engine/obs/external-tracing-config.test.ts.
+vi.mock("@/lib/agent-engine/platform/features", () => ({
+  resolveAiPlatformFeature: vi.fn().mockResolvedValue({ mode: "on", config: {}, killed: false }),
+}));
+
 import { executeN8nWebhook } from "@/lib/automation/actions/n8n-webhook";
 import { buildN8nEnvelope, type N8nIntegrationEnvelope } from "@/lib/automation/n8n/envelope";
-import type { ActionCtx } from "@/lib/automation/types";
 
 const REPO_ROOT = join(__dirname, "..", "..");
 const DOC_PATH = join(REPO_ROOT, "docs", "examples", "n8n", "crm-lead-created.md");

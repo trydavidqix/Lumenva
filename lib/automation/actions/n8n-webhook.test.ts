@@ -1,8 +1,23 @@
 import { createHmac } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { executeN8nWebhook, n8nWebhookConfigSchema } from "@/lib/automation/actions/n8n-webhook";
 import type { ActionCtx } from "@/lib/automation/types";
+
+// I3 fix: executeN8nWebhook now gates on the "n8n" AI Platform feature
+// (lib/agent-engine/platform/features.ts) before doing anything else. Every
+// test in this file exercises delivery behavior, not the gate itself, so the
+// feature defaults to "on"/not-killed here — the gate's own behavior (off,
+// killed) is covered by the dedicated describe block below. Mirrors the
+// vi.hoisted + vi.mock pattern used by
+// lib/agent-engine/obs/external-tracing-config.test.ts for the same seam.
+const state = vi.hoisted(() => ({
+  resolveFeature: vi.fn().mockResolvedValue({ mode: "on", config: {}, killed: false }),
+}));
+vi.mock("@/lib/agent-engine/platform/features", () => ({
+  resolveAiPlatformFeature: state.resolveFeature,
+}));
+
+import { executeN8nWebhook, n8nWebhookConfigSchema } from "@/lib/automation/actions/n8n-webhook";
 
 function baseCtx(overrides: Partial<ActionCtx["event"]> = {}): ActionCtx {
   return {
@@ -46,6 +61,11 @@ async function listen(server: Server): Promise<{ port: number; close: () => Prom
 
 describe("executeN8nWebhook", () => {
   let server: Server | undefined;
+
+  beforeEach(() => {
+    state.resolveFeature.mockClear();
+    state.resolveFeature.mockResolvedValue({ mode: "on", config: {}, killed: false });
+  });
 
   afterEach(async () => {
     if (server) {
@@ -343,5 +363,64 @@ describe("executeN8nWebhook", () => {
     await import("@/lib/automation/actions/register-all");
     const { getAction } = await import("@/lib/automation/actions");
     expect(getAction("n8n_webhook")).toBeDefined();
+  });
+
+  describe("I3: gate na feature AI Platform 'n8n' (default off)", () => {
+    it("feature mode 'off': failed n8n_feature_disabled, sem tentar entrega/fetch nem checar a URL", async () => {
+      state.resolveFeature.mockResolvedValue({ mode: "off", config: {}, killed: false });
+
+      // URL deliberadamente inválida/unsafe — se o gate não interceptasse
+      // antes do parse/fetch, este teste falharia por outro motivo (unsafe_url
+      // ou invalid_config) em vez de provar que a entrega nem começou.
+      const result = await executeN8nWebhook(baseCtx(), { url: "not a url", workflow_key: "wf-1" });
+
+      expect(result).toEqual({ type: "n8n_webhook", status: "failed", error: "n8n_feature_disabled" });
+      expect(state.resolveFeature).toHaveBeenCalledWith({ organizationId: "org-1", feature: "n8n" });
+    });
+
+    it("kill switch ativo (killed=true): failed n8n_feature_disabled mesmo se mode viesse 'on'", async () => {
+      // resolveAiPlatformFeature real já colapsa mode->'off' quando killed=true;
+      // este teste garante que executeN8nWebhook honra `killed` diretamente
+      // também, sem depender só do valor de `mode`.
+      state.resolveFeature.mockResolvedValue({ mode: "on", config: {}, killed: true });
+
+      const result = await executeN8nWebhook(baseCtx(), { url: "https://example.com/hook", workflow_key: "wf-1" });
+
+      expect(result).toEqual({ type: "n8n_webhook", status: "failed", error: "n8n_feature_disabled" });
+    });
+
+    it.each(["shadow", "canary", "on"] as const)(
+      "feature mode '%s' (não-off, não killed): entrega prossegue normalmente",
+      async (mode) => {
+        state.resolveFeature.mockResolvedValue({ mode, config: {}, killed: false });
+        server = createServer((req, res) => {
+          req.resume();
+          req.on("end", () => {
+            res.writeHead(200);
+            res.end("ok");
+          });
+        });
+        const { port, close } = await listen(server);
+
+        const result = await executeN8nWebhook(
+          baseCtx(),
+          { url: `http://127.0.0.1:${port}/hook`, workflow_key: "wf-1" },
+          { skipUrlCheck: true },
+        );
+
+        expect(result.status).toBe("success");
+        await close();
+      },
+    );
+
+    it("organizationId propagado ao gate vem de ctx.organizationId, não de config/payload", async () => {
+      state.resolveFeature.mockResolvedValue({ mode: "off", config: {}, killed: false });
+      const ctx = baseCtx();
+      ctx.organizationId = "org-specific-tenant";
+
+      await executeN8nWebhook(ctx, { url: "https://example.com/hook", workflow_key: "wf-1" });
+
+      expect(state.resolveFeature).toHaveBeenCalledWith({ organizationId: "org-specific-tenant", feature: "n8n" });
+    });
   });
 });
