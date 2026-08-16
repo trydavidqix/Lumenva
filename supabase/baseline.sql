@@ -9352,4 +9352,67 @@ comment on function public.fn_liberar_leads_do_agente() is
   'violando crm_leads_owner_kind_coherence — e um agente que já atendeu alguém '
   'não podia ser removido.';
 
+-- ---- registro de workflow runs — Fase 7 LangGraph, Task 2 (migration 0119) ----
+-- Ver cabeçalho da migration 0119 para a justificativa completa (NNNN, papel do
+-- thread_id, doutrina de checkpoint fora desta tabela). Bloco idempotente
+-- espelhando o create table/policy/grant da migration para o self-hoster que
+-- aplica só o baseline.
+create table if not exists public.ai_workflow_runs (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  workflow_type text not null check (workflow_type in ('commercial_proposal')),
+  thread_id uuid not null,
+  contact_id uuid not null references public.contacts(id) on delete restrict,
+  conversation_id uuid references public.conversations(id) on delete set null,
+  lead_id uuid references public.crm_leads(id) on delete set null,
+  status text not null default 'shadow' check (status in (
+    'shadow', 'drafting', 'awaiting_approval', 'approved', 'rejected',
+    'sending', 'completed', 'failed', 'cancelled'
+  )),
+  draft_payload jsonb not null default '{}'::jsonb,
+  decision_payload jsonb,
+  decided_by uuid references auth.users(id) on delete set null,
+  decided_at timestamptz,
+  side_effect_key text not null,
+  sent_message_id uuid references public.messages(id) on delete set null,
+  followup_id uuid references public.followup_enrollments(id) on delete set null,
+  last_error_code text,
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint ai_workflow_runs_thread_unique unique (organization_id, thread_id),
+  constraint ai_workflow_runs_side_effect_unique unique (organization_id, side_effect_key),
+  constraint ai_workflow_runs_decision_coherence check (
+    (decided_by is null and decided_at is null)
+    or (decided_by is not null and decided_at is not null)
+  )
+);
+comment on table public.ai_workflow_runs is
+  'Fase 7 (LangGraph) — registro por-tenant de execuções de workflow (piloto: commercial_proposal). Estado de workflow separado do estado de lead/contact/conversation do CRM. Nunca guarda chave de provedor nem checkpoint bruto do LangGraph.';
+create index if not exists idx_ai_workflow_runs_org_status
+  on public.ai_workflow_runs (organization_id, status);
+create index if not exists idx_ai_workflow_runs_contact
+  on public.ai_workflow_runs (organization_id, contact_id);
+drop trigger if exists trg_ai_workflow_runs_updated_at on public.ai_workflow_runs;
+create trigger trg_ai_workflow_runs_updated_at
+  before update on public.ai_workflow_runs
+  for each row execute function public.fn_set_updated_at();
+alter table public.ai_workflow_runs enable row level security;
+drop policy if exists tenant_isolation_ai_workflow_runs_all on public.ai_workflow_runs;
+create policy tenant_isolation_ai_workflow_runs_all on public.ai_workflow_runs
+  for all
+  to authenticated
+  using (
+    (organization_id in (select public.fn_user_org_ids())
+      and public.fn_role_at_least(organization_id, 'manager'))
+    or public.fn_is_platform_admin()
+  )
+  with check (
+    (organization_id in (select public.fn_user_org_ids())
+      and public.fn_role_at_least(organization_id, 'manager'))
+    or public.fn_is_platform_admin()
+  );
+grant select, insert, update, delete on public.ai_workflow_runs to authenticated;
+grant all on public.ai_workflow_runs to service_role;
+
 notify pgrst, 'reload schema';
