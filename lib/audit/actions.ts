@@ -217,4 +217,9 @@ export type AuditAction =
   // de código próprio para não somar duas grandezas no mesmo relatório.
   | "followup.scheduled"
   | "followup.cancelled"
-  | "lead.reactivation_proposed";
+  | "lead.reactivation_proposed"
+  // Fase 7 (LangGraph) — ai_workflow_runs. `workflow.created` audita id/thread
+  // id/status inicial, nunca o corpo do draft (pode carregar PII do contato).
+  | "workflow.created"
+  | "workflow.approved"
+  | "workflow.rejected";
