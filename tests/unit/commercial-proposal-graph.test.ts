@@ -26,6 +26,7 @@ const BASE_STATE: ProposalGraphState = {
     needs: "Precisa de um CRM com WhatsApp nativo para 5 vendedores.",
   },
   draft_payload: null,
+  validation_errors: null,
   error: null,
 };
 

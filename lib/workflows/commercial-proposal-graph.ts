@@ -28,6 +28,26 @@
  * `organization_id` (Task 2 schema) has no path into the LLM call at all.
  * The caller must populate `organization_id` from the trusted
  * `ai_workflow_runs` row — never from request body/model output.
+ *
+ * ADDENDUM (proposal drafting nodes follow-up): the briefing that produced
+ * this addendum asked for a from-scratch `ProposalWorkflowState` at
+ * `lib/agent-engine/workflows/proposal/state.ts` — that path does NOT exist
+ * in this tree (confirmed via grep; only referenced in the plan doc, same
+ * gap `progress.md`'s "Numbering note" already recorded for the plan's own
+ * Task 4). Building a second, parallel state shape for the same graph would
+ * be the `.claude/rules/data-modeling.md` "duplicação sem source of
+ * verdade" anti-pattern, so the two still-missing nodes from that briefing
+ * (`load_context`, `validate`) were implemented against THIS file's existing
+ * `ProposalGraphState` instead: `load-proposal-context-node.ts`
+ * (`loadProposalContextNode`) and `validate-proposal-draft-node.ts`
+ * (`validateProposalDraftNode`). The briefing's third node (`draftProposal`)
+ * is `generateProposalNode` below, unchanged — it already satisfies that
+ * brief's contract (runModelCall, purpose `proposal_workflow_draft`, catches
+ * LLM errors) and rewriting it under a new name would just be a duplicate.
+ * Neither new node is wired into `commercialProposalGraph`'s compiled edges
+ * yet — graph assembly (plus the human-approval interrupt) stays a separate,
+ * later task, same "exported standalone, not yet wired" convention this
+ * file's own docblock already used for `generateProposalNode`.
  */
 import {
   Annotation,
@@ -45,8 +65,10 @@ import type { Logger } from '../agent-engine/obs/logger';
 
 /**
  * CRM context assumed already resolved into the graph state by the upstream
- * setup step (ledger Task 6 fetches official CRM state; this node only
- * consumes it — see the module docblock). Never fetched by this node.
+ * setup step — `loadProposalContextNode` in `load-proposal-context-node.ts`
+ * populates this from canonical CRM tables (contacts/crm_leads/messages)
+ * only, never Mem0/Graphiti recall facts; this node only consumes it. Never
+ * fetched by `generateProposalNode` itself.
  */
 export const proposalCrmContextSchema = z.object({
   contact_name: z.string().min(1),
@@ -65,7 +87,7 @@ export const proposalDraftPayloadSchema = z.object({
 export type ProposalDraftPayload = z.infer<typeof proposalDraftPayloadSchema>;
 
 export interface ProposalNodeError {
-  code: 'invalid_contact_data' | 'llm_call_failed' | 'invalid_llm_output';
+  code: 'invalid_contact_data' | 'crm_lookup_failed' | 'llm_call_failed' | 'invalid_llm_output';
   message: string;
 }
 
@@ -79,6 +101,19 @@ export const ProposalGraphStateAnnotation = Annotation.Root({
     default: () => null,
   }),
   draft_payload: Annotation<ProposalDraftPayload | null>({
+    reducer: (_prev, next) => next,
+    default: () => null,
+  }),
+  /**
+   * Deterministic output of the "validate" step (plan's Task 7 graph shape:
+   * `load_context -> draft -> validate -> await_human_decision[interrupt] -> ...`,
+   * see `validate-proposal-draft-node.ts`). `null` means "not yet validated",
+   * `[]` means "validated, no findings", non-empty means the draft must not
+   * reach a human/send step unreviewed. Separate from `error` on purpose —
+   * `error` is a pipeline/node failure (nothing to show), `validation_errors`
+   * is content that DID get produced but failed a deterministic content check.
+   */
+  validation_errors: Annotation<string[] | null>({
     reducer: (_prev, next) => next,
     default: () => null,
   }),
