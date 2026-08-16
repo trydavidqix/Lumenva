@@ -29,7 +29,18 @@ export async function POST(
       return fail('invalid_state', 'No active organization', 400);
     }
 
-    // TODO: Verify manager+ role
+    // Step 5: RBAC — verify manager+ role
+    // TODO: Check user.role in activeOrg >= 'manager'
+    // const ROLE_RANK = { viewer: 1, agent: 2, manager: 4, admin: 5 };
+    // if (ROLE_RANK[activeOrg.role] < ROLE_RANK['manager']) {
+    //   return fail('forbidden', 'Manager+ role required', 403);
+    // }
+
+    // Step 6: Feature flag — OFF/SHADOW/ON/CANARY
+    // TODO: Resolve feature flag for proposal_workflow_langgraph per tenant
+    // const featureFlag = await resolveFeatureFlag('proposal_workflow_langgraph', activeOrg.orgId);
+    // if (featureFlag === 'OFF') return fail('not_found', '', 404);
+    // if (featureFlag === 'SHADOW') return ok({ run_id: runId, status: 'completed' }); // mock
 
     const runId = params.id;
     const body = await request.json();
