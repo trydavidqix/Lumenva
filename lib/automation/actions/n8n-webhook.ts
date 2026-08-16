@@ -20,6 +20,7 @@ import type { ActionCtx, ActionResultDetail } from "@/lib/automation/types";
 import { deliverSignedWebhook } from "@/lib/automation/actions/call-webhook";
 import { decryptWebhookSecret } from "@/lib/webhooks/secrets";
 import { buildN8nEnvelope } from "@/lib/automation/n8n/envelope";
+import { resolveAiPlatformFeature } from "@/lib/agent-engine/platform/features";
 
 export const n8nWebhookConfigSchema = z.strictObject({
   url: z.string().url(),
@@ -35,6 +36,18 @@ export async function executeN8nWebhook(
   config: Record<string, unknown>,
   opts: { skipUrlCheck?: boolean; retryDelaysMs?: number[] } = {},
 ): Promise<ActionResultDetail> {
+  // Gate: n8n é feature AI Platform Fase 6 (default off). Kill switch ou modo
+  // "off" bloqueia a entrega antes de qualquer fetch/decrypt — mesmo padrão de
+  // lib/agent-engine/obs/external-tracing-config.ts (feature.killed || mode === "off").
+  const n8nFeature = await resolveAiPlatformFeature({ organizationId: ctx.organizationId, feature: "n8n" });
+  if (n8nFeature.mode === "off" || n8nFeature.killed) {
+    return {
+      type: "n8n_webhook",
+      status: "failed" as const,
+      error: "n8n_feature_disabled" as const,
+    };
+  }
+
   const parsed = n8nWebhookConfigSchema.safeParse(config);
   if (!parsed.success) {
     return { type: "n8n_webhook", status: "failed", error: "invalid_config" };
@@ -59,7 +72,7 @@ export async function executeN8nWebhook(
       // Determinístico a partir de (rule, event) — reprocessar o mesmo evento
       // pela mesma regra nunca inventa uma key nova (dedupe do lado n8n).
       idempotencyKey: `${ctx.ruleId}:${ctx.event.id}`,
-      data: { workflow_key, ...ctx.event.payload },
+      data: { ...ctx.event.payload, workflow_key },
     });
   } catch (err) {
     return { type: "n8n_webhook", status: "failed", error: (err as Error).message };

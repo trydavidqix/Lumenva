@@ -144,7 +144,13 @@ export async function executeCallWebhook(
 ): Promise<ActionResultDetail> {
   const url = typeof config.url === "string" ? config.url : null;
   if (!url) return { type: "call_webhook", status: "failed", error: "missing_url" };
-  if (!opts.skipUrlCheck) {
+  // opts.skipUrlCheck exists ONLY so tests can hit local/loopback listeners
+  // without tripping assertSafeOutboundUrl's anti-SSRF guard. No production
+  // caller of executeCallWebhook passes it. NODE_ENV gate is a second,
+  // independent floor under that convention — a caller that accidentally
+  // sets skipUrlCheck outside a test run still gets the guard.
+  const TEST_ONLY_SKIP_URL_CHECK = process.env.NODE_ENV === "test" && opts.skipUrlCheck === true;
+  if (!TEST_ONLY_SKIP_URL_CHECK) {
     try {
       assertSafeOutboundUrl(url);
     } catch (err) {

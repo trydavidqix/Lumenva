@@ -336,14 +336,23 @@ describe("n8n Integration Envelope", () => {
       ).toThrow("organizationId");
     });
 
-    it("should allow empty occurredAt for flexibility (test actual behavior)", () => {
-      // If this is allowed or not should match the brief
-      // The brief doesn't explicitly forbid empty occurredAt, only the others
-      const envelope = buildN8nEnvelope({
-        ...baseInput,
-        occurredAt: "",
-      });
-      expect(envelope).toBeDefined();
+    it("should reject empty occurredAt (M7 fix: was silently allowed, now fails closed like the other required fields)", () => {
+      expect(() =>
+        buildN8nEnvelope({
+          ...baseInput,
+          occurredAt: "",
+        }),
+      ).toThrow("occurredAt");
+    });
+
+    it("should reject non-string occurredAt", () => {
+      expect(() =>
+        buildN8nEnvelope({
+          ...baseInput,
+          // @ts-expect-error deliberately passing a non-string to prove the runtime guard
+          occurredAt: null,
+        }),
+      ).toThrow("occurredAt");
     });
   });
 

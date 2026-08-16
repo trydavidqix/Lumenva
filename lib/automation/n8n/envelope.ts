@@ -127,6 +127,15 @@ export function buildN8nEnvelope(input: BuildN8nEnvelopeInput): N8nIntegrationEn
   if (!organizationId || organizationId.trim() === "") {
     throw new Error("organizationId is required and cannot be empty");
   }
+  // occurredAt has no default here on purpose: every caller (currently only
+  // executeN8nWebhook) passes `new Date().toISOString()` explicitly, so the
+  // envelope stays a pure function of its inputs instead of silently
+  // stamping "now" itself. Still validated like the other required fields —
+  // an empty/non-string value would otherwise reach the external n8n
+  // instance as a broken timestamp instead of failing closed here.
+  if (!occurredAt || typeof occurredAt !== "string" || occurredAt.trim() === "") {
+    throw new Error("occurredAt is required and must be a non-empty ISO-8601 string");
+  }
 
   // Sanitize data payload (fail-closed: any secret blocks the envelope)
   validateDataFieldsNoSecrets(data);
