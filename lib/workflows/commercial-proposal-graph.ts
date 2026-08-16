@@ -29,7 +29,14 @@
  * The caller must populate `organization_id` from the trusted
  * `ai_workflow_runs` row — never from request body/model output.
  */
-import { Annotation, END, START, StateGraph, type LangGraphRunnableConfig } from '@langchain/langgraph';
+import {
+  Annotation,
+  END,
+  START,
+  StateGraph,
+  type BaseCheckpointSaver,
+  type LangGraphRunnableConfig,
+} from '@langchain/langgraph';
 import type pg from 'pg';
 import { z } from 'zod';
 
@@ -245,6 +252,32 @@ const graphBuilder = new StateGraph(ProposalGraphStateAnnotation)
  * Compiled entry point: `START -> node_generate_proposal -> END`. Invoke
  * with `commercialProposalGraph.invoke(state, { configurable: { db, llmCfg } })`.
  * No checkpointer is attached here — this graph never interrupts, so there
- * is nothing to resume yet (see the module docblock scope note).
+ * is nothing to resume yet (see the module docblock scope note), and
+ * existing call sites (including this file's own test suite) invoke it
+ * without a `thread_id`. Once a `BaseCheckpointSaver` is attached to a
+ * compiled graph, LangGraph requires `configurable.thread_id` on every
+ * invoke — so this uncheckpointed export stays as-is, and
+ * `compileCommercialProposalGraphWithCheckpointer` below is the separate,
+ * additive entry point for callers that need persistence/resume (Task 4 —
+ * see `checkpointer-config.ts`'s scope note).
  */
 export const commercialProposalGraph = graphBuilder.compile();
+
+/**
+ * Same graph, compiled with a `BaseCheckpointSaver` attached (typically
+ * `createCheckpointer()`/`createAndSetupCheckpointer()` from
+ * `./checkpointer-config`). Every invocation MUST pass a stable
+ * `configurable.thread_id` — LangGraph uses it to key checkpoint rows, and
+ * it's how a caller resumes the same run later (after a crash, after a
+ * pause/interrupt once this graph grows one — see the module docblock scope
+ * note: this graph has no interrupt node yet, so today "resume" just means
+ * "the executed node's state was durably persisted", which is still real
+ * value ahead of a future interrupt node landing here).
+ *
+ * Kept as a factory (not a second top-level singleton) because a
+ * checkpointer owns a live `pg.Pool` — callers decide its lifecycle
+ * (when to build it, when to `.end()` it), the graph module doesn't.
+ */
+export function compileCommercialProposalGraphWithCheckpointer(checkpointer: BaseCheckpointSaver) {
+  return graphBuilder.compile({ checkpointer });
+}
