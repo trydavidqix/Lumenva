@@ -57,46 +57,50 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-export async function executeCallWebhook(
-  ctx: ActionCtx,
-  config: Record<string, unknown>,
-  opts: { skipUrlCheck?: boolean; retryDelaysMs?: number[] } = {},
-): Promise<ActionResultDetail> {
-  const url = typeof config.url === "string" ? config.url : null;
-  if (!url) return { type: "call_webhook", status: "failed", error: "missing_url" };
+export interface WebhookDeliveryResult {
+  status: "success" | "failed";
+  error?: string;
+  detail?: Record<string, unknown>;
+}
+
+export interface DeliverSignedWebhookOpts {
+  /** Pulável só nos testes — todo caller de produção passa pelo guard. */
+  skipUrlCheck?: boolean;
+  retryDelaysMs?: number[];
+  /** HMAC-sha256 do body vira X-Deskcomm-Signature quando presente; null/undefined → envio sem assinatura. */
+  secret?: string | null;
+  /** Headers extras do caller (ex.: X-Deskcomm-Event). Nunca inclui a assinatura — essa é sempre computada aqui. */
+  headers?: Record<string, string>;
+}
+
+/**
+ * Transporte outbound canônico — ÚNICO lugar do repo que faz fetch() de
+ * webhook de tenant. Cobre assertSafeOutboundUrl, assinatura HMAC-sha256
+ * (X-Deskcomm-Signature) e o loop de retry/timeout/redirect:"manual".
+ *
+ * Compartilhado por `call_webhook` (abaixo) e `n8n_webhook`
+ * (lib/automation/actions/n8n-webhook.ts) — nenhuma das duas ações
+ * reimplementa fetch/anti-SSRF/HMAC; ambas chamam esta função.
+ */
+export async function deliverSignedWebhook(
+  url: string,
+  body: string,
+  opts: DeliverSignedWebhookOpts = {},
+): Promise<WebhookDeliveryResult> {
   if (!opts.skipUrlCheck) {
     try {
       assertSafeOutboundUrl(url);
     } catch (err) {
-      return { type: "call_webhook", status: "failed", error: (err as Error).message };
+      return { status: "failed", error: (err as Error).message };
     }
   }
 
-  const leadPublic = projectPublicFields(ctx.context.lead, LEAD_PUBLIC_FIELDS);
-  const contactPublic = projectPublicFields(ctx.context.contact, CONTACT_PUBLIC_FIELDS);
-  const body = JSON.stringify({
-    event: ctx.event.event_type,
-    occurred_at: new Date().toISOString(),
-    data: {
-      ...ctx.event.payload,
-      ...(leadPublic ? { lead: leadPublic } : {}),
-      ...(contactPublic ? { contact: contactPublic } : {}),
-    },
-  });
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "X-Deskcomm-Event": ctx.event.event_type,
+    ...(opts.headers ?? {}),
   };
-  // secret_enc (cifrado at-rest, migration 0041) tem precedência; config.secret
-  // plaintext fica só como legado pré-retrofit. Decrypt indisponível (chave da
-  // GUC ausente) → envia SEM assinatura em vez de falhar a entrega — espelho do
-  // hmacSkipped do inbound.
-  let secret: string | null = typeof config.secret === "string" && config.secret ? config.secret : null;
-  if (typeof config.secret_enc === "string" && config.secret_enc) {
-    secret = await decryptWebhookSecret(ctx.admin, config.secret_enc);
-  }
-  if (secret) {
-    headers["X-Deskcomm-Signature"] = createHmac("sha256", secret).update(body).digest("hex");
+  if (opts.secret) {
+    headers["X-Deskcomm-Signature"] = createHmac("sha256", opts.secret).update(body).digest("hex");
   }
 
   const retryDelaysMs = opts.retryDelaysMs ?? RETRY_DELAYS_MS;
@@ -117,7 +121,7 @@ export async function executeCallWebhook(
       });
       lastStatus = res.status;
       if (res.ok) {
-        return { type: "call_webhook", status: "success", detail: { response_status: res.status, attempt } };
+        return { status: "success", detail: { response_status: res.status, attempt } };
       }
       lastError = res.status >= 300 && res.status < 400 ? "redirect_not_followed" : `http_${res.status}`;
     } catch (err) {
@@ -127,11 +131,61 @@ export async function executeCallWebhook(
     if (delay !== undefined) await sleep(delay);
   }
   return {
-    type: "call_webhook",
     status: "failed",
     error: lastError,
     detail: { response_status: lastStatus, attempts: retryDelaysMs.length + 1 },
   };
+}
+
+export async function executeCallWebhook(
+  ctx: ActionCtx,
+  config: Record<string, unknown>,
+  opts: { skipUrlCheck?: boolean; retryDelaysMs?: number[] } = {},
+): Promise<ActionResultDetail> {
+  const url = typeof config.url === "string" ? config.url : null;
+  if (!url) return { type: "call_webhook", status: "failed", error: "missing_url" };
+  // opts.skipUrlCheck exists ONLY so tests can hit local/loopback listeners
+  // without tripping assertSafeOutboundUrl's anti-SSRF guard. No production
+  // caller of executeCallWebhook passes it. NODE_ENV gate is a second,
+  // independent floor under that convention — a caller that accidentally
+  // sets skipUrlCheck outside a test run still gets the guard.
+  const TEST_ONLY_SKIP_URL_CHECK = process.env.NODE_ENV === "test" && opts.skipUrlCheck === true;
+  if (!TEST_ONLY_SKIP_URL_CHECK) {
+    try {
+      assertSafeOutboundUrl(url);
+    } catch (err) {
+      return { type: "call_webhook", status: "failed", error: (err as Error).message };
+    }
+  }
+
+  const leadPublic = projectPublicFields(ctx.context.lead, LEAD_PUBLIC_FIELDS);
+  const contactPublic = projectPublicFields(ctx.context.contact, CONTACT_PUBLIC_FIELDS);
+  const body = JSON.stringify({
+    event: ctx.event.event_type,
+    occurred_at: new Date().toISOString(),
+    data: {
+      ...ctx.event.payload,
+      ...(leadPublic ? { lead: leadPublic } : {}),
+      ...(contactPublic ? { contact: contactPublic } : {}),
+    },
+  });
+  // secret_enc (cifrado at-rest, migration 0041) tem precedência; config.secret
+  // plaintext fica só como legado pré-retrofit. Decrypt indisponível (chave da
+  // GUC ausente) → envia SEM assinatura em vez de falhar a entrega — espelho do
+  // hmacSkipped do inbound.
+  let secret: string | null = typeof config.secret === "string" && config.secret ? config.secret : null;
+  if (typeof config.secret_enc === "string" && config.secret_enc) {
+    secret = await decryptWebhookSecret(ctx.admin, config.secret_enc);
+  }
+
+  // URL já validada acima (ou skipUrlCheck explícito do caller) — não repete o guard.
+  const result = await deliverSignedWebhook(url, body, {
+    skipUrlCheck: true,
+    retryDelaysMs: opts.retryDelaysMs,
+    secret,
+    headers: { "X-Deskcomm-Event": ctx.event.event_type },
+  });
+  return { type: "call_webhook", ...result };
 }
 
 registerAction({
