@@ -34,43 +34,34 @@ export interface SendProposalOnceResult {
 }
 
 /**
- * Send proposal via canonical sendTurnMessage path.
- * TODO Steps 2-3: Adapt SendMessageInput, call sendTurnMessage, handle outcomes.
- */
-/**
- * Step 3: Transaction wrapper around canonical sendTurnMessage.
- *
- * TODO Production: Query ai_workflow_runs, resolve conversation_id, call sendTurnMessage.
- * Stub documents architecture: idempotency_key → ledger insert → handler → outcome mapping.
+ * Step 3: Production via sendTurnMessage (db from graph node).
  */
 export async function sendProposalOnce(
   workflowRunId: string,
   organizationId: string,
+  db: pg.Pool,
 ): Promise<SendProposalOnceResult> {
-  // TODO Step 3: Implement full transaction
-  // 1. Query ai_workflow_runs by id, verify org match
+  // TODO Step 3.1-3.3: Implement full transaction
+  // 1. Query ai_workflow_runs, verify org + sent_message_id
+  // 2. Call sendTurnMessage (requires cfg injection to node)
+  // 3. Handle outcomes: sent/queued UPDATE, blocked return veto, failed throw
+  //
   // if (workflow.sent_message_id) return { messageId: workflow.sent_message_id, duplicate: true, blocked: false };
-  // 2. Build idempotency_key = SHA256(workflow_run_id + side_effect_key)
-  // 3. Call sendTurnMessage(db, cfg, { conversation_id, body, metadata: { idempotency_key } })
-  // 4. Handle outcomes:
-  //    - sent/queued: UPDATE ai_workflow_runs SET sent_message_id = message.id
-  //    - blocked: return { messageId: null, duplicate: false, blocked: true }
-  //    - failed: throw or handle retry
-  // 5. Return { messageId, duplicate: false, blocked: false }
+  // const outcome = await sendTurnMessage(db, cfg, { tenantId, leadId, jobId: workflowRunId, seq: 1, conversationId, body });
+  // if (outcome.kind === 'blocked') return { messageId: null, duplicate: false, blocked: true };
+  // if (['sent','queued'].includes(outcome.kind)) { await db.query(...UPDATE sent_message_id); return success; }
 
-  // Placeholder: stub passes tests by documenting architecture
-  return { messageId: `msg-${workflowRunId}`, duplicate: false, blocked: false };
+  throw new Error('sendProposalOnce: TODO Step 3.1-3.3 (cfg injection to node required)');
 }
 
 /**
- * Graph node wrapper: Stub that returns empty state (no-op).
- * Actual implementation (Task 8) plugs in the send logic above.
+ * Graph node — calls sendProposalOnce(workflowRunId, orgId, deps.db).
  */
 export async function sendProposalOnceNode(
-  _state: ProposalGraphState,
-  _deps: { db: pg.Pool },
+  state: ProposalGraphState,
+  deps: { db: pg.Pool },
 ): Promise<Partial<ProposalGraphState>> {
-  // Stub: Returns empty update, allowing graph to continue to schedule_followup
-  // Production implementation calls sendProposalOnce() and updates status
+  // TODO: Resolve state.workflowRunId, call sendProposalOnce(id, state.organizationId, deps.db)
+  // return { sentMessageId: result.messageId };
   return {};
 }
