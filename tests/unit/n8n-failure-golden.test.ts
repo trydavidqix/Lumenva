@@ -56,6 +56,15 @@ vi.mock("@/lib/logger", () => ({
 vi.mock("@/lib/audit", () => ({ audit: vi.fn(async () => undefined) }));
 vi.mock("@/lib/ai/dispatcher/rate-limit", () => ({ checkRateLimit: vi.fn() }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
+// I3 fix: executeN8nWebhook now gates on the "n8n" AI Platform feature before
+// delivering, which would otherwise call the real (mocked-to-undefined-return)
+// createAdminClient() via resolveAiPlatformFeature's DB read. Every scenario
+// in this file is about delivery/CRM-state behavior downstream of the gate,
+// not the gate itself (that's covered by n8n-webhook.test.ts), so it's fixed
+// to "on" here — same seam as n8n-webhook.test.ts/n8n-reference-workflow.test.ts.
+vi.mock("@/lib/agent-engine/platform/features", () => ({
+  resolveAiPlatformFeature: vi.fn().mockResolvedValue({ mode: "on", config: {}, killed: false }),
+}));
 vi.mock("@/app/api/v1/leads/_handler", async (importOriginal) => {
   const actual = await importOriginal<typeof LeadsHandlerModule>();
   return { ...actual, createLeadHandler: vi.fn() };

@@ -61,11 +61,39 @@ describe("createAutomationRuleSchema", () => {
       { type: "add_tag", config: { tags: ["vip"] } },
       { type: "assign_owner", config: { user_id: UUID } },
       { type: "call_webhook", config: { url: "https://example.com/hook" } },
+      { type: "n8n_webhook", config: { url: "https://example.com/hook", workflow_key: "wf-1" } },
     ];
     for (const action of actionCases) {
       const r = createAutomationRuleSchema.safeParse({ ...base, actions: [action] });
       expect(r.success).toBe(true);
     }
+  });
+
+  // C1 regression: actionSchema's discriminated union previously had no
+  // n8n_webhook variant, so POST/PATCH /api/v1/automation-rules rejected any
+  // rule with type: "n8n_webhook" with 400 — unreachable via the API despite
+  // the action executor (lib/automation/actions/n8n-webhook.ts) existing and
+  // being registered in the engine.
+  it("accepts n8n_webhook with secret/secret_enc, rejects it without workflow_key", () => {
+    const base = { name: "Regra n8n", trigger_event: "lead.created" as const, conditions: [] };
+
+    const withSecret = createAutomationRuleSchema.safeParse({
+      ...base,
+      actions: [{ type: "n8n_webhook", config: { url: "https://example.com/hook", workflow_key: "wf-1", secret: "***REMOVED***" } }],
+    });
+    expect(withSecret.success).toBe(true);
+
+    const withSecretEnc = createAutomationRuleSchema.safeParse({
+      ...base,
+      actions: [{ type: "n8n_webhook", config: { url: "https://example.com/hook", workflow_key: "wf-1", secret_enc: "deadbeef" } }],
+    });
+    expect(withSecretEnc.success).toBe(true);
+
+    const missingWorkflowKey = createAutomationRuleSchema.safeParse({
+      ...base,
+      actions: [{ type: "n8n_webhook", config: { url: "https://example.com/hook" } }],
+    });
+    expect(missingWorkflowKey.success).toBe(false);
   });
 
   it("rejects trigger_event outside the enum", () => {
