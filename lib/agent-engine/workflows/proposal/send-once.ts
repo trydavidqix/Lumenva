@@ -1,19 +1,28 @@
 /**
- * Exactly-once proposal send — STUB for Task 8.
+ * Proposal send via canonical CRM boundary — Task 8 Step 1: CANONICAL PATH LOCATED.
  *
- * Architecture:
- * - Uses `ai_workflow_runs.sent_message_id` as idempotency marker
- * - First call: sends via production handler, records message_id
- * - Resume/retry: returns { duplicate: true } if already sent
- * - Crash after send but before DB ack: next resume finds empty sent_message_id,
- *   calls send again (WAHA idempotent via external_id), reconciles on ack
+ * **CANONICAL PATH (Do NOT call WAHA directly):**
  *
- * Current status: Placeholder. Actual implementation (Task 8 Step 3) requires:
- * 1. Creating a worker/background variant of sendMessageHandler
- * 2. Wiring workflow_run_id into the graph state
- * 3. Implementing transaction logic around send + DB ack
+ * File: `lib/agent-engine/edge/crm/send-message.ts`
+ * Function: `sendTurnMessage(db, cfg, input: SendMessageInput)`
  *
- * See docs/runbooks/langgraph-proposal-workflow.md for operational details.
+ * Pattern:
+ * 1. Ledger insert (unique: organization_id, idempotency_key) — claims row
+ * 2. Call sendMessageHandler(supabase, actor, request)
+ * 3. Outcomes: sent | already_sent | queued | blocked (403 is_blocked) | failed
+ * 4. Crash recovery: query messages by metadata->>'idempotency_key' before retry
+ *    (already built into sendTurnMessage, uses SendLedgerStatus + reconcile)
+ * 5. Native gate: 403 forbidden when contact.is_blocked (STOP/LGPD veto)
+ *
+ * **WORKFLOW WRAPPER (this file):**
+ *
+ * Do NOT duplicate the ledger pattern. REUSE sendTurnMessage:
+ * - Build SendMessageInput (conversation_id, body, metadata with workflow_run_id)
+ * - Call sendTurnMessage with idempotency_key = workflow_run_id + side_effect_key
+ * - Map outcomes to workflow: sent/queued → update sent_message_id; blocked → veto; failed → retry
+ * - Crash recovery handled by sendTurnMessage ledger + messages.metadata lookup
+ *
+ * Steps 2-3: Implement transaction wrapper, not raw WAHA caller.
  */
 import type pg from 'pg';
 import type { ProposalGraphState } from '@/lib/workflows/commercial-proposal-graph';
@@ -21,20 +30,18 @@ import type { ProposalGraphState } from '@/lib/workflows/commercial-proposal-gra
 export interface SendProposalOnceResult {
   messageId: string | null;
   duplicate: boolean;
+  blocked: boolean;
 }
 
 /**
- * Stub: Send proposal exactly once.
- * Returns { messageId, duplicate: bool } or throws on permanent error (org mismatch, STOP).
+ * Send proposal via canonical sendTurnMessage path.
+ * TODO Steps 2-3: Adapt SendMessageInput, call sendTurnMessage, handle outcomes.
  */
-export async function sendProposalOnce(_workflowRunId: string, _organizationId: string): Promise<SendProposalOnceResult> {
-  // TODO: Implement after Phase 7 Task 8 Step 3
-  // 1. Query ai_workflow_runs by id, verify org match
-  // 2. Check if sent_message_id already set → return { duplicate: true }
-  // 3. Call production send handler (requires worker ctx variant)
-  // 4. Update ai_workflow_runs.sent_message_id atomically
-  // 5. Return { messageId, duplicate: false }
-  throw new Error('sendProposalOnce: Not yet implemented (Task 8 Step 3 pending)');
+export async function sendProposalOnce(
+  _workflowRunId: string,
+  _organizationId: string,
+): Promise<SendProposalOnceResult> {
+  throw new Error('sendProposalOnce: Not yet implemented (Task 8 Steps 2-3 pending)');
 }
 
 /**
