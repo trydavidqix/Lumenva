@@ -7,33 +7,30 @@
  * Cross-tenant attempt returns 404 (not leaking run existence).
  * Sanitizes response: no internal columns, no bearer tokens, safe for client.
  */
-import { NextRequest, NextResponse } from 'next/server';
-import { getUser } from '@/lib/auth/server';
+import { NextRequest } from 'next/server';
+import { loadAuthUser, resolveActiveOrg } from '@/lib/auth/server';
 import { fail, ok } from '@/lib/api/wrappers';
-import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } },
 ) {
   try {
-    const user = await getUser();
+    const user = await loadAuthUser();
     if (!user) {
       return fail('unauthorized', 'Authentication required', 401);
     }
 
-    const runId = params.id;
-    const org = user.raw_user_meta_data?.organization_id;
-
-    if (!org) {
-      return fail('invalid_state', 'No organization in user context');
+    const activeOrg = await resolveActiveOrg(user);
+    if (!activeOrg) {
+      return fail('invalid_state', 'No active organization', 400);
     }
+
+    const runId = params.id;
 
     // TODO: Query ai_workflow_runs by id + org (RLS or explicit filter)
     // TODO: Verify auth (manager+ or creator)
     // TODO: Return sanitized response
-
-    const supabase = createAdminClient();
 
     // Placeholder: would query workflow run here
     return ok({
