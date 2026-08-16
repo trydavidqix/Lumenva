@@ -43,11 +43,17 @@ export interface RuleActionInput {
   config?: Record<string, unknown>;
 }
 
+/** Tipos de ação cujo `config.secret` carrega um segredo real que precisa ser
+ *  cifrado at-rest. Qualquer tipo fora deste set tem `config.secret` DESCARTADO
+ *  pelo branch else abaixo — adicionar uma ação nova que aceite secret sem
+ *  incluí-la aqui apaga o segredo do usuário silenciosamente. */
+const SECRET_BEARING_TYPES = new Set(["call_webhook", "n8n_webhook"]);
+
 /**
  * Troca `config.secret` (plaintext, input do editor) por `config.secret_enc`
- * (hex cifrado) em ações call_webhook antes de gravar no jsonb da regra.
- * `secret_enc` já presente (round-trip do editor sem re-digitar) passa direto.
- * Retorna null se a cifra estiver indisponível (caller responde 422).
+ * (hex cifrado) em ações call_webhook/n8n_webhook antes de gravar no jsonb da
+ * regra. `secret_enc` já presente (round-trip do editor sem re-digitar) passa
+ * direto. Retorna null se a cifra estiver indisponível (caller responde 422).
  */
 export async function encryptRuleActionSecrets(
   admin: SupabaseClient,
@@ -55,7 +61,7 @@ export async function encryptRuleActionSecrets(
 ): Promise<RuleActionInput[] | null> {
   const out: RuleActionInput[] = [];
   for (const action of actions) {
-    if (action.type === "call_webhook" && typeof action.config?.secret === "string" && action.config.secret) {
+    if (SECRET_BEARING_TYPES.has(action.type) && typeof action.config?.secret === "string" && action.config.secret) {
       const enc = await encryptWebhookSecret(admin, action.config.secret);
       if (enc === null) return null;
       const { secret: _plain, ...restConfig } = action.config;

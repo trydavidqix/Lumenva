@@ -34,6 +34,17 @@ export const actionSchema = z.discriminatedUnion("type", [
       secret_enc: z.string().max(4000).optional(),
     }),
   }),
+  z.object({
+    type: z.literal("n8n_webhook"),
+    config: z.object({
+      url: z.string().url().max(2000),
+      // Input do usuário (plaintext, write-only) — a rota troca por secret_enc.
+      secret: z.string().max(200).optional(),
+      // Ciphertext hex (round-trip do editor: GET devolve, PATCH preserva).
+      secret_enc: z.string().max(4000).optional(),
+      workflow_key: z.string().min(1).max(120),
+    }),
+  }),
 ]);
 
 export const createWebhookSourceSchema = z.object({
