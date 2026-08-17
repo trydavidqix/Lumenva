@@ -1,64 +1,190 @@
 /**
- * Exactly-once proposal send tests — STUBS for Task 8.
+ * Exactly-once proposal send tests — Task 1 (Phase 8) real implementation.
  *
- * Full implementation (Task 8 Steps 1-3) will cover:
- * - Crash windows: first send success, crash before DB ack, resume reconciles
- * - Idempotency: same workflow run never sends twice
- * - Org isolation: cross-tenant send rejected
- * - STOP/LGPD: native gate can still block after manager approval
+ * Mocks `sendTurnMessage` (the canonical CRM send boundary) and a fake
+ * `pg.Pool.query` to exercise `sendProposalOnce`'s decision logic without a
+ * real database: crash/duplicate short-circuits, org isolation, STOP/LGPD
+ * veto, and the outcome→status mapping.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type pg from 'pg';
+
+import type { SendOutcome } from '@/lib/agent-engine/edge/crm/send-message';
+
+const sendTurnMessageMock = vi.fn<(...args: unknown[]) => Promise<SendOutcome>>();
+vi.mock('@/lib/agent-engine/edge/crm/send-message', () => ({
+  sendTurnMessage: (...args: unknown[]) => sendTurnMessageMock(...args),
+}));
 
 import { sendProposalOnce } from './send-once';
 
+const ORG_ID = 'org-1';
+const RUN_ID = 'workflow-run-1';
+const DRAFT = {
+  proposal_title: 'Proposta X',
+  executive_summary: 'Resumo',
+  terms: 'Termos',
+  next_steps: ['Passo 1'],
+};
+
+function fakeDb(row: Record<string, unknown> | undefined) {
+  const query = vi.fn().mockImplementation((sql: string) => {
+    if (sql.includes('select') && sql.includes('from ai_workflow_runs')) {
+      return Promise.resolve({ rows: row ? [row] : [] });
+    }
+    return Promise.resolve({ rows: [] });
+  });
+  return { query } as unknown as pg.Pool;
+}
+
+beforeEach(() => {
+  sendTurnMessageMock.mockReset();
+});
+
 describe('sendProposalOnce', () => {
-  it('Throws when not yet implemented (Task 8 Step 3)', async () => {
-    await expect(sendProposalOnce('workflow-id', 'org-id')).rejects.toThrow('Not yet implemented');
+  it('throws when the workflow run does not exist', async () => {
+    const db = fakeDb(undefined);
+    await expect(sendProposalOnce(RUN_ID, ORG_ID, db, { supabase: {} as never })).rejects.toThrow('not found');
+    expect(sendTurnMessageMock).not.toHaveBeenCalled();
   });
 
-  it('First send succeeds, returns { messageId, duplicate: false }', () => {
-    // TODO: Task 8 Step 1 implementation
-    // Requires: workflow run seeded, sendMessageHandler mocked
-    expect(true).toBe(true);
+  it('throws on organization mismatch without sending', async () => {
+    const db = fakeDb({
+      organization_id: 'other-org',
+      contact_id: 'c1',
+      conversation_id: 'conv1',
+      lead_id: null,
+      status: 'approved',
+      sent_message_id: null,
+      draft_payload: DRAFT,
+    });
+    await expect(sendProposalOnce(RUN_ID, ORG_ID, db, { supabase: {} as never })).rejects.toThrow('organization mismatch');
+    expect(sendTurnMessageMock).not.toHaveBeenCalled();
   });
 
-  it('Resume returns existing message, duplicate: true', () => {
-    // TODO: Task 8 Step 1 implementation
-    // Requires: workflow run with sent_message_id already set
-    expect(true).toBe(true);
+  it('short-circuits when sent_message_id is already set (resume/duplicate)', async () => {
+    const db = fakeDb({
+      organization_id: ORG_ID,
+      contact_id: 'c1',
+      conversation_id: 'conv1',
+      lead_id: null,
+      status: 'sending',
+      sent_message_id: 'msg-existing',
+      draft_payload: DRAFT,
+    });
+    const result = await sendProposalOnce(RUN_ID, ORG_ID, db, { supabase: {} as never });
+    expect(result).toEqual({ messageId: 'msg-existing', duplicate: true, blocked: false });
+    expect(sendTurnMessageMock).not.toHaveBeenCalled();
   });
 
-  it('Crash window: send succeeds, crash before DB ack, resume reconciles', () => {
-    // TODO: Task 8 Step 2 implementation
-    // Scenario: sendMessageHandler succeeds, DB update fails/crashes
-    // Resume: sent_message_id still empty, calls send again (idempotent via external_id)
-    // Result: exactly one message sent, recorded correctly
-    expect(true).toBe(true);
+  it('throws when there is no conversation_id to send into', async () => {
+    const db = fakeDb({
+      organization_id: ORG_ID,
+      contact_id: 'c1',
+      conversation_id: null,
+      lead_id: null,
+      status: 'approved',
+      sent_message_id: null,
+      draft_payload: DRAFT,
+    });
+    await expect(sendProposalOnce(RUN_ID, ORG_ID, db, { supabase: {} as never })).rejects.toThrow('conversation_id');
   });
 
-  it('Org mismatch: throws without sending', () => {
-    // TODO: Task 8 Step 2 implementation
-    expect(true).toBe(true);
+  it('throws when there is no draft to send', async () => {
+    const db = fakeDb({
+      organization_id: ORG_ID,
+      contact_id: 'c1',
+      conversation_id: 'conv1',
+      lead_id: null,
+      status: 'approved',
+      sent_message_id: null,
+      draft_payload: null,
+    });
+    await expect(sendProposalOnce(RUN_ID, ORG_ID, db, { supabase: {} as never })).rejects.toThrow('draft_payload');
   });
 
-  it('STOP blocks send after manager approval', () => {
-    // TODO: Task 8 Step 2 implementation
-    // sendMessageHandler returns 403 is_blocked (LGPD/opt-out rule)
-    // Permanent block, no retry
-    expect(true).toBe(true);
+  it('first send succeeds: returns messageId, duplicate false, blocked false', async () => {
+    const db = fakeDb({
+      organization_id: ORG_ID,
+      contact_id: 'c1',
+      conversation_id: 'conv1',
+      lead_id: 'lead1',
+      status: 'approved',
+      sent_message_id: null,
+      draft_payload: DRAFT,
+    });
+    sendTurnMessageMock.mockResolvedValue({ kind: 'sent', idempotencyKey: 'k1', crmMessageId: 'msg-1' });
+
+    const result = await sendProposalOnce(RUN_ID, ORG_ID, db, { supabase: {} as never });
+
+    expect(result).toEqual({ messageId: 'msg-1', duplicate: false, blocked: false });
+    expect(sendTurnMessageMock).toHaveBeenCalledTimes(1);
+    const call = sendTurnMessageMock.mock.calls[0]?.[2] as { jobId: string; seq: number; conversationId: string };
+    expect(call.jobId).toBe(RUN_ID);
+    expect(call.seq).toBe(1);
+    expect(call.conversationId).toBe('conv1');
   });
 
-  it('Idempotency: same side_effect_key never sends twice', () => {
-    // TODO: Task 8 implementation
-    // Guaranteed by unique (org, side_effect_key) constraint +
-    // checking sent_message_id before send
-    expect(true).toBe(true);
+  it('queued outcome is treated as a successful send (message under CRM custody)', async () => {
+    const db = fakeDb({
+      organization_id: ORG_ID,
+      contact_id: 'c1',
+      conversation_id: 'conv1',
+      lead_id: null,
+      status: 'approved',
+      sent_message_id: null,
+      draft_payload: DRAFT,
+    });
+    sendTurnMessageMock.mockResolvedValue({ kind: 'queued', idempotencyKey: 'k1', crmMessageId: 'msg-1' });
+
+    const result = await sendProposalOnce(RUN_ID, ORG_ID, db, { supabase: {} as never });
+    expect(result).toEqual({ messageId: 'msg-1', duplicate: false, blocked: false });
   });
 
-  it('No send before message_id durably recorded', () => {
-    // TODO: Task 8 implementation
-    // sendProposalOnce updates sent_message_id AFTER handler succeeds
-    // Crash between handler and DB ack: next resume finds empty, reconciles via WAHA idempotency
-    expect(true).toBe(true);
+  it('already_sent outcome is reported as duplicate: true', async () => {
+    const db = fakeDb({
+      organization_id: ORG_ID,
+      contact_id: 'c1',
+      conversation_id: 'conv1',
+      lead_id: null,
+      status: 'approved',
+      sent_message_id: null,
+      draft_payload: DRAFT,
+    });
+    sendTurnMessageMock.mockResolvedValue({ kind: 'already_sent', idempotencyKey: 'k1', crmMessageId: 'msg-1' });
+
+    const result = await sendProposalOnce(RUN_ID, ORG_ID, db, { supabase: {} as never });
+    expect(result).toEqual({ messageId: 'msg-1', duplicate: true, blocked: false });
+  });
+
+  it('STOP/LGPD veto (blocked): returns blocked true, never throws, no retry', async () => {
+    const db = fakeDb({
+      organization_id: ORG_ID,
+      contact_id: 'c1',
+      conversation_id: 'conv1',
+      lead_id: null,
+      status: 'approved',
+      sent_message_id: null,
+      draft_payload: DRAFT,
+    });
+    sendTurnMessageMock.mockResolvedValue({ kind: 'blocked', idempotencyKey: 'k1' });
+
+    const result = await sendProposalOnce(RUN_ID, ORG_ID, db, { supabase: {} as never });
+    expect(result).toEqual({ messageId: null, duplicate: false, blocked: true });
+  });
+
+  it('handler-level failure throws (surfaces loudly, retry ownership stays with the caller)', async () => {
+    const db = fakeDb({
+      organization_id: ORG_ID,
+      contact_id: 'c1',
+      conversation_id: 'conv1',
+      lead_id: null,
+      status: 'approved',
+      sent_message_id: null,
+      draft_payload: DRAFT,
+    });
+    sendTurnMessageMock.mockResolvedValue({ kind: 'failed', idempotencyKey: 'k1', crmMessageId: null });
+
+    await expect(sendProposalOnce(RUN_ID, ORG_ID, db, { supabase: {} as never })).rejects.toThrow('send failed');
   });
 });
