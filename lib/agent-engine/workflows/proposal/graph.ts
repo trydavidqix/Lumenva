@@ -1,5 +1,6 @@
 /**
- * Phase 7 LangGraph pilot — resumable proposal workflow graph.
+ * Phase 7/8 LangGraph proposal workflow graph — resumable via a REAL
+ * interrupt (Task 1, Phase 8: this file's own "LangGraph resume wiring").
  *
  * Assembles the full workflow: load_context -> draft -> validate -> await_human_decision
  * [INTERRUPT] -> {reject, edit, approve routing} -> send_once -> schedule_followup ->
@@ -7,30 +8,33 @@
  * can be interrupted for human approval, edited, and resumed without re-running prior
  * steps (guaranteed by LangGraph's checkpointing semantics).
  *
- * The interrupt node (`await_human_decision`) stops execution and returns an interrupt
- * payload containing the sanitized draft and CRM context. The caller (HTTP route or worker)
- * presents this to a manager/user, receives a `humanDecision` input (`{decision: "approve"
- * | "reject" | "edit", ...}`), and resumes the graph from the interrupt point via
- * `.invoke()` with the new input.
+ * The interrupt node (`await_human_decision`) calls LangGraph's `interrupt()` — this
+ * ACTUALLY pauses execution (proven pattern: `tests/unit/langgraph-interrupt-resume.test.ts`),
+ * returning an interrupt payload containing the sanitized draft and CRM context.
+ * The caller (HTTP route — `app/api/v1/ai/workflows/proposals/[id]/decision/route.ts`)
+ * presents this to a manager, then resumes with
+ * `graph.invoke(new Command({ resume: humanDecision }), { configurable: { thread_id, ... } })`
+ * — NOT a plain state-patch invoke, which would start a new run instead of resuming.
  *
- * Side effects (send_once, schedule_followup) are stubbed for now — Task 8 implements
- * exactly-once send, Task 9 implements idempotent follow-up scheduling. Both stubs
- * write nothing and return empty state updates to allow the graph to complete.
+ * Side effects (send_once, schedule_followup) delegate to `./send-once` and
+ * `./followup-once` (Task 1, Phase 8 Steps 1-2) — both exactly-once against
+ * `ai_workflow_runs`, never duplicated here.
  *
- * Multi-tenancy: all node dependencies (db, supabase admin client) are injected via
- * `config.configurable`, not state. The `thread_id` must be validated/scoped to the
- * caller's organization_id before invoking the graph (see `repository.ts`).
+ * Multi-tenancy: all node dependencies (db, supabase admin client, llmCfg) are injected via
+ * `config.configurable`, not state. `workflow_run_id` is the trusted join key into
+ * `ai_workflow_runs` (which enforces `unique(organization_id, thread_id)`) — callers must
+ * resolve it from a trusted source (the row THEY created/queried), never from client input.
  */
 import {
   END,
   START,
   StateGraph,
+  interrupt,
   type LangGraphRunnableConfig,
 } from '@langchain/langgraph';
 import type pg from 'pg';
-import { createPool } from '@/lib/agent-engine/db/pool';
 
-import { createAdminClient } from '@/lib/supabase/admin';
+import type { createAdminClient } from '@/lib/supabase/admin';
 import type { Logger } from '@/lib/agent-engine/obs/logger';
 import type { LlmEdgeConfig } from '@/lib/agent-engine/edge/llm/run-model-call';
 
@@ -39,28 +43,34 @@ import { Annotation } from '@langchain/langgraph';
 import {
   generateProposalNode,
   ProposalGraphStateAnnotation,
-  type ProposalGraphState,
+  type ProposalDraftPayload,
 } from '@/lib/workflows/commercial-proposal-graph';
 import { loadProposalContextNode, type LoadProposalContextNodeDeps } from '@/lib/workflows/load-proposal-context-node';
 import { validateProposalDraftNode } from '@/lib/workflows/validate-proposal-draft-node';
 import { createCheckpointerForProposalWorkflow } from '@/lib/agent-engine/workflows/checkpointer';
+import { sendProposalOnceNode, type ProposalSendNodeState } from './send-once';
+import { scheduleFollowupOnceNode, type ProposalFollowupNodeState } from './followup-once';
 
 /**
  * Human approval decision from the interrupt handler.
- * Passed back to the graph via `.invoke({ humanDecision: ... })`.
+ * Passed back to the graph via `graph.invoke(new Command({ resume: humanDecision }), config)`
+ * — resuming a real `interrupt()`, never a plain state-patch invoke.
  */
 export interface HumanDecision {
   decision: 'approve' | 'reject' | 'edit';
-  /** Optional edited draft if decision === 'edit'. */
-  edited_draft_payload?: string;
+  /** Required when decision === 'edit' — the manager's edited draft, already Zod-validated by the route. */
+  edited_draft_payload?: ProposalDraftPayload;
 }
 
 /**
- * Extended graph state that includes humanDecision input.
- * Built by extending the proposal graph state with an optional humanDecision field.
+ * Extended graph state: `humanDecision` (the resumed interrupt value) and
+ * `workflow_run_id` (trusted join key into `ai_workflow_runs`, resolved by the
+ * caller — never client input). Both are graph.ts-local extensions of the base
+ * `ProposalGraphState`, same convention as `humanDecision` already used.
  */
 const ProposalApprovalGraphStateAnnotation = Annotation.Root({
   ...ProposalGraphStateAnnotation.spec,
+  workflow_run_id: Annotation<string>(),
   humanDecision: Annotation<HumanDecision | null>({
     reducer: (_prev, next) => next,
     default: () => null,
@@ -114,63 +124,91 @@ function extractDeps(config: LangGraphRunnableConfig | undefined): ProposalGraph
 }
 
 /**
- * Stub — Task 8 implements exactly-once send boundary.
- * For now, returns empty state update (no-op).
+ * Terminal node for rejected workflows. Persists the final status —
+ * `decided_by`/`decided_at`/`decision_payload` are written by the HTTP route
+ * BEFORE resuming the graph (it has the authenticated user id; graph state
+ * deliberately does not carry actor identity).
  */
-async function sendProposalOnceNode(_state: ProposalGraphState): Promise<Partial<ProposalGraphState>> {
-  // Task 8: call exactly-once send, persist sent_message_id
-  return {};
-}
-
-/**
- * Stub — Task 9 implements idempotent follow-up scheduling.
- * For now, returns empty state update (no-op).
- */
-async function scheduleFollowupOnceNode(_state: ProposalGraphState): Promise<Partial<ProposalGraphState>> {
-  // Task 9: schedule follow-up, persist followup_id, deduplicate by side_effect_key
-  return {};
-}
-
-/**
- * Terminal node for rejected workflows.
- */
-async function rejectedNode(_state: ProposalGraphState): Promise<Partial<ProposalGraphState>> {
+async function rejectedNode(
+  state: ProposalApprovalGraphState,
+  config: LangGraphRunnableConfig | undefined,
+): Promise<Partial<ProposalApprovalGraphState>> {
+  const deps = extractDeps(config);
+  await deps.db.query(`update ai_workflow_runs set status = 'rejected' where id = $1 and organization_id = $2`, [
+    state.workflow_run_id,
+    state.organization_id,
+  ]);
   return {};
 }
 
 /**
  * Approved marker — flows to send_once next.
  */
-async function approvedNode(_state: ProposalGraphState): Promise<Partial<ProposalGraphState>> {
+async function approvedNode(
+  state: ProposalApprovalGraphState,
+  config: LangGraphRunnableConfig | undefined,
+): Promise<Partial<ProposalApprovalGraphState>> {
+  const deps = extractDeps(config);
+  await deps.db.query(`update ai_workflow_runs set status = 'approved' where id = $1 and organization_id = $2`, [
+    state.workflow_run_id,
+    state.organization_id,
+  ]);
   return {};
 }
 
 /**
- * Completion marker — workflow finished (sent or rejected).
+ * Completion marker — workflow finished (sent, or send skipped/blocked but
+ * the run still reached the end of the pipeline without rejection).
  */
-async function completedNode(_state: ProposalGraphState): Promise<Partial<ProposalGraphState>> {
+async function completedNode(
+  state: ProposalApprovalGraphState,
+  config: LangGraphRunnableConfig | undefined,
+): Promise<Partial<ProposalApprovalGraphState>> {
+  const deps = extractDeps(config);
+  await deps.db.query(
+    `update ai_workflow_runs set status = 'completed' where id = $1 and organization_id = $2 and status <> 'rejected'`,
+    [state.workflow_run_id, state.organization_id],
+  );
   return {};
 }
 
 /**
- * Interrupt node — awaits human decision on the draft.
- * This node returns the current state without modification. LangGraph's checkpointer
- * persists state at this point. The workflow is then invoked with humanDecision input
- * to resume and route based on the decision (approve/reject/edit).
+ * Interrupt node — ACTUALLY pauses the graph via LangGraph's `interrupt()`
+ * (proven pattern: `tests/unit/langgraph-interrupt-resume.test.ts`). The
+ * caller resumes with `graph.invoke(new Command({ resume: humanDecision }), config)`;
+ * `interrupt()` returns synchronously with that `humanDecision` value on resume.
  *
- * The draft_payload and crm_context are already in state and available to the
- * caller (HTTP route, worker) for presentation to the human decision-maker.
+ * On `edit`, the manager's edited draft REPLACES `draft_payload` immediately
+ * (already Zod-validated by the route before it ever reaches here) so the
+ * `validate_edited` edge re-validates the new content before looping back to
+ * a fresh interrupt.
  */
-async function awaitHumanDecisionNode(state: ProposalApprovalGraphState): Promise<Partial<ProposalApprovalGraphState>> {
+async function awaitHumanDecisionNode(
+  state: ProposalApprovalGraphState,
+  config: LangGraphRunnableConfig | undefined,
+): Promise<Partial<ProposalApprovalGraphState>> {
   if (!state.draft_payload || !state.crm_context) {
     throw new Error(
       'awaitHumanDecisionNode: draft_payload or crm_context missing — should not reach interrupt without both',
     );
   }
 
-  // Simply return empty update — the graph halts here when invoked,
-  // and resuming with humanDecision input branches via humanDecisionRouter.
-  return {};
+  const configurableThreadId = (config?.configurable as { thread_id?: string } | undefined)?.thread_id;
+
+  const payload: InterruptPayload = {
+    thread_id: configurableThreadId ?? state.workflow_run_id,
+    draft_title: state.draft_payload.proposal_title,
+    draft_summary: state.draft_payload.executive_summary,
+    crm_contact_name: state.crm_context.contact_name,
+    crm_needs: state.crm_context.needs,
+  };
+
+  const resume = interrupt<InterruptPayload, HumanDecision>(payload);
+
+  if (resume.decision === 'edit' && resume.edited_draft_payload) {
+    return { humanDecision: resume, draft_payload: resume.edited_draft_payload, validation_errors: null };
+  }
+  return { humanDecision: resume };
 }
 
 /**
@@ -194,13 +232,6 @@ function humanDecisionRouter(state: ProposalApprovalGraphState): string {
     default:
       return 'reject';
   }
-}
-
-/**
- * Route back to validation after editing.
- */
-function validateEditedRouter(_state: ProposalGraphState): string {
-  return 'validate_edited';
 }
 
 /**
@@ -232,8 +263,14 @@ export function buildProposalApprovalGraph(checkpointer: ReturnType<typeof creat
       .addNode('await_human_decision', awaitHumanDecisionNode)
       .addNode('rejected', rejectedNode)
       .addNode('approved', approvedNode)
-      .addNode('send_once', sendProposalOnceNode)
-      .addNode('schedule_followup', scheduleFollowupOnceNode)
+      .addNode('send_once', async (state, config) => {
+        const deps = extractDeps(config);
+        return sendProposalOnceNode(state as ProposalSendNodeState, { db: deps.db, cfg: { supabase: deps.supabase } });
+      })
+      .addNode('schedule_followup', async (state, config) => {
+        const deps = extractDeps(config);
+        return scheduleFollowupOnceNode(state as ProposalFollowupNodeState, { db: deps.db });
+      })
       .addNode('completed', completedNode)
       // Linear flow until the interrupt
       .addEdge(START, 'load_context')
