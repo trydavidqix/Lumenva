@@ -23,6 +23,7 @@
  * vira ENSINO, nunca strip silencioso. PII: as notas VÃO ao prompt (é o ponto — memória
  * do lead), mas o corpo/headline NUNCA entram em log estruturado nem em mensagem de erro.
  */
+import { createHash } from 'node:crypto';
 import { z } from 'zod';
 
 import type { Queryable } from '../queue/queue';
@@ -42,6 +43,17 @@ export type SaveLeadNoteInput = z.infer<typeof saveLeadNoteInputSchema>;
 export interface LeadNoteIndexEntry {
   id: string;
   headline: string;
+}
+
+export interface SaveLeadNoteIds {
+  tenantId: string;
+  leadId: string;
+  /**
+   * Chave estável do Agent OS quando o caller já conhece a identidade lógica do
+   * side effect. Callers legados podem omitir: o fallback é um SHA-256 do alvo +
+   * conteúdo normalizado, sem PII em claro na chave persistida.
+   */
+  idempotencyKey?: string;
 }
 
 export type SaveLeadNoteResult =
@@ -64,6 +76,25 @@ function teachInvalidPayload(issues: string): SaveLeadNoteResult {
     ok: false,
     error: { code: 'invalid_payload', message: `payload inválido em save_lead_note (${issues}). ${PAYLOAD_TEACHING}` },
   };
+}
+
+function deriveLeadNoteIdempotencyKey(ids: SaveLeadNoteIds, input: SaveLeadNoteInput): string {
+  const explicit = ids.idempotencyKey?.trim();
+  if (explicit) return explicit;
+
+  const digest = createHash('sha256')
+    .update(
+      JSON.stringify([
+        ids.tenantId,
+        ids.leadId,
+        input.headline,
+        input.body,
+        [...(input.supersedes ?? [])].sort(),
+      ]),
+    )
+    .digest('hex');
+
+  return `lead-note:${digest}`;
 }
 
 /**
@@ -138,16 +169,19 @@ export async function buildNotesIndexBlock(
 }
 
 /**
- * Aplica um save_lead_note: valida whitelist, remove as notas de `supersedes` e insere a
- * nova — atômico (CTE). O orçamento do índice é medido no estado PÓS-operação; estouro →
- * ENSINO pedindo curadoria, SEM gravar nada (hard cap). Idempotência de escrita não se
- * aplica (cada save é uma nota nova, por design); o retry do run re-executa o turno e o
- * modelo decide de novo. ponytail: read-then-write sem lock — a fila tem lane por lead
- * (F2-03), turnos do mesmo lead nunca correm em paralelo.
+ * Aplica um save_lead_note: valida whitelist, resolve a identidade idempotente,
+ * remove as notas de `supersedes` e insere a nova — atômico (CTE). O orçamento do
+ * índice é medido no estado PÓS-operação; estouro → ENSINO pedindo curadoria, SEM
+ * gravar nada (hard cap).
+ *
+ * Replay: uma idempotency key já materializada devolve a MESMA nota sem repetir
+ * deleções nem insert. Callers antigos sem key explícita recebem um hash estável do
+ * alvo + conteúdo como fallback; a migration Agent OS adiciona o índice único como
+ * backstop de concorrência. A fila continua tendo lane por lead (F2-03).
  */
 export async function applySaveLeadNote(
   db: Queryable,
-  ids: { tenantId: string; leadId: string },
+  ids: SaveLeadNoteIds,
   cfg: { budgetTokens: number },
   rawInput: unknown,
 ): Promise<SaveLeadNoteResult> {
@@ -160,6 +194,24 @@ export async function applySaveLeadNote(
     return teachInvalidPayload(zodIssuesSummary(parsed.error));
   }
   const input = parsed.data;
+  const idempotencyKey = deriveLeadNoteIdempotencyKey(ids, input);
+
+  const { rows: existingRows } = await db.query<{ id: string }>(
+    `select id from lead_notes
+     where organization_id = $1 and contact_id = $2 and idempotency_key = $3
+     limit 1`,
+    [ids.tenantId, ids.leadId, idempotencyKey],
+  );
+  const existing = existingRows[0];
+  if (existing) {
+    return {
+      ok: true,
+      noteId: existing.id,
+      superseded: 0,
+      message: 'nota já estava salva; replay idempotente sem nova escrita.',
+    };
+  }
+
   const superseded = new Set(input.supersedes ?? []);
 
   // Índice que RESULTARIA: notas atuais menos as substituídas, mais a nova headline.
@@ -190,6 +242,7 @@ export async function applySaveLeadNote(
 
   // Insert + supersede numa única transação implícita (CTE): a nova nota entra e as
   // substituídas saem juntas — nunca um estado intermediário fora do orçamento.
+  // ON CONFLICT é o backstop para uma corrida residual além da lane per-contact.
   const { rows } = await db.query<{ id: string; superseded: string }>(
     `with removed as (
        delete from lead_notes
@@ -197,12 +250,15 @@ export async function applySaveLeadNote(
        returning id
      ),
      inserted as (
-       insert into lead_notes (organization_id, contact_id, headline, body)
-       values ($1, $2, $4, $5)
+       insert into lead_notes (organization_id, contact_id, headline, body, idempotency_key)
+       values ($1, $2, $4, $5, $6)
+       on conflict (organization_id, contact_id, idempotency_key)
+         where idempotency_key is not null
+       do update set idempotency_key = excluded.idempotency_key
        returning id
      )
      select inserted.id, (select count(*) from removed)::text as superseded from inserted`,
-    [ids.tenantId, ids.leadId, toDelete, input.headline, input.body],
+    [ids.tenantId, ids.leadId, toDelete, input.headline, input.body, idempotencyKey],
   );
   const row = rows[0]!;
   const supersededCount = Number(row.superseded);
