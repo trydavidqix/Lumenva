@@ -6,6 +6,7 @@ interface StoredNote {
   id: string;
   headline: string;
   body: string;
+  idempotencyKey: string;
 }
 
 function memoryDb() {
@@ -13,6 +14,15 @@ function memoryDb() {
   let inserts = 0;
 
   const query = vi.fn(async (sql: string, values?: unknown[]) => {
+    if (sql.includes('idempotency_key = $3')) {
+      const key = String(values?.[2] ?? '');
+      const existing = notes.find((note) => note.idempotencyKey === key);
+      return {
+        rows: existing ? [{ id: existing.id }] : [],
+        rowCount: existing ? 1 : 0,
+      };
+    }
+
     if (sql.includes('select id, headline from lead_notes')) {
       return {
         rows: notes.map(({ id, headline }) => ({ id, headline })),
@@ -25,7 +35,8 @@ function memoryDb() {
       const id = `note-${inserts}`;
       const headline = String(values?.[3] ?? '');
       const body = String(values?.[4] ?? '');
-      notes.push({ id, headline, body });
+      const idempotencyKey = String(values?.[5] ?? '');
+      notes.push({ id, headline, body, idempotencyKey });
       return { rows: [{ id, superseded: '0' }], rowCount: 1 };
     }
 
@@ -46,7 +57,7 @@ describe('Agent OS lead note idempotency', () => {
       tenantId: 'org-1',
       leadId: 'lead-1',
       idempotencyKey: 'agent-os:run-1:save-lead-note:customer-preference',
-    } as any;
+    };
     const input = {
       headline: 'Prefere contato à tarde',
       body: 'O lead informou que prefere receber contato depois das 14h.',
