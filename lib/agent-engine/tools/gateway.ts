@@ -1,5 +1,10 @@
 import type { PromotionDecision } from '../autonomy/promotion';
 import { mostRestrictiveAutonomyLevel, type RuntimeAutonomyResolver } from '../autonomy/decision';
+import {
+  buildAutonomyDecisionEvidence,
+  recordAutonomyDecision,
+  type AutonomyEvidenceRecorder,
+} from '../autonomy/evidence';
 import type { ApprovalStore } from '../policies/approval';
 import { createApprovalRequest } from '../policies/approval';
 import {
@@ -19,11 +24,14 @@ export interface ExecuteThroughToolGatewayInput {
   organizationId: string;
   agentId: string;
   runId?: string;
+  traceId?: string;
+  correlationId?: string;
   autonomyLevel: AgentAutonomyLevel;
   tenantPolicy?: ToolPolicyOverrides;
   agentPolicy?: ToolPolicyOverrides;
   promotionDecision?: PromotionDecision;
   runtimeAutonomyResolver?: RuntimeAutonomyResolver;
+  autonomyEvidenceRecorder?: AutonomyEvidenceRecorder;
   tool: AgentToolDefinition;
   args: unknown;
   idempotencyKey: string;
@@ -47,11 +55,45 @@ function disabledReason(input: {
 export async function executeThroughToolGateway(
   input: ExecuteThroughToolGatewayInput,
 ): Promise<ToolGatewayResult> {
+  const runId = input.runId ?? `gateway:${input.idempotencyKey}`;
+  const traceId = input.traceId ?? runId;
+  const correlationId = input.correlationId ?? traceId;
+  let effectiveLevel = input.autonomyLevel;
+
+  const emit = async (details: {
+    policyOutcome: string;
+    approvalId?: string | null;
+    approvalStatus?: string | null;
+    executionOutcome: string;
+  }) => {
+    await recordAutonomyDecision(
+      input.autonomyEvidenceRecorder,
+      buildAutonomyDecisionEvidence({
+        organizationId: input.organizationId,
+        agentId: input.agentId,
+        runId,
+        capabilityId: input.tool.id,
+        autonomyLevel: effectiveLevel,
+        riskTier: input.tool.risk,
+        promotionEvidenceRef:
+          input.promotionDecision?.kind === 'allow'
+            ? input.promotionDecision.evidenceRef
+            : null,
+        policyOutcome: details.policyOutcome,
+        approvalId: details.approvalId ?? null,
+        approvalStatus: details.approvalStatus ?? null,
+        executionOutcome: details.executionOutcome,
+        traceId,
+        correlationId,
+      }),
+    );
+  };
+
   if (input.tool.idempotencyRequired && input.idempotencyKey.trim().length === 0) {
+    await emit({ policyOutcome: 'deny', executionOutcome: 'idempotency_key_required' });
     return { kind: 'denied', reason: 'idempotency_key_required' };
   }
 
-  let effectiveLevel = input.autonomyLevel;
   if (input.tool.hasSideEffect && input.runtimeAutonomyResolver) {
     const runtime = await input.runtimeAutonomyResolver.resolve({
       organizationId: input.organizationId,
@@ -59,7 +101,11 @@ export async function executeThroughToolGateway(
       capabilityId: input.tool.id,
     });
     const reason = disabledReason(runtime);
-    if (reason) return { kind: 'denied', reason };
+    if (reason) {
+      effectiveLevel = 'off';
+      await emit({ policyOutcome: 'deny', executionOutcome: reason });
+      return { kind: 'denied', reason };
+    }
     effectiveLevel = mostRestrictiveAutonomyLevel(input.autonomyLevel, runtime.level);
   }
 
@@ -73,9 +119,13 @@ export async function executeThroughToolGateway(
     promotionDecision: input.promotionDecision,
   });
 
-  if (policy.kind === 'deny') return { kind: 'denied', reason: policy.reason };
+  if (policy.kind === 'deny') {
+    await emit({ policyOutcome: policy.kind, executionOutcome: policy.reason });
+    return { kind: 'denied', reason: policy.reason };
+  }
 
   if (policy.kind === 'draft') {
+    await emit({ policyOutcome: policy.kind, executionOutcome: 'draft_proposed' });
     return {
       kind: 'draft',
       proposal: { toolId: input.tool.id, args: input.args, idempotencyKey: input.idempotencyKey },
@@ -83,21 +133,31 @@ export async function executeThroughToolGateway(
   }
 
   if (policy.kind === 'require_approval') {
-    if (!input.approvalStore) return { kind: 'denied', reason: 'approval_store_unavailable' };
+    if (!input.approvalStore) {
+      await emit({ policyOutcome: policy.kind, executionOutcome: 'approval_store_unavailable' });
+      return { kind: 'denied', reason: 'approval_store_unavailable' };
+    }
 
     const request = await createApprovalRequest(input.approvalStore, {
       organizationId: input.organizationId,
-      runId: input.runId ?? `gateway:${input.idempotencyKey}`,
+      runId,
       agentId: input.agentId,
       toolId: input.tool.id,
       approvalType: policy.approvalType,
       idempotencyKey: input.idempotencyKey,
       reason: policy.reason,
     });
+    await emit({
+      policyOutcome: policy.kind,
+      approvalId: request.id,
+      approvalStatus: request.status,
+      executionOutcome: 'pending_approval',
+    });
     return { kind: 'pending_approval', approvalId: request.id };
   }
 
   const result = await input.execute();
+  await emit({ policyOutcome: policy.kind, executionOutcome: 'executed' });
   return { kind: 'executed', result };
 }
 
@@ -111,11 +171,14 @@ export interface WrapToolSetWithGatewayOptions {
   organizationId: string;
   agentId: string;
   runId?: string;
+  traceId?: string;
+  correlationId?: string;
   autonomyLevel: AgentAutonomyLevel;
   tenantPolicy?: ToolPolicyOverrides;
   agentPolicy?: ToolPolicyOverrides;
   promotionDecision?: PromotionDecision;
   runtimeAutonomyResolver?: RuntimeAutonomyResolver;
+  autonomyEvidenceRecorder?: AutonomyEvidenceRecorder;
   definitions: ReadonlyMap<string, AgentToolDefinition>;
   approvalStore: ApprovalStore | null;
   idempotencyKeyFor: (toolId: string, args: unknown) => string;
@@ -138,11 +201,14 @@ export function wrapToolSetWithGateway(tools: ToolSetLike, options: WrapToolSetW
           organizationId: options.organizationId,
           agentId: options.agentId,
           runId: options.runId,
+          traceId: options.traceId,
+          correlationId: options.correlationId,
           autonomyLevel: options.autonomyLevel,
           tenantPolicy: options.tenantPolicy,
           agentPolicy: options.agentPolicy,
           promotionDecision: options.promotionDecision,
           runtimeAutonomyResolver: options.runtimeAutonomyResolver,
+          autonomyEvidenceRecorder: options.autonomyEvidenceRecorder,
           tool: metadata,
           args,
           idempotencyKey: options.idempotencyKeyFor(toolId, args),
