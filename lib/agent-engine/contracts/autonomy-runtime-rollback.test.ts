@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import type { AgentAutonomyLevel } from '../policies/engine';
 import { executeThroughToolGateway } from '../tools/gateway';
 import type { AgentToolDefinition } from '../tools/registry';
 
@@ -17,13 +18,15 @@ const reversibleTool: AgentToolDefinition = {
 
 const promotionDecision = { kind: 'allow', evidenceRef: 'eval-7' } as const;
 
-async function run(runtimeState: {
-  level: 'assisted' | 'draft';
+type RuntimeState = {
+  level: AgentAutonomyLevel;
   globalEnabled: boolean;
   tenantEnabled: boolean;
   agentEnabled: boolean;
   capabilityEnabled: boolean;
-}) {
+};
+
+async function run(runtimeState: RuntimeState) {
   const execute = vi.fn().mockResolvedValue({ ok: true });
   const runtimeAutonomyResolver = { resolve: vi.fn().mockResolvedValue(runtimeState) };
   const result = await executeThroughToolGateway({
@@ -44,11 +47,12 @@ describe('Phase 5 runtime autonomy rollback', () => {
   });
 
   it('rechecks tenant, agent and capability kill switches before a side effect', async () => {
-    for (const [state, reason] of [
+    const cases: Array<[RuntimeState, string]> = [
       [{ level: 'assisted', globalEnabled: true, tenantEnabled: false, agentEnabled: true, capabilityEnabled: true }, 'tenant_kill_switch'],
       [{ level: 'assisted', globalEnabled: true, tenantEnabled: true, agentEnabled: false, capabilityEnabled: true }, 'agent_kill_switch'],
       [{ level: 'assisted', globalEnabled: true, tenantEnabled: true, agentEnabled: true, capabilityEnabled: false }, 'capability_kill_switch'],
-    ] as const) {
+    ];
+    for (const [state, reason] of cases) {
       const { result, execute } = await run(state);
       expect(result).toEqual({ kind: 'denied', reason });
       expect(execute).not.toHaveBeenCalled();
