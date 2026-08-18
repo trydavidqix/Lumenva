@@ -11,22 +11,24 @@ import {
 import { executeThroughToolGateway } from '../tools/gateway';
 import type { AgentToolDefinition } from '../tools/registry';
 
-const r1: AgentToolDefinition = {
-  id: 'crm.contact.update', description: 'update contact', risk: 'r1_reversible_write',
-  hasSideEffect: true, idempotencyRequired: true, maxRetries: 0,
-};
-const r2: AgentToolDefinition = {
-  id: 'crm.message.send', description: 'send message', risk: 'r2_external_communication',
-  hasSideEffect: true, idempotencyRequired: true, maxRetries: 0,
-};
-const r3: AgentToolDefinition = {
-  id: 'crm.deal.discount', description: 'sensitive commercial', risk: 'r3_sensitive_commercial',
-  hasSideEffect: true, idempotencyRequired: true, maxRetries: 0,
-};
-const r4: AgentToolDefinition = {
-  id: 'admin.destroy', description: 'destructive', risk: 'r4_destructive_admin',
-  hasSideEffect: true, idempotencyRequired: true, maxRetries: 0,
-};
+function tool(id: string, risk: AgentToolDefinition['risk']): AgentToolDefinition {
+  return {
+    id,
+    owner: 'agent-engine.phase-5-test',
+    source: 'internal',
+    schema: { kind: 'inline', value: {} },
+    risk,
+    hasSideEffect: risk !== 'r0_read',
+    idempotencyRequired: risk !== 'r0_read',
+    timeoutMs: 10_000,
+    maxRetries: 0,
+  };
+}
+
+const r1 = tool('crm.contact.update', 'r1_reversible_write');
+const r2 = tool('crm.message.send', 'r2_external_communication');
+const r3 = tool('crm.deal.discount', 'r3_sensitive_commercial');
+const r4 = tool('admin.destroy', 'r4_destructive_admin');
 
 function store(): ApprovalStore {
   const rows = new Map<string, ApprovalRequest>();
@@ -105,12 +107,12 @@ describe('Agent OS Phase 5 end-to-end release gate', () => {
   });
 
   it('keeps R2 and R3 behind durable approval and R4 denied', async () => {
-    for (const tool of [r2, r3]) {
+    for (const toolDefinition of [r2, r3]) {
       const approvals = store();
       const result = await executeThroughToolGateway({
-        organizationId: 'org-a', agentId: 'agent-a', runId: `run-${tool.id}`,
+        organizationId: 'org-a', agentId: 'agent-a', runId: `run-${toolDefinition.id}`,
         autonomyLevel: 'assisted', promotionDecision: { kind: 'allow', evidenceRef: evidence.ref },
-        tool, args: {}, idempotencyKey: `key-${tool.id}`, execute: vi.fn(), approvalStore: approvals,
+        tool: toolDefinition, args: {}, idempotencyKey: `key-${toolDefinition.id}`, execute: vi.fn(), approvalStore: approvals,
       });
       expect(result.kind).toBe('pending_approval');
     }
