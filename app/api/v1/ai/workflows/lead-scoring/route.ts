@@ -1,86 +1,142 @@
 /**
- * POST/GET /api/v1/ai/workflows/lead-scoring
+ * POST /api/v1/ai/workflows/lead-scoring — Create + draft lead scoring workflow run.
+ * GET  /api/v1/ai/workflows/lead-scoring — List workflow runs for the active org.
  *
- * Lead scoring workflow API.
- * POST: Create new scoring run
- * GET: List runs (paginated)
- *
- * Phase 8 Task 5: Skeleton.
+ * Authentication: manager+ (RBAC via `requireRole`).
+ * Feature gating: OFF → 404; SHADOW → draft only; ON/CANARY → execute.
  */
+import { randomUUID } from "node:crypto";
+import type { NextRequest } from "next/server";
+import { z } from "zod";
 
-import type { NextRequest } from 'next/server';
-import { loadAuthUser, resolveActiveOrg } from '@/lib/auth/server';
-import { fail, ok } from '@/lib/api/wrappers';
-import { logger } from '@/lib/logger';
+import { fail, ok } from "@/lib/api/wrappers";
+import { audit } from "@/lib/audit";
+import { requireRole } from "@/lib/auth/require-role";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveAiPlatformFeature } from "@/lib/agent-engine/platform/features";
+import { buildLeadScoringGraph } from "@/lib/agent-engine/workflows/lead-scoring/graph";
+import { getWorkflowDbPool, getWorkflowLlmCfg } from "@/lib/agent-engine/workflows/proposal/runtime";
 
-export async function POST(request: NextRequest) {
-  try {
-    const user = await loadAuthUser();
-    if (!user) {
-      return fail('unauthorized', 'Authentication required', 401);
-    }
+export const dynamic = "force-dynamic";
 
-    const activeOrg = await resolveActiveOrg(user);
-    if (!activeOrg) {
-      return fail('invalid_state', 'No active organization', 400);
-    }
+const WORKFLOW_TYPE = "lead_scoring" as const;
 
-    // TODO Step 5.3: RBAC — viewer/agent can trigger
-    // const ROLE_RANK = { viewer: 1, agent: 2, manager: 4, admin: 5 };
-    // if (ROLE_RANK[activeOrg.role] < ROLE_RANK['agent']) {
-    //   return fail('forbidden', 'Agent+ role required', 403);
-    // }
+const createLeadScoringSchema = z.object({
+  lead_id: z.string().uuid(),
+  pipeline_id: z.string().uuid().optional(),
+});
 
-    const body = await request.json();
-    const { lead_id: leadId } = body;
-
-    if (!leadId) {
-      return fail('invalid_input', 'lead_id required', 400);
-    }
-
-    // TODO Step 5.2: Implement
-    // 1. Query lead by leadId, verify org match
-    // 2. Create ai_workflow_runs row (type='lead_scoring', lead_id, status='drafted')
-    // 3. Invoke leadScoringGraph.stream()
-    // 4. Return { run_id, status, created_at }
-
-    logger.info('workflow.lead_scoring.created stub', {
-      org: activeOrg.orgId,
-      lead_id: leadId,
-      user_id: user.id,
-    });
-
-    return ok({
-      run_id: `lead-score-${Date.now()}`,
-      status: 'drafted',
-      created_at: new Date().toISOString(),
-    });
-  } catch (error) {
-    return fail('internal_error', error instanceof Error ? error.message : 'Unknown error', 500);
-  }
+interface InterruptedResult {
+  __interrupt__?: unknown[];
 }
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<Response> {
+  const requestId = randomUUID();
+  const authz = await requireRole("manager", { requestId, resource: "ai_workflow_runs" });
+  if (!authz.ok) return authz.response;
+  const { user, org: activeOrg } = authz;
+
+  let raw: unknown;
   try {
-    const user = await loadAuthUser();
-    if (!user) {
-      return fail('unauthorized', 'Authentication required', 401);
-    }
-
-    const activeOrg = await resolveActiveOrg(user);
-    if (!activeOrg) {
-      return fail('invalid_state', 'No active organization', 400);
-    }
-
-    // TODO: Query ai_workflow_runs by org, type='lead_scoring'
-    // Paginate by created_at cursor
-    // Return { data: [...], meta: { cursor, has_more } }
-
-    return ok({
-      data: [],
-      meta: { cursor: null, has_more: false },
-    });
-  } catch (error) {
-    return fail('internal_error', error instanceof Error ? error.message : 'Unknown error', 500);
+    raw = await request.json();
+  } catch {
+    return fail("invalid_request", "Body JSON inválido.", 400, { requestId });
   }
+  const parsed = createLeadScoringSchema.safeParse(raw);
+  if (!parsed.success) {
+    return fail("validation_failed", "Campos inválidos.", 422, { requestId, details: parsed.error.flatten() });
+  }
+  const { lead_id, pipeline_id } = parsed.data;
+
+  const feature = await resolveAiPlatformFeature({
+    organizationId: activeOrg.orgId,
+    feature: "langgraph_lead_scoring_workflow",
+  });
+  if (feature.mode === "off") {
+    return fail("not_found", "Workflow indisponível.", 404, { requestId });
+  }
+
+  const supabase = await createClient();
+
+  const threadId = randomUUID();
+  const sideEffectKey = `${WORKFLOW_TYPE}:${threadId}`;
+
+  const { data: created, error: insertErr } = await supabase
+    .from("ai_workflow_runs")
+    .insert({
+      organization_id: activeOrg.orgId,
+      workflow_type: WORKFLOW_TYPE,
+      thread_id: threadId,
+      status: "drafted",
+      side_effect_key: sideEffectKey,
+      created_by: user.id,
+    })
+    .select("id, thread_id")
+    .maybeSingle();
+  if (insertErr) return fail("internal_error", insertErr.message, 500, { requestId });
+  if (!created) return fail("internal_error", "Failed to create workflow run.", 500, { requestId });
+
+  const db = getWorkflowDbPool();
+  const admin = createAdminClient();
+  const llmCfg = getWorkflowLlmCfg();
+  const graph = buildLeadScoringGraph();
+  const config = { configurable: { thread_id: created.thread_id, db, supabase: admin, llmCfg } };
+
+  let result: InterruptedResult;
+  try {
+    result = (await graph.invoke(
+      { leadId: lead_id, organizationId: activeOrg.orgId },
+      config,
+    )) as InterruptedResult;
+  } catch (error) {
+    return fail("internal_error", error instanceof Error ? error.message : "workflow failed", 500, {
+      requestId,
+    });
+  }
+
+  const pausedForApproval = Boolean(result.__interrupt__ && result.__interrupt__.length > 0);
+  if (pausedForApproval) {
+    await supabase
+      .from("ai_workflow_runs")
+      .update({ status: "awaiting_approval" })
+      .eq("id", created.id)
+      .eq("organization_id", activeOrg.orgId);
+  }
+
+  void audit({
+    action: "workflow.created",
+    actorUserId: user.id,
+    organizationId: activeOrg.orgId,
+    resourceType: "ai_workflow_run",
+    resourceId: created.id,
+    requestId,
+    metadata: { workflow_type: WORKFLOW_TYPE, mode: feature.mode },
+  });
+
+  return ok(
+    { run_id: created.id, status: pausedForApproval ? "awaiting_approval" : "drafted" },
+    { requestId },
+  );
+}
+
+export async function GET(request: NextRequest): Promise<Response> {
+  const requestId = randomUUID();
+  const authz = await requireRole("viewer", { requestId, resource: "ai_workflow_runs" });
+  if (!authz.ok) return authz.response;
+  const { org: activeOrg } = authz;
+
+  const supabase = await createClient();
+
+  const { data: runs, error: err } = await supabase
+    .from("ai_workflow_runs")
+    .select("id, workflow_type, status, created_at")
+    .eq("organization_id", activeOrg.orgId)
+    .eq("workflow_type", WORKFLOW_TYPE)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (err) return fail("internal_error", err.message, 500, { requestId });
+
+  return ok({ data: runs ?? [], meta: { requestId } });
 }

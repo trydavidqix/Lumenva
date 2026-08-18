@@ -23,6 +23,8 @@ const killSwitches: Record<AiPlatformFeature, boolean> = {
   external_guardrails: env.AI_PLATFORM_KILL_EXTERNAL_GUARDRAILS,
   n8n: env.AI_PLATFORM_KILL_N8N,
   langgraph_proposal_workflow: env.AI_PLATFORM_KILL_LANGGRAPH,
+  langgraph_automation_workflow: env.AI_PLATFORM_KILL_LANGGRAPH,
+  langgraph_lead_scoring_workflow: env.AI_PLATFORM_KILL_LANGGRAPH,
 };
 
 function safeConfig(value: unknown): Record<string, unknown> {
