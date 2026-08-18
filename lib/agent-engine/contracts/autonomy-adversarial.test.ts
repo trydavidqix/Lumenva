@@ -15,14 +15,22 @@ import {
 import { executeThroughToolGateway } from '../tools/gateway';
 import type { AgentToolDefinition } from '../tools/registry';
 
-const r1: AgentToolDefinition = {
-  id: 'crm.contact.update', description: 'update', risk: 'r1_reversible_write',
-  hasSideEffect: true, idempotencyRequired: true, maxRetries: 0,
-};
-const r4: AgentToolDefinition = {
-  id: 'admin.destroy', description: 'destroy', risk: 'r4_destructive_admin',
-  hasSideEffect: true, idempotencyRequired: true, maxRetries: 0,
-};
+function tool(id: string, risk: AgentToolDefinition['risk']): AgentToolDefinition {
+  return {
+    id,
+    owner: 'agent-engine.phase-5-test',
+    source: 'internal',
+    schema: { kind: 'inline', value: {} },
+    risk,
+    hasSideEffect: risk !== 'r0_read',
+    idempotencyRequired: risk !== 'r0_read',
+    timeoutMs: 10_000,
+    maxRetries: 0,
+  };
+}
+
+const r1 = tool('crm.contact.update', 'r1_reversible_write');
+const r4 = tool('admin.destroy', 'r4_destructive_admin');
 
 function approvalStore(): ApprovalStore {
   const rows = new Map<string, ApprovalRequest>();
@@ -57,7 +65,7 @@ describe('Phase 5 autonomy adversarial matrix', () => {
     expect(authorizeAutonomyPromotion({
       actor: 'human',
       currentLevel: 'shadow',
-      desiredLevel: 'autopilot_expanded',
+      desiredLevel: 'assisted',
       promotionDecision: { kind: 'allow', evidenceRef: 'eval-good' },
     })).toEqual({ kind: 'deny', reason: 'invalid_promotion_transition' });
   });
