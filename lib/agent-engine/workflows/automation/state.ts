@@ -40,56 +40,54 @@ export interface AutomationSchedulingGraphState {
 }
 
 export const AutomationSchedulingGraphStateAnnotation = Annotation.Root({
-  workflowRunId: {
-    reducer: (prev: string, next: string) => next || prev,
-    default: () => '',
-  },
-  organizationId: {
-    reducer: (prev: string, next: string) => next || prev,
-    default: () => '',
-  },
-  automationId: {
-    reducer: (prev: string, next: string) => next || prev,
-    default: () => '',
-  },
-  automationConfig: {
-    reducer: (prev: any, next: any) => next ?? prev,
+  workflowRunId: Annotation<string>(),
+  organizationId: Annotation<string>(),
+  automationId: Annotation<string>(),
+  automationConfig: Annotation<{
+    name: string;
+    type: 'message_campaign' | 'lead_scoring' | 'proposal_send';
+    schedule: string;
+    enabled: boolean;
+    filters: Record<string, unknown>;
+    action_params: Record<string, unknown>;
+  } | null>({
+    reducer: (_prev, next) => next,
     default: () => null,
-  },
-  nextRunAt: {
-    reducer: (prev: string | null, next: string | null) => next ?? prev,
+  }),
+  nextRunAt: Annotation<string | null>({
+    reducer: (_prev, next) => next,
     default: () => null,
-  },
-  estimatedLeadCount: {
-    reducer: (prev: number | null, next: number | null) => next ?? prev,
+  }),
+  estimatedLeadCount: Annotation<number | null>({
+    reducer: (_prev, next) => next,
     default: () => null,
-  },
-  humanDecision: {
-    reducer: (prev: string | null, next: string | null) => next ?? prev,
+  }),
+  humanDecision: Annotation<'approve' | 'reject' | 'edit' | null>({
+    reducer: (_prev, next) => next,
     default: () => null,
-  },
-  humanReason: {
-    reducer: (prev: string | null, next: string | null) => next ?? prev,
+  }),
+  humanReason: Annotation<string | null>({
+    reducer: (_prev, next) => next,
     default: () => null,
-  },
-  editedSchedule: {
-    reducer: (prev: string | null, next: string | null) => next ?? prev,
+  }),
+  editedSchedule: Annotation<string | null>({
+    reducer: (_prev, next) => next,
     default: () => null,
-  },
-  executedAt: {
-    reducer: (prev: string | null, next: string | null) => next ?? prev,
+  }),
+  executedAt: Annotation<string | null>({
+    reducer: (_prev, next) => next,
     default: () => null,
-  },
-  executionJobId: {
-    reducer: (prev: string | null, next: string | null) => next ?? prev,
+  }),
+  executionJobId: Annotation<string | null>({
+    reducer: (_prev, next) => next,
     default: () => null,
-  },
-  leadsProcessed: {
-    reducer: (prev: number | null, next: number | null) => next ?? prev,
+  }),
+  leadsProcessed: Annotation<number | null>({
+    reducer: (_prev, next) => next,
     default: () => null,
-  },
-  status: {
-    reducer: (prev: string, next: string) => next || prev,
+  }),
+  status: Annotation<'drafted' | 'awaiting_approval' | 'approved' | 'rejected' | 'scheduled' | 'executed' | 'completed'>({
+    reducer: (prev, next) => next || prev,
     default: () => 'drafted',
-  },
+  }),
 });
