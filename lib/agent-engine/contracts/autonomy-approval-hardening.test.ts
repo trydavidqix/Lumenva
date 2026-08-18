@@ -155,4 +155,44 @@ describe('Phase 5 approval hardening', () => {
     expect(execute).toHaveBeenCalledTimes(1);
     expect(stored?.idempotencyKey).toBe('idem-stable-1');
   });
+
+  it('resumes after a crash from executing with the same approval and idempotency identity', async () => {
+    const store = memoryStore();
+    const request = await pending(store, { idempotencyKey: 'idem-crash-stable' });
+    await decideApprovalRequest(
+      store,
+      request.id,
+      { decision: 'approved', decidedBy: 'user-1' },
+      { organizationId: 'org-a', runTerminal: false },
+    );
+
+    const seenKeys: string[] = [];
+    await expect(
+      enforceApprovalDecision(
+        store,
+        request.id,
+        (executing) => {
+          seenKeys.push(executing.idempotencyKey);
+          throw new Error('simulated_process_crash_after_claim');
+        },
+        { organizationId: 'org-a' },
+      ),
+    ).rejects.toThrow('simulated_process_crash_after_claim');
+
+    expect((await store.load(request.id))?.status).toBe('executing');
+
+    const resumed = await enforceApprovalDecision(
+      store,
+      request.id,
+      async (executing) => {
+        seenKeys.push(executing.idempotencyKey);
+        return { ok: true };
+      },
+      { organizationId: 'org-a' },
+    );
+
+    expect(resumed).toEqual({ kind: 'executed', result: { ok: true } });
+    expect(seenKeys).toEqual(['idem-crash-stable', 'idem-crash-stable']);
+    expect((await store.load(request.id))?.status).toBe('executed');
+  });
 });
