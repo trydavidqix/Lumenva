@@ -2,8 +2,8 @@
  * Task 3: Proposal workflow metrics — Sentry + structured logging.
  */
 
-import * as Sentry from '@sentry/node';
-import { logger } from '../../../lib/logger';
+// import * as Sentry from '@sentry/node'; // Optional: requires @sentry/node package
+import { logger } from '@/lib/logger';
 
 export interface WorkflowMetrics {
   runId: string;
@@ -15,27 +15,16 @@ export interface WorkflowMetrics {
 }
 
 export function recordWorkflowStarted(runId: string, organizationId: string) {
-  Sentry.captureMessage('proposal_workflow_created', {
-    level: 'info',
-    contexts: { workflow: { run_id: runId, organization_id: organizationId } },
-  });
+  // Sentry.captureMessage('proposal_workflow_created', { ... });
   logger.info('workflow.started', { workflow_run_id: runId, organization_id: organizationId });
 }
 
 export function recordWorkflowDecision(runId: string, decision: string) {
-  Sentry.captureMessage(`proposal_decision_${decision}`, {
-    level: 'info',
-    contexts: { workflow: { run_id: runId, decision } },
-  });
   logger.info('workflow.decision', { workflow_run_id: runId, decision });
 }
 
 export function recordWorkflowSent(runId: string, messageId: string | null, blocked: boolean) {
   const outcome = blocked ? 'blocked' : messageId ? 'sent' : 'failed';
-  Sentry.captureMessage(`proposal_send_${outcome}`, {
-    level: 'info',
-    contexts: { workflow: { run_id: runId, outcome, message_id: messageId } },
-  });
   logger.info('workflow.sent', {
     workflow_run_id: runId,
     message_id: messageId,
@@ -49,10 +38,6 @@ export function recordMetric(name: string, value: number, tags: Record<string, s
     .map(([k, v]) => `${k}:${v}`)
     .join(',');
   logger.info('workflow.metric', { metric_name: name, value, tags: tagStr });
-  Sentry.captureMessage(`metric.${name}`, {
-    level: 'debug',
-    contexts: { metric: { value, tags } },
-  });
 }
 
 export async function recordCheckpointPerformance(
@@ -64,15 +49,5 @@ export async function recordCheckpointPerformance(
     thread_id: threadId,
     checkpoint_size_bytes: checkpointSizeBytes,
     resume_latency_ms: resumeLatencyMs,
-  });
-  Sentry.captureMessage('checkpoint_performance', {
-    level: 'debug',
-    contexts: {
-      checkpoint: {
-        thread_id: threadId,
-        size_bytes: checkpointSizeBytes,
-        resume_latency_ms: resumeLatencyMs,
-      },
-    },
   });
 }
