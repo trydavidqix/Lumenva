@@ -284,6 +284,15 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     section: "Acompanhar o agente",
   },
   {
+    href: "/app/ai/workflows",
+    label: "Fluxos de trabalho",
+    description: "Automações e pontuações agendadas, esperando aprovação do gerente.",
+    icon: FlowArrow,
+    group: "ia",
+    section: "Acompanhar o agente",
+    minRole: "manager",
+  },
+  {
     href: "/app/ai/usage",
     label: "Uso e orçamento",
     description: "Quanto a IA consumiu e qual é o teto de gasto do mês.",
