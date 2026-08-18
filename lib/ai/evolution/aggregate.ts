@@ -32,6 +32,7 @@ export interface EvolutionInput {
   }>;
   stageTransitions: Array<{ created_at: string; to_stage: string }>;
   costCents: number;
+  followupOutcomes: Array<{ outcome: string; count: number; recorded_at: string }>;
   inboundCount: number;
   handoffCount: number;
   pipelines: Array<{ name: string; hints: Array<string | null> }>;

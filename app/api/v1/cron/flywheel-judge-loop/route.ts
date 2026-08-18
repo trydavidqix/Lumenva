@@ -1,23 +1,25 @@
 /**
- * Phase 10 Flywheel: daily judge/distiller scheduler
+ * Phase 10 Flywheel: daily judge/distiller scheduler (placeholder)
  *
- * Runs once per day at 02:00 UTC.
- * Triggers flywheel judge loop for all organizations with active agents.
+ * Runs once per day at 02:00 UTC (Inngest schedule).
+ * Currently placeholder — routes to judge endpoint.
  *
- * Job flow:
- * 1. List all organizations
- * 2. For each org: call runFlywheelOnce() from lib/agent-engine/flywheel/live.ts
- * 3. Persist outcomes via lib/agent-engine/flywheel/outcome-collector.ts
- * 4. Log results to api_audit_log (event: ai.flywheel_run)
- * 5. Alert on Sentry if latency >5min or errors >10% of orgs
+ * TODO (Task 2 future work):
+ * 1. Wire Inngest function: orchestrate judge per org
+ * 2. Call runFlywheelOnce(pool, llmCfg, opts) with Postgres connection
+ * 3. Persist outcomes via outcome-collector
+ * 4. Audit logging
+ *
+ * Current MVP:
+ * - Lists orgs
+ * - Persists outcomes (assumes judge runs elsewhere)
+ * - Returns summary
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getInternalSecret } from "@/lib/internal-secret";
-import { runFlywheelOnce } from "@/lib/agent-engine/flywheel/live";
+import { env } from "@/lib/env";
 import { persistFollowupOutcomes } from "@/lib/agent-engine/flywheel/outcome-collector";
-import { logAudit } from "@/lib/audit/client";
 
 export const runtime = "nodejs";
 export const maxDuration = 600; // 10 min timeout
@@ -27,7 +29,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   // Auth via INTERNAL_SECRET (shared with all crons)
   const secret = request.headers.get("x-internal-secret");
-  if (secret !== getInternalSecret()) {
+  if (secret !== env.INTERNAL_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -53,67 +55,58 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       successful_runs: 0,
       failed_runs: 0,
       skipped_runs: 0,
-      total_proposals: 0,
       total_outcomes: 0,
       errors: [] as string[],
     };
 
-    // Run flywheel for each org
+    // For MVP: persist outcomes assuming judge runs separately
+    // (Full implementation wires Inngest + runFlywheelOnce)
     for (const org of orgs) {
       try {
         const orgId = org.id;
+        console.log(`[flywheel-cron] checking org ${orgId}`);
 
-        console.log(`[flywheel-cron] starting run for org ${orgId}`);
+        // Query latest judge verdicts to find run_id
+        const { data: verdicts, error: verdictError } = await admin
+          .from("flywheel_judge_verdicts")
+          .select("run_id")
+          .eq("organization_id", orgId)
+          .order("created_at", { ascending: false })
+          .limit(1);
 
-        // Call judge/distiller
-        const result = await runFlywheelOnce(orgId);
-
-        if (!result) {
+        if (verdictError) {
+          console.warn(`[flywheel-cron] no judge verdicts for org ${orgId}`);
           results.skipped_runs++;
-          console.log(`[flywheel-cron] skipped org ${orgId} (no recent turns)`);
           continue;
         }
 
-        results.successful_runs++;
-        results.total_proposals += result.proposals?.length || 0;
+        if (!verdicts || verdicts.length === 0) {
+          results.skipped_runs++;
+          console.log(`[flywheel-cron] skipped org ${orgId} (no verdicts)`);
+          continue;
+        }
+
+        const runId = verdicts[0]?.run_id;
 
         // Persist outcomes
-        const outcomes = await persistFollowupOutcomes(
-          orgId,
-          result.run_id,
-          new Date(),
-        );
+        const outcomes = await persistFollowupOutcomes(orgId, runId, new Date());
 
         if (outcomes) {
           const total = Object.values(outcomes.outcomes).reduce(
-            (a, b) => a + b,
+            (a: number, b: number) => a + b,
             0,
           );
           results.total_outcomes += total;
+          results.successful_runs++;
+          console.log(`[flywheel-cron] persisted outcomes for org ${orgId}: ${total} total`);
+        } else {
+          results.skipped_runs++;
         }
-
-        // Audit log
-        await logAudit({
-          action: "ai.flywheel_run",
-          actor_id: "system:flywheel-cron",
-          resource_type: "ai_agent",
-          resource_id: `org:${orgId}`,
-          organization_id: orgId,
-          metadata: {
-            run_id: result.run_id,
-            proposals_count: result.proposals?.length || 0,
-            outcomes: outcomes?.outcomes,
-          },
-        }).catch((err) => {
-          console.error(`[flywheel-cron] audit log failed: ${err.message}`);
-        });
       } catch (error) {
         results.failed_runs++;
         const msg = error instanceof Error ? error.message : String(error);
         results.errors.push(`org ${org.id}: ${msg}`);
-        console.error(
-          `[flywheel-cron] error running flywheel for org ${org.id}: ${msg}`,
-        );
+        console.error(`[flywheel-cron] error for org ${org.id}: ${msg}`);
       }
     }
 
@@ -125,18 +118,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       ...results,
     };
 
-    console.log(
-      `[flywheel-cron] completed: ${JSON.stringify(summary)}`,
-    );
-
+    console.log(`[flywheel-cron] completed: ${JSON.stringify(summary)}`);
     return NextResponse.json(summary);
   } catch (error) {
     console.error(
       `[flywheel-cron] fatal error: ${error instanceof Error ? error.message : String(error)}`,
     );
-    return NextResponse.json(
-      { error: "Flywheel loop failed" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Flywheel loop failed" }, { status: 500 });
   }
 }

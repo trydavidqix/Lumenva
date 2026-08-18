@@ -225,4 +225,6 @@ export type AuditAction =
   | "workflow.rejected"
   // Phase 8 Task 1 — manager sent the draft back for a revision loop
   // (interrupt re-pauses at a fresh draft instead of reaching a terminal state).
-  | "workflow.edited";
+  | "workflow.edited"
+  // Phase 10 — Flywheel judge/distiller run completed
+  | "ai.flywheel_run";
