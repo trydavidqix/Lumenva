@@ -1,5 +1,15 @@
 import type { AgentAutonomyLevel } from '../policies/engine';
-import type { CapabilityAutonomyRecord } from './store';
+import type { CapabilityAutonomyKey, CapabilityAutonomyRecord } from './store';
+
+export interface RuntimeAutonomyResolver {
+  resolve(key: CapabilityAutonomyKey): Promise<{
+    level: AgentAutonomyLevel;
+    globalEnabled: boolean;
+    tenantEnabled: boolean;
+    agentEnabled: boolean;
+    capabilityEnabled: boolean;
+  }>;
+}
 
 const LEVEL_ORDER: readonly AgentAutonomyLevel[] = [
   'off',
@@ -10,7 +20,7 @@ const LEVEL_ORDER: readonly AgentAutonomyLevel[] = [
   'autopilot_expanded',
 ];
 
-function mostRestrictive(
+export function mostRestrictiveAutonomyLevel(
   left: AgentAutonomyLevel,
   right: AgentAutonomyLevel,
 ): AgentAutonomyLevel {
@@ -46,6 +56,6 @@ export function resolveEffectiveAutonomy(input: {
         ? input.capability.rollbackLevel
         : input.capability.currentLevel;
 
-  const level = mostRestrictive(input.requestedLevel, capabilityLevel);
+  const level = mostRestrictiveAutonomyLevel(input.requestedLevel, capabilityLevel);
   return { level, enabled: level !== 'off' };
 }
