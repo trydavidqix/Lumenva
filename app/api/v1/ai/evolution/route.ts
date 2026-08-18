@@ -150,6 +150,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     knowledgeSearches,
     stageTransitions,
     llmCalls,
+    followupOutcomes,
     inboundCount,
     handoffInbox,
     handoffEvents,
@@ -181,6 +182,12 @@ export async function GET(req: NextRequest): Promise<Response> {
     ),
     ler<{ created_at: string; to_stage: string }>("lead_state_transitions", "created_at, to_stage", "created_at"),
     ler<{ cost_cents: number | null }>("llm_calls", "cost_cents", "created_at"),
+    // Phase 10 Flywheel outcomes: tracks follow-up conversions per judge run
+    ler<{ outcome: string; count: number; recorded_at: string }>(
+      "flywheel_followup_outcomes",
+      "outcome, count, recorded_at",
+      "recorded_at",
+    ),
     contar("messages", "created_at", ["direction", "inbound"]),
     // ⚠️ DUAS FONTES DE HANDOFF, DE PROPÓSITO — não "simplifique" para uma.
     // Há dois runtimes no repo e cada um registra o handoff no seu lugar:
@@ -233,6 +240,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     // total sem tocar nele. Se uma linha vier como string, `acc + '12.5'` concatena
     // em silêncio e o card mostra texto (ou NaN) — nunca um erro.
     costCents: llmCalls.reduce((acc, c) => acc + Number(c.cost_cents ?? 0), 0),
+    followupOutcomes,
     inboundCount,
     handoffCount: handoffInbox + handoffEvents,
     pipelines: [...porPipeline.entries()].map(([name, hints]) => ({ name, hints })),
