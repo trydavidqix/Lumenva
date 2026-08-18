@@ -1,63 +1,98 @@
 # Phase 5 — Assisted Autonomy Verification
 
-**Status:** IMPLEMENTATION COMPLETE / VERIFICATION PENDING
+**Status:** GO / APPROVED — LOCAL EXECUTABLE GATE VERIFIED
 
 **Implementation branch:** `agent-os-phase-5-assisted-autonomy`
 
-**Recorded implementation SHA:** `b6ebc94b807ab568498f1e16757ddfa4ca8f0510`
+**Verified code SHA:** `9bb8358f2872a03ed27f339b763950c2298c71ec`
 
-This document intentionally does **not** declare Phase 5 GO. Fresh executable verification is still required through an approved runner that is neither GitHub Actions nor a Vercel Preview deployment.
+**Verification date:** 2026-08-18
 
-## Implemented boundaries visible in the branch
+Phase 5 has fresh executable evidence from the approved local Windows/PowerShell runner. No GitHub Actions and no Vercel Preview deployment were used for this verification.
 
-The Phase 5 integration contract covers the staged autonomy path `SHADOW -> DRAFT -> ASSISTED` with deterministic controls outside model reasoning.
+## Fresh verification evidence
 
-Observed implementation contracts include:
+The runner first confirmed the correct branch, synchronization and clean working tree:
 
-- SHADOW read-only execution with autonomy-decision evidence recording;
-- DRAFT side-effect suppression with proposal/evidence recording;
-- ASSISTED R1 execution gated by promotion evidence;
-- R2/R3 retained behind durable approval;
-- R4 denied as non-autonomous;
-- approved R3 resume preserving the original idempotency identity and preventing duplicate execution;
-- runtime kill-switch re-evaluation before side effects;
-- synthetic `autopilot_low_risk` mechanics covered while customer promotion to that level remains disabled;
-- model-initiated autonomy promotion denied;
-- promotion remains stepwise and evidence-backed.
+- branch: `agent-os-phase-5-assisted-autonomy`;
+- `git pull --ff-only origin agent-os-phase-5-assisted-autonomy`: already up to date;
+- `git status`: nothing to commit, working tree clean.
 
-These are code/test contracts present in the branch. They are **not** fresh pass results in this closeout.
+The following gates were then executed on that branch:
 
-## Prohibited verification paths
+### TypeScript
 
-The approved workflow for this closeout explicitly forbids:
+Command:
+
+```text
+pnpm typecheck
+```
+
+Result: **PASS** — `tsc --noEmit` completed with zero TypeScript errors.
+
+### Agent OS / Phase 5 verification suite
+
+Command:
+
+```text
+pnpm exec vitest run --config vitest.agent-os.config.ts
+```
+
+Result: **PASS**
+
+- Test Files: **39 passed / 39**
+- Tests: **171 passed / 171**
+- Failures: **0**
+
+The fresh suite includes the Phase 5 autonomy contracts and the required Agent OS regressions, including Tool Gateway, policy/approval, idempotency/resume, runtime rollback/kill-switch behavior, autonomy scoping, promotion gates, risk registry, adversarial cases and runtime autonomy wiring.
+
+### Application build
+
+Command:
+
+```text
+pnpm build
+```
+
+Result: **PASS**
+
+Observed build evidence:
+
+- Next.js production compilation completed successfully;
+- TypeScript build stage completed successfully;
+- page data collection completed successfully;
+- static page generation completed **43/43**;
+- final page optimization completed.
+
+Environment messages about absent local AI provider keys and `IMPERSONATE_COOKIE_SECRET` were warnings describing disabled/unavailable optional runtime capabilities in the local runner; they did not fail the verification suite, typecheck or production build.
+
+## Verified Phase 5 safety boundaries
+
+The verified contracts preserve the intended staged autonomy model:
+
+- SHADOW remains read-only;
+- DRAFT suppresses side effects and records proposals/evidence;
+- ASSISTED R1 execution remains gated by promotion evidence;
+- R2/R3 remain behind durable approval;
+- R4 remains denied as non-autonomous/human-only;
+- approved R3 resume preserves the original idempotency identity and prevents duplicate execution;
+- runtime kill switches are re-evaluated before side effects;
+- model-initiated autonomy promotion is denied;
+- promotion remains stepwise and evidence-backed;
+- synthetic `autopilot_low_risk` mechanics may be contract-tested, but this GO does not enable customer promotion to that level.
+
+## Verification-path constraints
+
+This GO is based on the approved local executable runner. It does not rely on:
 
 - GitHub Actions;
-- Vercel Preview deployments.
+- Vercel Preview deployments;
+- production execution;
+- real customer communications;
+- remote migrations.
 
-Historical or stale evidence from either path must not be used to claim final GO.
+## Decision
 
-## Fresh verification still required
+**PHASE 5 = GO / APPROVED for the implemented Assisted Autonomy scope evidenced above.**
 
-Before Phase 5 can be marked GO, an approved non-Vercel-Preview, non-GitHub-Actions runner must freshly execute the Phase 5 focused verification set and record exact output for:
-
-1. Phase 5 autonomy contract/unit/integration tests;
-2. required Agent OS regressions for Tool Gateway, policy/approval, idempotency, kill switches and promotion gates;
-3. TypeScript typecheck;
-4. application build if required by the repository release doctrine.
-
-The final evidence must include the exact branch SHA, commands, test counts, failures (expected zero for GO), and build/typecheck exit status.
-
-## Safety state
-
-Until that evidence exists:
-
-- no final Phase 5 GO is claimed;
-- no production deployment is authorized;
-- no real customer communication is authorized;
-- no autonomy increase beyond the governed Phase 5 implementation is authorized;
-- R4 remains human-only/non-autonomous;
-- production/main remains untouched by this closeout.
-
-## Closeout rule
-
-Phase 5 may transition from `IMPLEMENTATION COMPLETE / VERIFICATION PENDING` to `GO` only after fresh evidence from an approved runner satisfies the verification requirements above. Documentation must then be updated with the exact verified SHA and results.
+This decision closes the previously pending local executable verification gate. It does **not** authorize production deployment, customer-facing autonomy increases, real external communications, or autonomous R4 execution. Those remain separately governed boundaries.
