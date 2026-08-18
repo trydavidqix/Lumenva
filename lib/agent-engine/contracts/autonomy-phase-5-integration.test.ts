@@ -67,25 +67,41 @@ describe('Agent OS Phase 5 end-to-end release gate', () => {
       .toEqual({ kind: 'deny', reason: 'model_cannot_promote' });
   });
 
-  it('runs SHADOW read-only with zero side effects', async () => {
+  it('runs SHADOW read-only with zero side effects and records the decision', async () => {
     const read = vi.fn().mockResolvedValue({ contact: 'synthetic' });
+    const recorder = { record: vi.fn().mockResolvedValue(undefined) };
     const result = await executeThroughToolGateway({
-      organizationId: 'org-a', agentId: 'agent-a', autonomyLevel: 'shadow',
+      organizationId: 'org-a', agentId: 'agent-a', runId: 'run-shadow', traceId: 'trace-shadow', correlationId: 'corr-shadow',
+      autonomyLevel: 'shadow', autonomyEvidenceRecorder: recorder,
       tool: r0, args: {}, idempotencyKey: '', execute: read, approvalStore: null,
     });
     expect(result).toEqual({ kind: 'executed', result: { contact: 'synthetic' } });
     expect(read).toHaveBeenCalledTimes(1);
     expect(r0.hasSideEffect).toBe(false);
+    expect(recorder.record).toHaveBeenCalledWith(expect.objectContaining({
+      kind: 'autonomy_decision',
+      payload: expect.objectContaining({
+        autonomyLevel: 'shadow', capabilityId: r0.id, policyOutcome: 'allow', executionOutcome: 'executed',
+      }),
+    }));
   });
 
-  it('keeps DRAFT R1 side-effect free and returns a proposal', async () => {
+  it('keeps DRAFT R1 side-effect free, returns a proposal and records evidence', async () => {
     const execute = vi.fn();
+    const recorder = { record: vi.fn().mockResolvedValue(undefined) };
     const result = await executeThroughToolGateway({
-      organizationId: 'org-a', agentId: 'agent-a', autonomyLevel: 'draft',
+      organizationId: 'org-a', agentId: 'agent-a', runId: 'run-draft', traceId: 'trace-draft', correlationId: 'corr-draft',
+      autonomyLevel: 'draft', autonomyEvidenceRecorder: recorder,
       tool: r1, args: { x: 1 }, idempotencyKey: 'idem-draft', execute, approvalStore: null,
     });
     expect(result.kind).toBe('draft');
     expect(execute).not.toHaveBeenCalled();
+    expect(recorder.record).toHaveBeenCalledWith(expect.objectContaining({
+      kind: 'autonomy_decision',
+      payload: expect.objectContaining({
+        autonomyLevel: 'draft', capabilityId: r1.id, policyOutcome: 'draft', executionOutcome: 'draft_proposed',
+      }),
+    }));
   });
 
   it('executes ASSISTED R1 only with valid promotion evidence and emits audit evidence', async () => {
