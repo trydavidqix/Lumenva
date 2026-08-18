@@ -1,3 +1,4 @@
+import type { PromotionDecision } from '../autonomy/promotion';
 import type { AgentToolDefinition } from '../tools/registry';
 
 export type AgentAutonomyLevel =
@@ -30,16 +31,14 @@ export interface EvaluateToolPolicyInput {
   tool: AgentToolDefinition;
   tenantPolicy?: ToolPolicyOverrides;
   agentPolicy?: ToolPolicyOverrides;
+  promotionDecision?: PromotionDecision;
 }
 
 function includesTool(ids: readonly string[] | undefined, toolId: string): boolean {
   return ids?.includes(toolId) ?? false;
 }
 
-function approval(
-  reason: string,
-  approvalType: string,
-): PolicyDecision {
+function approval(reason: string, approvalType: string): PolicyDecision {
   return { kind: 'require_approval', reason, approvalType };
 }
 
@@ -70,10 +69,7 @@ export function evaluateToolPolicy(input: EvaluateToolPolicyInput): PolicyDecisi
   }
 
   if (input.tool.risk === 'r3_sensitive_commercial') {
-    return approval(
-      'sensitive_commercial_requires_approval',
-      'sensitive_commercial',
-    );
+    return approval('sensitive_commercial_requires_approval', 'sensitive_commercial');
   }
 
   switch (input.autonomyLevel) {
@@ -91,21 +87,17 @@ export function evaluateToolPolicy(input: EvaluateToolPolicyInput): PolicyDecisi
     case 'assisted':
       if (input.tool.risk === 'r0_read') return { kind: 'allow' };
       if (input.tool.risk === 'r1_reversible_write') {
-        return approval('autonomy_level_requires_approval', 'reversible_write');
+        return input.promotionDecision?.kind === 'allow'
+          ? { kind: 'allow' }
+          : { kind: 'deny', reason: 'promotion_evidence_required' };
       }
       return approval('autonomy_level_requires_approval', 'external_communication');
 
     case 'autopilot_low_risk':
-      if (
-        input.tool.risk === 'r0_read' ||
-        input.tool.risk === 'r1_reversible_write'
-      ) {
+      if (input.tool.risk === 'r0_read' || input.tool.risk === 'r1_reversible_write') {
         return { kind: 'allow' };
       }
-      return approval(
-        'autonomy_level_requires_approval',
-        'external_communication',
-      );
+      return approval('autonomy_level_requires_approval', 'external_communication');
 
     case 'autopilot_expanded':
       return { kind: 'allow' };
