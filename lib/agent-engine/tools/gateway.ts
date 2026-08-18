@@ -1,3 +1,4 @@
+import type { PromotionDecision } from '../autonomy/promotion';
 import type { ApprovalStore } from '../policies/approval';
 import { createApprovalRequest } from '../policies/approval';
 import {
@@ -10,10 +11,7 @@ import type { AgentToolDefinition } from './registry';
 export type ToolGatewayResult =
   | { kind: 'executed'; result: unknown }
   | { kind: 'denied'; reason: string }
-  | {
-      kind: 'draft';
-      proposal: { toolId: string; args: unknown; idempotencyKey: string };
-    }
+  | { kind: 'draft'; proposal: { toolId: string; args: unknown; idempotencyKey: string } }
   | { kind: 'pending_approval'; approvalId: string };
 
 export interface ExecuteThroughToolGatewayInput {
@@ -23,6 +21,7 @@ export interface ExecuteThroughToolGatewayInput {
   autonomyLevel: AgentAutonomyLevel;
   tenantPolicy?: ToolPolicyOverrides;
   agentPolicy?: ToolPolicyOverrides;
+  promotionDecision?: PromotionDecision;
   tool: AgentToolDefinition;
   args: unknown;
   idempotencyKey: string;
@@ -44,27 +43,20 @@ export async function executeThroughToolGateway(
     tool: input.tool,
     tenantPolicy: input.tenantPolicy,
     agentPolicy: input.agentPolicy,
+    promotionDecision: input.promotionDecision,
   });
 
-  if (policy.kind === 'deny') {
-    return { kind: 'denied', reason: policy.reason };
-  }
+  if (policy.kind === 'deny') return { kind: 'denied', reason: policy.reason };
 
   if (policy.kind === 'draft') {
     return {
       kind: 'draft',
-      proposal: {
-        toolId: input.tool.id,
-        args: input.args,
-        idempotencyKey: input.idempotencyKey,
-      },
+      proposal: { toolId: input.tool.id, args: input.args, idempotencyKey: input.idempotencyKey },
     };
   }
 
   if (policy.kind === 'require_approval') {
-    if (!input.approvalStore) {
-      return { kind: 'denied', reason: 'approval_store_unavailable' };
-    }
+    if (!input.approvalStore) return { kind: 'denied', reason: 'approval_store_unavailable' };
 
     const request = await createApprovalRequest(input.approvalStore, {
       organizationId: input.organizationId,
@@ -75,7 +67,6 @@ export async function executeThroughToolGateway(
       idempotencyKey: input.idempotencyKey,
       reason: policy.reason,
     });
-
     return { kind: 'pending_approval', approvalId: request.id };
   }
 
@@ -87,7 +78,6 @@ export type ExecutableTool = {
   execute?: (args: unknown, options?: unknown) => unknown;
   [key: string]: unknown;
 };
-
 export type ToolSetLike = Record<string, ExecutableTool>;
 
 export interface WrapToolSetWithGatewayOptions {
@@ -97,33 +87,25 @@ export interface WrapToolSetWithGatewayOptions {
   autonomyLevel: AgentAutonomyLevel;
   tenantPolicy?: ToolPolicyOverrides;
   agentPolicy?: ToolPolicyOverrides;
+  promotionDecision?: PromotionDecision;
   definitions: ReadonlyMap<string, AgentToolDefinition>;
   approvalStore: ApprovalStore | null;
   idempotencyKeyFor: (toolId: string, args: unknown) => string;
 }
 
-export function wrapToolSetWithGateway(
-  tools: ToolSetLike,
-  options: WrapToolSetWithGatewayOptions,
-): ToolSetLike {
+export function wrapToolSetWithGateway(tools: ToolSetLike, options: WrapToolSetWithGatewayOptions): ToolSetLike {
   const wrapped: ToolSetLike = {};
-
   for (const [toolId, definition] of Object.entries(tools)) {
     if (typeof definition.execute !== 'function') {
       wrapped[toolId] = definition;
       continue;
     }
-
     const metadata = options.definitions.get(toolId);
     const originalExecute = definition.execute.bind(definition);
-
     wrapped[toolId] = {
       ...definition,
       execute: async (args: unknown, executeOptions?: unknown): Promise<ToolGatewayResult> => {
-        if (!metadata) {
-          return { kind: 'denied', reason: 'tool_not_registered' };
-        }
-
+        if (!metadata) return { kind: 'denied', reason: 'tool_not_registered' };
         return executeThroughToolGateway({
           organizationId: options.organizationId,
           agentId: options.agentId,
@@ -131,6 +113,7 @@ export function wrapToolSetWithGateway(
           autonomyLevel: options.autonomyLevel,
           tenantPolicy: options.tenantPolicy,
           agentPolicy: options.agentPolicy,
+          promotionDecision: options.promotionDecision,
           tool: metadata,
           args,
           idempotencyKey: options.idempotencyKeyFor(toolId, args),
@@ -140,6 +123,5 @@ export function wrapToolSetWithGateway(
       },
     };
   }
-
   return wrapped;
 }
