@@ -1,3 +1,5 @@
+import type { AgentAutonomyLevel } from '../policies/engine';
+
 export interface AutonomyEvalEvidence {
   ref: string;
   observedAt: string;
@@ -31,6 +33,28 @@ export type PromotionDecision =
         | 'loop_stop_rate_above_threshold';
     };
 
+export type PromotionActor = 'human' | 'system' | 'model';
+
+export type PromotionAuthorization =
+  | { kind: 'allow'; evidenceRef: string }
+  | {
+      kind: 'deny';
+      reason:
+        | 'model_cannot_promote'
+        | 'promotion_gate_denied'
+        | 'invalid_promotion_transition'
+        | 'phase5_autopilot_disabled';
+    };
+
+const PROMOTION_ORDER: readonly AgentAutonomyLevel[] = [
+  'off',
+  'shadow',
+  'draft',
+  'assisted',
+  'autopilot_low_risk',
+  'autopilot_expanded',
+];
+
 export function evaluateAutonomyPromotion(input: {
   evidence: AutonomyEvalEvidence | null;
   nowMs: number;
@@ -54,4 +78,32 @@ export function evaluateAutonomyPromotion(input: {
   }
 
   return { kind: 'allow', evidenceRef: evidence.ref };
+}
+
+export function authorizeAutonomyPromotion(input: {
+  actor: PromotionActor;
+  currentLevel: AgentAutonomyLevel;
+  desiredLevel: AgentAutonomyLevel;
+  promotionDecision: PromotionDecision;
+}): PromotionAuthorization {
+  if (input.actor === 'model') {
+    return { kind: 'deny', reason: 'model_cannot_promote' };
+  }
+  if (input.promotionDecision.kind !== 'allow') {
+    return { kind: 'deny', reason: 'promotion_gate_denied' };
+  }
+  if (
+    input.desiredLevel === 'autopilot_low_risk' ||
+    input.desiredLevel === 'autopilot_expanded'
+  ) {
+    return { kind: 'deny', reason: 'phase5_autopilot_disabled' };
+  }
+
+  const current = PROMOTION_ORDER.indexOf(input.currentLevel);
+  const desired = PROMOTION_ORDER.indexOf(input.desiredLevel);
+  if (current < 0 || desired !== current + 1) {
+    return { kind: 'deny', reason: 'invalid_promotion_transition' };
+  }
+
+  return { kind: 'allow', evidenceRef: input.promotionDecision.evidenceRef };
 }
