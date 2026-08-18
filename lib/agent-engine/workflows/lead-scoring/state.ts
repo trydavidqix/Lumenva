@@ -45,60 +45,59 @@ export interface LeadScoringGraphState {
 }
 
 export const LeadScoringGraphStateAnnotation = Annotation.Root({
-  workflowRunId: {
-    reducer: (prev: string, next: string) => next || prev,
-    default: () => '',
-  },
-  organizationId: {
-    reducer: (prev: string, next: string) => next || prev,
-    default: () => '',
-  },
-  leadId: {
-    reducer: (prev: string, next: string) => next || prev,
-    default: () => '',
-  },
-  leadData: {
-    reducer: (prev: any, next: any) => next ?? prev,
+  workflowRunId: Annotation<string>(),
+  organizationId: Annotation<string>(),
+  leadId: Annotation<string>(),
+  leadData: Annotation<{
+    name: string;
+    email: string;
+    phone: string;
+    engagement_score: number;
+    conversation_count: number;
+    last_message_at: string;
+    tags: string[];
+  } | null>({
+    reducer: (_prev, next) => next,
     default: () => null,
-  },
-  draftScore: {
-    reducer: (prev: number | null, next: number | null) => next ?? prev,
+  }),
+  draftScore: Annotation<number | null>({
+    reducer: (_prev, next) => next,
     default: () => null,
-  },
-  draftReason: {
-    reducer: (prev: string | null, next: string | null) => next ?? prev,
+  }),
+  draftReason: Annotation<string | null>({
+    reducer: (_prev, next) => next,
     default: () => null,
-  },
-  isValid: {
-    reducer: (prev: boolean, next: boolean) => next ?? prev,
+  }),
+  isValid: Annotation<boolean>({
+    reducer: (_prev, next) => next,
     default: () => false,
-  },
-  validationErrors: {
-    reducer: (prev: string[], next: string[]) => next ?? prev,
+  }),
+  validationErrors: Annotation<string[]>({
+    reducer: (_prev, next) => next,
     default: () => [],
-  },
-  humanDecision: {
-    reducer: (prev: string | null, next: string | null) => next ?? prev,
+  }),
+  humanDecision: Annotation<'approve' | 'reject' | 'edit' | null>({
+    reducer: (_prev, next) => next,
     default: () => null,
-  },
-  humanReason: {
-    reducer: (prev: string | null, next: string | null) => next ?? prev,
+  }),
+  humanReason: Annotation<string | null>({
+    reducer: (_prev, next) => next,
     default: () => null,
-  },
-  editedScore: {
-    reducer: (prev: number | null, next: number | null) => next ?? prev,
+  }),
+  editedScore: Annotation<number | null>({
+    reducer: (_prev, next) => next,
     default: () => null,
-  },
-  appliedScore: {
-    reducer: (prev: number | null, next: number | null) => next ?? prev,
+  }),
+  appliedScore: Annotation<number | null>({
+    reducer: (_prev, next) => next,
     default: () => null,
-  },
-  appliedAt: {
-    reducer: (prev: string | null, next: string | null) => next ?? prev,
+  }),
+  appliedAt: Annotation<string | null>({
+    reducer: (_prev, next) => next,
     default: () => null,
-  },
-  status: {
-    reducer: (prev: string, next: string) => next || prev,
+  }),
+  status: Annotation<'drafted' | 'validated' | 'awaiting_approval' | 'approved' | 'rejected' | 'applied' | 'completed'>({
+    reducer: (prev, next) => next || prev,
     default: () => 'drafted',
-  },
+  }),
 });
