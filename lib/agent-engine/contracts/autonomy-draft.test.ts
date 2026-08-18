@@ -21,7 +21,7 @@ function tool(risk: AgentToolDefinition['risk']): AgentToolDefinition {
 function gatewayInput(
   autonomyLevel: 'shadow' | 'draft',
   risk: AgentToolDefinition['risk'],
-  execute: ReturnType<typeof vi.fn>,
+  execute: () => Promise<unknown>,
 ) {
   return {
     organizationId: 'org-a',
@@ -38,7 +38,7 @@ function gatewayInput(
 
 describe('SHADOW and DRAFT autonomy', () => {
   it('SHADOW never executes a side-effecting capability', async () => {
-    const execute = vi.fn().mockResolvedValue({ ok: true });
+    const execute = vi.fn<() => Promise<unknown>>().mockResolvedValue({ ok: true });
     const result = await executeThroughToolGateway(
       gatewayInput('shadow', 'r1_reversible_write', execute),
     );
@@ -53,7 +53,7 @@ describe('SHADOW and DRAFT autonomy', () => {
     'r3_sensitive_commercial',
   ] as const) {
     it(`DRAFT returns a proposal and executes zero side effects for ${risk}`, async () => {
-      const execute = vi.fn().mockResolvedValue({ ok: true });
+      const execute = vi.fn<() => Promise<unknown>>().mockResolvedValue({ ok: true });
       const result = await executeThroughToolGateway(gatewayInput('draft', risk, execute));
 
       expect(result).toEqual({
@@ -69,7 +69,7 @@ describe('SHADOW and DRAFT autonomy', () => {
   }
 
   it('DRAFT can execute an R0 read when policy permits', async () => {
-    const execute = vi.fn().mockResolvedValue({ leadId: 'lead-a' });
+    const execute = vi.fn<() => Promise<unknown>>().mockResolvedValue({ leadId: 'lead-a' });
     const result = await executeThroughToolGateway(gatewayInput('draft', 'r0_read', execute));
 
     expect(result).toEqual({ kind: 'executed', result: { leadId: 'lead-a' } });
