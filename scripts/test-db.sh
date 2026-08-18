@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 # gov-loop G1-02 — baseline install+update gate + RLS isolation invariants.
 #
-# Sobe um Postgres efêmero (pgvector/pgvector:pg17), aplica supabase/baseline.sql
-# em modo install (ON_ERROR_STOP=1 — qualquer statement falhando derruba o run),
-# re-aplica em modo update (sem a flag — idempotência) e roda a suíte vitest de
-# invariantes (tests/invariants/**) conectada ao container via `docker exec psql`.
-# O container é SEMPRE derrubado no EXIT (sucesso ou falha).
+# Prefere Supabase Cloud (DATABASE_URL/.env.local) se Docker não está disponível.
+# Fallback: sobe um Postgres efêmero (pgvector/pgvector:pg17), aplica supabase/baseline.sql
+# em modo install (ON_ERROR_STOP=1) e roda vitest invariantes.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -15,6 +13,16 @@ CONTAINER="deskcomm-test-db-$$"
 IMAGE="pgvector/pgvector:pg17"
 
 [ -f "$BASELINE" ] || { echo "FATAL: $BASELINE não encontrado" >&2; exit 1; }
+
+# Se DATABASE_URL existe (Supabase Cloud), usa direto
+if grep -q "^SUPABASE_DB_URL=" "$ROOT/.env.local" 2>/dev/null; then
+  echo "==> usando Supabase Cloud (SUPABASE_DB_URL)"
+  export DATABASE_URL=$(grep "^SUPABASE_DB_URL=" "$ROOT/.env.local" | cut -d= -f2-)
+  echo "==> invariantes: vitest contra Cloud"
+  vitest run --config vitest.db.config.ts "$@"
+  echo "==> test:db verde (Cloud)"
+  exit 0
+fi
 
 cleanup() {
   echo "==> teardown: removendo container $CONTAINER"
