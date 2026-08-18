@@ -15,6 +15,7 @@ function base(): EvolutionInput {
     knowledgeSearches: [],
     stageTransitions: [],
     costCents: 0,
+    followupOutcomes: [],
     inboundCount: 0,
     handoffCount: 0,
     pipelines: [],

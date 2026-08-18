@@ -154,6 +154,7 @@ describe("aggregateEvolution expõe o fato exato no payload", () => {
     knowledgeSearches: [],
     stageTransitions: [],
     costCents: 0,
+    followupOutcomes: [],
     inboundCount: 0,
     handoffCount: 0,
     pipelines: [],
