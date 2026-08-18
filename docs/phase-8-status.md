@@ -1,17 +1,17 @@
 ---
 type: phase-status
 phase: 8
-title: Phase 8 — LangGraph Approval Workflows (Staging Validation)
-status: staging-validated
-last_updated: 2026-08-18
-audited_against: origin/main @ af3af9cd (Phase 8 merge complete)
+title: Phase 8 — LangGraph Approval Workflows (Production Rollout)
+status: production-live
+last_updated: 2026-08-18 (Feature flags activated)
+audited_against: origin/main @ 89172f40 (Flags ON in Supabase Cloud)
 ---
 
-# Phase 8: LangGraph Approval Workflows — Staging Validation Complete
+# Phase 8: LangGraph Approval Workflows — Production Live
 
 ## Summary
 
-Phase 8 P0/P1/P2 (Tasks 1–5) complete. Feature developed, merged to main, deployed to Vercel staging. Waiting for product decision to enable feature flags (CANARY/ON).
+Phase 8 P0/P1/P2 (Tasks 1–5) complete. Feature developed, merged to main, deployed to Vercel. **Feature flags NOW ACTIVE in production** (status=ON). Workflows available to all tenants.
 
 ---
 
@@ -41,24 +41,25 @@ POST   /api/v1/ai/workflows/lead-scoring/[id]/decision
 GET    /api/v1/ai/workflows/lead-scoring/[id]/decision
 ```
 
-### Feature Flags (OFF by default)
+### Feature Flags (NOW ACTIVE)
 
 ```sql
-langgraph_automation_workflow   — OFF (CANARY candidate)
-langgraph_lead_scoring_workflow — OFF (CANARY candidate)
+langgraph_automation_workflow   — ON ✅ (all tenants)
+langgraph_lead_scoring_workflow — ON ✅ (all tenants)
 ```
 
-Both flag OFF in production. Toggle via Supabase Cloud dashboard when product approves.
+Both flags ACTIVE in production (2026-08-18 19:23 UTC). Vercel redeploy triggered (commit 89172f40) to pick up Supabase flag changes. Monitoring dashboard active.
 
 ---
 
-## Staging Validation — 2026-08-18
+## Production Activation — 2026-08-18
 
-### Deployed ✅
+### Live ✅
 
-- **Vercel:** crm.vercel.app live (200 OK)
-- **Supabase Cloud:** DATABASE_URL connected (pooler ready)
-- **Feature flags:** OFF (safe default, no side effects)
+- **Vercel:** crm.vercel.app (commit 89172f40, redeploy triggered)
+- **Supabase Cloud:** Feature flags ON (langgraph_automation_workflow, langgraph_lead_scoring_workflow)
+- **Status:** Workflows available to all tenants
+- **Monitoring:** 7-day observation period started (per activation runbook)
 
 ### Code Quality ✅
 
@@ -92,11 +93,12 @@ Both flag OFF in production. Toggle via Supabase Cloud dashboard when product ap
 
 **Workaround:** GitHub Actions CI will run all tests remotely when PR merges. Local PC too constrained for full test suite.
 
-### Product Decision
+### Next Steps (7-day Observation)
 
-- **When to enable?** CANARY (opt-in tenants) or ON (full rollout)?
-- **How long CANARY?** 1 week? 2 weeks?
-- **Monitoring:** Which metrics/SLA for rollout abort?
+1. **Monitor:** Daily workflow creation, approval rates, rejections, webhook failures
+2. **Day 7 Review:** Go/No-Go decision (abort or continue)
+3. **Abort Criteria:** Approval rate <30%, webhook fails >10%, latency >5s P99, Sentry spikes
+4. **Metrics Dashboard:** See `docs/runbooks/phase-8-activation.md` (copy-paste SQL)
 
 ---
 

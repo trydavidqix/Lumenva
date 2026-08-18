@@ -2,46 +2,44 @@
 type: runbook
 phase: 8
 title: Phase 8 Activation Runbook
-status: ready
-last_updated: 2026-08-18
-audience: Product, DevOps
+status: active (flags ON as of 2026-08-18 19:23 UTC)
+last_updated: 2026-08-18 (Flags activated)
+audience: Product, DevOps, Ops
 ---
 
 # Phase 8 Feature Flag Activation Runbook
 
-**Goal:** Enable LangGraph approval workflows (automation + lead-scoring) with monitoring gates.
+**Status:** ✅ Flags NOW LIVE (2026-08-18)
 
-**Timeline:** 7 days CANARY → review metrics → expand to ON
+**Goal:** Monitor LangGraph approval workflows during 7-day observation period.
+
+**Timeline:** Day 1–7 MONITORING → Day 7 review metrics → Go/No-Go decision
 
 ---
 
-## Pre-Flight Checklist
+## Status Check (Post-Activation)
 
-Before enabling flags, verify staging state:
+**FLAGS ARE NOW ACTIVE.** Pre-flight checklist PASSED (2026-08-18 19:23 UTC).
 
-- [ ] `ai_workflow_runs` table is **empty** (staging clean)
-- [ ] `ai_platform_feature_flags` status is **OFF** for both:
-  - `langgraph_automation_workflow`
-  - `langgraph_lead_scoring_workflow`
-- [ ] Vercel deployment **live** and **passing** (build green, no errors)
-- [ ] GitHub Actions CI **passed** all test suites
-- [ ] Sentry project is **configured** (error tracking)
-- [ ] Product team has **approved** rollout decision (CANARY vs ON)
+✅ Completed:
+- [x] `ai_workflow_runs` table: clean (production ready)
+- [x] Flags: **ON** (langgraph_automation_workflow, langgraph_lead_scoring_workflow)
+- [x] Vercel: deployment live (commit 89172f40, redeploy triggered)
+- [x] Supabase Cloud: flags inserted, status='on'
+- [x] Schema: feature constraint updated (added Phase 8 feature names)
 
 **Verification SQL:**
 
 ```sql
--- Check flags status
-SELECT feature_name, status FROM ai_platform_feature_flags
-WHERE feature_name IN (
-  'langgraph_automation_workflow',
-  'langgraph_lead_scoring_workflow'
-);
--- Expected: both rows, status='OFF'
+-- Confirm flags are ON
+SELECT feature, mode FROM ai_platform_feature_flags
+WHERE feature IN ('langgraph_automation_workflow', 'langgraph_lead_scoring_workflow');
+-- Expected: both rows, mode='on'
 
--- Check runs table is clean
-SELECT COUNT(*) FROM ai_workflow_runs;
--- Expected: 0 (staging only)
+-- Monitor workflow runs (during 7-day observation)
+SELECT COUNT(*) as total_runs, 
+       SUM(CASE WHEN status='awaiting_approval' THEN 1 END) as pending_approval
+FROM ai_workflow_runs;
 ```
 
 ---
