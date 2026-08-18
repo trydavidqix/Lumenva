@@ -1,4 +1,5 @@
 import type { PromotionDecision } from '../autonomy/promotion';
+import { mostRestrictiveAutonomyLevel, type RuntimeAutonomyResolver } from '../autonomy/decision';
 import type { ApprovalStore } from '../policies/approval';
 import { createApprovalRequest } from '../policies/approval';
 import {
@@ -22,11 +23,25 @@ export interface ExecuteThroughToolGatewayInput {
   tenantPolicy?: ToolPolicyOverrides;
   agentPolicy?: ToolPolicyOverrides;
   promotionDecision?: PromotionDecision;
+  runtimeAutonomyResolver?: RuntimeAutonomyResolver;
   tool: AgentToolDefinition;
   args: unknown;
   idempotencyKey: string;
   execute: () => Promise<unknown> | unknown;
   approvalStore: ApprovalStore | null;
+}
+
+function disabledReason(input: {
+  globalEnabled: boolean;
+  tenantEnabled: boolean;
+  agentEnabled: boolean;
+  capabilityEnabled: boolean;
+}): string | null {
+  if (!input.globalEnabled) return 'global_kill_switch';
+  if (!input.tenantEnabled) return 'tenant_kill_switch';
+  if (!input.agentEnabled) return 'agent_kill_switch';
+  if (!input.capabilityEnabled) return 'capability_kill_switch';
+  return null;
 }
 
 export async function executeThroughToolGateway(
@@ -36,10 +51,22 @@ export async function executeThroughToolGateway(
     return { kind: 'denied', reason: 'idempotency_key_required' };
   }
 
+  let effectiveLevel = input.autonomyLevel;
+  if (input.tool.hasSideEffect && input.runtimeAutonomyResolver) {
+    const runtime = await input.runtimeAutonomyResolver.resolve({
+      organizationId: input.organizationId,
+      agentId: input.agentId,
+      capabilityId: input.tool.id,
+    });
+    const reason = disabledReason(runtime);
+    if (reason) return { kind: 'denied', reason };
+    effectiveLevel = mostRestrictiveAutonomyLevel(input.autonomyLevel, runtime.level);
+  }
+
   const policy = evaluateToolPolicy({
     organizationId: input.organizationId,
     agentId: input.agentId,
-    autonomyLevel: input.autonomyLevel,
+    autonomyLevel: effectiveLevel,
     tool: input.tool,
     tenantPolicy: input.tenantPolicy,
     agentPolicy: input.agentPolicy,
@@ -88,6 +115,7 @@ export interface WrapToolSetWithGatewayOptions {
   tenantPolicy?: ToolPolicyOverrides;
   agentPolicy?: ToolPolicyOverrides;
   promotionDecision?: PromotionDecision;
+  runtimeAutonomyResolver?: RuntimeAutonomyResolver;
   definitions: ReadonlyMap<string, AgentToolDefinition>;
   approvalStore: ApprovalStore | null;
   idempotencyKeyFor: (toolId: string, args: unknown) => string;
@@ -114,6 +142,7 @@ export function wrapToolSetWithGateway(tools: ToolSetLike, options: WrapToolSetW
           tenantPolicy: options.tenantPolicy,
           agentPolicy: options.agentPolicy,
           promotionDecision: options.promotionDecision,
+          runtimeAutonomyResolver: options.runtimeAutonomyResolver,
           tool: metadata,
           args,
           idempotencyKey: options.idempotencyKeyFor(toolId, args),
