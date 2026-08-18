@@ -26,6 +26,8 @@ export const aiPlatformFeatureSchema = z.enum([
   "external_guardrails",
   "n8n",
   "langgraph_proposal_workflow",
+  "langgraph_automation_workflow",
+  "langgraph_lead_scoring_workflow",
 ]);
 export type AiPlatformFeature = z.infer<typeof aiPlatformFeatureSchema>;
 

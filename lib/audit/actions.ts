@@ -222,4 +222,7 @@ export type AuditAction =
   // id/status inicial, nunca o corpo do draft (pode carregar PII do contato).
   | "workflow.created"
   | "workflow.approved"
-  | "workflow.rejected";
+  | "workflow.rejected"
+  // Phase 8 Task 1 — manager sent the draft back for a revision loop
+  // (interrupt re-pauses at a fresh draft instead of reaching a terminal state).
+  | "workflow.edited";

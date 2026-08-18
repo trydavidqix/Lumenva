@@ -148,6 +148,11 @@ const KNOWN_DEBT: { reason: string; files: string[] }[] = [
       "regex PIORA o código — por isso a decisão é registrar, não reescrever.",
     files: [
       "app/api/v1/ai/agents/[id]/versions/[vid]/test/route.ts",
+      // Phase 8 Task 1 — "reaches WAHA"/"never reaches WAHA" in the SHADOW-mode
+      // docblock, explaining why the shadow path skips the real send. No
+      // provider import/coupling in the code.
+      "app/api/v1/ai/workflows/proposals/[id]/decision/route.ts",
+      "app/api/v1/ai/workflows/proposals/route.ts",
       "app/api/v1/conversations/[id]/media/route.ts",
       "app/api/v1/webhook-sources/route.ts",
       "app/api/v1/webhooks/in/[token]/route.ts",
@@ -163,6 +168,10 @@ const KNOWN_DEBT: { reason: string; files: string[] }[] = [
       "lib/agent-engine/env.ts",
       "lib/agent-engine/health/circuit.ts",
       "lib/agent-engine/obs/metrics.ts",
+      // Phase 8 Task 1 — "do NOT call WAHA directly" points at the canonical
+      // `sendTurnMessage` boundary this file wraps; pre-existing prose kept
+      // from the Task 8 stub docblock, not new coupling.
+      "lib/agent-engine/workflows/proposal/send-once.ts",
       "lib/ai/dispatcher/triggers.ts",
       "lib/ai/runtime/finalize.ts",
       "lib/automation/start-conversation.ts",
