@@ -6789,6 +6789,10 @@ drop policy if exists tenant_isolation_agent_case_events_insert on agent_case_ev
 create policy tenant_isolation_agent_case_events_insert on agent_case_events
   for insert with check (organization_id in (select fn_user_org_ids()));
 
+-- Revoke anon access to case data (hardening, migration 0101)
+revoke all on table agent_cases from public, anon;
+revoke all on table agent_case_events from public, anon;
+
 -- estender CHECKs de job_queue (kind + coerência kind⇔contato) p/ case_reply_turn
 -- nomes reais conferidos no banco linkado: job_queue_kind_check (named) e
 -- job_queue_check (anônimo, gerado pelo Postgres) para o CHECK de coerência.
