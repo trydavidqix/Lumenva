@@ -20,6 +20,7 @@
 
 import * as Sentry from '@sentry/nextjs';
 import { logger } from '@/lib/logger';
+import type { Pool } from 'pg';
 
 export function initWorkflowObservability() {
   // TODO: Configure Sentry for workflow events
@@ -75,6 +76,6 @@ export function recordWorkflowEvent(
  * WHERE thread_id = $1
  * ORDER BY created_at DESC LIMIT 1;
  */
-export async function monitorCheckpointPerformance(threadId: string, db: any) {
+export async function monitorCheckpointPerformance(threadId: string, db: Pool) {
   // TODO: Query checkpoint table, emit metrics
 }
