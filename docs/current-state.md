@@ -26,6 +26,33 @@ versões de biblioteca do `AGENTS.md` foram remedidas por um mantenedor na revis
 Onde a régua divergiu, ela passou a ser declarada junto do número. O estado de épico (§2–§3)
 **não** foi re-verificado nesta revisão — segue valendo o aviso acima.
 
+**Revisão de manutenção (2026-08-19, `main` local @ `5eb118ef`, 3 commits à frente de
+`origin/main`):** sessão operacional, não reauditoria — não recontou §1–§3. Cobre só o que foi
+de fato executado/verificado nesta sessão, registrado em detalhe no §4.10:
+
+- `test:db`/`test:invariants` deixou de exigir Docker — engine nativo (Homebrew `postgresql@17`
+  + `pgvector`) com fallback automático, commit `7fe2929c`. Isto fecha, parcialmente, a
+  "armadilha de conhecimento tácito" que o `harness-audit.md` já registrava no item 20.
+- 3 bugs reais corrigidos e commitados em `main`: colisão de `NNNN` em migrations (`867d0203`),
+  sintaxe inválida de `COMMENT ON ... || ...` que quebrava instalação fresh (`5eb118ef`),
+  e uma race TOCTOU entre projeção de memória e anonimização LGPD (`cd2b7249` — **fica na
+  branch `ai-platform-gate`, não em `main`**; não confundir com os dois primeiros).
+- O projeto Supabase rotulado PRODUCTION (`idqlutosaqqqqxetepen`) nunca tinha recebido o
+  schema — 3 tabelas existiam, `baseline.sql` nunca tinha sido aplicado de verdade lá. Aplicado
+  agora (100 tabelas) e o histórico de migrations reconciliado (`supabase migration repair`,
+  103 versões). Isto era um bloqueio de lançamento não documentado em lugar nenhum.
+- **Achado novo, sem cobertura prévia em nenhum doc:** os templates de e-mail do Supabase Auth
+  (`confirm-sign-up`, `reset-password`) e o SMTP customizado são configuração do **Dashboard do
+  projeto hospedado**, não de `supabase/config.toml` — `config.toml` só se aplica a
+  `supabase start` local ou via `supabase config push` (que também sobrescreveria `site_url`
+  para `localhost`, então **não** é o comando certo para sincronizar produção). O projeto de
+  produção estava usando os templates default do Supabase (`{{ .ConfirmationURL }}`, formato
+  PKCE `?code=`), incompatíveis com a rota `app/auth/confirm/route.ts` (espera
+  `?token_hash=&type=`) — cadastros confirmavam o e-mail mas nunca provisionavam a organização
+  do tenant, silenciosamente. Corrigido colando manualmente o conteúdo de
+  `supabase/templates/confirmation.html` e `recovery.html` no Dashboard. Sem gate automatizado
+  contra essa deriva — ver §4.10.
+
 ---
 
 ## 1. Números do repositório — CONFIRMADO
@@ -207,6 +234,39 @@ no dev DB — mas o repo já tem migrations até **0092**. São 34 migrations de
 consequência natural de trabalho em branches paralelas, mas ilustra a regra:
 **HANDOFF não é fonte da verdade de schema** — `supabase/migrations/` e `baseline.sql` são.
 **A CONFIRMAR:** se a pendência de dev DB de `0057` ainda existe.
+
+### 4.10 Templates de e-mail e SMTP do Supabase Auth não sincronizam com `config.toml` 🔴 — corrigido no projeto de produção em 2026-08-19
+
+Achado desta sessão, não coberto antes em nenhum doc. `supabase/config.toml` declara
+`[auth.email.template.confirmation]`/`[auth.email.template.recovery]` apontando para
+`supabase/templates/*.html` (que usam `?token_hash={{ .TokenHash }}&type=...`, o formato que
+`app/auth/confirm/route.ts` espera). Isso só é aplicado automaticamente em `supabase start`
+local. Um projeto hospedado (self-host na nuvem do Supabase, como o de produção deste app)
+**não herda esses templates só por existirem no repo** — precisam ser colados manualmente em
+Dashboard → Authentication → Emails → Templates, ou via `supabase config push` (que também
+reescreveria `site_url` do projeto para `http://localhost:3000`, então não é o comando certo
+para produção sem antes limpar as chaves não relacionadas a e-mail do `config.toml`).
+
+**Sintoma quando isso está errado:** cadastro via `/signup` funciona, o e-mail chega
+(especialmente depois de configurar SMTP customizado), o link confirma o e-mail (porque o
+GoTrue hospedado processa `?code=` no próprio endpoint antes de redirecionar) — mas
+`ensureTenantForUser()` nunca roda, porque a rota `/auth/confirm` só reconhece
+`?token_hash=&type=`. O usuário loga normalmente depois e cai em "Você não tem nenhuma
+organização ativa", sem nenhum erro nos logs do app (a falha acontece inteiramente do lado do
+Supabase, antes do redirect chegar na rota).
+
+Corrigido manualmente no Dashboard do projeto de produção nesta sessão. **Não há gate/teste que
+detecte essa deriva automaticamente** — se o Supabase resetar os templates (recriação de
+projeto, mudança de plano, etc.) ou um projeto novo for provisionado sem repetir esse passo
+manual, o mesmo bug volta a acontecer silenciosamente. Candidato a runbook/checklist de deploy
+(`docs/runbooks/deploy.md`) e possivelmente a um invariante de `test:e2e` que exercite o link
+de confirmação real contra um projeto Supabase fresco.
+
+Também descoberto nesta sessão, sem relação direta com o bug acima: o projeto de produção não
+tinha SMTP customizado configurado (só o serviço default do Supabase, ~2 e-mails/hora) — bloqueio
+de lançamento real, já que qualquer teste de reset de senha esgotava a cota. Configurado com
+Resend (domínio `lumenva.pt`, já verificado) e testado com entrega real confirmada via API do
+Resend.
 
 ---
 
