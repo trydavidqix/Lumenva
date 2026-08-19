@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # gov-loop G1-02 — baseline install+update gate + RLS isolation invariants.
 #
-# Prefere Supabase Cloud (DATABASE_URL/.env.local) se Docker não está disponível.
-# Fallback: sobe um Postgres efêmero (pgvector/pgvector:pg17), aplica supabase/baseline.sql
-# em modo install (ON_ERROR_STOP=1) e roda vitest invariantes.
+# Sobe um Postgres 17 efêmero (Docker quando disponível, nativo via
+# initdb/pg_ctl caso contrário — ver detecção de ENGINE abaixo), aplica
+# supabase/baseline.sql em modo install (ON_ERROR_STOP=1 — qualquer statement
+# falhando derruba o run), re-aplica em modo update (sem a flag — idempotência)
+# e roda a suíte vitest de invariantes (tests/invariants/**). O Postgres é
+# SEMPRE derrubado no EXIT (sucesso ou falha), nos dois engines.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -14,34 +17,91 @@ IMAGE="pgvector/pgvector:pg17"
 
 [ -f "$BASELINE" ] || { echo "FATAL: $BASELINE não encontrado" >&2; exit 1; }
 
-# Se DATABASE_URL existe (Supabase Cloud), usa direto
-if grep -q "^SUPABASE_DB_URL=" "$ROOT/.env.local" 2>/dev/null; then
-  echo "==> usando Supabase Cloud (SUPABASE_DB_URL)"
-  export DATABASE_URL=$(grep "^SUPABASE_DB_URL=" "$ROOT/.env.local" | cut -d= -f2-)
-  echo "==> invariantes: vitest contra Cloud"
-  vitest run --config vitest.db.config.ts "$@"
-  echo "==> test:db verde (Cloud)"
-  exit 0
+# ---------------------------------------------------------------------------
+# Engine: docker (padrão quando o daemon responde) ou native (Postgres local
+# via Homebrew, sem depender do Docker CLI). Force com TEST_DB_ENGINE=docker|native.
+# ---------------------------------------------------------------------------
+ENGINE="${TEST_DB_ENGINE:-auto}"
+if [ "$ENGINE" = auto ]; then
+  if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+    ENGINE=docker
+  else
+    ENGINE=native
+  fi
+fi
+echo "==> engine: $ENGINE"
+
+PG_BIN=""
+PGDATA=""
+if [ "$ENGINE" = native ]; then
+  if command -v initdb >/dev/null 2>&1; then
+    PG_BIN="$(dirname "$(command -v initdb)")"
+  else
+    for cand in /opt/homebrew/opt/postgresql@17/bin /usr/local/opt/postgresql@17/bin; do
+      [ -x "$cand/initdb" ] && { PG_BIN="$cand"; break; }
+    done
+  fi
+  [ -n "$PG_BIN" ] || {
+    echo "FATAL: modo native precisa de postgresql@17 (initdb/pg_ctl/psql) no PATH." >&2
+    echo "       brew install postgresql@17 pgvector" >&2
+    exit 1
+  }
+  SHAREDIR="$("$PG_BIN/pg_config" --sharedir 2>/dev/null || true)"
+  if [ -z "$SHAREDIR" ] || [ ! -f "$SHAREDIR/extension/vector.control" ]; then
+    echo "FATAL: extensão pgvector não encontrada para este postgresql@17." >&2
+    echo "       brew install pgvector (garanta que aponta pro mesmo postgresql@17)" >&2
+    exit 1
+  fi
 fi
 
 cleanup() {
-  echo "==> teardown: removendo container $CONTAINER"
-  docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+  if [ "$ENGINE" = docker ]; then
+    echo "==> teardown: removendo container $CONTAINER"
+    docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+  elif [ -n "$PGDATA" ]; then
+    echo "==> teardown: parando postgres nativo e removendo $PGDATA"
+    "$PG_BIN/pg_ctl" -D "$PGDATA" -m immediate stop >/dev/null 2>&1 || true
+    rm -rf "$PGDATA"
+  fi
 }
 trap cleanup EXIT
 
-echo "==> subindo $IMAGE como $CONTAINER (porta local $PORT)"
-docker run -d --rm --name "$CONTAINER" \
-  -p "127.0.0.1:${PORT}:5432" \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=postgres \
-  "$IMAGE" >/dev/null
+if [ "$ENGINE" = docker ]; then
+  echo "==> subindo $IMAGE como $CONTAINER (porta local $PORT)"
+  docker run -d --rm --name "$CONTAINER" \
+    -p "127.0.0.1:${PORT}:5432" \
+    -e POSTGRES_PASSWORD=postgres \
+    -e POSTGRES_DB=postgres \
+    "$IMAGE" >/dev/null
+  run_psql() { docker exec -i "$CONTAINER" psql -U postgres -d postgres "$@"; }
+else
+  # LC_ALL=C evita "postmaster became multithreaded during startup" no macOS
+  # (Homebrew's own install caveat recomenda isso — CoreFoundation vira
+  # multithread ao resolver locale de sistema durante o bootstrap do postgres).
+  export LC_ALL=C
+  PGDATA="$(mktemp -d "${TMPDIR:-/tmp}/deskcomm-test-pgdata.XXXXXX")"
+  echo "==> subindo postgres nativo ($PG_BIN) em $PGDATA (porta local $PORT)"
+  "$PG_BIN/initdb" -D "$PGDATA" -U postgres -A trust --locale=C -E UTF8 -N >/dev/null
+  {
+    echo "listen_addresses = '127.0.0.1'"
+    echo "port = $PORT"
+    # UTC pra bater com o container Docker (a imagem pgvector roda em UTC por
+    # default) — sem isso, timestamptz sai com o offset do sistema local
+    # (ex.: +01 em Lisboa no horário de verão) e testes que comparam a saída
+    # crua do psql contra "+00" quebram sem nenhuma relação com o schema.
+    echo "timezone = 'UTC'"
+  } >> "$PGDATA/postgresql.conf"
+  "$PG_BIN/pg_ctl" -D "$PGDATA" -l "$PGDATA/server.log" -w start >/dev/null
+  run_psql() {
+    PGPASSWORD=postgres "$PG_BIN/psql" -h 127.0.0.1 -p "$PORT" -U postgres -d postgres "$@"
+  }
+fi
 
 # Espera o servidor DEFINITIVO (o initdb sobe um temporário só em socket;
 # testar via TCP 127.0.0.1 evita o falso-ready da fase de init).
 ready=0
 for _ in $(seq 1 60); do
-  if docker exec "$CONTAINER" psql -h 127.0.0.1 -U postgres -d postgres -c "select 1" >/dev/null 2>&1; then
+  if run_psql -h 127.0.0.1 -c "select 1" >/dev/null 2>&1; then
     ready=1; break
   fi
   sleep 1
@@ -49,7 +109,7 @@ done
 [ "$ready" = 1 ] || { echo "FATAL: postgres não ficou pronto em 60s" >&2; exit 1; }
 
 psql_install() {
-  docker exec -i "$CONTAINER" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -q -f - "$@"
+  run_psql -v ON_ERROR_STOP=1 -q -f - "$@"
 }
 
 echo "==> prelude: stubs mínimos do Supabase (roles, auth.uid(), extensions)"
@@ -124,10 +184,17 @@ psql_install < "$BASELINE"
 echo "    ✓ install ok"
 
 echo "==> modo UPDATE: re-aplicando baseline.sql sem ON_ERROR_STOP (idempotência)"
-docker exec -i "$CONTAINER" psql -U postgres -d postgres -q -f - < "$BASELINE" >/dev/null
+run_psql -q -f - < "$BASELINE" >/dev/null
 echo "    ✓ update ok (re-apply terminou; erros tolerados por contrato)"
 
 echo "==> invariantes: vitest (tests/invariants)"
-TEST_DB_CONTAINER="$CONTAINER" vitest run --config vitest.db.config.ts "$@"
+if [ "$ENGINE" = docker ]; then
+  export TEST_DB_CONTAINER="$CONTAINER"
+else
+  export TEST_DB_CONTAINER="native:$PORT"
+fi
+export TEST_DB_ENGINE="$ENGINE"
+export TEST_DB_PORT="$PORT"
+vitest run --config vitest.db.config.ts "$@"
 
 echo "==> test:db verde"

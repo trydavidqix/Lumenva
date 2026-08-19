@@ -1,11 +1,10 @@
-import { execFileSync } from "node:child_process";
-
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { applyScheduleFollowup } from "@/lib/agent-engine/agent/schedule-followup";
 import { cancelaRetorno, listaRetornos, situacaoDoRetorno } from "@/lib/followup/retorno";
 import { criaRetornoDbPg } from "@/lib/followup/retorno-pg";
+import { sql as psql } from "./pg-exec";
 
 /**
  * O ANTI-MORTE, contra Postgres real e pelo CÓDIGO DE PRODUÇÃO.
@@ -28,20 +27,10 @@ import { criaRetornoDbPg } from "@/lib/followup/retorno-pg";
  *     `pg` direto (sem RLS), então o filtro explícito é a única defesa.
  */
 
-const container = process.env.TEST_DB_CONTAINER;
-if (!container) {
+if (!process.env.TEST_DB_CONTAINER) {
   throw new Error("TEST_DB_CONTAINER not set — rode via `pnpm test:db` (scripts/test-db.sh)");
 }
-const containerName: string = container;
 const porta = process.env.TEST_DB_PORT ?? "54329";
-
-function psql(script: string): string {
-  return execFileSync(
-    "docker",
-    ["exec", "-i", containerName, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-tA", "-f", "-"],
-    { input: script, encoding: "utf8" },
-  ).trim();
-}
 
 const ORG_A = "0102aaaa-1111-4111-8111-000000000001";
 const ORG_B = "0102bbbb-1111-4111-8111-000000000002";

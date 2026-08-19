@@ -1,5 +1,5 @@
-import { execFileSync } from "node:child_process";
 import { beforeAll, describe, expect, it } from "vitest";
+import { sql } from "./pg-exec";
 
 /**
  * G1-02 — RLS isolation invariant.
@@ -11,37 +11,6 @@ import { beforeAll, describe, expect, it } from "vitest";
  * set_config('request.jwt.claims', ...) — the same auth.uid() /
  * fn_user_org_ids() path production policies use.
  */
-
-const container = process.env.TEST_DB_CONTAINER;
-if (!container) {
-  throw new Error(
-    "TEST_DB_CONTAINER not set — run this suite via `pnpm test:db` (scripts/test-db.sh)",
-  );
-}
-const containerName: string = container;
-
-/** Runs a SQL script in ONE psql session inside the container; returns stdout (tuples-only). */
-function sql(script: string): string {
-  return execFileSync(
-    "docker",
-    [
-      "exec",
-      "-i",
-      containerName,
-      "psql",
-      "-U",
-      "postgres",
-      "-d",
-      "postgres",
-      "-v",
-      "ON_ERROR_STOP=1",
-      "-tA",
-      "-f",
-      "-",
-    ],
-    { input: script, encoding: "utf8" },
-  ).trim();
-}
 
 // Fixed UUIDs make the seed idempotent (on conflict do nothing).
 const ORG_A = "aaaaaaaa-0000-4000-8000-000000000001";

@@ -1,46 +1,15 @@
-import { execFileSync } from "node:child_process";
+import { sql } from "./pg-exec";
+export { sql };
 
 /**
  * G1-03 — shared harness for the governance invariants (gov-*.test.ts).
  *
- * Same docker-exec-psql pattern as rls-isolation.test.ts (G1-02): the suite
- * runs against the ephemeral Postgres started by scripts/test-db.sh
- * (baseline.sql applied), with JWT claims simulated via
- * set_config('request.jwt.claims', ...) — the exact auth.uid() path the
- * production RLS policies use. No real PII anywhere (LGPD): synthetic
- * @invariant.test emails only.
+ * Runs against the ephemeral Postgres started by scripts/test-db.sh
+ * (baseline.sql applied, docker or native engine — see pg-exec.ts), with
+ * JWT claims simulated via set_config('request.jwt.claims', ...) — the
+ * exact auth.uid() path the production RLS policies use. No real PII
+ * anywhere (LGPD): synthetic @invariant.test emails only.
  */
-
-const container = process.env.TEST_DB_CONTAINER;
-if (!container) {
-  throw new Error(
-    "TEST_DB_CONTAINER not set — run this suite via `pnpm test:invariants` (scripts/test-db.sh)",
-  );
-}
-const containerName: string = container;
-
-/** Runs a SQL script in ONE psql session inside the container; returns stdout (tuples-only). */
-export function sql(script: string): string {
-  return execFileSync(
-    "docker",
-    [
-      "exec",
-      "-i",
-      containerName,
-      "psql",
-      "-U",
-      "postgres",
-      "-d",
-      "postgres",
-      "-v",
-      "ON_ERROR_STOP=1",
-      "-tA",
-      "-f",
-      "-",
-    ],
-    { input: script, encoding: "utf8" },
-  ).trim();
-}
 
 /** Last stdout line of a script (psql -tA prints one line per SELECT). */
 export function lastLine(out: string): string {
