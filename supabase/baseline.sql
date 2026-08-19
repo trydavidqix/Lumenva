@@ -9455,21 +9455,21 @@ grant select, insert on flywheel_followup_outcomes to authenticated;
 grant select, insert on flywheel_followup_outcomes to service_role;
 
 comment on table flywheel_followup_outcomes is
-  'Phase 10 Flywheel: tracks follow-up outcomes per judge run. ' ||
-  'Enables measurement of proposal effectiveness (did approved proposals improve conversions?). ' ||
+  'Phase 10 Flywheel: tracks follow-up outcomes per judge run. '
+  'Enables measurement of proposal effectiveness (did approved proposals improve conversions?). '
   'Append-only: one row per outcome type per run per org.';
 
 comment on column flywheel_followup_outcomes.outcome is
-  'Outcome type from followup_enrollments.outcome. ' ||
-  'Values: converted (customer paid), replied (engaged), exhausted (automation spent quota), ' ||
+  'Outcome type from followup_enrollments.outcome. '
+  'Values: converted (customer paid), replied (engaged), exhausted (automation spent quota), '
   'opted_out (customer STOP), handoff (routed to human), in_flight (still waiting).';
 
 comment on column flywheel_followup_outcomes.count is
-  'Aggregate count of enrollments with this outcome in this run. ' ||
+  'Aggregate count of enrollments with this outcome in this run. '
   'Allows efficient aggregation without row explosion.';
 
 comment on column flywheel_followup_outcomes.recorded_at is
-  'Timestamp when the aggregation was computed (from aggregateFollowupOutcomes worker). ' ||
+  'Timestamp when the aggregation was computed (from aggregateFollowupOutcomes worker). '
   'May lag actual completion by several minutes.';
 
 notify pgrst, 'reload schema';
