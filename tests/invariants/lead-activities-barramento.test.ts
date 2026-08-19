@@ -1,6 +1,6 @@
-import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { beforeAll, describe, expect, it } from "vitest";
+import { execPsql } from "./pg-exec";
 
 /**
  * 0071 — o barramento da vida do lead, contra Postgres real.
@@ -14,32 +14,14 @@ import { beforeAll, describe, expect, it } from "vitest";
  * 3. **stage_changed_at** carimba na entrada do estágio e SÓ nela.
  */
 
-const container = process.env.TEST_DB_CONTAINER;
-if (!container) {
-  throw new Error("TEST_DB_CONTAINER not set — rode via `pnpm test:db` (scripts/test-db.sh)");
-}
-const containerName: string = container;
-
 function psql(script: string, stopOnError = true): string {
-  return execFileSync(
-    "docker",
-    [
-      "exec", "-i", containerName, "psql", "-U", "postgres", "-d", "postgres",
-      ...(stopOnError ? ["-v", "ON_ERROR_STOP=1"] : []),
-      "-tA", "-f", "-",
-    ],
-    { input: script, encoding: "utf8" },
-  ).trim();
+  return execPsql([...(stopOnError ? ["-v", "ON_ERROR_STOP=1"] : []), "-tA", "-f", "-"], script).trim();
 }
 
 /** Roda SQL que DEVE falhar; devolve o nome da constraint violada. */
 function constraintViolada(script: string): string {
   try {
-    execFileSync(
-      "docker",
-      ["exec", "-i", containerName, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-tA", "-f", "-"],
-      { input: script, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] },
-    );
+    execPsql(["-v", "ON_ERROR_STOP=1", "-tA", "-f", "-"], script, { stdio: "pipe" });
   } catch (err) {
     const stderr = String((err as { stderr?: Buffer }).stderr ?? "");
     return /violates check constraint "([^"]+)"/.exec(stderr)?.[1] ?? stderr.slice(0, 200);

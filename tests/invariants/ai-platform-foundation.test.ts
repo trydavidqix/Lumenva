@@ -1,16 +1,5 @@
-import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
-
-const container = process.env.TEST_DB_CONTAINER;
-if (!container) throw new Error("TEST_DB_CONTAINER not set — run via pnpm test:db");
-
-function sql(script: string): string {
-  return execFileSync(
-    "docker",
-    ["exec", "-i", container!, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-tA", "-f", "-"],
-    { input: script, encoding: "utf8" },
-  ).trim();
-}
+import { sql } from "./pg-exec";
 
 describe("AI Platform foundation schema", () => {
   it("has tenant-aware flags and an idempotent projection ledger", () => {

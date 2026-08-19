@@ -1,7 +1,7 @@
-import { execFileSync } from "node:child_process";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { resolveOwnerPatch } from "@/lib/leads/owner-patch";
+import { execPsql, sql } from "./pg-exec";
 
 /**
  * 0070 — invariante de posse do negócio, contra Postgres real (baseline.sql já
@@ -17,30 +17,10 @@ import { resolveOwnerPatch } from "@/lib/leads/owner-patch";
  *    transferência agente → humano, que é onde o 23514 aparecia.
  */
 
-const container = process.env.TEST_DB_CONTAINER;
-if (!container) {
-  throw new Error(
-    "TEST_DB_CONTAINER not set — rode via `pnpm test:db` (scripts/test-db.sh)",
-  );
-}
-const containerName: string = container;
-
-function sql(script: string): string {
-  return execFileSync(
-    "docker",
-    ["exec", "-i", containerName, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-tA", "-f", "-"],
-    { input: script, encoding: "utf8" },
-  ).trim();
-}
-
 /** Roda SQL que DEVE falhar; devolve o SQLSTATE (ex.: 23514 = check violation). */
 function sqlstateOf(script: string): string {
   try {
-    execFileSync(
-      "docker",
-      ["exec", "-i", containerName, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-tA", "-f", "-"],
-      { input: script, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] },
-    );
+    execPsql(["-v", "ON_ERROR_STOP=1", "-tA", "-f", "-"], script, { stdio: "pipe" });
   } catch (err) {
     const stderr = String((err as { stderr?: Buffer }).stderr ?? "");
     // psql imprime "ERROR:  new row ... violates check constraint "<nome>""
