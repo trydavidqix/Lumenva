@@ -72,6 +72,14 @@ function fakeLedgerDb(messages: SourceMessageRow[] = []) {
       matched.forEach((r) => (r.status = "deleted"));
       return { rows: matched.map((r) => ({ id: r.id, status: r.status })) };
     }
+    // TOCTOU close (project-message.ts `isContactAnonymized`) re-reads the
+    // authoritative flag straight from `contacts` right before committing.
+    // This fake has no contacts table — the scenario this test proves never
+    // actually anonymizes the contact (step 7 is a Mem0-side ledger wipe,
+    // not an LGPD delete), so the flag is always false here.
+    if (sql.includes("select is_anonymized from contacts")) {
+      return { rows: [{ is_anonymized: false }] };
+    }
     throw new Error(`fakeLedgerDb: unhandled query: ${sql}`);
   };
   return {

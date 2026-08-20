@@ -7,7 +7,19 @@ import { getAdapter } from "@/lib/channels";
  * mockar o admin client, o `fetch` stubado captura a query do Supabase em vez da
  * chamada à Graph API — foi assim que estes testes vermelharam quando a resolução
  * por sessão entrou, e o vermelho foi correto.
+ *
+ * `env.META_*` é lido de `@/lib/env` (validado por Zod, carregado uma vez por
+ * módulo) desde a migração pra `lib/env.ts` — `vi.stubEnv` mexe em
+ * `process.env`, que o Zod já processou antes do teste rodar, então parava de
+ * ter efeito. Mockamos `@/lib/env` inteiro com um objeto mutável em vez disso.
  */
+const fakeEnv = vi.hoisted(() => ({
+  META_PHONE_NUMBER_ID: "",
+  META_SYSTEM_USER_TOKEN: "",
+  META_GRAPH_VERSION: "v22.0",
+}));
+vi.mock("@/lib/env", () => ({ env: fakeEnv }));
+
 const sessaoNoBanco: { token: string | null } = { token: null };
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
@@ -30,9 +42,9 @@ vi.mock("@/lib/supabase/admin", () => ({
 const a = () => getAdapter("meta_cloud");
 
 function configurar() {
-  vi.stubEnv("META_PHONE_NUMBER_ID", "1103328999528818");
-  vi.stubEnv("META_SYSTEM_USER_TOKEN", "tok");
-  vi.stubEnv("META_GRAPH_VERSION", "v22.0");
+  fakeEnv.META_PHONE_NUMBER_ID = "1103328999528818";
+  fakeEnv.META_SYSTEM_USER_TOKEN = "tok";
+  fakeEnv.META_GRAPH_VERSION = "v22.0";
 }
 
 function stubFetch(resposta: unknown, ok = true) {
@@ -46,7 +58,9 @@ function stubFetch(resposta: unknown, ok = true) {
 }
 
 afterEach(() => {
-  vi.unstubAllEnvs();
+  fakeEnv.META_PHONE_NUMBER_ID = "";
+  fakeEnv.META_SYSTEM_USER_TOKEN = "";
+  fakeEnv.META_GRAPH_VERSION = "v22.0";
   vi.unstubAllGlobals();
   sessaoNoBanco.token = null;
 });
@@ -74,8 +88,8 @@ describe("adapter meta_cloud — endereçamento", () => {
 
 describe("adapter meta_cloud — configuração", () => {
   it("sem credencial NÃO está configurado", () => {
-    vi.stubEnv("META_PHONE_NUMBER_ID", "");
-    vi.stubEnv("META_SYSTEM_USER_TOKEN", "");
+    fakeEnv.META_PHONE_NUMBER_ID = "";
+    fakeEnv.META_SYSTEM_USER_TOKEN = "";
     expect(a().isConfigured()).toBe(false);
   });
 
@@ -86,8 +100,8 @@ describe("adapter meta_cloud — configuração", () => {
 
   it("não configurado é NOOP no envio, nunca exceção", async () => {
     // Mesmo contrato do outro canal: a UI mostra banner, o handler grava `queued`.
-    vi.stubEnv("META_PHONE_NUMBER_ID", "");
-    vi.stubEnv("META_SYSTEM_USER_TOKEN", "");
+    fakeEnv.META_PHONE_NUMBER_ID = "";
+    fakeEnv.META_SYSTEM_USER_TOKEN = "";
     const r = await a().send({ sessionRef: "x", to: "5531999", kind: "text", body: "oi" });
     expect(r).toEqual({ externalId: null });
   });

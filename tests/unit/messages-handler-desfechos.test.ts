@@ -18,6 +18,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { sendMessageHandler } from '@/app/api/v1/messages/_handler';
 import type { HandlerCtx } from '@/lib/api/handlers/types';
+import type * as EnvModule from '@/lib/env';
 import type { SendMessageInput } from '@/lib/schemas';
 
 const ORG = '11111111-1111-4111-8111-111111111111';
@@ -37,6 +38,28 @@ vi.mock('@/lib/supabase/admin', () => ({
 }));
 // Audit é fire-and-forget e escreve em outra tabela; fora do escopo dos desfechos.
 vi.mock('@/lib/audit', () => ({ audit: vi.fn(async () => {}) }));
+
+// `env.META_*` é lido de `@/lib/env` (Zod, carregado uma vez por módulo) desde
+// a migração pra lib/env.ts — `vi.stubEnv` mexe em `process.env`, que o Zod já
+// processou antes do teste rodar, então parava de ter efeito nos casos 7b/8/8b.
+// Sobrescreve só os 2 campos de Meta sobre o `env` real via Proxy, pra não
+// arriscar quebrar algum outro campo que o resto do handler leia.
+const fakeMetaEnv = vi.hoisted(() => ({
+  META_PHONE_NUMBER_ID: '',
+  META_SYSTEM_USER_TOKEN: '',
+}));
+vi.mock('@/lib/env', async (importOriginal) => {
+  const actual = await importOriginal<typeof EnvModule>();
+  return {
+    ...actual,
+    env: new Proxy(actual.env, {
+      get: (target, prop) =>
+        prop in fakeMetaEnv
+          ? fakeMetaEnv[prop as keyof typeof fakeMetaEnv]
+          : (target as Record<string, unknown>)[prop as string],
+    }),
+  };
+});
 
 type Row = Record<string, unknown>;
 
@@ -173,6 +196,8 @@ function wahaConfigured(configured: boolean) {
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
+  fakeMetaEnv.META_PHONE_NUMBER_ID = '';
+  fakeMetaEnv.META_SYSTEM_USER_TOKEN = '';
   signedUrl.mockResolvedValue({ data: { signedUrl: 'https://signed.example/a.jpg' }, error: null });
 });
 
@@ -330,8 +355,8 @@ describe('sendMessageHandler — os 6 desfechos do envio', () => {
     // desconhecido não vaza para canal nenhum; este prova que o canal oficial
     // deixou de ser desconhecido.
     wahaConfigured(true);
-    vi.stubEnv('META_PHONE_NUMBER_ID', '1103328999528818');
-    vi.stubEnv('META_SYSTEM_USER_TOKEN', 'tok');
+    fakeMetaEnv.META_PHONE_NUMBER_ID = '1103328999528818';
+    fakeMetaEnv.META_SYSTEM_USER_TOKEN = 'tok';
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -388,8 +413,8 @@ describe('sendMessageHandler — os 6 desfechos do envio', () => {
     // O ramo NOVO. Grava `template_name`/`template_language` porque o tipo sozinho
     // não responde "qual template custou o quê" — e template é cobrado por entrega.
     wahaConfigured(true);
-    vi.stubEnv('META_PHONE_NUMBER_ID', '1103328999528818');
-    vi.stubEnv('META_SYSTEM_USER_TOKEN', 'tok');
+    fakeMetaEnv.META_PHONE_NUMBER_ID = '1103328999528818';
+    fakeMetaEnv.META_SYSTEM_USER_TOKEN = 'tok';
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -425,8 +450,8 @@ describe('sendMessageHandler — os 6 desfechos do envio', () => {
   it('8b. template ausente do espelho FALHA, não envia às cegas', async () => {
     // Sem esta guarda, um nome errado viraria 132000 na Meta — cobrado e tarde.
     wahaConfigured(true);
-    vi.stubEnv('META_PHONE_NUMBER_ID', '1103328999528818');
-    vi.stubEnv('META_SYSTEM_USER_TOKEN', 'tok');
+    fakeMetaEnv.META_PHONE_NUMBER_ID = '1103328999528818';
+    fakeMetaEnv.META_SYSTEM_USER_TOKEN = 'tok';
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
 
