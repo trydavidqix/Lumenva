@@ -2,6 +2,27 @@
 
 > Regra modular compartilhada. Em caso de conflito, `CLAUDE.md` da raiz vence.
 
+## GitHub Actions desabilitado (permanente, 2026-08-20)
+
+Decisão explícita do dono do repositório: Actions está desligado a nível de repositório
+(`enabled: false` em `repos/{owner}/{repo}/actions/permissions`), não só arquivo de workflow.
+`ci.yml`, `e2e.yml`, `perf.yml` e `publish-image.yml` continuam no repo mas ficam inertes — não
+disparam em push/PR/manual, mesmo que alguém os edite ou adicione um workflow novo. Não reative
+sem autorização explícita, e não trate "adicionar workflow novo" como solução — a trava é a
+configuração do repositório, não a ausência de arquivo.
+
+Consequência direta: não existe mais gate de CI em PR. Verificação local
+(`pnpm typecheck && pnpm lint && pnpm test:unit`; `pnpm test:db` quando schema/RLS mudou) e Vercel
+Preview passam a ser a prova primária, não um complemento ao que o CI cobriria.
+
+## Cadência do Vercel Preview: só no fim da tarefa
+
+Decisão explícita do dono do repositório, reforça uma política já em vigor sobre a cota de
+Preview: quando uma tarefa se divide em subtasks (ex.: 10), execute todas as subtasks primeiro
+**sem** gerar/testar Preview a cada uma — só a última etapa, com a tarefa inteira pronta, dispara
+a validação completa via Preview. Isso vale tanto para preservar a cota (100 previews/24h) quanto
+como novo padrão geral de cadência, agora que não há CI cobrindo builds intermediários.
+
 ## Evidência antes de conclusão
 
 Não declare `pronto`, `corrigido`, `seguro`, `publicado` ou `verde` sem evidência recente que prove exatamente a afirmação.
