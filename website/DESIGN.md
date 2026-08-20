@@ -31,6 +31,7 @@ No blue, green, purple, brown, neon, or gradient accents anywhere. All colors ar
 - **Panels and cards:** use only when elevation communicates a genuine grouping. Favor editorial sequences, border-top dividers, and negative space. Never use a generic three-equal-card grid.
 - **Forms:** labels sit above controls; accessible helper and error text sit below. All tap targets are at least 44 px.
 - **Hero preview:** the hero pairs the headline copy with a decorative, static dashboard mockup (`AppWindow` + `SidebarNav` + stat cards + sparkline chart + pipeline list + activity feed), built from typed content only — never a literal app screenshot. The mockup window carries a visible "Pré-visualização ilustrativa" caption so illustrative figures are never mistaken for real product metrics by a reader, search engine, or AI crawler. The whole panel is `aria-hidden` since the surrounding copy already carries the value proposition. No canvas/WebGL in the hero critical path.
+- **Hero integrations strip:** the pill row under the hero copy (`heroIntegrations` in `content/home.ts`) is labeled "Empresas com que trabalhamos" and shows the platforms/tools Lumenva integrates with (WhatsApp, OpenAI, Claude, n8n, Supabase, Vercel) — not customer/client logos, which stays banned per §7.
 
 ## 5. Layout Principles
 
@@ -81,3 +82,5 @@ Do not use a centered hero, Inter, serifs, neon or purple glow, gradients on hea
 ## 9. Local Implementation Contract
 
 `styles/tokens.css` is the local source of truth for the semantic color palette, typography, spacing, radius, elevation, z-index, layout, and motion tokens. `app/globals.css` imports the shared token, layout, and motion layers; future component and section styles consume those semantic properties rather than introducing local palette hex values. Manrope is loaded once by `app/layout.tsx` and exposed as `--font-manrope` for the typography layer.
+
+`app/icon.tsx` renders the favicon at request time via `next/og`'s `ImageResponse`, reading `public/brand/lumenva-mark-favicon.png` as a base64 data URI. That decoder only accepts plain RGB/RGBA PNGs — an indexed/palette PNG (or one with extra ancillary chunks like `eXIf`) fails at request time with a 500 (`Input buffer contains unsupported image format`), not at build time. Any replacement of that source PNG must stay 8-bit RGBA with no palette/indexed color type.

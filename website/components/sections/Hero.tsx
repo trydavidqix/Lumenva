@@ -48,7 +48,7 @@ export function Hero() {
               {homeContent.secondaryCta.label}
             </Button>
           </div>
-          <p className={styles.integrationsLabel}>Compatível com as ferramentas que já usa</p>
+          <p className={styles.integrationsLabel}>Empresas com que trabalhamos</p>
           <ul className={styles.integrations}>
             {heroIntegrations.map((name) => {
               const Icon = INTEGRATION_ICONS[name];
