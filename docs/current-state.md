@@ -358,9 +358,7 @@ Sessão dedicada a mapear toda branch local/`origin` fora da `main` e decidir de
 (local — o único commit pendente, troca de ícones do footer, foi conferido contra `main` e
 achado **superado**: `main` já resolveu o mesmo problema de forma mais completa via
 `LumenvaMark`/`socialIconMap` em `components/ui/BrandIcons`; o commit ficou preservado no
-histórico da branch antes de apagar, não foi portado). `agent-os-phase-5-verification`
-(`origin`) também é candidata óbvia — confirmado no §9.3 que é um alias morto, mesmo commit
-exato de `agent-os-phase-2-kernel`, sem trabalho próprio.
+histórico da branch antes de apagar, não foi portado).
 
 ### 9.2 Mantidas — trabalho real, decisão pendente
 
@@ -369,6 +367,23 @@ exato de `agent-os-phase-2-kernel`, sem trabalho próprio.
 | `ai-platform-gate` (local) | 3 commits | Fix isolado de race TOCTOU LGPD×Mem0 (`cd2b7249`, ver §4.10 nota anterior). Pequeno, testado, nunca teve PR aberto |
 | `gpt-lumenva-content-os` (local) | 24 commits local / 7 no `origin` | **17 commits só no local, nunca pushados** — sistema de inteligência de conteúdo (providers RSShub/changedetection) em desenvolvimento ativo. Risco de perda se a máquina falhar antes de um `git push` |
 | `agent-os-phase-7-durable-benchmark` (local + `origin`) | 235 commits | Sob auditoria ativa por sessão paralela nesta mesma janela; achados já confirmados: Fases 9/14 têm flag ligada sem rota HTTP por trás, Fase 7 (benchmark) incompleta, Fase 13 tinha teste especulativo |
+
+### 9.4 Segunda rodada de limpeza (2026-08-20) — PRs de bot + duplicatas confirmadas
+
+Apagadas por serem cópias exatas/ancestrais diretas de branches já mantidas, zero conteúdo
+próprio, zero PR associado (conferido no repo certo, ver correção do §9.3):
+
+- `origin/agent-os-phase-5-verification` — mesmo commit exato de `agent-os-phase-2-kernel`.
+- `origin/agent-os-phase-7-durable-benchmark-planning` — ancestral direta de
+  `agent-os-phase-7-durable-benchmark` (mantida), tudo que tinha já está contido nela.
+
+Fechados dois PRs de dependency bump com 4+ checks falhando (`verify`/`e2e`/`build-and-size`/
+`invariants`), sem relação com as branches acima:
+[#24](https://github.com/trydavidqix/CRM/pull/24) (dependabot, 17 updates em grupo) e
+[#21](https://github.com/trydavidqix/CRM/pull/21) (dependabot, `pdf-parse` 1.1.4→2.4.5, breaking
+changes documentadas). O PR [#22](https://github.com/trydavidqix/CRM/pull/22) (seu, draft,
+rastreando `agent-os-implementation-plan`) foi mantido aberto de propósito — é WIP real, não
+lixo de bot.
 
 ### 9.3 Iniciativa "Agent OS" — 8 branches só no `origin`, quase nenhuma com PR, nenhuma mergeada
 
@@ -401,10 +416,10 @@ que a intenção de formalizar via PR existia, só não foi seguida adiante nas 
 | `agent-os-phase-3-product-agents` (Fase 3) | 194 | **PARTIAL** | 14 módulos de agente (`lib/agent-engine/product-agents/`) com validators determinísticos reais + wiring no kernel, testes substantivos (`agent-product-kernel-wiring.test.ts`). Mas **sem chamada de LLM e sem endpoint** — só scaffolding/contrato, nenhum agente roda de verdade |
 | `agent-os-phase-4-shadow-evals` (+ `-planning`, ancestral direta) | 233 / 195 | **PARTIAL** | Infra de shadow-eval real (`lib/agent-engine/evals/`: runner, quality-judge, sampler, métricas) com ~14 arquivos de teste. A própria branch declara o critério de aceite real ("≥20 casos históricos por agente") como **"HISTORICAL PRODUCTION EVIDENCE NOT YET APPLICABLE"** — o CRM ainda não tem histórico suficiente pra avaliar de verdade |
 | `agent-os-phase-5-assisted-autonomy` | 203 | **PARTIAL** | Autonomia real: kill-switch em cascata, máquina de estados de aprovação, escada de promoção (`off → shadow → draft → assisted → autopilot_*`) que nega auto-promoção pelo próprio modelo. Evidência honesta: o próprio doc admite rodar só localmente ("no GitHub Actions and no Vercel Preview deployment were used"), nunca em CI/ambiente compartilhado |
-| `agent-os-phase-5-verification` | 164 | **descartável** | Confirmado: mesmo commit exato de `agent-os-phase-2-kernel` (`8ff7c402`). Alias morto, sem trabalho próprio |
+| `agent-os-phase-5-verification` | 164 | **✅ apagada (§9.4)** | Confirmado: mesmo commit exato de `agent-os-phase-2-kernel` (`8ff7c402`). Alias morto, sem trabalho próprio |
 | `agent-os-phase-6-learning-flywheel` | 278 | **PARTIAL** | Flywheel real e testado (`lib/agent-engine/flywheel/*`, 17 arquivos de teste). **Colisão confirmada e não-trivial** com o Flywheel já mergeado em `main` (Fase 10, `docs/current-state.md` §2): ambos leem/escrevem `flywheel_distiller_proposals`, e a migration desta branch reabre a mesma `check constraint` que `main` já alterou duas vezes por outro caminho. Migration nunca rodou contra banco real. Sem flag em `ai_platform_feature_flags` |
 | `agent-os-verification` | 252 | **PARTIAL** | Não é fase isolada — é a branch "transporte" cumulativa das fases 1–6 (ver achado estrutural acima). O marcador específico de "Fase 6 verificada" é um commit de 3 linhas sem output de comando anexado — self-report puro para esse ponto específico, ainda que fases anteriores (1/1.5/1.6) tenham evidência mais concreta na mesma árvore |
-| `agent-os-phase-7-durable-benchmark-planning` | 111 | **DOCS-ONLY** | Só design doc + 1 teste propositalmente falhando (RED puro, `tests/unit/durable-benchmark-contracts.test.ts` importa um módulo que não existe nesta branch). Ancestral direta de `agent-os-phase-7-durable-benchmark` (já sob auditoria — §9.2), que tem a implementação de verdade |
+| `agent-os-phase-7-durable-benchmark-planning` | 111 | **✅ apagada (§9.4)** | Só design doc + 1 teste propositalmente falhando (RED puro, `tests/unit/durable-benchmark-contracts.test.ts` importa um módulo que não existe nesta branch). Era ancestral direta de `agent-os-phase-7-durable-benchmark` (mantida — §9.2), que tem a implementação de verdade |
 
 **Padrão geral:** diferente do pior caso já visto nesta investigação (flag ligada em produção
 sem rota nenhuma por trás — ver o achado da outra sessão sobre Fases 9/14 no §9.2), o padrão
