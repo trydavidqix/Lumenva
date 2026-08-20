@@ -24,6 +24,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { env } from "@/lib/env";
 import { decryptWebhookSecret } from "@/lib/webhooks/secrets";
 
 export interface MetaCredentials {
@@ -36,7 +37,7 @@ export interface MetaCredentials {
 
 /** Versão da Graph API. Explícita de propósito: bump é decisão, não deriva. */
 function graphVersion(): string {
-  return process.env.META_GRAPH_VERSION ?? "v22.0";
+  return env.META_GRAPH_VERSION;
 }
 
 /**
@@ -44,8 +45,8 @@ function graphVersion(): string {
  * canal não conectado (noop), nunca como erro.
  */
 export function metaCredsFromEnv(): MetaCredentials | null {
-  const phoneNumberId = process.env.META_PHONE_NUMBER_ID;
-  const token = process.env.META_SYSTEM_USER_TOKEN;
+  const phoneNumberId = env.META_PHONE_NUMBER_ID;
+  const token = env.META_SYSTEM_USER_TOKEN;
   if (!phoneNumberId || !token) return null;
   return { phoneNumberId, token, graphVersion: graphVersion(), source: "env" };
 }

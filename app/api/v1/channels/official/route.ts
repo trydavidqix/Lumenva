@@ -31,6 +31,7 @@ import { ARCHIVED_AT, queryTolerantToMissingArchived } from "@/lib/channels/arch
 import { CHANNEL_PROVIDER_META } from "@/lib/channels/capabilities";
 import { validateMetaCredentials } from "@/lib/channels/meta/validate-credentials";
 import { reactivateChannelSession } from "@/lib/channels/reactivate";
+import { env } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { encryptWebhookSecret } from "@/lib/webhooks/secrets";
 
@@ -101,7 +102,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     webhook: data
       ? {
           callbackUrl: `${base}/api/v1/webhooks/meta/${data.webhook_path_token}`,
-          verifyToken: process.env.META_WEBHOOK_VERIFY_TOKEN ?? null,
+          verifyToken: env.META_WEBHOOK_VERIFY_TOKEN || null,
           fields: ["messages", "message_template_status_update"],
         }
       : null,
