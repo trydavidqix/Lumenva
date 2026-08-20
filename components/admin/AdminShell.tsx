@@ -22,8 +22,8 @@ interface AdminShellProps {
  *
  * QUEM É ATINGIDO, medido em vez de suposto: o único consumidor do Tooltip do
  * Radix sem Provider próprio é o `TenantBadge`. Ele é montado em 4 telas —
- * /admin/inbox, /admin/inbox/[conversationId], /admin/lgpd e
- * /admin/lgpd/requests/[id]. Os outros três importadores de
+ * /admin/inbox, /admin/inbox/[conversationId], /admin/privacy e
+ * /admin/privacy/requests/[id]. Os outros três importadores de
  * `components/ui/tooltip` (CredentialCard, MessageBubble, PlatformAdminsTable)
  * embrulham o seu, por isso nunca quebraram.
  *

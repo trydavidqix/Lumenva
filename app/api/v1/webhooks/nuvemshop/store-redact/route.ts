@@ -222,7 +222,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       contactId: null,
       externalCustomerId: null,
       receivedAt: now,
-      slaDays: 15,
+      slaMonths: 1,
       emergency: true,
       scope: "tenant",
       payload: {

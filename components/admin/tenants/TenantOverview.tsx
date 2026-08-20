@@ -165,14 +165,14 @@ export function TenantOverview({ organization, counts, integrations }: TenantOve
           </h2>
           <div>
             <InfoRow
-              label="Solicitações LGPD pendentes"
+              label="Solicitações de privacidade pendentes"
               value={
                 <span className="flex items-center gap-1.5">
                   <span className={counts.lgpd_requests_pending > 0 ? "text-amber-600 font-semibold" : ""}>
                     {counts.lgpd_requests_pending}
                   </span>
                   {counts.lgpd_requests_pending > 0 && (
-                    <Warning size={14} weight="fill" className="text-amber-500" aria-label="Pendências LGPD" />
+                    <Warning size={14} weight="fill" className="text-amber-500" aria-label="Pendências de privacidade" />
                   )}
                 </span>
               }

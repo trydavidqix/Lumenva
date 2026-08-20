@@ -1,5 +1,5 @@
 /**
- * GET /api/v1/lgpd/requests/[id]
+ * GET /api/v1/privacy/requests/[id]
  *
  * Detail of a single lgpd_request + audit trail entries for that request.
  * If completed and result.pdf_path exists, generates a 72h signed URL.

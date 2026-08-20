@@ -60,7 +60,7 @@ export function useAdminLGPDRequests(filters: AdminLgpdFilters = {}) {
       if (filters.tenant_id) qs.set("tenant_id", filters.tenant_id);
       if (pageParam) qs.set("cursor", pageParam);
       qs.set("limit", "50");
-      return apiClient.get<ListResponse>(`/api/v1/admin/lgpd/requests?${qs.toString()}`);
+      return apiClient.get<ListResponse>(`/api/v1/admin/privacy/requests?${qs.toString()}`);
     },
     getNextPageParam: (last) =>
       last.meta?.has_more && last.meta.cursor ? last.meta.cursor : undefined,

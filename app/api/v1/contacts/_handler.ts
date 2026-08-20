@@ -346,10 +346,10 @@ export async function patchContactHandler(
   if (existing.is_anonymized) {
     throw new ApiError(
       403,
-      "lgpd_anonymization_irreversible",
+      "privacy_anonymization_irreversible",
       undefined,
       ctx.requestId,
-      "Contato anonimizado — edição bloqueada (LGPD).",
+      "Contato anonimizado — edição bloqueada (RGPD).",
     );
   }
 

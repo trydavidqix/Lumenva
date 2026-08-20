@@ -65,7 +65,7 @@ export function useLgpdRequests(filters: LgpdRequestsFilters = {}) {
 
       try {
         return await apiClient.get<LgpdRequestsResponse>(
-          `/api/v1/lgpd/requests?${qs.toString()}`,
+          `/api/v1/privacy/requests?${qs.toString()}`,
         );
       } catch (err) {
         showApiError(err);

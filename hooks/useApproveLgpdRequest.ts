@@ -22,7 +22,7 @@ export function useApproveLgpdRequest() {
     mutationFn: async ({ id, approved_reason }: ApproveInput) => {
       const idempotencyKey = randomId();
       return apiClient.post<ApproveResponse>(
-        `/api/v1/lgpd/requests/${id}/approve`,
+        `/api/v1/privacy/requests/${id}/approve`,
         { approved_reason },
         { idempotencyKey },
       );

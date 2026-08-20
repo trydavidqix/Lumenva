@@ -33,7 +33,7 @@ export function useLgpdRequest(id: string) {
     queryFn: async () => {
       try {
         return await apiClient.get<LgpdRequestDetailResponse>(
-          `/api/v1/lgpd/requests/${id}`,
+          `/api/v1/privacy/requests/${id}`,
         );
       } catch (err) {
         showApiError(err);

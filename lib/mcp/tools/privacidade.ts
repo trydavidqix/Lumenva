@@ -2,10 +2,10 @@
  * Capacidades de PRIVACIDADE — LEITURA dos pedidos de titular, e só.
  *
  * DECISÃO DELIBERADA: a IA não anonimiza. A rota que anonimiza
- * (`app/api/v1/lgpd/anonymize`) exige `admin`, e pela régua da paridade a tool
+ * (`app/api/v1/privacy/anonymize`) exige `admin`, e pela régua da paridade a tool
  * teria de exigir o mesmo — o que a deixaria fora do alcance de qualquer agente.
  * Mas o ponto não é o papel: anonimizar é IRREVERSÍVEL por contrato do próprio
- * produto (reverter devolve 403 `lgpd_anonymization_irreversible`). Expor uma
+ * produto (reverter devolve 403 `privacy_anonymization_irreversible`). Expor uma
  * tool de anonimizar, mesmo travada, só acrescenta superfície — o humano já faz
  * pela tela, que é onde a decisão deve ser tomada.
  *

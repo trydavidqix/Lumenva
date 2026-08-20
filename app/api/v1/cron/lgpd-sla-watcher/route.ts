@@ -1,17 +1,15 @@
 /**
  * GET /api/v1/cron/lgpd-sla-watcher
  *
- * Daily cron (09:00 BRT / 12:00 UTC) — scans active lgpd_requests and fires
- * SLA alarms when requests are approaching / past their threshold:
- *   - data_request  → alarm if received_at <= now - 5 days  (D+5)
- *   - redact / store_redact → alarm if received_at <= now - 10 days (D+10)
+ * Daily cron (09:00 WET / 09:00-10:00 UTC depending on DST) — scans active
+ * lgpd_requests and fires an alarm once a request is 20 calendar days old,
+ * i.e. approaching the GDPR/RGPD Art. 12(3) 1-month response deadline
+ * (~10 days of buffer before the actual due_at computed by computeDueAtGdpr).
+ * All request types share the same threshold — GDPR does not distinguish
+ * access vs. erasure requests the way the Brazilian LGPD did.
  *
  * Auth: `Authorization: Bearer <INTERNAL_CRON_SECRET|INTERNAL_SECRET>` (fail-closed).
  * Audit: emits lgpd.sla_watcher_run after processing.
- *
- * MVP: calendar-day approximation for SELECT is intentional and acceptable
- * (D+5 corridos ≈ D+5 úteis in short windows). Precision via computeDueAt
- * deferred to v2.
  */
 import { randomUUID } from "node:crypto";
 import type { NextRequest } from "next/server";
@@ -54,7 +52,6 @@ export async function GET(req: NextRequest): Promise<Response> {
   // ────────────────────────────────────────────────────────────────────────
   // Query — system-wide scan via admin client (bypasses RLS intentionally;
   //          this is a platform-level cron, not a tenant-scoped request)
-  // MVP: corridos OK; precision via computeDueAt deferred to v2
   // ────────────────────────────────────────────────────────────────────────
   const supabaseAdmin = createAdminClient();
 
@@ -70,16 +67,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     `,
     )
     .not("status", "in", '("completed","failed")')
-    .or(
-      [
-        "and(request_type.eq.data_request,received_at.lte." +
-          new Date(Date.now() - 5 * 86_400_000).toISOString() +
-          ")",
-        "and(request_type.in.(redact,store_redact),received_at.lte." +
-          new Date(Date.now() - 10 * 86_400_000).toISOString() +
-          ")",
-      ].join(","),
-    )
+    .lte("received_at", new Date(Date.now() - 20 * 86_400_000).toISOString())
     .limit(SCAN_LIMIT);
 
   if (queryError) {
@@ -96,10 +84,9 @@ export async function GET(req: NextRequest): Promise<Response> {
   let dedupedCount = 0;
   let errorsCount = 0;
 
-  for (const row of requests) {
-    const threshold: AlarmThreshold =
-      row.request_type === "data_request" ? "data_request_d5" : "redact_d10";
+  const threshold: AlarmThreshold = "gdpr_deadline_d20";
 
+  for (const row of requests) {
     // Extract org columns from the joined relation
     const orgData = (row as unknown as { organizations: OrgRow }).organizations;
     const dpoEmail = orgData?.dpo_email ?? null;

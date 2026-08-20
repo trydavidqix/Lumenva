@@ -147,19 +147,19 @@ Esta camada **é invisível pro cliente final** mas governa todas as garantias d
 - **Anonimização preferida sobre delete**: vendas históricas precisam permanecer pro faturamento; nome/telefone/email do contato vira hash + token "Cliente Anonimizado #N"
 - **Delete físico** apenas quando solicitado e sem dependências (raro: pré-venda sem nenhum pedido)
 - **Audit completo** de toda operação em dados sensíveis (`lgpd.data_request_received`, `lgpd.export_generated`, `lgpd.redact_executed`, `lgpd.consent_changed`)
-- **SLA**: data_request entregue em D+7 dias úteis; redact executado em D+15
+- **SLA (RGPD Art. 12(3))**: data_request e redact entregues em 1 mês corrido a partir do recebimento — não são mais dias úteis nem prazos diferentes por tipo (LGPD usava D+7/D+15); extensível por mais 2 meses em casos complexos, com notificação ao titular dentro do 1º mês
 - **Imutabilidade**: dados anonimizados não podem ser revertidos (decisão definitiva)
 
 **Endpoints (detalhe vai na Spec):**
-- `POST /api/v1/lgpd/data-request` — recebe `{contact_id | email | phone | cpf}`, dispara job assíncrono que gera export estruturado (JSON + PDF assinado) e o entrega via email ou link assinado
-- `POST /api/v1/lgpd/redact` — recebe `{contact_id, mode: 'anonymize' | 'delete'}`, valida pré-condições, executa cascade
+- `GET /api/v1/privacy/requests` — lista solicitações de privacidade do tenant ativo (criadas hoje só via webhook de e-commerce; ver `.claude/rules/lgpd.md` §Nuvemshop)
+- `POST /api/v1/privacy/anonymize` — recebe `{contact_id, mode: 'anonymize' | 'delete'}`, valida pré-condições, executa cascade
 - `GET /api/v1/contacts/:id/consent` — lê estado de consentimento
 - `PATCH /api/v1/contacts/:id/consent` — atualiza com audit
 
 **ACs principais.**
-- Tenant admin solicita export de cliente X via UI → recebe PDF/JSON em D+7 com 100% dos dados pessoais armazenados
+- Tenant admin solicita export de cliente X via UI → recebe PDF/JSON em até 1 mês corrido com 100% dos dados pessoais armazenados
 - Anonimização cascade afeta: contact, conversations (preserva histórico), messages (mídia removida do storage), activities (mantém timestamps e tipos)
-- Tentativa de reverter anonimização retorna 403 `lgpd_anonymization_irreversible`
+- Tentativa de reverter anonimização retorna 403 `privacy_anonymization_irreversible`
 - Audit do redact registra `who`, `which contact`, `mode`, `cascaded_to=[conversations:N, messages:M, activities:K]`
 
 ### 3.7 Onboarding de tenant
@@ -245,8 +245,8 @@ A Plataforma Base é considerada **MVP-completa** quando:
 1. ✅ 2 tenants podem ser criados, cada um com pipeline default seedado, e isolamento de dados é verificado por teste automatizado no CI
 2. ✅ Login com MFA TOTP funciona pra admin; usuário sem MFA é forçado a configurar
 3. ✅ Bearer token criado pelo admin permite chamada server-to-server, e tem audit log de criação/uso
-4. ✅ Endpoint LGPD `data-request` gera export JSON + PDF em ≤7 dias úteis pra um contato real
-5. ✅ Endpoint LGPD `redact` anonimiza um contato com cascade pra conversations/messages/activities, sem perda de histórico de pedidos
+4. ✅ Fluxo de data-request gera export JSON + PDF em ≤1 mês corrido pra um contato real (RGPD Art. 12(3))
+5. ✅ Endpoint de privacidade (`/api/v1/privacy/anonymize`) anonimiza um contato com cascade pra conversations/messages/activities, sem perda de histórico de pedidos
 6. ✅ Audit log captura todas as mutações listadas e não pode ser editado via API
 7. ✅ Super-admin de plataforma loga, troca de tenant pela UI, e ações são auditadas com `as_platform_admin=true`
 8. ✅ Rate limit funciona em endpoint crítico (login + criação de lead)
@@ -284,7 +284,7 @@ A Plataforma Base é considerada **MVP-completa** quando:
 | P3 | MFA TOTP perdido bloqueia admin | Códigos de recuperação gerados na configuração; processo de reset via super-admin com audit duplo |
 | P4 | Audit log explode em volume e custa caro | Retenção em hot storage 90 dias; rest em cold storage (S3) com lifecycle policy; sampling em GET-volume baixo |
 | P5 | Super-admin abusivo vê dados sem necessidade | Toda ação loggeada com flag; revisão semanal pelo líder operacional; consideração futura de "modo restrito" exigindo justificativa por sessão |
-| P6 | LGPD data_request demora além de D+7 | Job assíncrono com fila própria + alarme em D+5; runbook de escalação pra super-admin |
+| P6 | data_request demora além do prazo RGPD (1 mês) | Job assíncrono com fila própria + alarme em D+20; runbook de escalação pra super-admin |
 | P7 | Onboarding manual erra config (webhook secret, role inicial) | CLI script ou wizard guiado; validação automática pós-criação (ping em todos os endpoints essenciais) |
 
 ---

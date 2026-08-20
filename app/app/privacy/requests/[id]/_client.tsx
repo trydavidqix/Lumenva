@@ -79,7 +79,7 @@ export function LgpdRequestDetail({ id }: Props) {
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" asChild className="-ml-2 gap-1 text-muted-foreground">
-            <Link href="/app/lgpd/requests">
+            <Link href="/app/privacy/requests">
               <CaretLeft size={14} aria-hidden />
               Solicitações
             </Link>

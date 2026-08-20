@@ -1,5 +1,5 @@
 /**
- * GET /api/v1/lgpd/requests
+ * GET /api/v1/privacy/requests
  *
  * Lista paginada de lgpd_requests para o tenant ativo.
  * Apenas role >= admin pode acessar (lgpd:execute permission).

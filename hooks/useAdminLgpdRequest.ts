@@ -48,7 +48,7 @@ export function useAdminLgpdRequest(id: string) {
   return useQuery({
     queryKey: ["admin", "lgpd", id] as const,
     queryFn: () =>
-      apiClient.get<DetailResponse>(`/api/v1/admin/lgpd/requests/${id}`),
+      apiClient.get<DetailResponse>(`/api/v1/admin/privacy/requests/${id}`),
     staleTime: 30_000,
     enabled: !!id,
   });
