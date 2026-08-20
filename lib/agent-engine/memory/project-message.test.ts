@@ -64,6 +64,29 @@ describe("projectMessage", () => {
     expect(memoryPort.upsert).not.toHaveBeenCalled();
   });
 
+  it("compensates a race where the contact gets anonymized mid-flight, instead of applying a resurrection", async () => {
+    const query = vi.fn()
+      .mockResolvedValueOnce({ rows: [{ id: "ledger-1", status: "pending" }] }) // beginProjection: race hasn't landed yet
+      .mockResolvedValueOnce({ rows: [{ is_anonymized: true }] }) // isContactAnonymized: flipped while extract()+upsert() ran
+      .mockResolvedValue({ rows: [{ id: "ledger-1", status: "deleted" }] }); // markProjectionDeleted
+    const memoryPort: MemoryPort = {
+      upsert: vi.fn().mockResolvedValue(undefined),
+      search: vi.fn().mockResolvedValue([]),
+      deleteContact: vi.fn().mockResolvedValue(undefined),
+      health: vi.fn(),
+    };
+    const { input } = harness({ db: { query }, memoryPort });
+
+    await expect(projectMessage(input)).resolves.toEqual({ status: "skipped", detail: "resurrection_blocked_deleted_entity" });
+
+    // The upsert did happen — the ledger check alone can't prevent a race
+    // that completes entirely inside the extract()+upsert() window — but the
+    // resurrection gets undone instead of committed as "ok".
+    expect(memoryPort.upsert).toHaveBeenCalledTimes(1);
+    expect(memoryPort.deleteContact).toHaveBeenCalledWith({ organizationId: orgA, contactId });
+    expect(query).toHaveBeenLastCalledWith(expect.stringContaining("status='deleted'"), ["ledger-1", orgA]);
+  });
+
   it("retries extraction failures without marking a projection applied", async () => {
     const { input, query } = harness({ extract: vi.fn().mockRejectedValue(new Error("boom")) });
 

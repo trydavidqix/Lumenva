@@ -13,7 +13,7 @@ import { Mem0ProviderError } from "@/lib/agent-engine/memory/mem0-client";
 import type { MemoryPort } from "@/lib/agent-engine/memory/port";
 import { sanitizeMemoryCandidate } from "@/lib/agent-engine/memory/sanitize";
 import type { SemanticMemoryRecord } from "@/lib/agent-engine/memory/types";
-import { beginProjection, markProjectionApplied, markProjectionRetry } from "@/lib/agent-engine/platform/projection-ledger";
+import { beginProjection, markProjectionApplied, markProjectionDeleted, markProjectionRetry } from "@/lib/agent-engine/platform/projection-ledger";
 import type { LlmEdgeConfig } from "@/lib/agent-engine/edge/llm/run-model-call";
 
 const EXISTING_MEMORY_TOP_K = 5;
@@ -89,6 +89,21 @@ async function lookupExistingMemories(
   } catch {
     return { refs: [], byId: new Map() };
   }
+}
+
+/**
+ * Authoritative anonymization flag, straight from `contacts` — not the
+ * projection ledger. `markProjectionDeletedByEntity` only ever flips ledger
+ * rows that are already `'applied'`, so a ledger row still `'pending'` mid-
+ * flight (the case here) never gets touched by a concurrent LGPD delete; the
+ * ledger alone can't tell us a race happened. `contacts.is_anonymized` can.
+ */
+async function isContactAnonymized(db: pg.Pool, organizationId: string, contactId: string): Promise<boolean> {
+  const result = await db.query(
+    `select is_anonymized from contacts where id = $1 and organization_id = $2`,
+    [contactId, organizationId],
+  );
+  return result.rows[0]?.is_anonymized === true;
 }
 
 /** Projects one message. Idempotent: re-running an already-applied source is a no-op. */
@@ -178,6 +193,19 @@ export async function projectMessage(input: ProjectMessageInput): Promise<Projec
     });
 
     await Promise.all([...upserts, ...retires]);
+
+    // TOCTOU close: the ledger.status check above ran once, before extract()
+    // (an LLM call) and the upserts — an LGPD anonymization can complete
+    // entirely inside that window. Re-check the authoritative flag right
+    // before committing; if it flipped while we were writing, the upserts
+    // above just resurrected memory for a contact whose deletion the rest of
+    // the product treats as irreversible. Compensate instead of applying.
+    if (await isContactAnonymized(input.db, input.organizationId, input.contactId)) {
+      await input.memoryPort.deleteContact({ organizationId: input.organizationId, contactId: input.contactId });
+      await markProjectionDeleted(input.db, input.organizationId, ledger.id);
+      return { status: "skipped", detail: "resurrection_blocked_deleted_entity" };
+    }
+
     await markProjectionApplied(input.db, input.organizationId, ledger.id);
     return { status: "ok" };
   } catch (error) {
