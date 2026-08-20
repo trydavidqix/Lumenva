@@ -180,12 +180,33 @@ que trate `gov:verify` verde como "pronto" vai declarar concluída uma mudança 
 sem nunca ter testado RLS. O CI pega o `test:db` depois do push, mas o loop local mente —
 e o nome do script sugere cobertura total que o conteúdo não entrega.
 
-### 4.3 Rate limit HTTP praticamente inexistente 🔴
+### 4.3 Rate limit HTTP — ✅ fechado em 2026-08-20 (era 🔴 desde a auditoria de julho)
 
-`checkRateLimit` (`lib/ai/dispatcher/rate-limit.ts`) é chamado em **2** lugares:
-o webhook público de captação e o dispatcher de IA. Sem proteção: `/login`, `/signup`,
-`/team/accept-invite/:token`, os crons, `/api/internal/*`, `/api/mcp`, webhooks WAHA
-e Nuvemshop. Detalhe e impacto em [`threat-model.md`](threat-model.md).
+**Achado desta auditoria (julho/2026), já obsoleto no código:** afirmava que `checkRateLimit`
+só era chamado em 2 lugares (webhook de captação + dispatcher de IA), com `/login`, `/signup`,
+`/team/accept-invite/:token`, crons, `/api/internal/*` e `/api/mcp` desprotegidos. Isso não
+reflete mais o repo — a issue #64 (antes desta sessão) já tinha coberto login/signup/reset/MFA/
+convite via `lib/auth/rate-limit.ts`, e `/api/mcp` + `/api/internal/agents/run` já tinham
+`checkRateLimit` próprio. Os crons são protegidos por secret fail-closed (`INTERNAL_CRON_SECRET`),
+não por rate limit — controle correto para superfície não pública.
+
+**Gap real, confirmado e fechado nesta sessão:** os 7 webhooks públicos de canal/integração
+não tinham nenhum rate limit — HMAC valida a assinatura, mas só depois de já ter recebido e
+processado o corpo, então um flood de POSTs (mal-formados ou não) consumia I/O/CPU antes de
+qualquer rejeição. Adicionado `checkRateLimit` (mesmo padrão já usado no webhook de captação),
+o mais cedo possível após resolver o identificador de tenant, antes de qualquer lookup no banco:
+
+- `webhooks/waha/[token]` e `webhooks/waha` (global) — 120/min por sessão;
+- `webhooks/meta/[token]` (POST) — 120/min por sessão;
+- `webhooks/nuvemshop/[event]` — 60/min por loja;
+- `webhooks/nuvemshop/store-redact`, `customer-data-request`, `customer-redact` (LGPD) —
+  30/min por loja (evento raro/crítico; teto baixo ainda permite retentativa legítima).
+
+Sem teste de rota dedicado (nenhum dos 7 handlers tinha harness de teste antes desta mudança —
+exigiria mockar Supabase admin client + HMAC por webhook; fora do escopo desta correção). Prova:
+`pnpm typecheck` e `pnpm lint` limpos, diff mínimo (80 linhas, 7 arquivos, mesmo padrão de 4
+linhas repetido, já em produção em 3 rotas — `webhooks/in/[token]`, `/api/mcp`,
+`/api/internal/agents/run`). Detalhe/impacto original em [`threat-model.md`](threat-model.md).
 
 ### 4.4 `node_modules` deste checkout está incompleto 🟠
 

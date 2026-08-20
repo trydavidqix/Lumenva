@@ -20,6 +20,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { fail } from "@/lib/api/wrappers";
+import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { parseMetaWebhook, verificationChallenge, verifyMetaSignature } from "@/lib/channels/meta/webhook";
 import { ingestMetaInbound } from "@/lib/channels/meta/ingest";
 import { metaSessionByWebhookToken } from "@/lib/channels/meta/session";
@@ -32,6 +33,10 @@ export const runtime = "nodejs";
 interface RouteCtx {
   params: Promise<{ token: string }>;
 }
+
+// Mesmo teto do webhook WAHA per-tenant (/waha/[token]) — volume de mensagem
+// é da mesma ordem de grandeza.
+const RATE_LIMIT_PER_MIN = 120;
 
 export async function GET(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
   const { token } = await ctx.params;
@@ -57,6 +62,14 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
 
   const session = await metaSessionByWebhookToken(token);
   if (!session) return fail("not_found", "unknown webhook token", 404, { requestId });
+
+  const rl = await checkRateLimit(`webhook_meta:${token}`, RATE_LIMIT_PER_MIN, 60);
+  if (!rl.allowed) {
+    return fail("rate_limited", "Too many requests.", 429, {
+      requestId,
+      headers: { "Retry-After": "60" },
+    });
+  }
 
   const rawBody = await req.text();
   const appSecret = process.env.META_APP_SECRET ?? "";

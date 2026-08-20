@@ -16,12 +16,17 @@
 import type { NextRequest, NextResponse } from "next/server";
 import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
+import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { slugToEvent } from "@/lib/nuvemshop/config";
 import { verifyHmac } from "@/lib/nuvemshop/oauth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+// Eventos de loja (pedido, produto, cliente) são bem menos frequentes que
+// mensageria — mesmo teto do webhook_in genérico.
+const RATE_LIMIT_PER_MIN = 60;
 
 interface RouteCtx {
   params: Promise<{ event: string }>;
@@ -58,6 +63,11 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
   const storeId = body.store_id !== undefined ? String(body.store_id) : "";
   if (!storeId) {
     return fail("invalid_request", "missing store_id", 400);
+  }
+
+  const rl = await checkRateLimit(`webhook_nuvemshop:${storeId}`, RATE_LIMIT_PER_MIN, 60);
+  if (!rl.allowed) {
+    return fail("rate_limited", "Too many requests.", 429, { headers: { "Retry-After": "60" } });
   }
 
   const admin = createAdminClient();

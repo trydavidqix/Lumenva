@@ -16,6 +16,7 @@ import type { NextRequest, NextResponse } from "next/server";
 import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { ARCHIVED_AT, queryTolerantToMissingArchived } from "@/lib/channels/archived";
+import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { dispatchWahaEvent, type WahaEnvelope } from "@/lib/waha/ingest";
@@ -23,6 +24,9 @@ import { authenticateWahaWebhook } from "@/lib/waha/webhook-auth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+// Mesmo teto da variante per-tenant (/waha/[token]) — ver comentário lá.
+const RATE_LIMIT_PER_MIN = 120;
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const requestId = randomUUID();
@@ -38,6 +42,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const sessionName = envelope.session;
   if (!sessionName) {
     return fail("invalid_request", "missing session field", 400, { requestId });
+  }
+
+  // Só dá pra saber o identificador de tenant depois de ler o body (rota
+  // global não tem token no path) — o rate limit entra aqui, o mais cedo
+  // possível, antes do lookup no banco.
+  const rl = await checkRateLimit(`webhook_waha:${sessionName}`, RATE_LIMIT_PER_MIN, 60);
+  if (!rl.allowed) {
+    return fail("rate_limited", "Too many requests.", 429, {
+      requestId,
+      headers: { "Retry-After": "60" },
+    });
   }
 
   const admin = createAdminClient();

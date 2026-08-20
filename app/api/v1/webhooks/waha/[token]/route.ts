@@ -15,6 +15,7 @@ import type { NextRequest, NextResponse } from "next/server";
 import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { ARCHIVED_AT, queryTolerantToMissingArchived } from "@/lib/channels/archived";
+import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { dispatchWahaEvent, type WahaEnvelope } from "@/lib/waha/ingest";
@@ -27,12 +28,25 @@ interface RouteCtx {
   params: Promise<{ token: string }>;
 }
 
+// Sessão movimentada gera muito mais eventos que o webhook_in genérico (60/min)
+// — cada mensagem, ack e mudança de status do WAHA é um POST. Generoso o
+// bastante pro tráfego legítimo, ainda barra flood.
+const RATE_LIMIT_PER_MIN = 120;
+
 export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
   const requestId = randomUUID();
   const { token } = await ctx.params;
 
   if (!token || token.length < 8) {
     return fail("not_found", "unknown webhook token", 404, { requestId });
+  }
+
+  const rl = await checkRateLimit(`webhook_waha:${token}`, RATE_LIMIT_PER_MIN, 60);
+  if (!rl.allowed) {
+    return fail("rate_limited", "Too many requests.", 429, {
+      requestId,
+      headers: { "Retry-After": "60" },
+    });
   }
 
   const rawBody = await req.text();
