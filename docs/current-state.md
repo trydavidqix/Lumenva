@@ -427,3 +427,41 @@ aqui é **engenharia real, testada localmente, nunca integrada** — nenhuma rot
 chama esse código, nenhuma passou por CI, uma delas (Fase 6) colide de fato com algo que já
 está em produção. Decisão do dono do repo: manter as 8 branches como estão por enquanto
 (R&D válido, mas nenhuma pronta pra virar PR sem rebase + trabalho de integração real).
+
+---
+
+## 10. GitHub Actions desabilitado (decisão permanente, 2026-08-20)
+
+Gatilho: os checks de CI do PR #25 vieram todos `FAILURE` em 4 segundos — tempo rápido demais
+pra falha de teste real. Investigado via `gh run view --repo trydavidqix/CRM`: a anotação real
+era `"The job was not started because recent account payments have failed or your spending
+limit needs to be increased"` — billing da conta GitHub quebrado, não código. **Isso também
+lança dúvida retroativa sobre os PRs #21 e #24, fechados horas antes com "checks falhando"
+como justificativa** — pode ter sido o mesmo problema de billing, não falha real de teste; não
+foi reaberto porque o conteúdo de ambos (dependency bumps major com breaking changes) já era
+descartável por outros motivos, mas o veredito "falhou no CI" especificamente não deve ser
+tratado como confiável para decisões anteriores a esta data.
+
+Decisão do dono do repo, dado o cenário: **desabilitar GitHub Actions inteiro,
+permanentemente** — não só até resolver o billing. Aplicado via
+`PUT repos/trydavidqix/CRM/actions/permissions {"enabled": false}` (configuração de repositório,
+não arquivo — continua valendo mesmo se `ci.yml`/`e2e.yml`/`perf.yml`/`publish-image.yml` forem
+editados ou um workflow novo for adicionado). Verificado via `GET` do mesmo endpoint:
+`{"enabled": false}`.
+
+**Consequências documentadas nesta sessão:**
+
+- `docs/runbooks/deploy.md` reescrito: o caminho que era "exceção" (build direto na VPS) virou
+  o único caminho — `publish-image.yml` não publica mais imagem no GHCR automaticamente.
+- `.claude/rules/testing-verification.md` ganhou seção própria: verificação local
+  (`typecheck`/`lint`/`test:unit`/`test:db` quando aplicável) e Vercel Preview passam a ser a
+  prova primária, não complemento ao CI.
+- Nova política de cadência, também registrada em `.claude/rules/testing-verification.md`:
+  tarefa com subtasks só dispara Vercel Preview na última etapa, não a cada subtask — reforça a
+  política pré-existente sobre a cota de 100 previews/24h, agora sem CI cobrindo builds
+  intermediários.
+
+**Não investigado nesta sessão:** a causa raiz do billing quebrado (forma de pagamento
+vencida, limite de gasto atingido, etc.) — é ação de conta que só o dono resolve em
+Settings → Billing & plans do GitHub, e ficou sem efeito prático já que a decisão foi desligar
+Actions em vez de consertar o billing.

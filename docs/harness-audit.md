@@ -17,6 +17,17 @@ ele torna o trabalho não-verificável, e é aí que a regressão entra sem ning
 Nada aqui foi executado — a auditoria é read-only por instrução. Todos os itens foram
 verificados por leitura de arquivo, config e workflow.
 
+**Correção (2026-08-20): GitHub Actions foi desabilitado, permanentemente, decisão do dono do
+repositório** (`repos/{owner}/{repo}/actions/permissions` → `enabled: false`; detalhe em
+`docs/current-state.md` §10). Toda afirmação abaixo que descreve algo "rodando no CI" —
+`ci.yml`, `e2e.yml`, `perf.yml`, `publish-image.yml`, os jobs `verify`/`invariants` — descreve
+um estado que **não é mais verdade**: os workflows continuam no repo mas estão inertes, não
+disparam em push/PR/manual. Não reescrevi item por item porque a maioria das afirmações abaixo
+já era stale desde julho por outros motivos (ver `audited_against`); trate qualquer menção a CI
+neste documento como histórico, não como comportamento atual. Verificação hoje é local
+(`pnpm typecheck && pnpm lint && pnpm test:unit`, `pnpm test:db` quando aplicável) + Vercel
+Preview no fim da tarefa — `.claude/rules/testing-verification.md` tem o detalhe atual.
+
 ---
 
 ## Nível de maturidade: **H4 — Preparado para agentes**

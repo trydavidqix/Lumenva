@@ -1,19 +1,40 @@
 # Runbook — Deploy em produção (VPS)
 
-O caminho normal de deploy **não constrói nada na VPS**: o CI publica a imagem no
-GHCR e a VPS só puxa. Construir localmente é exceção de emergência, e tem custo —
-está documentado no fim.
+**GitHub Actions está desabilitado neste repositório (decisão permanente, 2026-08-20).**
+`publish-image.yml` não dispara mais — não existe CI publicando imagem no GHCR
+automaticamente. O caminho que este runbook chamava de "exceção" (construir a
+imagem na própria VPS) é hoje o **único caminho** de deploy. Se um dia isso mudar
+(GHCR manual, outro CI), atualize este runbook junto — não deixe duas receitas
+divergentes.
 
 ---
 
 ## 1. O comando
 
+Sem CI publicando imagem, todo deploy constrói na própria VPS. Requisitos: >= 4 GB
+de RAM **ou** swap (medido: ~4min num VPS de 3.8 GB com 4 GB de swap).
+
 ```bash
 cd /var/www/crm
-docker compose -f docker-compose.prod.yml -f docker-compose.traefik.yml --env-file .env up -d app
+
+# 0) traz o código novo — sem isso o build usa o checkout antigo
+git pull origin main
+
+# 1) build local — não existe imagem nova no GHCR pra puxar
+APP_IMAGE=deskcomm-app:local docker compose \
+  -f docker-compose.prod.yml -f docker-compose.build.yml --env-file .env build app
+
+# 2) sobe com a imagem que acabou de ser construída
+APP_IMAGE=deskcomm-app:local APP_PULL_POLICY=never docker compose \
+  -f docker-compose.prod.yml -f docker-compose.traefik.yml --env-file .env up -d app
 ```
 
-### Os DOIS `-f` são obrigatórios. Sempre.
+`APP_PULL_POLICY=never` é obrigatório no passo 2: sem ele, o compose tenta puxar
+`deskcomm-app:local` de um registry (não existe) ou, pior, silenciosamente
+substitui a imagem que você acabou de construir pela última do GHCR — revertendo
+o deploy sem erro nenhum.
+
+### Os DOIS `-f` são obrigatórios no passo 2. Sempre.
 
 Esta é a pegadinha que já derrubou o site inteiro em produção (2026-08-05).
 
@@ -60,38 +81,17 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<DOMAIN>/
 ## 3. Fluxo completo (do código à produção)
 
 ```
-commit → push → PR → merge na main → CI publica imagem → VPS puxa
+commit → push → PR → merge na main → build na VPS → up -d
 ```
 
 1. **Commit + push** numa branch de feature. Trabalho que fica só no disco da
-   VPS não existe: o CI não o vê, some se a VPS for reconstruída, e é invisível
+   VPS não existe: o Git não o vê, some se a VPS for reconstruída, e é invisível
    pra qualquer outra pessoa.
-2. **PR e merge na `main`.** `publish-image.yml` dispara em push na `main` (ou
-   tag `v*`) e publica `ghcr.io/<repo>:latest`. O build pesado (~6min) roda nos
-   runners do GitHub, nunca na VPS do usuário.
-3. **Deploy na VPS** com o comando da seção 1. Como o `.env` tem
-   `APP_PULL_POLICY='always'`, o `up -d` já puxa a imagem nova sozinho.
+2. **PR e merge na `main`.** Sem CI, isso não dispara nenhum build automático —
+   é só o ponto de integração do código.
+3. **Deploy na VPS** com os três comandos da seção 1: `git pull` traz o código
+   novo pro checkout da VPS, o `build` gera a imagem local, o `up -d` sobe ela.
 
----
-
-## 4. Exceção: imagem construída na VPS
-
-Só quando é preciso validar algo em produção **antes** de a imagem oficial
-existir (ex.: CI ainda rodando e um bug bloqueando o usuário).
-
-```bash
-APP_IMAGE=deskcomm-app:local docker compose \
-  -f docker-compose.prod.yml -f docker-compose.build.yml --env-file .env build app
-
-APP_IMAGE=deskcomm-app:local APP_PULL_POLICY=never docker compose \
-  -f docker-compose.prod.yml -f docker-compose.traefik.yml --env-file .env up -d app
-```
-
-**Isto é dívida, não um caminho paralelo.** A imagem existe só no disco daquela
-VPS: não está no registry, não está no git, e qualquer `docker compose up -d`
-sem `APP_PULL_POLICY=never` a substitui pela do GHCR — silenciosamente, sem erro
-nenhum, revertendo o que você acabou de subir.
-
-Requisitos: >= 4 GB de RAM **ou** swap (medido: ~4min num VPS de 3.8 GB com 4 GB
-de swap). Ao terminar, feche o ciclo — merge na `main` e volte a VPS pra imagem
-oficial.
+Cada deploy reconstrói a imagem do zero na VPS — não há cache de camada
+compartilhado entre deploys como havia com o registry. Isso é o custo aceito da
+decisão de desligar o CI, não um bug deste runbook.

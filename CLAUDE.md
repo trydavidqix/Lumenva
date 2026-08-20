@@ -240,7 +240,12 @@ Anti-patterns continuam proibidos: string onde deveria existir FK; duplicação 
 
 **Não opere produção por memória. Leia `docs/runbooks/deploy.md`.**
 
-Na topologia documentada com proxy reverso externo, esquecer o compose/labels de roteamento pode deixar o contêiner saudável e o domínio em 404. O caminho normal é imagem publicada pelo CI/registry e deploy conforme runbook; build ad-hoc na VPS é exceção operacional, não padrão.
+**GitHub Actions está desabilitado neste repositório (decisão permanente, 2026-08-20).** Não existe
+mais CI/registry publicando imagem automaticamente. O caminho da VPS que o runbook chamava de
+"exceção" (build ad-hoc) é hoje o único caminho — veja `docs/runbooks/deploy.md` para o comando
+atual.
+
+Na topologia documentada com proxy reverso externo, esquecer o compose/labels de roteamento pode deixar o contêiner saudável e o domínio em 404.
 
 O comando exato, os dois arquivos de compose e a verificação HTTP pós-deploy ficam no runbook para não haver duas receitas operacionais divergentes.
 
@@ -255,6 +260,13 @@ Qualquer ação em produção, credencial ou dado real exige autorização expl�
 - UI/fluxo visível é provado pela tela; `curl` não prova UX.
 - Quando o critério é instalação fresca/self-host, use ambiente estilo VPS conforme `.claude/rules/testing-verification.md`: baseline fresco, runtime de produção e dependências/envs coerentes com primeiro deploy.
 - Side effect externo de alto risco deve ser provado no caminho real/receiver controlado quando o contrato exigir; mock não prova egress/assinatura/anti-SSRF.
+- **GitHub Actions está desabilitado (permanente).** Não existe mais gate de CI automático em PR —
+  `verify`/`invariants`/`e2e`/`perf`/`publish-image` não rodam. Verificação local
+  (`pnpm typecheck && pnpm lint && pnpm test:unit`, `pnpm test:db` quando schema/RLS mudou) e Vercel
+  Preview passam a ser a prova, não um complemento ao CI.
+- **Vercel Preview só no fim da tarefa, não a cada subtask.** Uma tarefa com várias subtasks (ex.: 10)
+  executa todas primeiro; só a última roda a validação completa via Preview. Detalhe/motivo:
+  `.claude/rules/testing-verification.md`.
 
 Não congele aqui a quantidade atual de specs, arquivos de teste ou quais checks são obrigatórios numa data específica; isso pertence a `docs/current-state.md`/`docs/harness-audit.md`.
 
