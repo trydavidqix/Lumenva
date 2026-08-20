@@ -310,12 +310,28 @@ Resend.
 
 ## 5. Riscos técnicos abertos
 
-1. **89 dos 169 handlers usam `createAdminClient`** (service role, bypassa RLS). A regra
-   "filtre `organization_id` manualmente, nunca do body" não tem *enforcement automático* na
-   escrita — é revisão humana. Os 56 arquivos de invariante cobrem isolamento a sério e
-   **rodam em CI**, o que mitiga muito; o que falta é o gate que impede um handler novo de
-   nascer errado (lint rule ou teste de diff). Erro aqui é vazamento cross-tenant, o pior
-   modo de falha do produto.
+1. **`createAdminClient` (service role, bypassa RLS) — 🟡 gate heurístico adicionado em
+   2026-08-20, risco reduzido mas não eliminado.** O achado original (julho/2026: 89 dos 169
+   handlers, sem enforcement automático na escrita) motivou `pnpm lint:tenant-filter`
+   (`scripts/lint-tenant-filter.ts`, no `gov:verify`), mesma catraca do `lint:channels`: handler
+   de `app/api/**/route.ts` com `createAdminClient` + query `.from()` direta + zero menção a
+   `organization_id`/`organizationId` no arquivo reprova o merge.
+
+   **O que isso prova e o que não prova** (documentado em
+   `scripts/lint-tenant-filter.pattern.ts`): não é dataflow analysis — não confirma que o filtro
+   usa o org CERTO, e não enxerga filtro feito dentro de um helper que recebe `orgId` como
+   parâmetro (medido ao construir o gate: 4 dos 9 arquivos da primeira passada eram exatamente
+   esse falso positivo — `ai/cases/route.ts` e `[id]/route.ts` delegam a `lib/escalacao/chamados.ts`,
+   que filtra corretamente, só que num arquivo diferente do que o predicado lê). Pega só a classe
+   mais simples e mais provável de erro: handler novo que esqueceu o `.eq()` de vez. Os 56 arquivos
+   de invariante (RLS/schema) continuam sendo a prova real de isolamento; este gate é triagem na
+   escrita, não substituto.
+
+   3 arquivos em `KNOWN_DEBT` (lidos individualmente, não "provavelmente ok"): `admin/platform-admins`
+   (único papel cross-tenant do contrato base), `system/update`+`system/agent`+`system/version`
+   (dado de instalação self-host, não de tenant), `cron/attendant-heartbeat` (varredura
+   system-wide documentada no próprio arquivo, AT-08). Nenhum é um vazamento — os 9 candidatos da
+   heurística inicial foram todos lidos manualmente e nenhum é bug real.
 2. **Fallback in-memory do rate limit** (`rate-limit.ts:23`): sem Upstash configurado — o
    estado normal de um primeiro deploy — o limite passa a ser por processo. Silencioso além
    de um `logger.warn`.
