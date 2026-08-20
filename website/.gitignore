@@ -7,3 +7,5 @@ test-results/
 *.tsbuildinfo
 AGENTS.md
 CLAUDE.md
+.vercel
+.env*
