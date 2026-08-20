@@ -1,8 +1,9 @@
 /**
- * LGPD SLA alarm dispatcher.
+ * GDPR/RGPD SLA alarm dispatcher.
  *
  * Triggered by the lgpd-sla-watcher cron (S-08.08) when a request is
- * approaching or past its D+5 / D+10 threshold.
+ * approaching or past its D+20 threshold (Art. 12(3) gives 1 calendar month
+ * from receipt; D+20 leaves ~10 days of buffer before the deadline).
  *
  * Privacy rules (L-08):
  *  - Sentry payload: zero PII — only ids, counts, thresholds.
@@ -18,7 +19,7 @@ import { audit } from "@/lib/audit";
 import { env } from "@/lib/env";
 import type { LgpdRequest } from "./types";
 
-export type AlarmThreshold = "data_request_d5" | "redact_d10";
+export type AlarmThreshold = "gdpr_deadline_d20";
 
 export interface TriggerSlaAlarmArgs {
   request: LgpdRequest;
@@ -100,17 +101,14 @@ export async function triggerSlaAlarm(
       const shortId = request.id.slice(0, 8);
       const orgName = organizationName ?? "DeskcommCRM";
       const appUrl = env.NEXT_PUBLIC_APP_URL;
-      const requestUrl = `${appUrl}/app/lgpd/requests/${request.id}`;
+      const requestUrl = `${appUrl}/app/privacy/requests/${request.id}`;
 
-      const subject = `[LGPD] Solicitação ${shortId} próxima do vencimento`;
+      const subject = `[RGPD] Solicitação ${shortId} próxima do vencimento`;
 
-      const thresholdLabel =
-        threshold === "data_request_d5"
-          ? "D+5 (acesso a dados)"
-          : "D+10 (anonimização/exclusão)";
+      const thresholdLabel = "D+20 (prazo RGPD de 1 mês, Art. 12.º n.º 3)";
 
-      const dueFmt = new Date(request.due_at).toLocaleString("pt-BR", {
-        timeZone: "America/Sao_Paulo",
+      const dueFmt = new Date(request.due_at).toLocaleString("pt-PT", {
+        timeZone: "Europe/Lisbon",
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
@@ -122,30 +120,30 @@ export async function triggerSlaAlarm(
           : `<p>O prazo vence em <strong>${dueFmt}</strong>.</p>`;
 
       const html = `<!doctype html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <body style="font-family:-apple-system,Helvetica,Arial,sans-serif;color:#111827;line-height:1.5;max-width:560px;margin:0 auto;padding:24px;">
-  <h2 style="margin:0 0 12px;font-size:18px;">[LGPD] Alerta de SLA — Solicitação #${shortId}</h2>
+  <h2 style="margin:0 0 12px;font-size:18px;">[RGPD] Alerta de SLA — Solicitação #${shortId}</h2>
   <p>Olá,</p>
-  <p>A solicitação LGPD <strong>#${shortId}</strong> de <strong>${orgName}</strong> atingiu o limiar <strong>${thresholdLabel}</strong>.</p>
+  <p>A solicitação RGPD <strong>#${shortId}</strong> de <strong>${orgName}</strong> atingiu o limiar <strong>${thresholdLabel}</strong>.</p>
   ${overdueNote}
   <p>Status atual: <code>${request.request_type}</code> / <code>${request.status}</code></p>
   <p style="margin:24px 0;">
     <a href="${requestUrl}" style="background:#111827;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;display:inline-block;">Ver solicitação no painel</a>
   </p>
-  <p style="font-size:12px;color:#6b7280;">Base legal: LGPD Lei nº 13.709/2018, Art. 18. SLA obrigatório conforme regulamentação vigente.</p>
+  <p style="font-size:12px;color:#6b7280;">Base legal: Regulamento (UE) 2016/679 (RGPD), artigo 12.º, n.º 3. SLA interno acompanha o prazo legal vigente.</p>
 </body>
 </html>`;
 
-      const text = `[LGPD] Alerta de SLA — Solicitação #${shortId}
+      const text = `[RGPD] Alerta de SLA — Solicitação #${shortId}
 
-A solicitação LGPD #${shortId} de ${orgName} atingiu o limiar ${thresholdLabel}.
+A solicitação RGPD #${shortId} de ${orgName} atingiu o limiar ${thresholdLabel}.
 ${daysOverdue > 0 ? `Esta solicitação está ${daysOverdue} dia(s) em atraso.` : `Prazo: ${dueFmt}.`}
 
 Status: ${request.request_type} / ${request.status}
 
 Acesse: ${requestUrl}
 
-Base legal: LGPD Lei nº 13.709/2018, Art. 18.`;
+Base legal: Regulamento (UE) 2016/679 (RGPD), artigo 12.º, n.º 3.`;
 
       const result = await sendEmail({
         to: recipientEmail,

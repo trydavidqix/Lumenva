@@ -20,7 +20,7 @@
  * Quem é atingido, e quem não é — está medido em `components/admin/AdminShell.tsx`
  * e não é repetido aqui. Dois pontos de lá que mudam como se lê um vermelho:
  * o consumidor sem Provider próprio é o `TenantBadge`, montado em /admin/inbox,
- * /admin/inbox/[conversationId], /admin/lgpd e /admin/lgpd/requests/[id]; e
+ * /admin/inbox/[conversationId], /admin/privacy e /admin/privacy/requests/[id]; e
  * /admin/usage NÃO está na lista, apesar do nome colidir, porque os gráficos de
  * lá importam um `Tooltip` do recharts, que não usa Provider nenhum.
  *

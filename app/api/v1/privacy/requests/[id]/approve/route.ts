@@ -1,5 +1,5 @@
 /**
- * POST /api/v1/lgpd/requests/[id]/approve
+ * POST /api/v1/privacy/requests/[id]/approve
  *
  * Manually approves an LGPD request that is in 'received' status.
  * Emits the canonical event to event_log (same as the webhook handler),
@@ -72,7 +72,7 @@ export async function POST(
   const { approved_reason } = parsed.data;
 
   // Idempotency check — endpoint is /lgpd/requests/:id/approve
-  const endpoint = `/api/v1/lgpd/requests/${id}/approve`;
+  const endpoint = `/api/v1/privacy/requests/${id}/approve`;
   const requestHash = createHash("sha256")
     .update(JSON.stringify({ id, approved_reason }))
     .digest("hex");

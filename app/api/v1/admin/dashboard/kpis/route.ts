@@ -6,7 +6,7 @@ import { ok, fail } from "@/lib/api/wrappers";
 export type AlertSeverity = "critical" | "warning" | "info";
 export type AlertKind =
   | "waha_ban"
-  | "lgpd_at_risk"
+  | "privacy_at_risk"
   | "ai_budget"
   | "tenant_pending_overflow";
 
@@ -25,7 +25,7 @@ export interface DashboardKPIs {
   tenants_active: number;
   conv_pending_10min: number;
   waha_ban_alerts: number;
-  lgpd_at_risk: number;
+  privacy_at_risk: number;
   ai_budget_warnings: number;
   alerts: AlertItem[];
 }
@@ -186,20 +186,20 @@ export async function GET(_req: NextRequest) {
     });
   }
 
-  // LGPD alerts
+  // Privacy (GDPR/RGPD) alerts
   for (const row of lgpdAlertsRes.data ?? []) {
     const org = (row as { organizations?: { display_name?: string } }).organizations;
     const isOverdue = new Date(row.due_at).getTime() < now;
     alerts.push({
-      id: `lgpd-${row.id}`,
+      id: `privacy-${row.id}`,
       severity: isOverdue ? "critical" : "warning",
-      kind: "lgpd_at_risk",
+      kind: "privacy_at_risk",
       tenant_id: row.organization_id,
       tenant_name: (org as { display_name?: string })?.display_name ?? row.organization_id,
       message: isOverdue
-        ? `Requisição LGPD vencida em ${new Date(row.due_at).toLocaleDateString("pt-BR")}`
-        : `Prazo LGPD expira em ${new Date(row.due_at).toLocaleDateString("pt-BR")}`,
-      link: "/admin/lgpd",
+        ? `Solicitação de privacidade vencida em ${new Date(row.due_at).toLocaleDateString("pt-PT")}`
+        : `Prazo de privacidade expira em ${new Date(row.due_at).toLocaleDateString("pt-PT")}`,
+      link: "/admin/privacy",
       created_at: row.created_at,
     });
   }
@@ -261,7 +261,7 @@ export async function GET(_req: NextRequest) {
     tenants_active: tenantsRes.count ?? 0,
     conv_pending_10min: convPendingRes.count ?? 0,
     waha_ban_alerts: wahaBanRes.count ?? 0,
-    lgpd_at_risk: lgpdRiskRes.count ?? 0,
+    privacy_at_risk: lgpdRiskRes.count ?? 0,
     ai_budget_warnings: aiBudgetWarnings,
     alerts: alerts.slice(0, 20),
   };

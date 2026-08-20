@@ -1,5 +1,5 @@
 /**
- * GET /api/v1/admin/lgpd/requests/[id]
+ * GET /api/v1/admin/privacy/requests/[id]
  *
  * Detail of a single lgpd_request cross-tenant — platform admin only.
  * Service-role client (bypasses RLS).

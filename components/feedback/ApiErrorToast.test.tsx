@@ -32,7 +32,7 @@ describe("ApiErrorToast", () => {
       "idempotency_conflict",
       "conversation_already_claimed",
       "rate_limited",
-      "lgpd_anonymization_irreversible",
+      "privacy_anonymization_irreversible",
       "internal_error",
     ];
     for (const code of knownCodes) {

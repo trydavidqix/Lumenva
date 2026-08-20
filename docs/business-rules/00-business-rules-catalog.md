@@ -12,7 +12,7 @@ owner: Rafael Melgaço
 
 ## Notação
 
-- **ID** prefixado por domínio: `T` (Tenancy), `L` (LGPD), `W` (WhatsApp), `P` (Pipeline), `AT` (Atendimento), `IA` (IA), `B` (Billing).
+- **ID** prefixado por domínio: `T` (Tenancy), `L` (Privacidade/RGPD), `W` (WhatsApp), `P` (Pipeline), `AT` (Atendimento), `IA` (IA), `B` (Billing).
 - **Origem**: link pro PRD/sub-PRD que define a capacidade subjacente.
 - **Tipo de comprometimento**:
   - **Hard constraint** — violação = bug. Sistema recusa.
@@ -83,35 +83,50 @@ owner: Rafael Melgaço
 
 ---
 
-## 2. LGPD (L)
+## 2. Privacidade / RGPD (L)
+
+> Renumeração evitada de propósito — L-01…L-10 continuam sendo os IDs referenciados
+> por outras specs/PRDs; L-11 é novo (violação de dados, RGPD Art. 33, sem
+> equivalente anterior). O conteúdo abaixo foi migrado de LGPD (lei brasileira) para
+> RGPD/GDPR (Regulamento (UE) 2016/679), que é a lei que rege o negócio a partir de
+> 2026-08-20 (clientela europeia, operação sediada em Portugal). L-07/L-08/L-09
+> (CPF) permanecem tecnicamente corretas mas são um caso Brasil-específico e opcional
+> por tenant — não fazem parte da migração porque nenhum cliente europeu tem CPF.
 
 ### L-01 — Anonimização preferida sobre delete físico
 - **Origem**: PRD-Mestre §7.1, Sub-PRD 01 §3.6, Sub-PRD 06 §3.9
 - **Tipo**: Hard constraint
-- **Regra**: GIVEN solicitação de redact LGPD; WHEN o contato tem **qualquer** referência em `crm_leads`, `orders`, `crm_lead_activities`, `messages` (ou seja, é praticamente sempre); THEN executar **anonimização** (não delete). Delete físico apenas se contact não tem nenhuma dependência (raro: contato criado e nunca usado).
-- **Enforcement**: API (`POST /api/v1/lgpd/redact`) + worker LGPD.
+- **Regra**: GIVEN solicitação de redact RGPD (direito ao apagamento, Art. 17); WHEN o contato tem **qualquer** referência em `crm_leads`, `orders`, `crm_lead_activities`, `messages` (ou seja, é praticamente sempre); THEN executar **anonimização** (não delete). Delete físico apenas se contact não tem nenhuma dependência (raro: contato criado e nunca usado).
+- **Enforcement**: API (`POST /api/v1/privacy/anonymize`) + worker de privacidade.
 - **Exceção**: Tenant pode solicitar delete forçado via processo manual com aprovação dupla (admin + super-admin) — auditado.
 
-### L-02 — SLA de data_request: D+7 dias úteis
+### L-02 — SLA de data_request: 1 mês corrido (RGPD Art. 12(3))
 - **Origem**: Sub-PRD 01 §3.6, Sub-PRD 06 §3.9
 - **Tipo**: Hard constraint
-- **Regra**: GIVEN data_request recebido (via UI ou webhook Nuvemshop); WHEN cronômetro inicia em `request.received_at`; THEN export estruturado (JSON + PDF) deve ser entregue em ≤7 dias úteis (timezone America/Sao_Paulo).
-- **Enforcement**: Worker LGPD + alarme em D+5 (Sentry/PagerDuty).
-- **Exceção**: Casos com volume excepcional (>1M activities) podem solicitar extensão por escrito ao titular, mas o pedido de extensão também é auditado.
+- **Regra**: GIVEN data_request recebido (via UI ou webhook de e-commerce); WHEN cronômetro inicia em `request.received_at`; THEN export estruturado (JSON + PDF) deve ser entregue em ≤1 mês corrido (calendário, não dias úteis — RGPD Art. 12(3) primeira frase), extensível por mais 2 meses em casos complexos/volumosos mediante notificação ao titular dentro do 1º mês.
+- **Enforcement**: Worker de privacidade + alarme em D+20 (Sentry/PagerDuty) — ~10 dias de folga antes do vencimento.
+- **Exceção**: A extensão de até 2 meses (Art. 12(3), 2ª frase) exige notificação por escrito ao titular explicando o motivo, dentro do prazo original de 1 mês — o próprio pedido de extensão é auditado.
 
-### L-03 — SLA de redact: D+15 dias úteis
+### L-03 — SLA de redact: 1 mês corrido (RGPD Art. 12(3))
 - **Origem**: Sub-PRD 01 §3.6, Sub-PRD 06 §3.9
 - **Tipo**: Hard constraint
-- **Regra**: GIVEN redact aprovado (incluindo cascade pra messages, activities, mídia em Storage); WHEN cronômetro inicia em `redact.approved_at`; THEN cascade completo aplicado em ≤15 dias úteis.
-- **Enforcement**: Worker LGPD + alarme em D+10.
+- **Regra**: GIVEN redact aprovado (incluindo cascade pra messages, activities, mídia em Storage); WHEN cronômetro inicia em `redact.approved_at`; THEN cascade completo aplicado em ≤1 mês corrido. O RGPD não distingue prazo de acesso (L-02) de apagamento (L-03) — ambos herdam o mesmo Art. 12(3); os dois IDs continuam separados aqui só porque o produto trata os dois tipos de solicitação como entidades distintas.
+- **Enforcement**: Worker de privacidade + alarme em D+20.
 - **Exceção**: Mesma da L-02.
 
 ### L-04 — Anonimização é irreversível
 - **Origem**: Sub-PRD 02 §3.4 (merge), Sub-PRD 01 §3.6
 - **Tipo**: Hard constraint
-- **Regra**: GIVEN contact com `is_anonymized=true`; WHEN qualquer endpoint tenta atualizar dados pessoais; THEN retorna 403 `lgpd_anonymization_irreversible`.
+- **Regra**: GIVEN contact com `is_anonymized=true`; WHEN qualquer endpoint tenta atualizar dados pessoais; THEN retorna 403 `privacy_anonymization_irreversible`.
 - **Enforcement**: API + DB (check constraint).
-- **Exceção**: Nenhuma. Decisão deliberada (LGPD prevê o direito do titular ao esquecimento como definitivo).
+- **Exceção**: Nenhuma. Decisão deliberada (RGPD Art. 17 prevê o direito do titular ao apagamento como definitivo).
+
+### L-11 — Notificação de violação de dados em até 72h (RGPD Art. 33)
+- **Origem**: RGPD Art. 33 — ainda sem PRD/spec dedicada; registrado aqui para não faltar doutrina antes de qualquer implementação.
+- **Tipo**: Hard constraint (processual — hoje não há mecanismo automatizado no código)
+- **Regra**: GIVEN uma violação de dados pessoais (vazamento, acesso não autorizado, perda) que representa risco aos titulares; WHEN a organização toma conhecimento; THEN a autoridade de controlo competente deve ser notificada em até 72 horas — prazo fixo, não "razoável" como na LGPD. Se o risco for alto, os titulares afetados também devem ser notificados sem atraso indevido.
+- **Enforcement**: Nenhum ainda — hoje é processo manual/humano. Antes de automatizar qualquer parte disso, valide o desenho com um advogado especializado em RGPD.
+- **Exceção**: Nenhuma quanto ao prazo; a notificação aos titulares (não à autoridade) pode ser dispensada se a organização demonstrar medidas técnicas que tornam os dados incompreensíveis (ex.: criptografia forte).
 
 ### L-05 — Consentimento granular por finalidade
 - **Origem**: PRD-Mestre §7.1, Sub-PRD 01 §3.6

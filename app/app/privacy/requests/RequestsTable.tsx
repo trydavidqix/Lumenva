@@ -261,7 +261,7 @@ export function RequestsTable() {
                 <TableCell colSpan={8} className="text-center">
                   <div className="flex flex-col items-center gap-2 py-12 text-sm text-muted-foreground">
                     <Warning size={32} weight="thin" aria-hidden />
-                    <p className="font-medium">Nenhuma solicitação LGPD</p>
+                    <p className="font-medium">Nenhuma solicitação de privacidade</p>
                     <p className="text-xs">
                       Solicitações de dados e anonimizações aparecerão aqui.
                     </p>
@@ -313,7 +313,7 @@ export function RequestsTable() {
                     </TableCell>
                     <TableCell>
                       <Button asChild size="sm" variant="ghost" className="h-7 px-2 text-xs">
-                        <Link href={`/app/lgpd/requests/${r.id}`}>Ver</Link>
+                        <Link href={`/app/privacy/requests/${r.id}`}>Ver</Link>
                       </Button>
                     </TableCell>
                   </TableRow>

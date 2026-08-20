@@ -38,7 +38,7 @@ export function LgpdRiskBanner({ requests }: LgpdRiskBannerProps) {
         </span>
       </div>
       <Link
-        href="/admin/lgpd?risk_level=expired"
+        href="/admin/privacy?risk_level=expired"
         className="shrink-0 text-xs font-medium underline underline-offset-2 hover:opacity-80"
       >
         Ver detalhes

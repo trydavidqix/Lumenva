@@ -6,7 +6,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { computeDueAt } from "./sla";
+import { computeDueAtGdpr } from "./sla";
 import type { LgpdRequest, LgpdRequestType, LgpdScope } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -20,8 +20,8 @@ export interface CreateLgpdRequestInput {
   contactId?: string | null;
   externalCustomerId?: string | null;
   receivedAt: Date;
-  /** Number of BR business days for SLA (e.g. 15 for redact, 7 for data export). */
-  slaDays: number;
+  /** Number of calendar months for the GDPR/RGPD SLA (Art. 12(3) — default 1). */
+  slaMonths: number;
   /** Extra context to store in request_payload. */
   payload?: Record<string, unknown>;
   /** Whether this is a high-priority emergency request (drives early SLA alarms). Default false. */
@@ -35,7 +35,7 @@ export async function createLgpdRequest(
 ): Promise<{ id: string; due_at: string }> {
   const admin = createAdminClient();
 
-  const dueAt = computeDueAt(input.receivedAt, input.slaDays);
+  const dueAt = computeDueAtGdpr(input.receivedAt, input.slaMonths);
 
   const { data, error } = await admin
     .from("lgpd_requests")

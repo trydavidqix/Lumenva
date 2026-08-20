@@ -1,5 +1,5 @@
 /**
- * POST /api/v1/lgpd/anonymize
+ * POST /api/v1/privacy/anonymize
  *
  * Irreversible cascade redact (Spec 05 §LGPD). Only `admin` role within the
  * tenant or platform_admin can execute. Idempotent: re-anonymizing returns

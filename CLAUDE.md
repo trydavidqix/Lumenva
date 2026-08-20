@@ -129,15 +129,18 @@ Detalhe: `.claude/rules/api-contract.md`.
 
 Detalhe: `.claude/rules/audit-observability.md`.
 
-### 7. LGPD
+### 7. Privacidade / RGPD
+
+> Migrado de LGPD (lei brasileira) para RGPD/GDPR em 2026-08-20 — clientela europeia, operação sediada em Portugal.
 
 - Anonimização é preferida sobre delete físico quando há dependências históricas.
 - Anonimização é irreversível.
-- Data request/export tem SLA D+7 dias úteis; redact D+15 dias úteis enquanto as business rules vigentes mantiverem esses valores.
+- Data request e redact têm o mesmo SLA sob o RGPD: 1 mês corrido a partir do recebimento (Art. 12(3)), extensível por mais 2 meses em casos complexos com notificação ao titular — não são mais dias úteis nem prazos diferentes por tipo, como era na LGPD.
 - Cascade e consentimento cobrem o grafo de dados definido nas specs; não faça redact parcial por conveniência.
-- Operações LGPD/dados sensíveis geram audit canônico.
+- Operações de privacidade/dados sensíveis geram audit canônico.
+- Violação de dados: notificação à autoridade em até 72h fixas (RGPD Art. 33) — hoje é processo manual, sem automação no código.
 
-Detalhe: `.claude/rules/lgpd.md`.
+Detalhe: `.claude/rules/lgpd.md` (nome do arquivo mantido por dependência do harness-check; conteúdo já é RGPD).
 
 ### 8. Input, erros e segurança de dados
 

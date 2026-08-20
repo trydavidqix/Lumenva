@@ -1,5 +1,5 @@
 /**
- * GET /api/v1/lgpd/requests/[id]/preview
+ * GET /api/v1/privacy/requests/[id]/preview
  *
  * Dry-run preview: returns COUNTS + SAMPLE (10 rows per category) of the data
  * that would be exported or redacted for this request.

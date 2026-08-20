@@ -61,7 +61,7 @@ export function ContactDetailClient({ contactId }: Props) {
         >
           <ShieldCheck size={18} weight="duotone" aria-hidden />
           <span>
-            Contato anonimizado (LGPD)
+            Contato anonimizado (RGPD)
             {contact.anonymized_at &&
               ` em ${format(new Date(contact.anonymized_at), "dd/MM/yyyy", { locale: ptBR })}`}
             {" — edição bloqueada."}
@@ -97,7 +97,7 @@ export function ContactDetailClient({ contactId }: Props) {
         <TabsList>
           <TabsTrigger value="overview">Visão geral</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
-          {isAdmin && <TabsTrigger value="lgpd">LGPD</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="privacy">Privacidade</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="overview" className="mt-4">
@@ -158,10 +158,10 @@ export function ContactDetailClient({ contactId }: Props) {
         </TabsContent>
 
         {isAdmin && (
-          <TabsContent value="lgpd" className="mt-4">
+          <TabsContent value="privacy" className="mt-4">
             <Card className="p-4 space-y-4">
               <div>
-                <h2 className="text-lg font-semibold">Direito ao esquecimento (LGPD)</h2>
+                <h2 className="text-lg font-semibold">Direito ao esquecimento (RGPD)</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   A anonimização é irreversível. Use somente após confirmação formal
                   do titular ou ordem judicial.

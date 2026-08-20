@@ -7,14 +7,14 @@ import type { ElementType } from "react";
 
 const KIND_ICONS: Record<AlertKind, ElementType> = {
   waha_ban: WifiSlash,
-  lgpd_at_risk: Scales,
+  privacy_at_risk: Scales,
   ai_budget: ChartBar,
   tenant_pending_overflow: Clock,
 };
 
 const KIND_LABELS: Record<AlertKind, string> = {
   waha_ban: "WAHA",
-  lgpd_at_risk: "LGPD",
+  privacy_at_risk: "Privacidade",
   ai_budget: "IA Budget",
   tenant_pending_overflow: "Overflow",
 };

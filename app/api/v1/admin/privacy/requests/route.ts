@@ -1,5 +1,5 @@
 /**
- * GET /api/v1/admin/lgpd/requests
+ * GET /api/v1/admin/privacy/requests
  *
  * Cross-tenant list of lgpd_requests — platform admin only.
  * Service-role client (bypasses RLS). organization_id NEVER from body.

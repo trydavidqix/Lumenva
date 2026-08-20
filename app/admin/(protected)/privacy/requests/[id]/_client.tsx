@@ -254,9 +254,9 @@ export function LgpdRequestAdminDetail({ id }: Props) {
           asChild
           className="-ml-2 gap-1 text-muted-foreground"
         >
-          <Link href="/admin/lgpd">
+          <Link href="/admin/privacy">
             <CaretLeft size={14} aria-hidden />
-            LGPD Cross-tenant
+            Privacidade Cross-tenant
           </Link>
         </Button>
       </div>

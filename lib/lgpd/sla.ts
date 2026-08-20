@@ -78,3 +78,36 @@ export function computeDueAt(
 
   return cursor;
 }
+
+/**
+ * Compute the due date for a GDPR (RGPD) data-subject-rights SLA.
+ *
+ * Art. 12(3) of Regulation (EU) 2016/679 gives the controller **one calendar
+ * month** from receipt to respond (extendable by two further months for
+ * complex/numerous requests — that extension is a manual decision, not
+ * computed here). Unlike the Brazilian LGPD calculator above, this uses
+ * calendar months, not business days: no weekend/holiday skipping.
+ *
+ * @param receivedAt Timestamp when the request was received.
+ * @param months     Number of calendar months allowed (default 1, per Art. 12(3)).
+ * @returns          Date one (or more) calendar month(s) after receivedAt,
+ *                    clamped to the last day of the target month on overflow
+ *                    (e.g. 31 Jan + 1 month → 28/29 Feb, not 3 Mar).
+ */
+export function computeDueAtGdpr(receivedAt: Date, months = 1): Date {
+  const targetMonthIndex = receivedAt.getUTCMonth() + months;
+  const lastDayOfTargetMonth = new Date(
+    Date.UTC(receivedAt.getUTCFullYear(), targetMonthIndex + 1, 0),
+  ).getUTCDate();
+
+  return new Date(
+    Date.UTC(
+      receivedAt.getUTCFullYear(),
+      targetMonthIndex,
+      Math.min(receivedAt.getUTCDate(), lastDayOfTargetMonth),
+      receivedAt.getUTCHours(),
+      receivedAt.getUTCMinutes(),
+      receivedAt.getUTCSeconds(),
+    ),
+  );
+}

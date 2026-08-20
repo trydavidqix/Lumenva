@@ -55,7 +55,7 @@ export function useLgpdPreview(id: string, enabled: boolean) {
     queryFn: async () => {
       try {
         return await apiClient.get<LgpdPreviewResponse>(
-          `/api/v1/lgpd/requests/${id}/preview`,
+          `/api/v1/privacy/requests/${id}/preview`,
         );
       } catch (err) {
         showApiError(err);

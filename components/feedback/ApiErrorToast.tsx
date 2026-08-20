@@ -50,7 +50,7 @@ const COPY: Record<string, { variant: Variant; msg: string }> = {
     variant: "warning",
     msg: "Calma — muitas tentativas. Espere alguns segundos.",
   },
-  lgpd_anonymization_irreversible: {
+  privacy_anonymization_irreversible: {
     variant: "error",
     msg: "Esta ação não pode ser desfeita: o contato já foi anonimizado.",
   },

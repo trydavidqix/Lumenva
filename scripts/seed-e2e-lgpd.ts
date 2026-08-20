@@ -243,7 +243,7 @@ async function main(): Promise<void> {
   console.info(`   contato   ${contactId} (${NOME})`);
   console.info(`   conversa  ${conversationId} com ${messageIds.length} mensagens`);
   console.info(`   lead      ${leadId} com 2 atividades (ai + user)`);
-  console.info(`   request   ${requestId} status=received  → /app/lgpd/requests/${requestId}`);
+  console.info(`   request   ${requestId} status=received  → /app/privacy/requests/${requestId}`);
 }
 
 main().catch((err) => {

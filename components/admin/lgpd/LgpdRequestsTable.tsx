@@ -213,7 +213,7 @@ export function LgpdRequestsTable({
                 </TableCell>
                 <TableCell>
                   <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs">
-                    <Link href={`/admin/lgpd/requests/${row.id}`}>Ver</Link>
+                    <Link href={`/admin/privacy/requests/${row.id}`}>Ver</Link>
                   </Button>
                 </TableCell>
               </TableRow>
