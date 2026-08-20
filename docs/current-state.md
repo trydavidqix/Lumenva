@@ -370,18 +370,29 @@ exato de `agent-os-phase-2-kernel`, sem trabalho próprio.
 | `gpt-lumenva-content-os` (local) | 24 commits local / 7 no `origin` | **17 commits só no local, nunca pushados** — sistema de inteligência de conteúdo (providers RSShub/changedetection) em desenvolvimento ativo. Risco de perda se a máquina falhar antes de um `git push` |
 | `agent-os-phase-7-durable-benchmark` (local + `origin`) | 235 commits | Sob auditoria ativa por sessão paralela nesta mesma janela; achados já confirmados: Fases 9/14 têm flag ligada sem rota HTTP por trás, Fase 7 (benchmark) incompleta, Fase 13 tinha teste especulativo |
 
-### 9.3 Iniciativa "Agent OS" — 8 branches só no `origin`, nenhuma com PR, nenhuma mergeada
+### 9.3 Iniciativa "Agent OS" — 8 branches só no `origin`, quase nenhuma com PR, nenhuma mergeada
 
 Todas nascem do plano `docs/superpowers/plans/2026-08-17-agent-os-master-implementation-plan.md`
 (fases 1–9, cada `PLAN N.M` com seu próprio GO gate). Investigadas em paralelo por subagentes
 Explore, um por branch/par, lendo só via `git show <branch>:<path>` (nenhum checkout).
 Datadas todas de 17–18/08/2026.
 
+**Correção (2026-08-20):** a varredura original de PR usou `gh pr list`/`gh pr view` sem
+`--repo` explícito, e o `gh` resolveu contra o remoto `upstream` (`melgarafael/DeskcommCRM`,
+o fork original) em vez do `origin` (`trydavidqix/CRM`, este repositório) — produzindo "nenhuma
+teve PR" como conclusão errada. Refeito contra o repo certo: **duas das 8 tiveram PR**,
+`agent-os-implementation-plan` → [PR #22](https://github.com/trydavidqix/CRM/pull/22)
+("Agent OS Phase 1 foundation (draft)", ainda **OPEN**) e `agent-os-verification` →
+[PR #23](https://github.com/trydavidqix/CRM/pull/23) ("Agent OS verification gate (draft, do
+not merge)", **CLOSED**). As outras 7 seguem sem PR nenhum. Isso não muda o veredito técnico
+de cada branch (código real vs. scaffolding, tabela abaixo) — só a afirmação sobre processo.
+
 **Achado estrutural, contra a hipótese inicial:** não são 8 experimentos isolados sem relação
 entre si — `agent-os-verification` é uma branch de "transporte" que acumula o código das fases
 1–6 num único histórico contínuo (kernel + autonomia + memória + flywheel + guardrails +
 playbooks coexistem na mesma árvore). O gate de cada fase historicamente rodou via preview
-deploy manual na Vercel, nunca via GitHub Actions/CI — daí nenhuma ter PR.
+deploy manual na Vercel, nunca via GitHub Actions/CI — o PR #22 aberto e nunca fechado sugere
+que a intenção de formalizar via PR existia, só não foi seguida adiante nas fases seguintes.
 
 | Branch | Commits à frente | Veredito | Achado central |
 |---|---|---|---|
