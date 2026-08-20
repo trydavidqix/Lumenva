@@ -21,11 +21,15 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
+import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createLgpdRequest, findContactByExternalId } from "@/lib/lgpd/repository";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+// Mesmo teto dos outros webhooks LGPD Nuvemshop — ver store-redact/route.ts.
+const RATE_LIMIT_PER_MIN = 30;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -94,6 +98,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const storeId = body.store_id !== undefined ? String(body.store_id) : "";
   if (!storeId) {
     return fail("invalid_request", "missing store_id", 400);
+  }
+
+  const rl = await checkRateLimit(`webhook_nuvemshop_lgpd:${storeId}`, RATE_LIMIT_PER_MIN, 60);
+  if (!rl.allowed) {
+    return fail("rate_limited", "Too many requests.", 429, { headers: { "Retry-After": "60" } });
   }
 
   const admin = createAdminClient();
