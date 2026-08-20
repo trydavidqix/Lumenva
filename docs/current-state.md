@@ -167,7 +167,30 @@ Nuvemshop no runner. Regressão nela passa sem detecção (issue #63).
 
 O `e2e` também **ainda não é check obrigatório** na branch protection, que exige apenas
 `verify`, `build-and-size` e `invariants`. Enquanto for opcional, um PR que quebre o e2e
-entra na `main` assim mesmo.
+entra na `main` assim mesmo. **Ponto morto adicional (2026-08-20): GitHub Actions está
+desabilitado permanentemente (§10)** — `e2e.yml` não dispara mais de forma nenhuma, então
+"não obrigatório" já nem é a questão certa; hoje esta spec só roda se alguém a disparar
+manualmente com Docker de pé (Supabase local + WAHA + Redis).
+
+**Tentativa de rodar nesta sessão (2026-08-20):** bloqueada de saída — Docker indisponível
+nesta estação (decisão do usuário de não rodar Docker no Mac), e a spec exige Supabase local
+via `supabase start` + WAHA + Redis, todos Docker. Sem isso, fiz revisão estática em vez de
+execução: li o spec inteiro (13 casos, J1.1–J1.13) contra o código real de cada tela —
+`app/onboarding/layout.tsx` (gate onboarded_at → redirect), `app/onboarding/page.tsx` (router
+de step), `welcome/_form.tsx` + `acceptWelcome.ts`, `connect-whatsapp/_client.tsx` +
+`skipWhatsapp.ts`, `setup-ai/_form.tsx` + `createDefaultAgent.ts`, `invite-team/_form.tsx` +
+`sendOnboardingInvites.ts`, `finishOnboarding.ts`, `MfaEnrollGate.tsx`, e o `_shared.ts` comum
+a todas as actions. **Nenhum defeito encontrado** — inclusive as duas regressões que o spec
+documenta terem sido corrigidas (redirect hardcoded pro Nuvemshop em vez de deixar o router
+decidir; gate MFA desmontando via revalidação do Server Action e perdendo os códigos de
+recuperação) batem com o código atual (`useState(!enrolled)` latching em
+`MfaEnrollGate.tsx:26`, `redirect("/onboarding")` em vez de rota fixa em `skipWhatsapp.ts:19`).
+
+**O que isso NÃO prova**, e por que continua sendo um gap real: leitura estática não exercita
+render de imagem (o QR code realmente carrega bytes válidos?), não prova timing real de TOTP
+contra o banco, não prova RLS sob concorrência, não prova o handshake HMAC do WAHA de verdade.
+Fica aberto até alguém rodar com Docker disponível (VPS de teste, ou Docker Desktop
+temporariamente nesta estação).
 
 `vitest.config.ts:12` exclui `tests/invariants/**` e `tests/e2e/**` do `test:unit`. Para os
 invariantes isso é deliberado e correto (o job de CI os pega). Para os E2E, o `e2e.yml` pega
