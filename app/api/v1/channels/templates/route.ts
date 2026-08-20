@@ -19,6 +19,7 @@ import { metaSessionForOrg } from "@/lib/channels/meta/session";
 import { normalizeRejectedReason } from "@/lib/channels/meta/webhook";
 import { deriveTemplateContract, describeAddress } from "@/lib/channels/meta/template-contract";
 import { syncTemplates } from "@/lib/channels/meta/template-sync";
+import { env } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -151,7 +152,7 @@ export async function POST(_req: NextRequest): Promise<NextResponse> {
     return fail("invalid_request", "no_meta_channel", 400, { requestId });
   }
 
-  const token = process.env.META_SYSTEM_USER_TOKEN ?? "";
+  const token = env.META_SYSTEM_USER_TOKEN;
   if (!token) return fail("invalid_request", "missing_meta_token", 400, { requestId });
 
   try {
@@ -159,7 +160,7 @@ export async function POST(_req: NextRequest): Promise<NextResponse> {
       organizationId: r.orgId,
       wabaId: sessao.wabaId,
       token,
-      graphVersion: process.env.META_GRAPH_VERSION ?? "v22.0",
+      graphVersion: env.META_GRAPH_VERSION,
     });
     return ok(counts);
   } catch (err) {

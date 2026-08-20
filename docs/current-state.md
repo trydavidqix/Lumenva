@@ -214,17 +214,34 @@ linhas repetido, já em produção em 3 rotas — `webhooks/in/[token]`, `/api/m
 `pnpm install` (não executado: a auditoria é read-only). Consequência para esta auditoria:
 nenhuma afirmação sobre "os testes passam" pôde ser verificada por execução.
 
-### 4.5 `.env.example` incompleto 🟠
+### 4.5 `.env.example` — ✅ fechado em 2026-08-20 (era 🟠 desde a auditoria de julho)
 
-6 variáveis declaradas em `lib/env.ts` e ausentes do template — incluindo **três secrets**:
-`IMPERSONATE_COOKIE_SECRET`, `INTERNAL_CRON_SECRET`, `LGPD_SIGNING_KEY`
-(mais `LGPD_DPO_EMAIL`, `LGPD_EXPORT_EXPIRES_HOURS`, `NUVEMSHOP_ENABLED`).
-Quem instala numa VPS não descobre que precisa delas até algo falhar. Viola o item 9 do DoD.
-O template ganhou vars de white-label (`APP_NAME`, `APP_LOGO_URL`) recentemente, então o
-arquivo está sendo mantido — só não reconciliado contra `lib/env.ts`.
+**Achado original (julho/2026), já resolvido antes desta sessão:** 6 variáveis declaradas em
+`lib/env.ts` estavam ausentes do template (`IMPERSONATE_COOKIE_SECRET`, `INTERNAL_CRON_SECRET`,
+`LGPD_SIGNING_KEY`, `LGPD_DPO_EMAIL`, `LGPD_EXPORT_EXPIRES_HOURS`, `NUVEMSHOP_ENABLED`).
+Confirmado nesta sessão: as 6 já estão no `.env.example` atual — não sei quando foram
+adicionadas, só que já não é gap.
 
-Inverso, e menos grave: `FLYWHEEL_*` e `WATCHDOG_*` estão no template (comentados) e não em
-`lib/env.ts` — lidos direto de `process.env`, portanto sem validação Zod.
+**Achado "inverso" original (`FLYWHEEL_*`/`WATCHDOG_*` no template, ausentes de `lib/env.ts`):**
+era descrito como "menos grave, sem validação Zod" — **incorreto**. Essas vars (mais
+`CRON_STAGGER_WINDOW_MS`, `FOLLOWUP_MIN_AHEAD_MS`, `FOLLOWUP_MAX_AHEAD_MS`) são validadas por
+Zod em `lib/agent-engine/env.ts`, um schema separado para o processo standalone do worker do
+agent-engine — `lib/env.ts` é só o schema do processo Next.js. Não é gap; é fronteira de
+processo correta, e a auditoria original não sabia da existência do segundo arquivo.
+
+**Gap real, confirmado e fechado nesta sessão:** o mesmo padrão se repetia com o canal oficial
+(Meta/WhatsApp Cloud API) — 6 vars (`META_APP_SECRET`, `META_WABA_ID`, `META_PHONE_NUMBER_ID`,
+`META_SYSTEM_USER_TOKEN`, `META_WEBHOOK_VERIFY_TOKEN`, `META_GRAPH_VERSION`) já estavam no
+template, mas eram lidas via `process.env.META_*` cru em 6 arquivos (3 rotas + 3 módulos de
+`lib/channels/meta/`), sem passar pela validação de `lib/env.ts`. Adicionadas ao schema
+(opcionais, mesmo padrão já usado para Nuvemshop) e os 6 call sites trocados para `env.META_*`.
+`META_APP_ID` segue no template sem uso no código — mantido como nota informacional pro
+self-hoster (aparece no painel de parceiros da Meta ao criar o app), não é gap de validação.
+`scripts/spike-*.ts` e `tests/journeys/canal-oficial.spec.ts` continuam lendo `process.env`
+direto de propósito — ferramentas fora do boot do app, não passam pela validação de produção.
+
+Prova: `pnpm typecheck` limpo, `pnpm lint` limpo nos arquivos tocados, 58/58 testes unitários
+relevantes (`meta-webhook*`, `send-template-wiring`, `meta-send-template*`) passando.
 
 ### 4.6 `ARCHITECTURE.md` tinha três afirmações falsas 🟡
 

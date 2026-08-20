@@ -15,6 +15,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { env } from "@/lib/env";
 import { sendTemplate } from "./send-template";
 
 export interface SendTemplateForSessionInput {
@@ -53,9 +54,9 @@ export async function sendTemplateForSession(
   if (error) throw new Error(`template_lookup_failed: ${error.message}`);
 
   const resultado = await sendTemplate({
-    phoneNumberId: process.env.META_PHONE_NUMBER_ID ?? "",
-    token: process.env.META_SYSTEM_USER_TOKEN ?? "",
-    graphVersion: process.env.META_GRAPH_VERSION ?? "v22.0",
+    phoneNumberId: env.META_PHONE_NUMBER_ID,
+    token: env.META_SYSTEM_USER_TOKEN,
+    graphVersion: env.META_GRAPH_VERSION,
     to: input.to,
     binding: {
       name: input.name,

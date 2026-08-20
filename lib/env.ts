@@ -195,6 +195,15 @@ const schema = z.object({
     .default("false")
     .transform((v) => v === "true"),
 
+  // WhatsApp Cloud API (Meta) — mesmo padrão do Nuvemshop: opcional, sem elas o
+  // canal oficial simplesmente não é configurado e o WAHA segue funcionando.
+  META_APP_SECRET: z.string().optional().default(""),
+  META_WABA_ID: z.string().optional().default(""),
+  META_PHONE_NUMBER_ID: z.string().optional().default(""),
+  META_SYSTEM_USER_TOKEN: z.string().optional().default(""),
+  META_WEBHOOK_VERIFY_TOKEN: z.string().optional().default(""),
+  META_GRAPH_VERSION: z.string().optional().default("v22.0"),
+
   // App URLs
   NEXT_PUBLIC_APP_URL: z
     .string()

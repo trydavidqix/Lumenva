@@ -21,6 +21,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { fail } from "@/lib/api/wrappers";
 import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
+import { env } from "@/lib/env";
 import { parseMetaWebhook, verificationChallenge, verifyMetaSignature } from "@/lib/channels/meta/webhook";
 import { ingestMetaInbound } from "@/lib/channels/meta/ingest";
 import { metaSessionByWebhookToken } from "@/lib/channels/meta/session";
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest, ctx: RouteCtx): Promise<NextResponse
 
   const challenge = verificationChallenge(
     req.nextUrl.searchParams,
-    process.env.META_WEBHOOK_VERIFY_TOKEN ?? "",
+    env.META_WEBHOOK_VERIFY_TOKEN,
   );
   if (challenge === null) return new NextResponse("forbidden", { status: 403 });
 
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
   }
 
   const rawBody = await req.text();
-  const appSecret = process.env.META_APP_SECRET ?? "";
+  const appSecret = env.META_APP_SECRET;
   if (!verifyMetaSignature(rawBody, req.headers.get("x-hub-signature-256"), appSecret)) {
     return fail("unauthorized", "invalid_signature", 401, { requestId });
   }
