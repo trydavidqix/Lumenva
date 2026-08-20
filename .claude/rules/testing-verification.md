@@ -33,6 +33,7 @@ Não declare `pronto`, `corrigido`, `seguro`, `publicado` ou `verde` sem evidên
 pnpm typecheck
 pnpm lint
 pnpm lint:channels
+pnpm lint:tenant-filter
 pnpm test:unit
 pnpm test:db
 pnpm test:e2e
@@ -46,6 +47,10 @@ Use os checks relevantes ao raio de dano, mas não substitua um tipo de prova po
 - `typecheck`: consistência de tipos; não prova comportamento.
 - `lint`: regras estáticas; não prova build ou runtime.
 - `lint:channels`: invariante de restrição de provider/canal.
+- `lint:tenant-filter`: catraca heurística — handler de `app/api/**/route.ts` com `createAdminClient` +
+  query `.from()` direta e zero menção a `organization_id`/`organizationId` no arquivo. Não é dataflow
+  analysis: não prova que o filtro é correto nem enxerga filtro feito num helper separado (ver
+  `scripts/lint-tenant-filter.pattern.ts`). Pega só a classe "esqueceu o `.eq()`".
 - `test:unit`: comportamento unitário; exclui invariantes de banco e E2E.
 - `test:db`: baseline install/update + invariantes de banco/RLS em Postgres real descartável.
 - `test:e2e`: jornada pelo produto; precisa do ambiente correspondente.

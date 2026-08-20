@@ -280,6 +280,7 @@ pnpm dev
 pnpm build
 pnpm lint
 pnpm lint:channels
+pnpm lint:tenant-filter
 pnpm typecheck
 pnpm test:unit
 pnpm test:db
