@@ -12,7 +12,7 @@
 | VPS Linux (2 vCPU / 4 GB+) com Docker | qualquer provedor |
 | Um domínio apontando para a VPS (registro A) | seu DNS |
 | Projeto **Supabase** (o plano free serve) | supabase.com — é o Postgres+Auth+Storage do CRM |
-| Chave **Anthropic** (ou cadastre BYOK depois na tela) | console.anthropic.com |
+| Chave **Anthropic** ou **Google/Gemini** (ou cadastre BYOK depois na tela) | console.anthropic.com ou aistudio.google.com/api-keys |
 | Um número de WhatsApp para o agente | qualquer chip/celular |
 
 > **Por que Supabase e não um Postgres no compose?** O CRM usa Auth, Storage e
@@ -49,8 +49,9 @@ Edite o `.env` e preencha (mínimo):
   `WAHA_BYO_ENCRYPTION_KEY`, `IMPERSONATE_COOKIE_SECRET`, `LGPD_SIGNING_KEY`, `SRH_TOKEN`
 - **WAHA**: `WAHA_API_KEY` (invente uma), `WAHA_API_KEY_SHA512`
   (`echo -n "$WAHA_API_KEY" | shasum -a 512 | awk '{print $1}'`), `WAHA_HMAC_SECRET`
-- **IA**: `ANTHROPIC_API_KEY` (ou deixe vazio e cadastre a chave depois em
-  `/app/ai/credentials` — fica cifrada no banco)
+- **IA**: `ANTHROPIC_API_KEY` **ou** `GOOGLE_API_KEY` (pelo menos uma das duas —
+  ou deixe as duas vazias e cadastre a chave depois em `/app/ai/credentials`,
+  onde fica cifrada no banco)
 
 ## 2. Aplicar o schema no Supabase
 
