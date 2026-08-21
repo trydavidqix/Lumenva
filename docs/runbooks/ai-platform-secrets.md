@@ -43,6 +43,19 @@ manager, never in Git, `.env.example` values, fixtures or logs. Full detail
 and the 🟡 known-drift note (VPS `.env` currently ahead of Infisical for
 this group) are in [`graphiti.md`](graphiti.md#segredos-antes-do-bootstrap).
 
+## RAG embedding override (free-tier escape hatch)
+
+`EMBEDDING_BASE_URL` / `EMBEDDING_API_KEY` / `EMBEDDING_MODEL_ID` — same
+swap pattern as the Graphiti trio above, but for `lib/ai/embed.ts` (the RAG
+indexer's embedding step). Discovered 2026-08-21: both default paths
+(Vercel AI Gateway and raw OpenAI) require a card-verified account — a self
+-host with neither ends up with `chunks_count: 0` forever and no visible
+error beyond `embed_failed@0` in `ai_knowledge_versions.error_message`.
+Pointing these 3 vars at a free OpenAI-compatible endpoint (validated:
+NVIDIA Build, `nvidia/nemotron-3-embed-1b`) bypasses both. Takes priority
+over `AI_GATEWAY_API_KEY`/`OPENAI_API_KEY` for embeddings specifically —
+chat/gateway resolution elsewhere (`lib/ai/gateway.ts`) is unaffected.
+
 ## Controlled runtime injection
 
 For a controlled local or operator runtime, inject a pre-existing Infisical project with:
