@@ -204,6 +204,13 @@ services:
     image: neo4j:5.26.0
     profiles: ["ai-graph"]
     restart: unless-stopped
+    # Cap duro do container, além do heap/pagecache internos abaixo — pega
+    # crescimento de memória fora do JVM heap (ex.: transaction memory,
+    # overhead do SO) que os dois envs de memória do Neo4j não cobrem. VPS
+    # atual (Hetzner CPX22, 4GB total, compartilhado com app/worker/WAHA)
+    # não tem espaço pra um Neo4j sem teto — ver docs/runbooks/graphiti.md
+    # "Limite de memória".
+    mem_limit: ${GRAPHITI_NEO4J_MEM_LIMIT:-512m}
     environment:
       # Community Edition (tag sem sufixo -enterprise) não exige aceite de
       # licença. `NEO4J_AUTH=neo4j/<senha>` é a forma padrão da imagem
@@ -211,6 +218,12 @@ services:
       # inicialização do volume de dados (comportamento da própria imagem,
       # não deste compose).
       NEO4J_AUTH: neo4j/${GRAPHITI_NEO4J_PASSWORD:?set GRAPHITI_NEO4J_PASSWORD in managed runtime secrets}
+      # Defaults pequenos de propósito (grafo single-tenant, VPS apertada).
+      # Sintaxe com "_" duplo é como a imagem oficial mapeia
+      # `server.memory.heap.max_size`/`server.memory.pagecache.size` do
+      # neo4j.conf pra env var — não é erro de digitação.
+      NEO4J_server_memory_heap_max__size: ${GRAPHITI_NEO4J_HEAP_SIZE:-256m}
+      NEO4J_server_memory_pagecache_size: ${GRAPHITI_NEO4J_PAGECACHE_SIZE:-128m}
     volumes:
       - neo4j-data:/data
     healthcheck:
@@ -249,6 +262,15 @@ services:
       # nunca a BYOK de um tenant (ai_provider_credentials). Escopo isolado,
       # entregue via Infisical/runtime env conforme doc/runbook.
       OPENAI_API_KEY: ${GRAPHITI_LLM_API_KEY:?set GRAPHITI_LLM_API_KEY in managed runtime secrets}
+      # `Settings` desta imagem só conhece o contrato "shape OpenAI"
+      # (`openai_api_key`/`openai_base_url`/`model_name`/`embedding_model_name`
+      # — sem campo de seleção de provider). Não existe suporte nativo a outro
+      # provider, mas qualquer API compatível com o formato REST da OpenAI
+      # funciona trocando só a URL — é assim que plugamos o Gemini (endpoint
+      # de compatibilidade OpenAI do Google) sem mexer no código do sidecar.
+      # Default aponta pra OpenAI real; setar GRAPHITI_LLM_BASE_URL troca de
+      # provider. Ver docs/runbooks/graphiti.md "Provider do LLM/embedder".
+      OPENAI_BASE_URL: ${GRAPHITI_LLM_BASE_URL:-https://api.openai.com/v1}
       MODEL_NAME: ${GRAPHITI_LLM_MODEL:-gpt-4.1-mini}
       EMBEDDING_MODEL_NAME: ${GRAPHITI_EMBEDDER_MODEL:-text-embedding-3-small}
       # Cada episódio pode disparar várias chamadas de LLM (extração de
@@ -257,6 +279,14 @@ services:
       # `zepai/graphiti:0.22.0` (a fila de ingestão desta versão não tem
       # limite de concorrência configurável) — mantido como no-op documentado.
       SEMAPHORE_LIMIT: ${GRAPHITI_INGESTION_CONCURRENCY:-2}
+    volumes:
+      # Patch local: upstream nunca aplica `embedding_model_name` no
+      # embedder (só no llm_client), travando o embedder no modelo default
+      # da OpenAI pra qualquer provider. Ver comentário completo no topo de
+      # docker/graphiti/zep_graphiti.py e docs/runbooks/graphiti.md "Patch
+      # local: embedder ignorado pelo upstream". Revalidar ao trocar a
+      # versão da imagem — o conteúdo do arquivo pode mudar de estrutura.
+      - ./docker/graphiti/zep_graphiti.py:/app/graph_service/zep_graphiti.py:ro
     depends_on:
       neo4j:
         condition: service_healthy

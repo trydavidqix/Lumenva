@@ -55,6 +55,38 @@ grafo manualmente em dev, entre no container:
 docker compose --profile ai-graph exec neo4j cypher-shell -u neo4j -p "$GRAPHITI_NEO4J_PASSWORD"
 ```
 
+## Limite de memória
+
+O Neo4j roda em JVM e, sem teto, tende a reservar bem mais RAM do que uma
+instalação self-host pequena tem sobrando (VPS Hetzner CPX22 de referência:
+4GB totais, já divididos entre `app`, `worker` e WAHA). Três variáveis
+controlam o teto, todas com default pequeno de propósito (grafo
+single-tenant):
+
+- `GRAPHITI_NEO4J_MEM_LIMIT` (default `512m`): cap duro do container Docker
+  (`mem_limit`). Pega crescimento fora do heap do JVM (transaction memory,
+  overhead do SO) que os dois envs abaixo não cobrem — se o processo
+  ultrapassar esse teto, o kernel mata o container (OOM), não deixa vazar
+  pro resto da VPS.
+- `GRAPHITI_NEO4J_HEAP_SIZE` (default `256m`): heap máximo do JVM
+  (`server.memory.heap.max_size` — repassado como env `NEO4J_server_memory_
+  heap_max__size`, com `_` duplo antes de `size`; não é erro de digitação, é
+  a sintaxe oficial da imagem pra mapear ponto→underscore no `neo4j.conf`).
+- `GRAPHITI_NEO4J_PAGECACHE_SIZE` (default `128m`): cache de páginas do
+  Neo4j (`server.memory.pagecache.size`).
+
+**Trade-off aceito:** com o grafo pequeno (poucos meses de dados de um único
+tenant), esses defaults são suficientes. Conforme o grafo cresce, consultas
+que não cabem mais no pagecache batem em disco e ficam mais lentas — é
+degradação gradual, não uma falha súbita. Se isso for percebido em produção,
+suba os três valores (ou migre o sidecar pra uma VPS com mais RAM, decisão
+de infra já discutida e adiada) em vez de remover o teto — um Neo4j sem
+`mem_limit` pode consumir RAM suficiente pra derrubar `app`/`worker`/WAHA no
+mesmo host.
+
+Fonte: [Neo4j Docker Operations Manual — Modify the default
+configuration](https://neo4j.com/docs/operations-manual/current/docker/configuration/).
+
 ## Histórico: por que FalkorDB virou Neo4j
 
 O plano original da Fase 4 (Task 3) wireou este sidecar em FalkorDB
@@ -174,6 +206,131 @@ GRAPHITI_INGESTION_CONCURRENCY=2
 Antes de aprovar custo/retenção real, confirme com o dono do produto qual
 provider/modelo de LLM e embedder o sidecar vai usar; não configure uma
 credencial de provider sem essa decisão.
+
+## Provider do LLM/embedder
+
+O `Settings` empacotado no `zepai/graphiti:0.22.0` só reconhece o contrato
+"shape OpenAI" (`openai_api_key`/`openai_base_url`/`model_name`/
+`embedding_model_name`) — não existe campo de seleção de provider. Isso não
+trava o sidecar num único provider: **qualquer API compatível com o formato
+REST da OpenAI funciona, trocando só `OPENAI_BASE_URL`** (mapeado de
+`GRAPHITI_LLM_BASE_URL` no compose).
+
+**Gemini via camada de compatibilidade OpenAI do Google** (decisão adotada —
+reaproveita a chave que já temos, em vez de pagar por uma credencial OpenAI
+separada só pro sidecar):
+
+```text
+GRAPHITI_LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+GRAPHITI_LLM_API_KEY=<chave Gemini>
+GRAPHITI_LLM_MODEL=gemini-3.6-flash
+GRAPHITI_EMBEDDER_MODEL=gemini-embedding-001
+```
+
+**Validado via `curl` direto contra a API do Gemini** (sem Docker, só o
+contrato HTTP que o sidecar usa):
+
+- `POST /v1beta/openai/embeddings` com `gemini-embedding-001` → `200`,
+  vetor de 3072 dimensões, formato OpenAI padrão.
+- `POST /v1beta/openai/chat/completions` com `gemini-2.5-flash` → `404`:
+  **esse modelo não está mais disponível pra contas novas** (mensagem da
+  própria API pedindo pra usar `gemini-3.6-flash`). Corrigido no default
+  deste repo — não use `gemini-2.5-flash`.
+- `POST /v1beta/openai/chat/completions` com `gemini-3.6-flash` → `200`,
+  resposta correta.
+
+**Ainda não validado**: o round-trip completo do sidecar Python (imagem
+`zepai/graphiti:0.22.0`, não só a API do Gemini isolada) — `POST /messages`
+seguido de `POST /search` encontrando o fato de volta. O teste acima prova
+que a API do Gemini responde certo no formato esperado; não prova que o
+cliente Python empacotado na imagem consome essa resposta sem erro (ex.:
+campos extras como `extra_content.google.thought_signature` que a OpenAI
+não devolve). Antes de apontar pra produção, valide com o container real:
+
+```bash
+docker compose --profile ai-graph up -d neo4j graphiti
+curl --fail http://127.0.0.1:8890/healthcheck
+# depois POST /messages seguido de POST /search com um episódio de teste —
+# confirmar que o /search encontra o fato, não só que o container sobe.
+```
+
+Se algum campo de resposta do Gemini não bater com o que o cliente
+OpenAI-Python espera, o erro aparece nesse round-trip, não no boot do
+container — não presuma sucesso só porque `docker compose ps` mostra
+`healthy`.
+
+Se o Gemini não funcionar de ponta a ponta, o fallback é usar uma chave
+OpenAI real (deixar `GRAPHITI_LLM_BASE_URL` vazio) — a variável existe
+justamente pra essa troca ser de configuração, não de código.
+
+## Patch local: embedder ignorado pelo upstream
+
+Validado ao vivo na VPS em 2026-08-21 (Neo4j + Graphiti reais, provider
+Gemini): `POST /messages` e `POST /search` falhavam com
+`openai.NotFoundError: models/text-embedding-3-small is not found` — mesmo
+com `GRAPHITI_EMBEDDER_MODEL` configurado corretamente e a variável
+confirmada dentro do container (`docker exec ... env`).
+
+Causa raiz, lendo `graph_service/zep_graphiti.py` de dentro da imagem:
+`get_graphiti()` aplica `openai_base_url`/`openai_api_key`/`model_name` só
+no `llm_client` — nunca no `embedder`. `base_url`/`api_key` do embedder já
+chegam certos por fallback automático do SDK da OpenAI lendo
+`OPENAI_BASE_URL`/`OPENAI_API_KEY` do ambiente (confirmado: o erro veio do
+endpoint do Google, não da OpenAI real). O que nunca é aplicado é o nome do
+modelo — `OpenAIEmbedderConfig.embedding_model` fica travado no default
+`'text-embedding-3-small'`. Confirmado contra o `main` branch upstream do
+Graphiti no mesmo dia: o bug segue presente na versão mais recente, não é
+algo específico da `0.22.0`.
+
+**Correção adotada**: `docker/graphiti/zep_graphiti.py` neste repo é uma
+cópia do arquivo original da imagem com **uma linha adicionada**:
+
+```python
+if settings.embedding_model_name is not None:
+    client.embedder.config.embedding_model = settings.embedding_model_name
+```
+
+Funciona porque `OpenAIEmbedder.create()`/`create_batch()`
+(`graphiti_core/embedder/openai.py`) leem `self.config.embedding_model` na
+hora da chamada, não na construção do client — mutar depois de criar o
+client é seguro, igual já acontecia com `model_name` do `llm_client` duas
+linhas acima no mesmo arquivo.
+
+**Segundo bug, mesma família** (achado ao vivo em 2026-08-21, testando com
+NVIDIA NIM depois de trocar o Gemini por falta de crédito): `graphiti_core`
+escolhe entre dois modelos por tarefa — `self.model` (normal) ou
+`self.small_model` (tarefas mais simples/baratas, ex.: alguns passos de
+dedup), via `_get_model_for_size()` em `openai_base_client.py`.
+`get_graphiti()` só configura `client.llm_client.model`, nunca `.small_model`
+— sem override, cai no default hardcoded `DEFAULT_SMALL_MODEL =
+'gpt-4.1-nano'`, que só existe na OpenAI real. Sintoma: episódio processa
+normalmente por um tempo (extração de entidade/aresta funcionando,
+confirmado vendo o Graphiti já consultando o Neo4j), depois trava com `404
+page not found` vindo do provider — sem nenhum log até a fila do worker
+morrer. Adicionada ao patch:
+
+```python
+if settings.model_name is not None:
+    client.llm_client.model = settings.model_name
+    client.llm_client.small_model = settings.model_name
+```
+
+A `Settings` deste app não expõe um "modelo pequeno" separado, então a
+correção reaproveita o mesmo `model_name` configurado pros dois tamanhos —
+mais simples que deixar sem controle nenhum.
+
+O compose (`docker-compose.yml` e `docker-compose.prod.yml`) monta esse
+arquivo por cima do original via `volumes:` — **não precisa rebuildar a
+imagem**.
+
+**Manutenção**: como é um arquivo colado por cima do original, ele pode
+ficar desatualizado se uma versão futura de `zepai/graphiti` mudar a
+estrutura interna deste arquivo. Ao trocar a versão da imagem no compose,
+revalide comparando `docker exec <container> cat
+/app/graph_service/zep_graphiti.py` original contra a versão patchada antes
+de assumir que o mount ainda faz sentido — e confira se o bug upstream
+ainda existe (pode ter sido corrigido, tornando este patch redundante e
+seguro de remover).
 
 ## Concorrência de ingestão
 
