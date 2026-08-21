@@ -73,6 +73,14 @@ O projeto nasceu como CRM de e-commerce e a comunidade o levou muito além: hoje
 - 🏢 **Multi-tenant + LGPD by-design** — RLS em toda tabela tenant-aware com teste de isolamento como gate de CI; anonimização preferida sobre delete; audit append-only com retenção 5 anos.
 - 🖥️ **Self-hosted de verdade** — seus dados na sua VPS; instalação com 1 comando; sem versão paga, sem feature travada.
 
+### 🧠 Memória e conhecimento dos agentes
+
+O CRM guarda tudo que realmente aconteceu — leads, conversas, mensagens — como **fonte única de verdade** no Postgres. Em cima disso, três camadas opcionais e especializadas dão aos agentes de IA tipos de contexto diferentes, sem se sobrepor: memória por pessoa (fatos soltos sobre um cliente), grafo temporal (como uma relação evoluiu com o tempo) e base de conhecimento institucional (política e procedimento da empresa, não dado de cliente). Se qualquer uma delas for apagada, o CRM continua funcionando normal — são projeções reconstruíveis, nunca a fonte.
+
+<p align="center">
+  <img src=".github/arvore-das-memorias.png" alt="Diagrama: Supabase como fonte única de verdade, com Mem0, Graphiti e Obsidian como camadas de memória especializadas" width="820">
+</p>
+
 ### 🔌 Webhooks & Automações
 
 Todo tenant pode criar **fontes de captação**: um endereço público (`/api/v1/webhooks/in/<token>`) que recebe leads de landing pages, formulários próprios ou ferramentas como Zapier/n8n via POST (JSON ou `application/x-www-form-urlencoded`) e já entra direto no funil/estágio escolhido — sem código, sem integração customizada por tenant. Em cima dessas fontes (e dos outros eventos do CRM — lead mudou de etapa, ganhou tag, chegou mensagem no WhatsApp), o tenant monta **automações**: regras no formato QUANDO/SE/ENTÃO que disparam ações como adicionar tag, mover o lead no funil, atribuir a um atendente, mandar uma mensagem de WhatsApp ou avisar outro sistema via webhook de saída.
