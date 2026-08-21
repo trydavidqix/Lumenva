@@ -23,7 +23,8 @@ ao fim**, falando em português simples, resolvendo os problemas você mesmo, se
 - Um **domínio** (ex: `crm.empresadela.com.br`) para o CRM.
 - Uma conta grátis no **Supabase** (o banco de dados). Você vai guiá-la a criar em
   supabase.com e copiar 3 chaves + a "connection string".
-- Uma chave da **Anthropic** (a IA) — de console.anthropic.com.
+- Uma chave da **Anthropic** (a IA) — de console.anthropic.com. Alternativa
+  gratuita: **Google/Gemini** — de aistudio.google.com/api-keys.
 - O **e-mail e a senha** que ela quer usar para entrar no CRM (o primeiro admin).
 
 ## Passo a passo que você conduz

@@ -250,9 +250,9 @@ Confira em <http://localhost:3030/dashboard/> que o WAHA está respondendo (UI d
 
 ---
 
-## 4. Anthropic + Vercel AI Gateway — IA
+## 4. Anthropic + Vercel AI Gateway (ou Google/Gemini) — IA
 
-**O que é:** O cérebro da IA conversacional (Claude). Usamos o **Vercel AI Gateway** preferencialmente (fallback automático entre provedores, observability, zero data retention) e o Anthropic direto como fallback. **Custo:** pay-per-use. Anthropic dá $5 de crédito grátis ao cadastrar.
+**O que é:** O cérebro da IA conversacional. Usamos o **Vercel AI Gateway** preferencialmente (fallback automático entre provedores, observability, zero data retention), o Anthropic direto como fallback, e o **Google/Gemini** como alternativa gratuita quando nenhum dos dois primeiros está configurado. **Custo:** pay-per-use (Anthropic dá $5 de crédito grátis ao cadastrar; Gemini tem free tier).
 
 ### Opção A — Vercel AI Gateway (recomendado)
 
@@ -278,7 +278,18 @@ VERCEL_AI_GATEWAY_URL=https://ai-gateway.vercel.sh/v1
 ANTHROPIC_API_KEY=sk-ant-api03-...
 ```
 
-> ⚠️ Se as duas chaves estiverem vazias, o worker `ai-response-worker` pula com `skip="ai_gateway_key_missing"` — o app sobe normal, só não responde com IA. Em dev tá ok. Em prod, configure pelo menos uma das duas.
+### Opção C — Google/Gemini direto (alternativa gratuita)
+
+1. Acesse <https://aistudio.google.com/api-keys> → faça login com uma conta Google.
+2. **Create API Key** → copie a chave.
+
+```env
+GOOGLE_API_KEY=...
+```
+
+> Usada quando nenhum provider Anthropic (Gateway, OpenRouter ou direto) está configurado — ver `directProviderIsAnthropic()` em `lib/ai/gateway.ts`. Com só `GOOGLE_API_KEY` preenchida, `defaultBotModel()`/`defaultClassifierModel()` resolvem para `google/gemini-3.7-flash`/`google/gemini-3.6-flash`.
+
+> ⚠️ Se **nenhuma** das três (Gateway, Anthropic, Google) estiver configurada, o worker `ai-response-worker` pula com `skip="ai_gateway_key_missing"` — o app sobe normal, só não responde com IA. Em dev tá ok. Em prod, configure pelo menos uma delas.
 
 ---
 
