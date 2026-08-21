@@ -17,6 +17,7 @@
 import http from 'node:http';
 import { hostname } from 'node:os';
 import { setTimeout as sleep } from 'node:timers/promises';
+import { fileURLToPath } from 'node:url';
 
 import type pg from 'pg';
 
@@ -24,6 +25,12 @@ import { createInboundTurnHandler } from '@/lib/agent-engine/agent/inbound-turn'
 import { createFollowupTurnHandler, type FollowupTurnDeps } from '@/lib/agent-engine/agent/followup-turn';
 import { createCaseReplyTurnHandler } from '@/lib/agent-engine/agent/case-reply-turn';
 import { createOperatorTurnHandler } from '@/lib/agent-engine/agent/operator-turn';
+import { Mem0ContextProvider } from '@/lib/agent-engine/context/mem0-context-provider';
+import { GraphitiContextProvider } from '@/lib/agent-engine/context/graphiti-context-provider';
+import { GraphitiClient } from '@/lib/agent-engine/graph/graphiti-client';
+import { NullGraphContextPort, type GraphContextPort } from '@/lib/agent-engine/graph/port';
+import { Mem0Client } from '@/lib/agent-engine/memory/mem0-client';
+import { NullMemoryPort, type MemoryPort } from '@/lib/agent-engine/memory/port';
 import { completeTurnForEnrollment, createPgAdminClient } from '@/lib/followup/turn-bridge';
 import { seedPlatformPlaybook } from '@/lib/agent-engine/agent/playbook-seed';
 import { runCronLoop } from '@/lib/agent-engine/cron/scheduler';
@@ -61,6 +68,36 @@ export type JobHandler = (job: JobRow, pool: pg.Pool, ctx: JobHandlerContext) =>
 function errMsg(err: unknown): string {
   const message = err instanceof Error ? err.message : String(err);
   return (message.split('\n', 1)[0] ?? '').slice(0, 300);
+}
+
+// Mesmo padrão de workers/memory-projection.handler.ts e
+// workers/graph-projection.handler.ts: sem MEM0_BASE_URL/GRAPHITI_BASE_URL (ou
+// config inválida), o client real lança na construção — cai pro Null port em
+// vez de derrubar o boot do worker. Ambos os Context Providers já checam a
+// feature flag (mem0/graphiti) internamente antes de chamar .search(), então
+// isso é seguro de ficar sempre ligado: sem flag ativa, é no-op.
+function defaultMemoryPort(): MemoryPort {
+  try {
+    return new Mem0Client({
+      baseUrl: process.env.MEM0_BASE_URL ?? '',
+      apiKey: process.env.MEM0_API_KEY ?? '',
+      timeoutMs: Number(process.env.MEM0_TIMEOUT_MS ?? 2_000),
+    });
+  } catch {
+    return new NullMemoryPort();
+  }
+}
+
+function defaultGraphPort(): GraphContextPort {
+  try {
+    return new GraphitiClient({
+      baseUrl: process.env.GRAPHITI_BASE_URL ?? '',
+      apiKey: process.env.GRAPHITI_API_KEY ?? '',
+      timeoutMs: Number(process.env.GRAPHITI_TIMEOUT_MS ?? 2_000),
+    });
+  } catch {
+    return new NullGraphContextPort();
+  }
 }
 
 /**
@@ -358,11 +395,16 @@ export async function startWorker(
   await stopped;
 }
 
-export async function main(): Promise<void> {
-  const env = loadEnv();
-  const log = createLogger();
-  const handlers = new Map<JobKind, JobHandler>();
-  const turnDeps: FollowupTurnDeps = {
+/**
+ * Deps compartilhados pelos 4 handlers de turno (inbound/followup/case-reply/
+ * operator). Extraído de `main()` pra ser testável sem precisar de pool real —
+ * `semanticContextProvider`/`graphContextProvider` (Mem0/Graphiti) nunca ficam
+ * `undefined`: com env ausente, o client real lança e cai pro Null port.
+ */
+export function buildTurnDeps(env: Env, log: Logger): FollowupTurnDeps {
+  return {
+    semanticContextProvider: new Mem0ContextProvider({ memory: defaultMemoryPort() }),
+    graphContextProvider: new GraphitiContextProvider({ graph: defaultGraphPort() }),
     crmCfg: crmEdgeConfigFromEnv({
       SUPABASE_URL: env.NEXT_PUBLIC_SUPABASE_URL,
       SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY,
@@ -420,6 +462,13 @@ export async function main(): Promise<void> {
     completeFollowupTurn: (pool, { organizationId, enrollmentId, nodeId, result }) =>
       completeTurnForEnrollment(createPgAdminClient(pool), organizationId, enrollmentId, nodeId, result),
   };
+}
+
+export async function main(): Promise<void> {
+  const env = loadEnv();
+  const log = createLogger();
+  const handlers = new Map<JobKind, JobHandler>();
+  const turnDeps = buildTurnDeps(env, log);
   handlers.set('inbound_turn', createInboundTurnHandler(turnDeps));
   handlers.set('followup_turn', createFollowupTurnHandler(turnDeps));
   handlers.set('case_reply_turn', createCaseReplyTurnHandler(turnDeps));
@@ -431,8 +480,12 @@ export async function main(): Promise<void> {
   await startWorker(env, handlers, log);
 }
 
-// tsx roda este arquivo como entrypoint direto.
-main().catch((err: unknown) => {
-  process.stderr.write(`boot falhou: ${errMsg(err)}\n`);
-  process.exit(1);
-});
+// tsx roda este arquivo como entrypoint direto — guard evita rodar o boot
+// (que exige env real) quando o módulo é só importado, como em main.test.ts
+// pra testar buildTurnDeps() isoladamente.
+if (process.argv[1] !== undefined && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main().catch((err: unknown) => {
+    process.stderr.write(`boot falhou: ${errMsg(err)}\n`);
+    process.exit(1);
+  });
+}

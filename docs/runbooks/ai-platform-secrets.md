@@ -22,6 +22,27 @@ after bootstrap; do not manufacture or paste a value into the CRM before the
 sidecar health and namespace checks have passed. The operational sequence and
 safe wipe procedure are in [`mem0.md`](mem0.md).
 
+## Graphiti optional sidecar
+
+The Phase 4 sidecar (Neo4j + `zepai/graphiti`) introduces its own secret
+group, distinct from Mem0's and from tenant BYOK:
+
+- `GRAPHITI_NEO4J_PASSWORD` — Neo4j `neo4j` user password, only takes effect
+  on first volume init.
+- `GRAPHITI_API_KEY` — shared secret between the CRM app and the sidecar
+  (reflected on both sides via `lib/env.ts`).
+- `GRAPHITI_LLM_API_KEY` — platform-owned credential for whichever
+  OpenAI-compatible LLM/embedder provider backs the sidecar (never a tenant
+  BYOK key from `ai_provider_credentials`).
+- `GRAPHITI_LLM_BASE_URL` / `GRAPHITI_LLM_MODEL` / `GRAPHITI_EMBEDDER_MODEL`
+  — provider-swap config; the provider itself is not sensitive, but treat
+  the triple as one unit with the API key above.
+
+Same rule as Mem0: these live only in the approved self-host runtime/secret
+manager, never in Git, `.env.example` values, fixtures or logs. Full detail
+and the 🟡 known-drift note (VPS `.env` currently ahead of Infisical for
+this group) are in [`graphiti.md`](graphiti.md#segredos-antes-do-bootstrap).
+
 ## Controlled runtime injection
 
 For a controlled local or operator runtime, inject a pre-existing Infisical project with:
