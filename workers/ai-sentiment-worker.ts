@@ -17,13 +17,13 @@ import { generateObject } from "ai";
 import { z } from "zod";
 
 import { computeCost } from "@/lib/ai/cost";
-import { DEFAULT_CLASSIFIER_MODEL, isAiGatewayConfigured, resolveLanguageModel } from "@/lib/ai/gateway";
+import { defaultClassifierModel, isAiGatewayConfigured, resolveLanguageModel } from "@/lib/ai/gateway";
 import { logInvocation } from "@/lib/ai/log-invocation";
 import { SENTIMENT_SYSTEM_PROMPT } from "@/lib/ai/prompts/sentiment";
 import type { EventRow } from "@/lib/event-log/dispatcher";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const SENTIMENT_MODEL = DEFAULT_CLASSIFIER_MODEL; // "anthropic/claude-haiku-4-5"
+const SENTIMENT_MODEL = defaultClassifierModel(); // "anthropic/claude-haiku-4-5" unless GOOGLE_API_KEY is the only provider configured
 const DEFAULT_SENTIMENT_THRESHOLD = 0.3;
 const CLASSIFY_TIMEOUT_MS = 5_000;
 

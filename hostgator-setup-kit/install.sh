@@ -298,6 +298,18 @@ v_anthropic() {
   esac
 }
 
+v_google() {
+  [ -z "$1" ] && return 0   # opcional
+  local code
+  code="$(curl -s -o /dev/null -w '%{http_code}' -m 20 "https://generativelanguage.googleapis.com/v1beta/models?key=$1" 2>/dev/null || echo 000)"
+  case "$code" in
+    2*) return 0;;
+    000) c_ylw "  ⚠ não consegui checar a chave online; sigo com ela."; return 0;;
+    400|401|403) echo "O Google recusou essa chave (${code}). Confira se está ativa em aistudio.google.com/api-keys."; return 1;;
+    *)   c_ylw "  ⚠ o Google respondeu ${code} ao testar a chave; sigo com ela."; return 0;;
+  esac
+}
+
 v_openai() {
   [ -z "$1" ] && return 0   # opcional
   case "$1" in sk-*) ;; *) echo "A chave da OpenAI começa com 'sk-'. Pegue em platform.openai.com > API keys (ou deixe em branco)."; return 1;; esac
@@ -882,7 +894,8 @@ FIELDS=(
   "NEXT_PUBLIC_SUPABASE_ANON_KEY|Supabase anon key (Settings > API)||v_anon||"
   "SUPABASE_SERVICE_ROLE_KEY|Supabase service_role key (Settings > API)||v_service|secret|"
   "SUPABASE_DB_URL|Supabase connection string — Session pooler, modo URI (Settings > Database)||v_db_url|secret|"
-  "ANTHROPIC_API_KEY|Chave da Anthropic — a IA que atende (console.anthropic.com)||v_anthropic|secret|"
+  "ANTHROPIC_API_KEY|Chave da Anthropic — a IA que atende (console.anthropic.com; Enter pula se for usar Google/Gemini abaixo)||v_anthropic|secret|opcional"
+  "GOOGLE_API_KEY|Chave do Google AI Studio (Gemini) — alternativa à Anthropic (aistudio.google.com/api-keys; Enter pula se já deu a da Anthropic)||v_google|secret|opcional"
   "OPENAI_API_KEY|Chave da OpenAI — ouvir áudios do WhatsApp e usar a base de conhecimento (Enter pula)||v_openai|secret|opcional"
   "OWNER_EMAIL|E-mail do primeiro admin (dono)||v_email||"
   "OWNER_PASSWORD|Senha do primeiro admin (mínimo 8 caracteres)||v_password|secret|"
@@ -945,6 +958,13 @@ else
       die "Corrija o .env e rode de novo."
     fi
   done
+fi
+
+# ANTHROPIC_API_KEY e GOOGLE_API_KEY são individualmente opcionais (dá pra pular
+# um dos dois), mas pelo menos um provedor de IA direto precisa existir — sem
+# isso o bot de atendimento e o classificador de sentimento nunca respondem.
+if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -z "${GOOGLE_API_KEY:-}" ]; then
+  die "Falta uma chave de IA: preencha ANTHROPIC_API_KEY (console.anthropic.com) ou GOOGLE_API_KEY (aistudio.google.com/api-keys)."
 fi
 
 # Derivados
@@ -1071,7 +1091,8 @@ umask 077
   printf '# imagem pública para trocar o texto por logo na sidebar. Ver lib/branding.ts.\n'
   envq APP_NAME "$APP_NAME"
   envq APP_LOGO_URL "${APP_LOGO_URL:-}"
-  envq ANTHROPIC_API_KEY "$ANTHROPIC_API_KEY"
+  envq ANTHROPIC_API_KEY "${ANTHROPIC_API_KEY:-}"
+  envq GOOGLE_API_KEY "${GOOGLE_API_KEY:-}"
   envq AI_GATEWAY_API_KEY "${AI_GATEWAY_API_KEY:-}"
   printf '# OpenRouter: alternativa ao AI Gateway para o chat da IA. A ordem de\n'
   printf '# resolução é AI_GATEWAY_API_KEY > OPENROUTER_API_KEY > provider direto,\n'

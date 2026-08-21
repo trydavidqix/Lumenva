@@ -12,6 +12,7 @@
  */
 
 import { createAnthropic } from "@ai-sdk/anthropic";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import type { LanguageModel } from "ai";
 
@@ -25,19 +26,44 @@ export type ModelId =
   | "anthropic/claude-sonnet-5"
   | "anthropic/claude-opus-5"
   | "anthropic/claude-haiku-4-5"
+  | "google/gemini-3.7-flash"
+  | "google/gemini-3.6-flash"
   | "openai/text-embedding-3-small"
   // Allow arbitrary tenant-configured strings without losing autocomplete on the canonical ones.
   | (string & {});
 
-export const DEFAULT_BOT_MODEL: ModelId = "anthropic/claude-sonnet-5";
-export const DEFAULT_CLASSIFIER_MODEL: ModelId = "anthropic/claude-haiku-4-5";
+/**
+ * Platform-level bot/classifier defaults. Functions, not constants: which
+ * model id makes sense depends on which provider is actually configured.
+ * Anthropic stays the default whenever it (or the gateway/OpenRouter, which
+ * both happily route "anthropic/..." ids) is available — this only falls
+ * through to Gemini for installs that deliberately configured GOOGLE_API_KEY
+ * as their platform-level provider instead of Anthropic.
+ */
+function directProviderIsAnthropic(): boolean {
+  return Boolean(env.AI_GATEWAY_API_KEY || env.OPENROUTER_API_KEY || env.ANTHROPIC_API_KEY);
+}
+
+export function defaultBotModel(): ModelId {
+  return directProviderIsAnthropic() || !env.GOOGLE_API_KEY
+    ? "anthropic/claude-sonnet-5"
+    : "google/gemini-3.7-flash";
+}
+
+export function defaultClassifierModel(): ModelId {
+  return directProviderIsAnthropic() || !env.GOOGLE_API_KEY
+    ? "anthropic/claude-haiku-4-5"
+    : "google/gemini-3.6-flash";
+}
+
 export const DEFAULT_EMBEDDING_MODEL: ModelId = "openai/text-embedding-3-small";
 
 export function isAiGatewayConfigured(): boolean {
   return (
     Boolean(env.AI_GATEWAY_API_KEY) ||
     Boolean(env.OPENROUTER_API_KEY) ||
-    Boolean(env.ANTHROPIC_API_KEY)
+    Boolean(env.ANTHROPIC_API_KEY) ||
+    Boolean(env.GOOGLE_API_KEY)
   );
 }
 
@@ -61,7 +87,7 @@ export function isAiGatewayConfigured(): boolean {
  *   2. OpenRouter         -> provider OpenAI-compatível apontado ao endpoint
  *      dela. Os ids da OpenRouter já são `provider/modelo`, então o mesmo id
  *      canônico serve sem tradução.
- *   3. Provider direto     -> Anthropic ou OpenAI, conforme o prefixo do id
+ *   3. Provider direto     -> Anthropic, OpenAI ou Google, conforme o prefixo do id
  *
  * Devolve null quando nada está configurado, para o chamador PULAR com motivo
  * claro em vez de estourar com erro de rede lá dentro.
@@ -86,6 +112,12 @@ export function resolveLanguageModel(model: ModelId): LanguageModel | null {
 
   if (id.startsWith("openai/") && env.OPENAI_API_KEY) {
     return createOpenAI({ apiKey: env.OPENAI_API_KEY })(id.slice("openai/".length));
+  }
+
+  if (id.startsWith("google/") && env.GOOGLE_API_KEY) {
+    return createGoogleGenerativeAI({ apiKey: env.GOOGLE_API_KEY })(
+      id.slice("google/".length),
+    );
   }
 
   return null;
