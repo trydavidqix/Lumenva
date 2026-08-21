@@ -8770,13 +8770,77 @@ comment on column public.automation_rules.last_change_actor_kind is
 notify pgrst, 'reload schema';
 
 -- ---- AI Platform foundation (migration 0116) ----
+-- 0122: repara clones onde ai_platform_feature_flags foi criada fora do pipeline de
+-- migrations com um schema divergente (feature_name/status em vez de feature/mode) —
+-- caso real de produção documentado na migration 0122. Preserva a tabela antiga em vez
+-- de derrubar dado; roda ANTES do create table abaixo pra liberar o nome.
+do $$
+declare
+  v_has_feature_col boolean;
+begin
+  select exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'ai_platform_feature_flags'
+      and column_name = 'feature'
+  ) into v_has_feature_col;
+
+  if not v_has_feature_col and exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'ai_platform_feature_flags'
+  ) then
+    execute 'alter table public.ai_platform_feature_flags rename to ai_platform_feature_flags_legacy_20260821';
+  end if;
+end $$;
 create table if not exists public.ai_platform_feature_flags (
   id uuid primary key default extensions.uuid_generate_v4(), organization_id uuid references public.organizations(id) on delete cascade,
-  feature text not null check (feature in ('langsmith','mem0','llamaindex','graphiti','external_guardrails','n8n','langgraph_proposal_workflow')),
+  -- vocabulário de 'feature' ampliado pela migration 0122 (langgraph_automation_workflow +
+  -- langgraph_lead_scoring_workflow) — CHECK já nasce largo em instalação fresca; o bloco
+  -- idempotente logo abaixo cobre clones existentes que só tinham o CHECK original.
+  feature text not null check (feature in ('langsmith','mem0','llamaindex','graphiti','external_guardrails','n8n','langgraph_proposal_workflow','langgraph_automation_workflow','langgraph_lead_scoring_workflow')),
   mode text not null default 'off' check (mode in ('off','shadow','canary','on')), config jsonb not null default '{}'::jsonb,
   updated_by uuid references auth.users(id) on delete set null, updated_at timestamptz not null default now(), created_at timestamptz not null default now(),
   constraint ai_platform_feature_flags_scope_unique unique nulls not distinct (organization_id, feature)
 );
+-- 0122: amplia o CHECK em clones que já tinham a tabela com o vocabulário antigo
+-- (create table if not exists acima é no-op nesses clones). Idempotente: só troca a
+-- constraint se o CHECK atual ainda não incluir langgraph_automation_workflow.
+do $$
+declare
+  v_conname text;
+begin
+  select conname into v_conname
+  from pg_constraint
+  where conrelid = 'public.ai_platform_feature_flags'::regclass
+    and contype = 'c'
+    and pg_get_constraintdef(oid) ilike '%feature%langgraph_proposal_workflow%'
+    and pg_get_constraintdef(oid) not ilike '%langgraph_automation_workflow%';
+
+  if v_conname is not null then
+    execute format('alter table public.ai_platform_feature_flags drop constraint %I', v_conname);
+    alter table public.ai_platform_feature_flags
+      add constraint ai_platform_feature_flags_feature_check
+      check (feature in (
+        'langsmith','mem0','llamaindex','graphiti','external_guardrails','n8n',
+        'langgraph_proposal_workflow','langgraph_automation_workflow','langgraph_lead_scoring_workflow'
+      ));
+  end if;
+end $$;
+-- 0122: preserva a decisão já tomada e ativa (status='ON', todos os tenants) na tabela
+-- legada renomeada acima — mantém o efeito atual sem regressão, não é promoção nova.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'ai_platform_feature_flags_legacy_20260821'
+  ) then
+    insert into public.ai_platform_feature_flags (organization_id, feature, mode)
+    select null, legacy.feature_name, 'on'
+    from public.ai_platform_feature_flags_legacy_20260821 legacy
+    where legacy.feature_name in ('langgraph_automation_workflow', 'langgraph_lead_scoring_workflow')
+      and legacy.status = 'ON'
+    on conflict (organization_id, feature) do update set mode = excluded.mode, updated_at = now();
+  end if;
+end $$;
 create table if not exists public.ai_projection_ledger (
   id uuid primary key default extensions.uuid_generate_v4(), organization_id uuid not null references public.organizations(id) on delete cascade,
   projection_type text not null check (projection_type in ('memory','graph')), provider text not null, entity_type text not null, entity_id text not null,
