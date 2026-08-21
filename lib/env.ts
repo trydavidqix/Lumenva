@@ -99,6 +99,18 @@ const schema = z.object({
   // platform-level bot/classifier model when neither the gateway nor
   // Anthropic is configured. See resolveLanguageModel() in lib/ai/gateway.ts.
   GOOGLE_API_KEY: z.string().optional().default(""),
+  // Embedding provider override — RAG embeddings only support the Vercel AI
+  // Gateway or raw OpenAI by default (embedText() in lib/ai/embed.ts), both
+  // of which require a paid/card-verified account. Setting these 3 lets a
+  // self-host point embeddings at any OpenAI-compatible endpoint (e.g. NVIDIA
+  // Build's free tier) instead, bypassing the gateway entirely for this call
+  // — same swap pattern already used for the Graphiti sidecar's LLM/embedder
+  // (GRAPHITI_LLM_BASE_URL). Takes priority over AI_GATEWAY_API_KEY/
+  // OPENAI_API_KEY for embeddings specifically when all 3 are set; chat/
+  // gateway resolution elsewhere in the app is unaffected.
+  EMBEDDING_BASE_URL: z.string().url().optional().or(z.literal("")).default(""),
+  EMBEDDING_API_KEY: z.string().optional().default(""),
+  EMBEDDING_MODEL_ID: z.string().optional().default(""),
 
   // AI Platform Foundation — all external providers start disabled; a kill
   // switch wins over any tenant or global database flag.

@@ -124,9 +124,15 @@ export function resolveLanguageModel(model: ModelId): LanguageModel | null {
 }
 
 export function isEmbeddingProviderConfigured(): boolean {
-  // Embeddings go through the gateway when `AI_GATEWAY_API_KEY` is set;
-  // otherwise the worker calls `openai/...` directly via OPENAI_API_KEY.
-  return Boolean(env.AI_GATEWAY_API_KEY) || Boolean(env.OPENAI_API_KEY);
+  // Custom override (any OpenAI-compatible endpoint, e.g. NVIDIA Build) takes
+  // priority — see embedText() in lib/ai/embed.ts. Otherwise embeddings go
+  // through the gateway when `AI_GATEWAY_API_KEY` is set; otherwise the
+  // worker calls `openai/...` directly via OPENAI_API_KEY.
+  return (
+    (Boolean(env.EMBEDDING_BASE_URL) && Boolean(env.EMBEDDING_API_KEY)) ||
+    Boolean(env.AI_GATEWAY_API_KEY) ||
+    Boolean(env.OPENAI_API_KEY)
+  );
 }
 
 /**

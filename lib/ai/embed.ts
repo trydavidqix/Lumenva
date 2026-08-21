@@ -37,8 +37,13 @@ export async function embedText(
     throw new Error("embed_unavailable: no AI_GATEWAY_API_KEY or OPENAI_API_KEY configured");
   }
   const model = opts.model ?? DEFAULT_EMBEDDING_MODEL;
-  const cfg = gatewayConfig();
+  const customEmbedding = env.EMBEDDING_BASE_URL && env.EMBEDDING_API_KEY;
+  const cfg = customEmbedding ? null : gatewayConfig();
 
+  // Override custom (qualquer endpoint compatível com OpenAI, ex.: NVIDIA
+  // Build) tem prioridade — evita o Gateway/OpenAI pagos quando o self-host
+  // aponta pra um provider gratuito. Mesmo padrão do GRAPHITI_LLM_BASE_URL.
+  //
   // COM gateway: a string `openai/text-embedding-3-small` é roteada por ele, que
   // lê `AI_GATEWAY_API_KEY` do process.env. Headers vão junto p/ observabilidade
   // por tenant + ZDR.
@@ -48,11 +53,15 @@ export async function embedText(
   // pelo gateway da Vercel mesmo sem chave, entrando no plano anônimo, cujo teto
   // devolve `GatewayRateLimitError` e derruba a busca na base de conhecimento.
   // Este arquivo prometia esse caminho no cabeçalho desde sempre e não o tinha.
-  const resolvido = cfg
-    ? model
-    : createOpenAI({ apiKey: env.OPENAI_API_KEY }).textEmbeddingModel(
-        String(model).replace(/^openai\//, ""),
-      );
+  const resolvido = customEmbedding
+    ? createOpenAI({ apiKey: env.EMBEDDING_API_KEY, baseURL: env.EMBEDDING_BASE_URL }).textEmbeddingModel(
+        env.EMBEDDING_MODEL_ID || String(model).replace(/^openai\//, ""),
+      )
+    : cfg
+      ? model
+      : createOpenAI({ apiKey: env.OPENAI_API_KEY }).textEmbeddingModel(
+          String(model).replace(/^openai\//, ""),
+        );
 
   const result = await embed({
     model: resolvido,
