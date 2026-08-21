@@ -367,6 +367,18 @@ Resend.
 5. **`lib/agent-engine/agent/inbound-turn.ts` com 1789 linhas** — 2,4× o segundo maior arquivo
    de lógica (`AgentForm.tsx`, 746), e é o hot path do produto. Cresceu ~200 linhas desde a
    primeira medição desta auditoria.
+6. 🟡 **Debug temporário de realtime, deployado na VPS de produção mas NÃO commitado no
+   git** (`lib/supabase/browser.ts`, `hooks/realtime/useRealtimeChannel.ts`) — investigação de
+   2026-08-21 de um bug intermitente (mensagens do WhatsApp não atualizam ao vivo no inbox sem
+   refresh manual). `console.warn("[TEMP DEBUG realtime] ...")` foi adicionado nos dois arquivos
+   e o build correspondente está rodando em `/root/deskcommcrm` (container `app`) desde então —
+   mas `CLAUDE.md` proíbe `console.log`/debug em código merged, então essas duas mudanças ficam
+   fora do git de propósito. `git status` local mostra os dois arquivos como modificados; isso é
+   deliberado, não deriva acidental. SDK/rede do Supabase Realtime foram provados corretos
+   independentemente (script Node.js local conectou e recebeu evento mesmo anonimamente); a
+   hipótese líder é falha intermitente de auth no socket realtime ou expiração de JWT em aba de
+   longa duração. **Ação pendente:** reverter os dois arquivos na VPS (rebuild + redeploy) assim
+   que o bug reproduzir com log capturado, ou quando a investigação for formalmente abandonada.
 
 ---
 

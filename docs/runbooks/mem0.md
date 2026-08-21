@@ -1,5 +1,19 @@
 # Mem0 OSS: operação do sidecar opcional
 
+## Wiring no worker — ligado no código, ainda `off` por flag
+
+`workers/agent-worker/main.ts` constrói `Mem0ContextProvider` (via
+`buildTurnDeps()`, testado em `main.test.ts`) e injeta em todos os 4 tipos
+de turno (`inbound_turn`, `followup_turn`, `case_reply_turn`,
+`operator_turn`). Isso significa que o código **já está pronto pra
+consultar o Mem0 real** — mas continua um no-op enquanto não houver linha
+em `ai_platform_feature_flags` com `feature='mem0'` e `mode` diferente de
+`off` (nenhuma existe hoje): o provider checa a flag internamente antes de
+chamar `.search()`, então wiring de código e ativação de produto são dois
+passos independentes por desenho. Sem `MEM0_BASE_URL`/`MEM0_API_KEY` no
+ambiente, o boot cai pro `NullMemoryPort` em vez de falhar — mesmo padrão
+já usado em `workers/memory-projection.handler.ts`.
+
 ## Limites e estado seguro
 
 O Mem0 é uma projeção semântica descartável, nunca a fonte de verdade do CRM.

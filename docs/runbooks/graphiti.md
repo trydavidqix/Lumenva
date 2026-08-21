@@ -1,5 +1,17 @@
 # Graphiti + Neo4j: operação do sidecar opcional
 
+## Wiring no worker — ligado no código, ainda `off` por flag
+
+`workers/agent-worker/main.ts` constrói `GraphitiContextProvider` (via
+`buildTurnDeps()`, testado em `main.test.ts`) e injeta em todos os 4 tipos
+de turno, junto com o `Mem0ContextProvider` (mesmo helper). Assim como o
+Mem0, o código está pronto mas continua no-op sem uma linha em
+`ai_platform_feature_flags` com `feature='graphiti'` e `mode` diferente de
+`off` (nenhuma existe hoje) — o provider checa a flag antes de chamar
+`.search()`. Sem `GRAPHITI_BASE_URL`/`GRAPHITI_API_KEY`, o boot cai pro
+`NullGraphContextPort` em vez de falhar, mesmo padrão de
+`workers/graph-projection.handler.ts`.
+
 ## Limites e estado seguro
 
 Graphiti é uma projeção temporal/relacional reconstruível, nunca a fonte de
@@ -190,6 +202,32 @@ envia em `X-Api-Key`. Vale repetir: esta imagem do Graphiti não valida essa
 key no servidor (não há middleware de auth) — o isolamento real é a rede
 `ai-graph-internal`. A variável é mantida para never-regress se uma versão
 futura da imagem adotar autenticação de verdade.
+
+### ✅ Drift entre a VPS e o Infisical — fechado em 2026-08-21
+
+Durante a sessão de validação de 2026-08-21 (testes com Gemini e depois
+NVIDIA Build), seis valores foram gerados/editados direto no
+`/root/deskcommcrm/.env` da VPS via SSH (regeneração de senha do Neo4j,
+troca de provider de LLM/embedder) e ficaram temporariamente fora do
+projeto Infisical "DeskcommCRM - Lumenva" (fonte canônica de segredos desse
+ambiente, ver `docs/runbooks/ai-platform-secrets.md`). Três já existiam lá
+com valor placeholder `"unused"` (`GRAPHITI_API_KEY`,
+`GRAPHITI_NEO4J_PASSWORD`, `GRAPHITI_LLM_API_KEY`); três nunca tinham sido
+criados (`GRAPHITI_LLM_BASE_URL`, `GRAPHITI_LLM_MODEL`,
+`GRAPHITI_EMBEDDER_MODEL`).
+
+Corrigido via `infisical secrets set --file <arquivo com os 6 pares
+chave=valor lidos direto do .env da VPS> --env prod` — projeto/ambiente
+confirmados pelo próprio usuário (login interativo `infisical login`,
+seleção do projeto "DeskcommCRM - Lumenva"). Os 6 valores foram lidos da VPS
+e escritos no Infisical sem passar pelo terminal/log em texto plano (arquivo
+temporário local apagado logo depois). Confirmado por leitura pós-escrita
+(`infisical secrets --env prod`, listando só as 6 chaves, sem valores) que
+as 6 existem no ambiente `prod` do projeto correto.
+
+Environment slug correto no Infisical é `prod`, não `production` (o slug
+`production` não existe nesse projeto — descoberto por 404 durante esta
+correção).
 
 Variáveis não sensíveis já têm default em `.env.example`:
 
