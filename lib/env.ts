@@ -95,6 +95,10 @@ const schema = z.object({
   VERCEL_AI_GATEWAY_URL: z.string().optional().default(""),
   ANTHROPIC_API_KEY: z.string().optional().default(""),
   OPENAI_API_KEY: z.string().optional().default(""),
+  // Google (Gemini) direct provider — alternative to ANTHROPIC_API_KEY for the
+  // platform-level bot/classifier model when neither the gateway nor
+  // Anthropic is configured. See resolveLanguageModel() in lib/ai/gateway.ts.
+  GOOGLE_API_KEY: z.string().optional().default(""),
 
   // AI Platform Foundation — all external providers start disabled; a kill
   // switch wins over any tenant or global database flag.
@@ -249,9 +253,9 @@ export const env = parsed.data;
 
 // Soft warning for env-gated AI keys (worker degrades gracefully but operators
 // should know when the bot is silent for config reasons).
-if (!env.AI_GATEWAY_API_KEY && !env.ANTHROPIC_API_KEY) {
+if (!env.AI_GATEWAY_API_KEY && !env.ANTHROPIC_API_KEY && !env.GOOGLE_API_KEY) {
   console.warn(
-    "[env] No AI_GATEWAY_API_KEY or ANTHROPIC_API_KEY set — ai-response-worker will skip with reason='ai_gateway_key_missing'.",
+    "[env] No AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY, or GOOGLE_API_KEY set — ai-response-worker will skip with reason='ai_gateway_key_missing'.",
   );
 }
 if (!env.OPENAI_API_KEY) {
