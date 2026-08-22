@@ -173,6 +173,54 @@ describe("devolver o atendimento: as três travas", () => {
     expect(await isLeadInHandoff(pool, GOV_ORG, ESC_CONTATO)).toBe(true);
   });
 
+  it("agora também abre um agent_case formal — senão a continuidade da volta não tem o que ler", async () => {
+    // Achado ao vivo (teste E2E adversarial, squad Lumenva): este handoff nativo
+    // marcava force_human/silêncio mas nunca abria um caso formal. lerContinuidadeHumana
+    // só lê agent_cases/agent_case_events — sem esta linha, devolverAtendimentoAoAgente
+    // nunca gravava a nota de resolução, e o rolling_summary do checkpoint ficava
+    // contaminado para sempre com o motivo do handoff, reabrindo escalação sozinho em
+    // turnos futuros sem relação com o episódio original.
+    const { rows } = await pool.query<{ status: string; blocker: string; source: string }>(
+      `select status, blocker, source from agent_cases
+        where organization_id = $1 and conversation_id = $2
+        order by created_at desc limit 1`,
+      [GOV_ORG, ESC_CONVERSA],
+    );
+    expect(rows[0]?.status).toBe("awaiting_human");
+    expect(rows[0]?.blocker).toBe("requested_human");
+    // Fonte é o runtime decidindo (jailbreak/regex), não o modelo escolhendo uma tool —
+    // mesma distinção de actor_kind que o resto do arquivo protege.
+    expect(rows[0]?.source).toBe("guardrail_autofallback");
+
+    const { rows: eventos } = await pool.query<{ kind: string; actor_kind: string }>(
+      `select kind, actor_kind from agent_case_events
+        where case_id = (
+          select id from agent_cases
+           where organization_id = $1 and conversation_id = $2
+           order by created_at desc limit 1
+        )`,
+      [GOV_ORG, ESC_CONVERSA],
+    );
+    expect(eventos.some((e) => e.kind === "opened" && e.actor_kind === "system")).toBe(true);
+  });
+
+  it("chamar de novo no mesmo episódio não abre um segundo caso — dedup, não duplicata", async () => {
+    const { rows: antes } = await pool.query<{ n: string }>(
+      `select count(*)::text as n from agent_cases where organization_id = $1 and conversation_id = $2`,
+      [GOV_ORG, ESC_CONVERSA],
+    );
+    await performHumanHandoff(
+      pool,
+      { tenantId: GOV_ORG, leadId: ESC_CONTATO, conversationId: ESC_CONVERSA },
+      { reason: "requested_human de novo", conversationSummary: "resumo 2", log: logMudo },
+    );
+    const { rows: depois } = await pool.query<{ n: string }>(
+      `select count(*)::text as n from agent_cases where organization_id = $1 and conversation_id = $2`,
+      [GOV_ORG, ESC_CONVERSA],
+    );
+    expect(depois[0]!.n).toBe(antes[0]!.n);
+  });
+
   it("a IDA também aparece na linha do tempo — não só o caminho do CRM", async () => {
     // `triggerHandoff` (orquestrador do CRM) sempre gravou `handoff_triggered`;
     // `performHumanHandoff` (harness e o "Assumir eu" dos casos) não gravava
