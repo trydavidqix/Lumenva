@@ -13,6 +13,7 @@ vi.mock('@composio/core', () => ({
   Composio: class {
     create = refs.createMock;
   },
+  SessionPreset: { DIRECT_TOOLS: 'direct_tools' },
 }));
 vi.mock('@composio/vercel', () => ({ VercelProvider: vi.fn() }));
 
@@ -42,7 +43,10 @@ describe('buildComposioTurnTools', () => {
 
   it('COM key e apps, cria sessão com os toolkits certos e devolve as tools', async () => {
     const result = await buildComposioTurnTools('key-123', 'org-1', ['googlecalendar', 'gmail'], fakeLog);
-    expect(refs.createMock).toHaveBeenCalledWith('org-1', { toolkits: ['googlecalendar', 'gmail'] });
+    expect(refs.createMock).toHaveBeenCalledWith('org-1', {
+      toolkits: ['googlecalendar', 'gmail'],
+      sessionPreset: 'direct_tools',
+    });
     expect(result?.toolIds).toEqual(['GOOGLECALENDAR_CREATE_EVENT']);
   });
 

@@ -14,7 +14,7 @@
  * silencioso (null), nunca falha o turno — mesmo contrato de "privilégio,
  * não invariante" do restante do 2B-tools.
  */
-import { Composio } from '@composio/core';
+import { Composio, SessionPreset } from '@composio/core';
 import { VercelProvider } from '@composio/vercel';
 import type { Tool } from 'ai';
 
@@ -55,7 +55,18 @@ export async function buildComposioTurnTools(
     const composio = getClient(apiKey);
     // `toolkits` é config de CRIAÇÃO da sessão (não parâmetro de `.tools()`) —
     // ver dist/docs/reference/sdk-reference/typescript/sessions.mdx do pacote.
-    const session = await composio.create(userId, { toolkits: apps });
+    //
+    // `sessionPreset: DIRECT_TOOLS` é OBRIGATÓRIO: sem ele, a sessão vem no
+    // modo Tool Router — só 6 meta-tools genéricas (COMPOSIO_SEARCH_TOOLS,
+    // COMPOSIO_MULTI_EXECUTE_TOOL, COMPOSIO_MANAGE_CONNECTIONS,
+    // COMPOSIO_GET_TOOL_SCHEMAS e, mais grave, COMPOSIO_REMOTE_BASH_TOOL +
+    // COMPOSIO_REMOTE_WORKBENCH — execução remota de shell, inaceitável num
+    // agente de atendimento). Com o preset, `session.tools()` já devolve as
+    // tools REAIS do toolkit (ex. GOOGLECALENDAR_CREATE_EVENT) direto.
+    const session = await composio.create(userId, {
+      toolkits: apps,
+      sessionPreset: SessionPreset.DIRECT_TOOLS,
+    });
     const tools = await session.tools();
     return { tools: tools as Record<string, Tool>, toolIds: Object.keys(tools) };
   } catch (err) {
