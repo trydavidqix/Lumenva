@@ -21,6 +21,8 @@ import {
   moveLeadHandler,
 } from "@/app/api/v1/leads/_handler";
 import { createLeadSchema, updateLeadSchema } from "@/lib/schemas/leads";
+import { resolveActiveLeadForContact, type LeadCandidate } from "@/lib/leads/active-lead";
+import { buildLeadActivityRow } from "@/lib/leads/activity-emitter";
 import { resolveUserNames } from "./_users";
 import type { McpContext, McpToolDefinition } from "../types";
 
@@ -205,6 +207,85 @@ export const crmCreateLead: McpToolDefinition<typeof createInputShape> = {
       parsed,
     );
     return { lead };
+  },
+};
+
+// ---------------------------------------------------------------------------
+// add lead note (nota do NEGÓCIO, roteada por contato — não confundir com
+// crm_add_case_note, que grava num caso de escalação humana já aberto)
+// ---------------------------------------------------------------------------
+
+const addLeadNoteInputShape = {
+  contact_id: z.string().uuid(),
+  note: z.string().trim().min(1).max(4000),
+};
+
+/**
+ * Mesma decisão de roteamento contato→negócio de `emitAgentActivityForContact`
+ * (lib/leads/agent-activity.ts), portada pro contexto MCP: aquela função usa
+ * pg.Pool (motor do agente, fora do request), e aqui só existe `ctx.supabase`
+ * (server core do MCP). A lógica de decisão (`resolveActiveLeadForContact`,
+ * `buildLeadActivityRow`) é a MESMA função importada, só o I/O muda.
+ */
+export const crmAddLeadNote: McpToolDefinition<typeof addLeadNoteInputShape> = {
+  name: "crm_add_lead_note",
+  description:
+    "Registra uma nota na timeline do NEGÓCIO (lead) aberto do contato — briefing, preferências, " +
+    "o que o cliente pediu. Recusa se o contato não tiver negócio aberto ou tiver mais de um " +
+    "(ambíguo); nesse caso, use crm_create_lead primeiro.",
+  inputSchema: addLeadNoteInputShape,
+  category: "write",
+  requiresRole: "agent",
+  requiresScope: "mcp:write",
+  handler: async (input, ctx) => {
+    const { data: candidatos, error: errCand } = await ctx.supabase
+      .from("crm_leads")
+      .select("id, organization_id, pipeline_id, status, last_activity_at, created_at")
+      .eq("organization_id", ctx.organizationId)
+      .eq("contact_id", input.contact_id);
+    if (errCand) throw new Error(`erro ao buscar leads do contato: ${errCand.message}`);
+
+    const { data: pipelinesDefault } = await ctx.supabase
+      .from("crm_pipelines")
+      .select("id")
+      .eq("organization_id", ctx.organizationId)
+      .eq("is_default", true)
+      .eq("is_archived", false)
+      .limit(1);
+
+    const alvo = resolveActiveLeadForContact((candidatos ?? []) as LeadCandidate[], {
+      defaultPipelineId: pipelinesDefault?.[0]?.id ?? null,
+    });
+    if (!alvo.routed) throw new Error(alvo.reason);
+
+    const row = buildLeadActivityRow({
+      organizationId: ctx.organizationId,
+      leadId: alvo.leadId,
+      contactId: input.contact_id,
+      type: "note",
+      sourceModule: "mcp.crm_add_lead_note",
+      actor: ctx.actor,
+      reason: input.note,
+      payload: {},
+    });
+
+    const { error: errInsert } = await ctx.supabase.from("crm_lead_activities").insert({
+      organization_id: row.organization_id,
+      lead_id: row.lead_id,
+      contact_id: row.contact_id,
+      type: row.type,
+      source_module: row.source_module,
+      source_id: row.source_id,
+      actor_kind: row.actor_kind,
+      actor_agent_id: row.actor_agent_id,
+      performed_by_user_id: row.performed_by_user_id,
+      reason: row.reason,
+      evidence: row.evidence,
+      payload: row.payload,
+    });
+    if (errInsert) throw new Error(`erro ao gravar nota: ${errInsert.message}`);
+
+    return { lead_id: alvo.leadId, recorded: true };
   },
 };
 
