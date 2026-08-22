@@ -1,7 +1,8 @@
 "use client";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { useRealtimeChannel } from "@/hooks/realtime/useRealtimeChannel";
+import { useRefetchDeSeguranca } from "@/hooks/realtime/useRefetchDeSeguranca";
 import { apiClient } from "@/lib/api/client";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import type { Conversation } from "@/lib/types/messaging";
@@ -42,6 +43,19 @@ export interface ConversationsFilters {
 interface ListResponse {
   data: ConversationWithContact[];
   meta?: { cursor?: string | null; has_more?: boolean };
+}
+
+/**
+ * Assinatura pro detector de perda (`useRefetchDeSeguranca`): sensível a
+ * exatamente o que o canal `conversations` deveria trazer — quantidade e a
+ * conversa mais recentemente atualizada. Exportada pura para ser testável
+ * sem montar QueryClient/Supabase mock.
+ */
+export function assinaturaConversas(d: InfiniteData<ListResponse> | undefined): string {
+  const todas = d?.pages.flatMap((p) => p.data) ?? [];
+  let maior = "";
+  for (const c of todas) if (c.updated_at > maior) maior = c.updated_at;
+  return `${todas.length}:${maior}`;
 }
 
 export function useConversationsRealtime(
@@ -88,7 +102,7 @@ export function useConversationsRealtime(
   // com o filtro amplo `organization_id=eq.<org>` abaixo. Prova do filtro em
   // tests/invariants/gov-5-visibility-scope.test.ts (SELECT sob role agent = 0 rows
   // para conversa de outro atendente — o mesmo SELECT que o Realtime executa).
-  useRealtimeChannel({
+  const { ultimaEntrega } = useRealtimeChannel({
     name: orgId ? `inbox-${orgId}` : "inbox-disabled",
     postgresChanges: orgId
       ? {
@@ -99,6 +113,16 @@ export function useConversationsRealtime(
         }
       : undefined,
     onChange,
+    enabled: !!orgId,
+  });
+
+  // A REDE DE SEGURANÇA (mesmo padrão de hooks/kanban/useBoard.ts). Sem ela, um
+  // canal que morre calado deixa a LISTA de conversas congelada — conversa nova
+  // não aparece, e a que já está aberta não sobe pro topo quando chega mensagem.
+  useRefetchDeSeguranca<InfiniteData<ListResponse>>({
+    queryKey,
+    assinatura: assinaturaConversas,
+    ultimaEntrega,
     enabled: !!orgId,
   });
 
