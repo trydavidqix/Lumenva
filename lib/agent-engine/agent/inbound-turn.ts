@@ -2477,6 +2477,41 @@ export async function runAgentTurn(
     );
   }
 
+  // O modelo pode terminar o turno com texto pronto na cabeça e nunca chamar
+  // `send_message` — nenhum gate roda (eles vivem dentro do execute da tool),
+  // nenhum erro é lançado, e o log final fica idêntico ao de um turno que
+  // legitimamente não precisava responder. Só em `inbound_turn` isso é
+  // suspeito: o cliente mandou mensagem e está esperando — nos outros kinds
+  // (follow-up, operador) silêncio pode ser a decisão certa. Sem fail-safe de
+  // reenvio aqui de propósito (mudaria comportamento de envio); isto só torna
+  // visível o que hoje é indistinguível no log.
+  if (job.kind === 'inbound_turn' && outcomes.length === 0 && turn.result.text.trim() !== '') {
+    runLog.warn('turno concluído sem nenhum envio, mas o modelo gerou texto final — cliente pode ter ficado sem resposta', {
+      job_id: job.id,
+    });
+    try {
+      await pool.query(
+        `insert into agent_inbox_items (organization_id, kind, severity, title, body, ref_kind, ref_id)
+         select $1, 'other', 'warning', $2, $3, 'contact', $4
+         where not exists (
+           select 1 from agent_inbox_items
+           where organization_id = $1 and kind = 'other' and ref_kind = 'contact' and ref_id = $4
+             and title = $2 and status = 'open'
+         )`,
+        [
+          tenantId,
+          'Turno sem envio — modelo gerou resposta mas não chamou send_message',
+          `job_id ${job.id}. O cliente mandou mensagem e o agente processou o turno, mas nunca chamou a ferramenta de envio — pode ter ficado sem resposta.`,
+          leadId,
+        ],
+      );
+    } catch (err) {
+      runLog.error('falha ao registrar alerta de turno sem envio (segue)', {
+        error: err instanceof Error ? err.name : 'unknown',
+      });
+    }
+  }
+
   await mcpCleanup?.();
 
   runLog.info('turno do agente concluído', {
