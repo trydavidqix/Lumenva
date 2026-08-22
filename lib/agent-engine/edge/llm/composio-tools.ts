@@ -36,25 +36,44 @@ export interface ComposioTurnTools {
   toolIds: string[];
 }
 
+/** Toolkit slug é o prefixo do tool slug até o primeiro `_`, minúsculo — ex.:
+ *  GOOGLECALENDAR_CREATE_EVENT → googlecalendar. É como a Composio nomeia. */
+function toolkitOf(toolSlug: string): string {
+  return toolSlug.slice(0, toolSlug.indexOf('_')).toLowerCase();
+}
+
 /**
  * @param userId Identidade da CONTA CONECTADA na Composio (não é o lead nem o
  *   operador do CRM) — cada org self-host que configurar Composio conecta a
  *   própria conta (Google Workspace da empresa) sob um id estável escolhido
  *   por ela; aqui usamos a própria organizationId do tenant, que já é estável
  *   e único por design, sem inventar um terceiro identificador.
+ * @param toolSlugs Tool slugs EXATOS da Composio (ex. "GOOGLECALENDAR_CREATE_EVENT"),
+ *   não toolkit slugs. Medido ao vivo: pedir o toolkit inteiro (`toolkits:
+ *   ['googlecalendar']` sem filtro de `tools`) trouxe as 44 tools do Calendar
+ *   pro prompt — 312k input tokens numa chamada só, 28s de latência, ~14
+ *   centavos. O filtro por tool específica evita isso.
  */
 export async function buildComposioTurnTools(
   apiKey: string,
   userId: string,
-  apps: string[],
+  toolSlugs: string[],
   log: Logger,
 ): Promise<ComposioTurnTools | null> {
-  if (apiKey === '' || apps.length === 0) return null;
+  if (apiKey === '' || toolSlugs.length === 0) return null;
 
   try {
     const composio = getClient(apiKey);
-    // `toolkits` é config de CRIAÇÃO da sessão (não parâmetro de `.tools()`) —
-    // ver dist/docs/reference/sdk-reference/typescript/sessions.mdx do pacote.
+    const porToolkit: Record<string, string[]> = {};
+    for (const slug of toolSlugs) {
+      const tk = toolkitOf(slug);
+      (porToolkit[tk] ??= []).push(slug);
+    }
+
+    // `toolkits`/`tools` são config de CRIAÇÃO da sessão (não parâmetro de
+    // `.tools()`) — ver dist/docs/reference/sdk-reference/typescript/
+    // sessions.mdx do pacote. `tools: {<toolkit>: [<slug>, ...]}` restringe a
+    // sessão às tools exatas, em vez do toolkit inteiro.
     //
     // `sessionPreset: DIRECT_TOOLS` é OBRIGATÓRIO: sem ele, a sessão vem no
     // modo Tool Router — só 6 meta-tools genéricas (COMPOSIO_SEARCH_TOOLS,
@@ -62,9 +81,10 @@ export async function buildComposioTurnTools(
     // COMPOSIO_GET_TOOL_SCHEMAS e, mais grave, COMPOSIO_REMOTE_BASH_TOOL +
     // COMPOSIO_REMOTE_WORKBENCH — execução remota de shell, inaceitável num
     // agente de atendimento). Com o preset, `session.tools()` já devolve as
-    // tools REAIS do toolkit (ex. GOOGLECALENDAR_CREATE_EVENT) direto.
+    // tools REAIS pedidas (ex. GOOGLECALENDAR_CREATE_EVENT) direto.
     const session = await composio.create(userId, {
-      toolkits: apps,
+      toolkits: Object.keys(porToolkit),
+      tools: porToolkit,
       sessionPreset: SessionPreset.DIRECT_TOOLS,
     });
     const tools = await session.tools();

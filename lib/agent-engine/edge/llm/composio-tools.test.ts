@@ -30,21 +30,30 @@ beforeEach(() => {
 
 describe('buildComposioTurnTools', () => {
   it('SEM api key, devolve null sem chamar a Composio', async () => {
-    const result = await buildComposioTurnTools('', 'org-1', ['googlecalendar'], fakeLog);
+    const result = await buildComposioTurnTools('', 'org-1', ['GOOGLECALENDAR_CREATE_EVENT'], fakeLog);
     expect(result).toBeNull();
     expect(refs.createMock).not.toHaveBeenCalled();
   });
 
-  it('SEM apps habilitados, devolve null sem chamar a Composio', async () => {
+  it('SEM tool slugs habilitados, devolve null sem chamar a Composio', async () => {
     const result = await buildComposioTurnTools('key-123', 'org-1', [], fakeLog);
     expect(result).toBeNull();
     expect(refs.createMock).not.toHaveBeenCalled();
   });
 
-  it('COM key e apps, cria sessão com os toolkits certos e devolve as tools', async () => {
-    const result = await buildComposioTurnTools('key-123', 'org-1', ['googlecalendar', 'gmail'], fakeLog);
+  it('COM key e tool slugs, cria sessão filtrada por toolkit+tool específica e devolve as tools', async () => {
+    const result = await buildComposioTurnTools(
+      'key-123',
+      'org-1',
+      ['GOOGLECALENDAR_CREATE_EVENT', 'GOOGLECALENDAR_FIND_FREE_SLOTS', 'GMAIL_SEND_EMAIL'],
+      fakeLog,
+    );
     expect(refs.createMock).toHaveBeenCalledWith('org-1', {
       toolkits: ['googlecalendar', 'gmail'],
+      tools: {
+        googlecalendar: ['GOOGLECALENDAR_CREATE_EVENT', 'GOOGLECALENDAR_FIND_FREE_SLOTS'],
+        gmail: ['GMAIL_SEND_EMAIL'],
+      },
       sessionPreset: 'direct_tools',
     });
     expect(result?.toolIds).toEqual(['GOOGLECALENDAR_CREATE_EVENT']);
@@ -52,7 +61,7 @@ describe('buildComposioTurnTools', () => {
 
   it('se a Composio falhar, devolve null e loga — nunca lança', async () => {
     refs.createMock.mockRejectedValueOnce(new Error('composio fora do ar'));
-    const result = await buildComposioTurnTools('key-123', 'org-1', ['googlecalendar'], fakeLog);
+    const result = await buildComposioTurnTools('key-123', 'org-1', ['GOOGLECALENDAR_CREATE_EVENT'], fakeLog);
     expect(result).toBeNull();
     expect(fakeLog.error).toHaveBeenCalledWith(
       'tools Composio não montadas — turno segue sem elas',
