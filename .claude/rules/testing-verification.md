@@ -15,6 +15,16 @@ Consequência direta: não existe mais gate de CI em PR. Verificação local
 (`pnpm typecheck && pnpm lint && pnpm test:unit`; `pnpm test:db` quando schema/RLS mudou) e Vercel
 Preview passam a ser a prova primária, não um complemento ao que o CI cobriria.
 
+**Incidente 2026-08-22 (resolvido):** todo deploy Vercel (Preview e produção) ficou em `ERROR`
+desde o commit `07874472` (bem antes de 2026-08-20) — `app/api/v1/cron/flywheel-judge-loop/route.ts`
+declarava `maxDuration = 600`, acima do teto de 300s do plano Hobby. O build passava limpo; a
+Vercel derrubava no passo `patchBuild` com `errorCode: "invalid_max_duration"`. Ou seja: por um
+período a "prova primária" descrita acima estava **sempre vermelha**, para qualquer commit,
+inclusive os que só tocavam documentação — quem seguisse esta regra ao pé da letra nunca teria um
+Preview verde para confiar. Corrigido baixando o `maxDuration` para 300 (commit `f0f62535`,
+confirmado `READY` via `mcp__vercel__list_deployments`). Se o cron precisar de mais que 5min no
+futuro, a correção é upgrade de plano — não subir o número de novo sem medir contra o teto atual.
+
 ## Cadência do Vercel Preview: só no fim da tarefa
 
 Decisão explícita do dono do repositório, reforça uma política já em vigor sobre a cota de
