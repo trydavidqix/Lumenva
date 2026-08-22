@@ -42,6 +42,8 @@
     "@ai-sdk/anthropic": "^4.0.30",
     "@ai-sdk/google": "^4.0.34",
     "@ai-sdk/openai": "^4.0.30",
+    "@composio/core": "^0.17.0",
+    "@composio/vercel": "^0.11.1",
     "@emoji-mart/data": "^1.2.1",
     "@emoji-mart/react": "^1.1.1",
     "@hello-pangea/dnd": "^18.0.1",

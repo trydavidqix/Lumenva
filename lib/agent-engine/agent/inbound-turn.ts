@@ -92,6 +92,7 @@ import {
   provideCaseUpdateInputSchema,
 } from './human-cases';
 import { buildMcpTurnTools } from '../edge/crm/mcp-tools';
+import { buildComposioTurnTools } from '../edge/llm/composio-tools';
 import { cancelPendingCronsForLead } from '../cron/scheduler';
 import {
   latestInboundSignal,
@@ -455,6 +456,13 @@ export interface InboundTurnKnobs {
 export interface InboundTurnDeps {
   crmCfg: CrmEdgeConfig;
   llmCfg: LlmEdgeConfig;
+  /**
+   * Chave da Composio (docs.composio.dev) — vazia/ausente = comportamento
+   * atual, `composio_apps` da versão publicada não produz nenhuma tool.
+   * Vem do env do worker (COMPOSIO_API_KEY), nunca de payload; ver
+   * edge/llm/composio-tools.ts.
+   */
+  composioApiKey?: string;
   knobs: InboundTurnKnobs;
   log: Logger;
   /** Optional, best-effort external tracing for the turn and its child seams. */
@@ -2028,6 +2036,24 @@ export async function runAgentTurn(
       const detalhe = (err instanceof Error ? err.message : String(err)).slice(0, 200);
       runLog.error('tools MCP da tela não montadas — turno segue sem elas', { error: detalhe });
       await avisarCapacidadesAusentes(pool, tenantId, input.conversationId, detalhe, runLog);
+    }
+  }
+
+  // Tools Composio (Google Calendar/Gmail/Docs/Sheets etc, ver
+  // edge/llm/composio-tools.ts) — mesma precedência de nome das nativas do
+  // catálogo MCP acima: falha/ausência de chave nunca derruba o turno.
+  if (agentConfig !== null && agentConfig.composioApps.length > 0 && (deps.composioApiKey ?? '') !== '') {
+    const composio = await buildComposioTurnTools(
+      deps.composioApiKey ?? '',
+      tenantId,
+      agentConfig.composioApps,
+      runLog,
+    );
+    if (composio !== null) {
+      for (const [name, composioTool] of Object.entries(composio.tools)) {
+        if (!(name in rawTools)) rawTools[name] = composioTool;
+      }
+      runLog.info('tools Composio montadas no turno', { composio_tool_ids: composio.toolIds });
     }
   }
 
