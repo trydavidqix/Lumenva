@@ -8,6 +8,7 @@
  */
 import type { McpToolDefinition } from "../types";
 import { TOOL_CATALOG, VALID_TOOL_IDS } from "./catalog";
+import { crmUploadLeadAttachment } from "./attachments";
 import { crmSearchContacts, crmGetContact } from "./contacts";
 import {
   crmListConversations,
@@ -117,6 +118,7 @@ export const allTools: ReadonlyArray<McpToolDefinition> = [
   crmUpdateLead,
   crmMoveLeadStage,
   crmAddLeadNote,
+  crmUploadLeadAttachment,
   crmSendWhatsappMessage,
   crmAssignConversation,
   crmManageTags,
