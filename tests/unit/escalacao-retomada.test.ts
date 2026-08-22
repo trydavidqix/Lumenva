@@ -50,6 +50,15 @@ interface CenarioBanco {
   checkpointAnterior?: Record<string, unknown> | null;
   negocios?: Array<Record<string, unknown>>;
   erroDoEmitEvent?: { message: string } | null;
+  /**
+   * Id de um `agent_cases` aberto (awaiting_human|awaiting_lead) pra ESTA
+   * conversa — undefined/null = nenhum caso aberto. Alimenta a busca de
+   * `fecharCasoAbertoAoDevolver` (achado: devolver o atendimento pelo botão
+   * rápido nunca fechava o caso que `performHumanHandoff` abre).
+   */
+  chamadoAbertoId?: string | null;
+  /** true = o UPDATE que tenta fechar o caso não casa (corrida perdida). */
+  fecharCasoPerdeACorrida?: boolean;
 }
 
 /**
@@ -78,6 +87,19 @@ function fazerSupabase(cenario: CenarioBanco, cap: Captura) {
         return Promise.resolve({ data: null, error: null });
       },
       maybeSingle: () => {
+        if (tabela === "agent_cases") {
+          if (ehUpdate) {
+            const casa = !(cenario.fecharCasoPerdeACorrida ?? false) && !!cenario.chamadoAbertoId;
+            return Promise.resolve({
+              data: casa ? { id: cenario.chamadoAbertoId } : null,
+              error: null,
+            });
+          }
+          return Promise.resolve({
+            data: cenario.chamadoAbertoId ? { id: cenario.chamadoAbertoId } : null,
+            error: null,
+          });
+        }
         if (ehUpdate) {
           const casa = cenario.updateDaConversaCasa ?? true;
           return Promise.resolve({ data: casa ? { id: CONV } : null, error: null });
@@ -377,6 +399,60 @@ describe("devolver o atendimento ao agente", () => {
     );
     expect(res.ok).toBe(true);
     if (res.ok) expect(res.jaEstavaComOAgente).toBe(true);
+  });
+
+  it("fecha o agent_case aberto ao devolver — sem isto ele ficava órfão pra sempre", async () => {
+    // Achado ao investigar auditoria de handoff: performHumanHandoff abre um
+    // agent_cases formal, mas só a tela de Cases (resolveCaseFromHuman) sabia
+    // fechá-lo. Quem devolvia pelo botão rápido "Devolver ao agente" nunca
+    // fechava o caso — ele ficava awaiting_human pra sempre, sem evento de
+    // resolução e sem actor_user_id.
+    const cap = novaCaptura();
+    await retomar(cenarioComAtendimentoHumano({ chamadoAbertoId: CHAMADO }), cap);
+
+    const fechamento = cap.updates.find((u) => u.tabela === "agent_cases");
+    expect(fechamento?.valores).toMatchObject({ status: "resolved" });
+
+    const evento = cap.inserts.find((i) => i.tabela === "agent_case_events");
+    expect(evento, "sem o evento, o caso fecha mas o rastro de QUEM fechou some").toBeDefined();
+    const eventos = evento!.valores as unknown as Array<Record<string, unknown>>;
+    expect(eventos).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "human_replied", actor_kind: "human", actor_user_id: ATENDENTE, human_action: "resolved" }),
+        expect.objectContaining({ kind: "resolved", actor_kind: "human", actor_user_id: ATENDENTE }),
+      ]),
+    );
+  });
+
+  it("devolução pela própria IA fecha o caso como agente — nunca inventa decisão humana", async () => {
+    const cap = novaCaptura();
+    const IA: Actor = { type: "ai_agent", id: "run-1", role: "agent" };
+    await retomar(cenarioComAtendimentoHumano({ chamadoAbertoId: CHAMADO }), cap, IA);
+
+    const evento = cap.inserts.find((i) => i.tabela === "agent_case_events");
+    const eventos = evento!.valores as unknown as Array<Record<string, unknown>>;
+    expect(eventos.every((e) => e.actor_kind === "agent")).toBe(true);
+    expect(eventos.some((e) => e.actor_user_id !== undefined)).toBe(false);
+  });
+
+  it("sem caso aberto, não escreve nada em agent_cases/agent_case_events", async () => {
+    const cap = novaCaptura();
+    await retomar(cenarioComAtendimentoHumano({ chamadoAbertoId: null }), cap);
+
+    expect(cap.updates.filter((u) => u.tabela === "agent_cases")).toEqual([]);
+    expect(cap.inserts.filter((i) => i.tabela === "agent_case_events")).toEqual([]);
+  });
+
+  it("a devolução em si não falha se o fechamento do caso perder a corrida", async () => {
+    // Fire-and-forget deliberado (ver comentário no chamador): a devolução real
+    // (as três travas) já aconteceu antes desta etapa e não pode depender dela.
+    const cap = novaCaptura();
+    const res = await retomar(
+      cenarioComAtendimentoHumano({ chamadoAbertoId: CHAMADO, fecharCasoPerdeACorrida: true }),
+      cap,
+    );
+    expect(res.ok).toBe(true);
+    expect(cap.inserts.filter((i) => i.tabela === "agent_case_events")).toEqual([]);
   });
 
   it("conversa encerrada não é reaberta pela volta", async () => {
