@@ -36,7 +36,11 @@ export interface PublishedAgentConfig {
   casesEnabled: boolean;
   /** tool_ids do catálogo MCP habilitadas na tela (2B-tools). */
   toolIds: string[];
-  /** toolkit slugs Composio (googlecalendar, gmail, ...) habilitados na tela — ver edge/llm/composio-tools.ts. */
+  /**
+   * Tool slugs EXATOS da Composio (ex. "GOOGLECALENDAR_CREATE_EVENT"), não
+   * toolkit slugs — pedir o toolkit inteiro trouxe 44 tools/312k tokens numa
+   * chamada só (medido ao vivo). Ver edge/llm/composio-tools.ts.
+   */
   composioApps: string[];
   /** KB ativa do agente (ai_agents.active_kb_version_id) — null = sem RAG. */
   activeKbVersionId: string | null;
