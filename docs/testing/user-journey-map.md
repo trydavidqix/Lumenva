@@ -159,6 +159,15 @@ travas — `contacts.force_human`, `conversations.bot_silenced_until` e
 `assignee_kind='user'`. A volta é `POST /conversations/[id]/reactivate-bot`, hoje
 atrás do botão "Devolver ao automático" no cabeçalho da conversa.
 
+**Atualizado 2026-08-22:** `performHumanHandoff` agora TAMBÉM abre o `agent_case`
+formal ela mesma (`openCase`, `source: 'guardrail_autofallback'`), em vez de
+depender de o chamador já ter aberto um antes. Achado ao vivo num teste E2E
+adversarial: o handoff nativo (jailbreak/pedido determinístico de humano — não
+passa pela tool `open_human_case`) travava as três travas mas nunca abria caso,
+então `lerContinuidadeHumana` nunca tinha o que ler na volta, e o resumo do
+checkpoint ficava contaminado para sempre com o motivo do handoff antigo. Ver
+`lib/agent-engine/agent/human-handoff.ts` (d.1).
+
 Spec: `tests/e2e/escalacao-ciclo.spec.ts`. Seed: `scripts/seed-e2e-escalacao.ts`
 (chama as funções REAIS `openCase` e `performHumanHandoff` — um seed que ligasse
 as travas com `UPDATE` próprio provaria o teste contra uma cópia da regra).

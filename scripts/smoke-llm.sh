@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Gate de release / upgrade de major do AI SDK (regra dura 16): sobe um Postgres
+# Gate de release / upgrade de major do AI SDK: sobe um Postgres
 # efêmero (mesma receita do test-db.sh: pgvector + prelude + baseline install) e
 # roda scripts/smoke-llm.ts contra o MODELO REAL. Exige ANTHROPIC_API_KEY no env.
 set -euo pipefail

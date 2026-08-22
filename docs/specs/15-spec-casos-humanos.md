@@ -163,7 +163,7 @@ Quando o humano clica **"Não consigo → escalar"**, o caso vira `escalated` e 
 await performHumanHandoff(pool, { tenantId, leadId, conversationId },
   { reason: <texto do humano>, conversationSummary: buildHandoffSummary(previous), log });
 ```
-Efeitos (idempotentes): `contacts.force_human=true`, `conversations.status ai_handling→pending` + `bot_silenced_until='infinity'`, `cancelPendingCronsForLead`, INSERT `agent_inbox_items(kind='handoff')`. Não criamos um 3º caminho.
+Efeitos (idempotentes): `contacts.force_human=true`, `conversations.status ai_handling→pending` + `bot_silenced_until='infinity'`, `cancelPendingCronsForLead`, INSERT `agent_inbox_items(kind='handoff')`, e (desde 2026-08-22) `openCase(source='guardrail_autofallback')` — o mesmo `agent_cases`/`agent_case_events` deste spec, dedupado por conversa. Antes disso, a via NATIVA do handoff (jailbreak/detecção determinística, §7 acima — que não passa pela tool `open_human_case`) travava as três travas mas nunca deixava um caso formal; a volta (`retomada.ts`/`lerContinuidadeHumana`) nunca tinha o que ler, e o `rolling_summary` do checkpoint ficava contaminado pelo motivo do handoff para sempre. Não criamos um 3º caminho — o `openCase` daqui é o MESMO usado pela tool `open_human_case` (§6).
 
 ---
 
@@ -245,6 +245,7 @@ Reusa o shell `app/app/ai/inbox/` (assistente), **seção/tab própria "Casos"**
 2. **Detector `detectHumanPromise`** (§6) — calibração pra baixo falso-positivo/negativo é o ponto mais sensível; os golden adversariais (§11.1) são o gate. Bumpar `BEFORE_SEND_CHAIN_VERSION`.
 3. ~~Confirmar runtime em produção~~ — **RESOLVIDO (Wave 0):** `AGENT_DISPATCH_CONSUMER` faz default para `'engine'` (`lib/env.ts:85`, `lib/agent-engine/env.ts:46`) e `.env.example`/`.env.hostgator.example` setam `engine` → agent-engine é o runtime de produção.
 4. **N de follow-up** default = 2 tentativas antes de `lead_unresponsive` — número a validar em uso.
+5. ~~Handoff nativo (jailbreak/determinístico) não abria caso, quebrando a continuidade da volta~~ — **RESOLVIDO 2026-08-22 (§7):** `performHumanHandoff` agora chama `openCase` ela mesma. Achado ao vivo num teste E2E adversarial contra um squad multiagente (Intent Router, Fase 3) — nenhum caso real de produção single-agent tinha exercitado esse caminho antes.
 
 ---
 

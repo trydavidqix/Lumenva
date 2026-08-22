@@ -18,12 +18,16 @@
  * REGRA DURA deste módulo: NADA volátil (timestamp, random, lead, contador) entra
  * aqui — quebraria o byte-identidade entre runs que o cache depende.
  *
- * ⚠️ Não existe teste automatizado cobrindo esta regra hoje (achado 2026-08-22,
- * durante investigação de um alerta de cache_hit baixo em produção): nenhum
- * `tests/**` referencia `stable-prefix.ts`/`StablePrefix`. Um comentário antigo
- * aqui citava um `llm-cache.test.ts` que não existe no repo — removido para não
- * dar falsa sensação de rede de segurança. Escrever esse teste é candidato a
- * tarefa separada, não decidido ainda.
+ * Correção 2026-08-22: um comentário antigo aqui citava um `llm-cache.test.ts`
+ * que não existe em `tests/**` — não existe mesmo, mas a regra NÃO está sem
+ * cobertura: `scripts/smoke-llm.ts` (roda via `scripts/smoke-llm.sh`, gate de
+ * release/upgrade de major do AI SDK) importa `stablePrefixHash` direto daqui
+ * e prova, contra um MODELO REAL (não mock), que a 1ª chamada escreve cache,
+ * a 2ª byte-idêntica lê, e o prefixo medido bate o mínimo cacheável do modelo.
+ * A diferença real: é smoke manual/gate de release (custa uma API key real e
+ * ~2 chamadas), não roda em `pnpm test:unit`/`test:invariants` a cada mudança
+ * — se alguém quebrar esta regra num commit comum, só o smoke pega, não o CI
+ * do dia a dia (que hoje nem existe — GitHub Actions desligado).
  */
 import { createHash } from 'node:crypto';
 
