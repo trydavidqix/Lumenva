@@ -965,6 +965,19 @@ function handleSessionStatus(payload: any, csRow: any, db: Db) {
 
 ### 6.1 Handler completo
 
+> **Nota 2026-08-22:** este bloco é o esboço de implementação original (path
+> `apps/web/...` nem corresponde à estrutura real do monorepo) — mantido como
+> referência histórica de intenção, não como código atual. O parse de linha 3
+> (`try { payload = JSON.parse(rawBody); } catch { ... }`) descreve um cast sem
+> validação de runtime que **não é mais o comportamento real**: o handler
+> canônico hoje é `app/api/v1/webhooks/waha/[token]/route.ts` (+ variante
+> global `app/api/v1/webhooks/waha/route.ts`), que confere o corpo contra um
+> schema Zod em `lib/waha/envelope.ts` em DOIS estágios — roteamento (session +
+> payload.id) antes do INSERT em `webhook_events_log`, contrato completo depois
+> — em vez de um cast que deixava `payload.from` não-string derrubar
+> `parseChatId` silenciosamente. Ver `lib/webhooks/contrato.ts` para o ritual
+> compartilhado com o canal Meta.
+
 ```ts
 // apps/web/app/api/wa/webhook/[token]/route.ts
 import { NextRequest } from "next/server";
