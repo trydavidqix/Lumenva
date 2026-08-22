@@ -14,8 +14,13 @@ divergentes.
 Sem CI publicando imagem, todo deploy constrói na própria VPS. Requisitos: >= 4 GB
 de RAM **ou** swap (medido: ~4min num VPS de 3.8 GB com 4 GB de swap).
 
+**Confirme o path da instalação antes de rodar qualquer coisa** — não é fixo entre
+VPS diferentes. A instalação padrão do `hostgator-setup-kit` usa `/root/deskcommcrm`
+(confirmado contra a VPS real da Lumenva em 2026-08-22); se a sua instalação usa
+outro path, ajuste o `cd` abaixo.
+
 ```bash
-cd /var/www/crm
+cd /root/deskcommcrm
 
 # 0) traz o código novo — sem isso o build usa o checkout antigo
 git pull origin main
@@ -26,7 +31,7 @@ APP_IMAGE=deskcomm-app:local docker compose \
 
 # 2) sobe com a imagem que acabou de ser construída
 APP_IMAGE=deskcomm-app:local APP_PULL_POLICY=never docker compose \
-  -f docker-compose.prod.yml -f docker-compose.traefik.yml --env-file .env up -d app
+  -f docker-compose.prod.yml --env-file .env up -d app
 ```
 
 `APP_PULL_POLICY=never` é obrigatório no passo 2: sem ele, o compose tenta puxar
@@ -34,46 +39,70 @@ APP_IMAGE=deskcomm-app:local APP_PULL_POLICY=never docker compose \
 substitui a imagem que você acabou de construir pela última do GHCR — revertendo
 o deploy sem erro nenhum.
 
-### Os DOIS `-f` são obrigatórios no passo 2. Sempre.
+### Qual topologia de proxy a sua VPS usa? Confirme, não presuma.
 
-Esta é a pegadinha que já derrubou o site inteiro em produção (2026-08-05).
+O stack padrão (o comando acima) sobe um **Caddy próprio** (definido dentro de
+`docker-compose.prod.yml`) que publica as portas 80/443 e faz HTTPS automático
+via Let's Encrypt. **Esta é a topologia real da VPS da Lumenva** (confirmado
+2026-08-22: `docker ps` mostra `deskcommcrm-caddy-1`, sem rede `traefik`
+externa) — o comando de dois `-f` documentado numa versão anterior deste runbook
+(`-f docker-compose.prod.yml -f docker-compose.traefik.yml`) **não se aplica a
+ela** e falha com `network traefik declared as external, but could not be found`.
 
-A VPS (Hostinger) vem com um **Traefik próprio** ocupando as portas 80/443.
-`docker-compose.traefik.yml` é o ÚNICO lugar que:
+Só use `docker-compose.traefik.yml` se a sua VPS **já vem** com um Traefik
+próprio ocupando as portas 80/443 antes de qualquer deploy do DeskcommCRM —
+comum em Hostinger com painel, Coolify, Dokploy, CapRover e afins. Nesse caso,
+e SÓ nesse caso:
 
-- coloca no contêiner `app` as labels de roteamento
-  (`traefik.http.routers.deskcomm.rule=Host(...)`);
-- associa o contêiner à rede que o Traefik enxerga (`TRAEFIK_DOCKER_NETWORK`);
-- desliga o `caddy` do compose base por profile (senão dois processos brigam
-  pela mesma porta).
+```bash
+APP_IMAGE=deskcomm-app:local APP_PULL_POLICY=never docker compose \
+  -f docker-compose.prod.yml -f docker-compose.traefik.yml --env-file .env up -d app
+```
 
-Rodar só com `-f docker-compose.prod.yml` recria o contêiner **sem labels
-nenhuma**. O Traefik deixa de enxergá-lo e o domínio inteiro passa a responder
-`404 page not found` — não é erro do Next, é o 404 genérico do Traefik. A app
-está no ar, saudável, e inalcançável.
+O cabeçalho de `docker-compose.traefik.yml` explica a equivalência exata com o
+Caddyfile. Rodar esse comando numa VPS que não tem uma rede Docker externa
+chamada `traefik` falha antes de subir qualquer contêiner (erro acima) — não é
+destrutivo, mas não pule a checagem de topologia achando que "os dois `-f` são
+sempre mais seguros".
 
 ---
 
 ## 2. Verificação pós-deploy (não pule)
 
 `healthy` no `docker ps` **não prova que o site está acessível** — o healthcheck
-é um probe TCP interno e passa mesmo com o roteamento quebrado. Verifique as
-duas coisas:
+é um probe TCP interno e passa mesmo com o roteamento quebrado. O domínio
+responder é a prova real, e vale para as duas topologias:
 
 ```bash
-# 1) as labels do Traefik existem?
-#    O nome do contêiner é <pasta-do-projeto>-app-1, então pergunte ao compose
-#    em vez de chutar. Aqui um -f só basta: o `ps -q` resolve pelo nome do
-#    projeto + serviço, não pelo conteúdo do arquivo (medido: com um -f ou com
-#    os dois, devolve o MESMO contêiner). Quem precisa dos dois é o `up -d`.
-docker inspect "$(docker compose -f docker-compose.prod.yml ps -q app)" \
-  --format '{{.Config.Labels}}' | grep -o 'traefik.enable:[^ ]*'
-# esperado: traefik.enable:true   (vazio = roteamento quebrado)
-
-# 2) o domínio responde?
 curl -s -o /dev/null -w "%{http_code}\n" https://<DOMAIN>/
 # esperado: 307 (redireciona pro login)
-# 404      = labels perdidas, refaça o deploy com os dois -f
+# 404      = roteamento quebrado — veja a checagem específica da sua topologia abaixo
+```
+
+**Se usa o Caddy padrão** (comando sem `-f docker-compose.traefik.yml`):
+
+```bash
+docker ps --filter name=caddy --format 'table {{.Names}}\t{{.Status}}'
+# esperado: Up, sem "(unhealthy)"
+docker logs <projeto>-caddy-1 --tail 20
+# procure erro de emissão de certificado (ACME) se o curl acima devolver algo
+# diferente de 307/redirect — Caddy renova sozinho, mas o container precisa
+# estar saudável para servir HTTPS.
+```
+
+**Se usa `docker-compose.traefik.yml`** (VPS com Traefik próprio):
+
+```bash
+# as labels do Traefik existem no contêiner app?
+#    O nome do contêiner é <pasta-do-projeto>-app-1, então pergunte ao compose
+#    em vez de chutar.
+docker inspect "$(docker compose -f docker-compose.prod.yml ps -q app)" \
+  --format '{{.Config.Labels}}' | grep -o 'traefik.enable:[^ ]*'
+# esperado: traefik.enable:true   (vazio = roteamento quebrado, refaça o deploy
+# com os dois -f — essa é a pegadinha que já derrubou o site em produção em
+# 2026-08-05: rodar só com -f docker-compose.prod.yml numa VPS com Traefik
+# externo recria o contêiner sem labels nenhuma, e o domínio responde 404
+# genérico do Traefik mesmo com a app saudável e no ar)
 ```
 
 ---
