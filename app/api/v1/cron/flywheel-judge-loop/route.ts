@@ -22,7 +22,11 @@ import { env } from "@/lib/env";
 import { persistFollowupOutcomes } from "@/lib/agent-engine/flywheel/outcome-collector";
 
 export const runtime = "nodejs";
-export const maxDuration = 600; // 10 min timeout
+// Teto do plano Hobby da Vercel é 300s (2026-08-22: todo deploy production
+// falhava com errorCode "invalid_max_duration" nesta função — build passava,
+// deploy morria no passo patchBuild). Se o cron precisar de mais que 5min,
+// a correção é fazer upgrade do plano, não subir este número de novo.
+export const maxDuration = 300;
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const startTime = Date.now();
