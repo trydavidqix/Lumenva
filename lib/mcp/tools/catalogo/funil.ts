@@ -73,4 +73,15 @@ export const TOOLS_FUNIL = declararTools([
     risco: "atencao",
     pacotes: ["vender"],
   },
+  {
+    name: "crm_add_lead_note",
+    category: "write",
+    description: "Registra uma nota na timeline da oportunidade aberta do contato",
+    rotulo: "Anotar na oportunidade",
+    explicacao:
+      "Grava uma nota na oportunidade de venda aberta do contato — briefing, preferências, o que o cliente pediu. Recusa se não houver oportunidade aberta única.",
+    oQueToca: "Funil de vendas",
+    risco: "atencao",
+    pacotes: ["vender"],
+  },
 ]);
