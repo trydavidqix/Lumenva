@@ -9,7 +9,7 @@
  *     lead_id, kind). "Por conversa" = agregação por labels->>'lead_id' (consulta,
  *     não escrita). PII NUNCA entra em name/labels;
  *   - cache_read_ratio = cache_read_tokens / input_tokens do run — a métrica de
- *     1ª classe do caching (CLAUDE.md regra 15). Alerta: quando a MÉDIA da janela
+ *     1ª classe do caching. Alerta: quando a MÉDIA da janela
  *     recente fica abaixo do alvo com um mínimo de runs (nunca 1 item por run —
  *     antes da F2-17 o ratio é ~0 em todo run; os knobs controlam o disparo),
  *     insere inbox_items 1× por EPISÓDIO (dedup enquanto houver item aberto —
@@ -145,8 +145,10 @@ export async function evaluateCacheHitAlert(
       tenantId,
       `média de cache_read/input nos últimos ${runs} runs da janela = ` +
         `${(avgRatio * 100).toFixed(1)}% (alvo ≥ ${(knobs.cacheHitAlertThreshold * 100).toFixed(0)}%). ` +
-        'Prefixo do prompt possivelmente abaixo do mínimo cacheável do modelo ou com conteúdo ' +
-        'volátil antes do último breakpoint — ver CLAUDE.md regra 15 e o smoke de caching.',
+        'Prefixo do prompt possivelmente abaixo do mínimo cacheável do modelo, com conteúdo ' +
+        'volátil antes do último breakpoint, ou (squad com múltiplos agentes) o prefixo ' +
+        'trocando de agente a cada turno na mesma conversa — cada troca de system prompt ' +
+        'reinicia o cache. Ver lib/agent-engine/obs/metrics.ts.',
       CACHE_ALERT_REF_KIND,
     ],
   );
