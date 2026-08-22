@@ -55,13 +55,19 @@ export async function recordRunMetrics(
     cache_read_tokens: number;
     cost_cents: number | null;
     llm_latency_ms: number;
+    agent_turn_input_tokens: number;
+    agent_turn_cache_read_tokens: number;
   }>(
     `select count(*)::int as calls,
             coalesce(sum(input_tokens), 0)::float8 as input_tokens,
             coalesce(sum(output_tokens), 0)::float8 as output_tokens,
             coalesce(sum(cache_read_tokens), 0)::float8 as cache_read_tokens,
             (sum(cost_cents))::float8 as cost_cents,
-            coalesce(sum(latency_ms), 0)::float8 as llm_latency_ms
+            coalesce(sum(latency_ms), 0)::float8 as llm_latency_ms,
+            coalesce(sum(input_tokens) filter (where purpose = 'agent_turn'), 0)::float8
+              as agent_turn_input_tokens,
+            coalesce(sum(cache_read_tokens) filter (where purpose = 'agent_turn'), 0)::float8
+              as agent_turn_cache_read_tokens
      from llm_calls
      where organization_id = $1 and job_id = $2`,
     [job.organization_id, job.id],
@@ -82,7 +88,19 @@ export async function recordRunMetrics(
   push('run_input_tokens', agg.input_tokens);
   push('run_output_tokens', agg.output_tokens);
   push('run_cache_read_tokens', agg.cache_read_tokens);
-  push(CACHE_RATIO_METRIC, agg.input_tokens > 0 ? agg.cache_read_tokens / agg.input_tokens : 0);
+  // Escopo SÓ em 'agent_turn': é a única chamada que usa o prefixo estável
+  // (lib/agent-engine/edge/llm/stable-prefix.ts) — as demais (checkpoint,
+  // stage_classifier, memory_extraction, jailbreak_detect, intent_router,
+  // promise_semantic) são classificadores pequenos, sem breakpoint de cache,
+  // sempre 0%. Medido ao vivo 2026-08-22: agent_turn sozinho batia 72.6% de
+  // cache hit enquanto a média de TODAS as chamadas do run ficava em 24.9% —
+  // a métrica antiga não media saúde de cache, media a proporção de chamadas
+  // que nem tentam cachear. Um run sem NENHUMA chamada agent_turn (ex.:
+  // followup_turn que não chega a chamar o modelo principal) não grava esta
+  // métrica — 0/0 viraria "0% de cache" mentiroso em vez de "não se aplica".
+  if (agg.agent_turn_input_tokens > 0) {
+    push(CACHE_RATIO_METRIC, agg.agent_turn_cache_read_tokens / agg.agent_turn_input_tokens);
+  }
   // custo NULL = preço desconhecido (pricing.ts) — não gravar (0 mentiria "grátis")
   push('run_cost_cents', agg.cost_cents);
   // soma das latências das chamadas LLM do run (não wall time do job)
@@ -143,12 +161,13 @@ export async function evaluateCacheHitAlert(
      )`,
     [
       tenantId,
-      `média de cache_read/input nos últimos ${runs} runs da janela = ` +
+      `média de cache_read/input nos últimos ${runs} runs da janela (só chamadas agent_turn) = ` +
         `${(avgRatio * 100).toFixed(1)}% (alvo ≥ ${(knobs.cacheHitAlertThreshold * 100).toFixed(0)}%). ` +
-        'Prefixo do prompt possivelmente abaixo do mínimo cacheável do modelo, com conteúdo ' +
-        'volátil antes do último breakpoint, ou (squad com múltiplos agentes) o prefixo ' +
-        'trocando de agente a cada turno na mesma conversa — cada troca de system prompt ' +
-        'reinicia o cache. Ver lib/agent-engine/obs/metrics.ts.',
+        'Causas prováveis: TTL do cache (LLM_CACHE_TTL) expirando entre turnos, muitos leads ' +
+        'novos na janela (1ª mensagem de uma conversa sempre ESCREVE cache, nunca lê), ou ' +
+        'prefixo realmente mudando entre runs (playbook/tools editados, ou squad trocando de ' +
+        'agente na mesma conversa). Ver lib/agent-engine/obs/metrics.ts e ' +
+        'lib/agent-engine/edge/llm/stable-prefix.ts.',
       CACHE_ALERT_REF_KIND,
     ],
   );
