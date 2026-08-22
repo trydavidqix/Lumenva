@@ -35,14 +35,30 @@ interface DriveFile {
 
 const inputShape = {
   contact_id: z.string().uuid(),
+  /** O QUE o cliente disse que é o arquivo — obrigatório: a tool não roda sem
+   *  isso, então o modelo é FORÇADO a perguntar antes de poder chamá-la. */
+  description: z
+    .string()
+    .trim()
+    .min(3, "pergunte ao cliente o que é o arquivo antes de chamar esta ferramenta")
+    .max(200),
+  /** Confirmação explícita de que o cliente autorizou guardar o arquivo na
+   *  pasta dele. `false`/ausente é RECUSADO — não é opcional silencioso. */
+  client_consented: z.literal(true, {
+    message: "peça autorização ao cliente pra guardar o arquivo antes de chamar esta ferramenta",
+  }),
 };
 
 export const crmUploadLeadAttachment: McpToolDefinition<typeof inputShape> = {
   name: "crm_upload_lead_attachment",
   description:
-    "Sobe o arquivo/foto/vídeo/documento mais recente enviado pelo contato no WhatsApp para uma " +
-    "pasta do Google Drive dedicada ao negócio (lead) aberto dele, e registra o link na timeline. " +
-    "Recusa se não houver anexo recente ou negócio aberto único.",
+    "Sobe o arquivo/foto/vídeo/documento mais recente enviado pelo contato no WhatsApp para uma pasta " +
+    "do Google Drive dedicada ao negócio (lead) aberto dele — a mesma pasta é reaproveitada em uploads " +
+    "futuros do mesmo lead, nunca cria uma pasta nova por arquivo. SEQUÊNCIA OBRIGATÓRIA antes de " +
+    "chamar: (1) pergunte ao cliente o que é o arquivo e descreva em `description`; (2) peça autorização " +
+    "explícita pra guardar na pasta dele e só passe `client_consented: true` se ele disser sim. Chamar " +
+    "sem ter feito as duas coisas é usar a ferramenta errado. Recusa se não houver anexo recente ou " +
+    "negócio aberto único.",
   inputSchema: inputShape,
   category: "write",
   requiresRole: "agent",
@@ -102,7 +118,15 @@ export const crmUploadLeadAttachment: McpToolDefinition<typeof inputShape> = {
     const userId = ctx.organizationId;
     const mime = (msg.media_mime as string | null) ?? "application/octet-stream";
     const ext = mime.split("/")[1]?.split(";")[0] ?? "bin";
-    const fileName = `${msg.id}.${ext}`;
+    // Nome do arquivo carrega data/hora + o que o cliente disse que é —
+    // legível na pasta do Drive sem abrir cada arquivo pra saber o que é.
+    const carimbo = (msg.created_at as string).slice(0, 16).replace("T", " ");
+    const descricaoSegura = input.description
+      .normalize("NFKD")
+      .replace(/[^\w\s-]/g, "")
+      .trim()
+      .slice(0, 80);
+    const fileName = `${carimbo} ${descricaoSegura}.${ext}`;
     const folderName = `Lead ${alvo.leadId}`;
 
     const found = await composio.tools.execute(
@@ -144,8 +168,14 @@ export const crmUploadLeadAttachment: McpToolDefinition<typeof inputShape> = {
       type: "note",
       sourceModule: "mcp.crm_upload_lead_attachment",
       actor: ctx.actor,
-      reason: `Anexo do cliente salvo no Drive: ${viewLink}`,
-      payload: { drive_file_id: file.id, message_id: msg.id, mime },
+      reason: `Anexo autorizado pelo cliente salvo no Drive (${carimbo}): ${input.description} — ${viewLink}`,
+      payload: {
+        drive_file_id: file.id,
+        message_id: msg.id,
+        mime,
+        description: input.description,
+        client_consented: true,
+      },
     });
     const { error: errInsert } = await ctx.supabase.from("crm_lead_activities").insert({
       organization_id: row.organization_id,

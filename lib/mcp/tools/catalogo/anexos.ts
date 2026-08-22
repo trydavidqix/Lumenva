@@ -14,7 +14,7 @@ export const TOOLS_ANEXOS = declararTools([
     description: "Sobe o anexo mais recente do WhatsApp pro Drive do lead do contato",
     rotulo: "Guardar anexo no Drive da oportunidade",
     explicacao:
-      "Quando o cliente manda foto, vídeo ou documento no WhatsApp, guarda o arquivo numa pasta do Google Drive dedicada à oportunidade dele, e deixa o link registrado na timeline. Precisa da conexão Composio com Google Drive.",
+      "Quando o cliente manda foto, vídeo ou documento no WhatsApp, o agent pergunta o que é e pede autorização antes de guardar — só então salva na pasta do Google Drive dedicada à oportunidade dele, com data/hora no nome, e deixa registrado na timeline. Precisa da conexão Composio com Google Drive.",
     oQueToca: "Funil de vendas",
     risco: "atencao",
     pacotes: ["vender"],
