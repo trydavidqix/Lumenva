@@ -13,7 +13,10 @@
  *   (b) conversa: status transiciona SÓ 'ai_handling'→'pending' (CASE — nunca pisa em
  *       claimed/closed) + bot_silenced_until='infinity' + last_handoff_at/reason;
  *   (c) cancela os crons PENDENTES do lead (follow-ups agendados não disparam após handoff);
- *   (d) cria agent_inbox_items(kind='handoff') com o resumo (dedup por episódio aberto).
+ *   (d) cria agent_inbox_items(kind='handoff') com o resumo (dedup por episódio aberto);
+ *   (d.1) abre um agent_case formal (openCase, source='guardrail_autofallback') — sem
+ *       isto este handoff era invisível para lerContinuidadeHumana/retomada.ts, e o
+ *       rolling_summary do checkpoint nunca recebia a nota de resolução ao ser devolvido.
  *
  * tenant/lead/conversation vêm da ROW do job (closure do run), NUNCA do payload (regra dura 1).
  * O resumo vai ao inbox (é PARA o humano assumir) — mas NUNCA a log (PII fora de log, regra 8).
@@ -26,6 +29,7 @@ import { emitAgentActivityForContact } from '@/lib/leads/agent-activity';
 
 import type { Logger } from '../obs/logger';
 import { cancelPendingCronsForLead } from '../cron/scheduler';
+import { openCase } from './human-cases';
 import { findForbiddenKey, zodIssuesSummary } from './lead-state';
 import { renderDeclaracaoParaHumano, type DeclaracaoDoTurno } from './declaracao';
 
@@ -199,6 +203,33 @@ export async function performHumanHandoff(
       ids.leadId,
     ],
   );
+
+  // (d.1) Abre um `agent_case` formal — mesma função (`openCase`) que a tool
+  // `open_human_case` usa, `source: 'guardrail_autofallback'` porque quem decidiu
+  // não foi o modelo escolhendo chamar uma tool, foi o runtime (jailbreak/regex
+  // determinística). Sem isto, este handoff (o "nativo") ficava invisível para
+  // `lerContinuidadeHumana` — que só lê `agent_cases`/`agent_case_events` — e a
+  // devolução do atendimento (`retomada.ts`) nunca gravava a nota de resolução no
+  // checkpoint. Resultado observado ao vivo: o resumo acumulado ("cliente com
+  // problema urgente") ficava para sempre no `rolling_summary`, e o PRÓXIMO turno
+  // (de outro subagente, sem relação com o episódio) reabria handoff sozinho lendo
+  // aquele texto como se fosse o problema ATUAL. `openCase` já dedupe por conversa
+  // com caso aberto — chamar aqui é seguro mesmo se um caso já existir.
+  const aberto = await openCase(
+    db,
+    { tenantId: ids.tenantId, conversationId: ids.conversationId },
+    {
+      title: opts.inboxTitle ?? 'Handoff humano solicitado — assumir a conversa',
+      summary: opts.conversationSummary,
+      blocker: opts.reason,
+      source: 'guardrail_autofallback',
+    },
+  );
+  if (!aberto.ok && aberto.error.code !== 'case_already_open') {
+    opts.log.warn('handoff: caso formal não foi aberto (segue sem continuidade rastreável)', {
+      error: aberto.error.code,
+    });
+  }
 
   // (e) A IDA na linha do tempo do NEGÓCIO. `triggerHandoff` (o caminho do CRM)
   // já gravava `handoff_triggered`; este caminho — o do harness e o do "Assumir
