@@ -56,15 +56,27 @@ describe("alerta de turno sem envio — só dispara onde o cliente está esperan
     expect(corpo).toMatch(/status = 'open'/);
   });
 
-  it("usa o kind aberto ('other') do vocabulário existente — não abre constraint nova", () => {
+  it("usa o kind aberto ('other') e a severity real do vocabulário — não abre constraint nova", () => {
     // docs/.claude/rules/data-modeling.md: vocabulário fechado não vira "completo"
     // só porque um caso novo apareceu. `other` já é o balde de propósito geral de
     // `agent_inbox_items_kind_check` — reusar evita migration para um alerta de nível 1.
-    expect(corpoDoAlerta()).toMatch(/kind, severity, title, body, ref_kind, ref_id\)\s*\n\s*select \$1, 'other', 'warning'/);
+    //
+    // 'warn', não 'warning': agent_inbox_items_severity_check só aceita
+    // info|warn|critical (baseline.sql). A 1ª versão deste código usava
+    // 'warning' e passava em typecheck/lint/teste — só um INSERT real contra
+    // Postgres acusa CHECK constraint, e este arquivo (só leitura de fonte,
+    // sem DB) não prova isso sozinho. Achado ao vivo em produção: o próprio
+    // alerta de nível 1 disparou de verdade e falhou ao gravar por causa
+    // deste exato erro. Ver tests/invariants para o equivalente com DB real.
+    expect(corpoDoAlerta()).toMatch(/kind, severity, title, body, ref_kind, ref_id\)\s*\n\s*select \$1, 'other', 'warn', /);
   });
 
   it("falha ao gravar o alerta não derruba o turno — mesma disciplina fire-and-forget do handoff", () => {
     const corpo = corpoDoAlerta();
-    expect(corpo).toMatch(/} catch \(err\) \{\s*\n\s*runLog\.error\('falha ao registrar alerta de turno sem envio/);
+    expect(corpo).toMatch(/} catch \(err\) \{[\s\S]{0,700}runLog\.error\('falha ao registrar alerta de turno sem envio/);
+    // .message, não .name — .name devolvia "error" pra QUALQUER DatabaseError do pg,
+    // sem dizer qual constraint. Foi exatamente essa perda de informação que escondeu
+    // o bug 'warning'/'warn' até alguém ler o erro na mão.
+    expect(corpo).toMatch(/err instanceof Error \? err\.message\.slice\(0, 200\)/);
   });
 });

@@ -2492,7 +2492,7 @@ export async function runAgentTurn(
     try {
       await pool.query(
         `insert into agent_inbox_items (organization_id, kind, severity, title, body, ref_kind, ref_id)
-         select $1, 'other', 'warning', $2, $3, 'contact', $4
+         select $1, 'other', 'warn', $2, $3, 'contact', $4
          where not exists (
            select 1 from agent_inbox_items
            where organization_id = $1 and kind = 'other' and ref_kind = 'contact' and ref_id = $4
@@ -2506,8 +2506,14 @@ export async function runAgentTurn(
         ],
       );
     } catch (err) {
+      // .message, não .name — este bloco só chega a existir por causa de um
+      // bug real da PRÓPRIA linha acima (severity 'warning' não existia no
+      // vocabulário do CHECK, era 'warn') que só apareceu porque .name
+      // devolvia "error" pra QUALQUER falha de Postgres, sem dizer qual
+      // constraint. Sem a mensagem real este catch não teria evidência —
+      // teria só ficado "falha ao registrar alerta" pra sempre.
       runLog.error('falha ao registrar alerta de turno sem envio (segue)', {
-        error: err instanceof Error ? err.name : 'unknown',
+        error: err instanceof Error ? err.message.slice(0, 200) : 'erro desconhecido',
       });
     }
   }
