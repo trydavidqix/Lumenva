@@ -13,7 +13,7 @@
  * Shape do usage: `LanguageModelUsage` (node_modules/ai/dist/index.d.ts):
  * inputTokens/outputTokens totais + inputTokenDetails.{cacheReadTokens,
  * cacheWriteTokens}. Validado no ai@7 via scripts/smoke-llm.sh (modelo real) —
- * upgrade de major re-valida esses paths pelo mesmo gate (regra dura 16).
+ * upgrade de major re-valida esses paths pelo mesmo gate (scripts/smoke-llm.ts).
  */
 import { randomUUID } from 'node:crypto';
 import { generateText, stepCountIs, type ModelMessage, type ToolSet } from 'ai';

@@ -1,8 +1,8 @@
 /**
- * Smoke LLM (gate de release / upgrade de major do AI SDK — regra dura 16 do
- * harness): valida contra o MODELO REAL que a disciplina de custo/cache da
- * regra 15 sobreviveu à stack instalada. Roda via scripts/smoke-llm.sh (que
- * sobe o Postgres efêmero) ou contra SMOKE_DB_URL já provisionado.
+ * Smoke LLM (gate de release / upgrade de major do AI SDK): valida contra o
+ * MODELO REAL que a disciplina de custo/cache de `stable-prefix.ts` sobreviveu
+ * à stack instalada. Roda via scripts/smoke-llm.sh (que sobe o Postgres
+ * efêmero) ou contra SMOKE_DB_URL já provisionado.
  *
  * Checks:
  *   1. shape do usage do SDK: inputTokens/outputTokens + inputTokenDetails.
@@ -29,7 +29,7 @@ import { stablePrefixHash } from '@/lib/agent-engine/edge/llm/stable-prefix';
 
 const DB_URL = process.env.SMOKE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54329/postgres';
 const MODEL = process.env.SMOKE_MODEL ?? 'claude-haiku-4-5';
-/** Mínimo cacheável POR MODELO (regra 15) — o smoke falha se o prefixo não cobre. */
+/** Mínimo cacheável POR MODELO — o smoke falha se o prefixo não cobre. */
 const MIN_CACHEABLE: Record<string, number> = {
   'claude-haiku-4-5': 4096,
   'claude-opus-4-8': 4096,
