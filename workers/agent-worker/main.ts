@@ -410,6 +410,7 @@ export function buildTurnDeps(env: Env, log: Logger): FollowupTurnDeps {
       SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY,
     }),
     llmCfg: llmEdgeConfigFromEnv(env),
+    composioApiKey: env.COMPOSIO_API_KEY,
     knobs: {
       historyLimit: env.LEAD_CONTEXT_HISTORY_LIMIT,
       maxContextTokens: env.LEAD_CONTEXT_MAX_TOKENS,

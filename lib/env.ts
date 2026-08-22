@@ -112,6 +112,14 @@ const schema = z.object({
   EMBEDDING_API_KEY: z.string().optional().default(""),
   EMBEDDING_MODEL_ID: z.string().optional().default(""),
 
+  // Composio (docs.composio.dev) — gives agents managed-OAuth access to Google
+  // Calendar/Gmail/Docs/Sheets (and 1000+ other apps) without the CRM
+  // implementing OAuth per provider. Optional: an agent version's
+  // `composio_apps` only produces tools when this key is set — self-hosters
+  // who don't configure it get the pre-existing zero-tools behavior, never a
+  // hard failure. See lib/agent-engine/edge/llm/composio-tools.ts.
+  COMPOSIO_API_KEY: z.string().optional().default(""),
+
   // AI Platform Foundation — all external providers start disabled; a kill
   // switch wins over any tenant or global database flag.
   AI_PLATFORM_KILL_MEM0: z.enum(["true", "false"]).optional().default("false").transform((v) => v === "true"),

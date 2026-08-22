@@ -29,6 +29,11 @@ const envSchema = z.object({
   // OpenAI e a chave no `.env` continuava sem credencial utilizável, e a única
   // saída era cadastrar BYOK pela tela — sem nada dizendo isso.
   OPENAI_API_KEY: z.string().min(1).optional(),
+  // Composio (docs.composio.dev) — OAuth gerenciado pra Google Calendar/
+  // Gmail/Docs/Sheets etc (ver edge/llm/composio-tools.ts). Opcional: sem ela,
+  // `ai_agent_versions.composio_apps` configurado num agente simplesmente não
+  // produz nenhuma tool no turno, nunca falha.
+  COMPOSIO_API_KEY: z.string().min(1).optional(),
   // Modelo default do agente quando a org não define o dela (knob, nunca constante).
   AGENT_DEFAULT_MODEL: z.string().min(1).default('claude-sonnet-4-5'),
   // Teto de conexões por pool do pg. Sem valor = pg decide (default 10).

@@ -9562,3 +9562,28 @@ create index if not exists skill_versions_organization_id_idx on public.skill_ve
 create index if not exists webhook_sources_organization_id_idx on public.webhook_sources (organization_id);
 
 notify pgrst, 'reload schema';
+
+-- ---- 0124: ai_chunks.embedding 1536 -> 2048 (override de embedding free-tier) ----
+-- Provider NVIDIA (nemotron-3-embed-1b) devolve 2048 dims, não as 1536 do
+-- default openai/text-embedding-3-small. Detalhe completo na migration
+-- 20260822052756_0124_ai_chunks_embedding_2048.sql.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'ai_chunks' and column_name = 'embedding'
+      and udt_name = 'vector'
+  ) then
+    drop index if exists public.ai_chunks_embedding_ivfflat_idx;
+    alter table public.ai_chunks alter column embedding type vector(2048);
+  end if;
+end $$;
+
+-- ---- 0125: ai_agent_versions.composio_apps (integração Composio) ----
+-- Toolkit slugs Composio (googlecalendar, gmail, googledocs, googlesheets,
+-- ...) habilitados no turno do agente. Mesma semântica de tool_ids, catálogo
+-- externo. Detalhe: 20260822063654_0125_ai_agent_versions_composio_apps.sql.
+alter table ai_agent_versions
+  add column if not exists composio_apps text[] not null default '{}';
+
+notify pgrst, 'reload schema';

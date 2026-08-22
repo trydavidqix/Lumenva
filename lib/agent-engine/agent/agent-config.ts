@@ -36,6 +36,8 @@ export interface PublishedAgentConfig {
   casesEnabled: boolean;
   /** tool_ids do catálogo MCP habilitadas na tela (2B-tools). */
   toolIds: string[];
+  /** toolkit slugs Composio (googlecalendar, gmail, ...) habilitados na tela — ver edge/llm/composio-tools.ts. */
+  composioApps: string[];
   /** KB ativa do agente (ai_agents.active_kb_version_id) — null = sem RAG. */
   activeKbVersionId: string | null;
   /** knobs de RAG do ai_agents.config (defaults do guardrails-schema: 5 / 0.72). */
@@ -80,6 +82,7 @@ interface Row {
   multimodal_input: boolean;
   cases_enabled: boolean;
   tool_ids: string[] | null;
+  composio_apps: string[] | null;
   active_kb_version_id: string | null;
   config: Record<string, unknown> | null;
   operator_enabled: boolean | null;
@@ -106,6 +109,7 @@ const SELECT_AGENT_CONFIG_COLUMNS = `a.id as agent_id,
             v.multimodal_input,
             v.cases_enabled,
             v.tool_ids,
+            v.composio_apps,
             a.active_kb_version_id,
             a.config,
             v.operator_enabled,
@@ -145,6 +149,9 @@ function mapAgentConfigRow(r: Row): PublishedAgentConfig {
     multimodalInput: r.multimodal_input,
     casesEnabled: r.cases_enabled,
     toolIds: r.tool_ids ?? [],
+    // `?? []` cobre o clone sem a 0125: sem coluna, zero tools Composio no
+    // turno — mesma direção segura das outras colunas novas deste arquivo.
+    composioApps: r.composio_apps ?? [],
     activeKbVersionId: r.active_kb_version_id,
     ragTopK,
     ragSimilarityThreshold,
