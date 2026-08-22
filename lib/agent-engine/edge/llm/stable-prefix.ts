@@ -1,6 +1,6 @@
 /**
- * Disciplina de prompt cache — prefixo estável org-wide (F2-17; blueprint 8.2/8.3;
- * CLAUDE.md regra 15). A inversão 1:N da armadilha do cache: o prefixo compartilhado
+ * Disciplina de prompt cache — prefixo estável org-wide (F2-17; blueprint 8.2/8.3).
+ * A inversão 1:N da armadilha do cache: o prefixo compartilhado
  * entre TODOS os leads da org é [tools em ordem determinística + system do playbook],
  * byte-idêntico entre runs (mesmas versões ⇒ mesmo hash); tudo por-lead (checkpoint,
  * lead_state, contexto) entra DEPOIS, nas mensagens — nunca antes do breakpoint.
@@ -16,13 +16,20 @@
  *   no bloco correspondente. Providers não-Anthropic ignoram o namespace.
  *
  * REGRA DURA deste módulo: NADA volátil (timestamp, random, lead, contador) entra
- * aqui — o teste de byte-identidade (llm-cache.test.ts) quebra se entrar.
+ * aqui — quebraria o byte-identidade entre runs que o cache depende.
+ *
+ * ⚠️ Não existe teste automatizado cobrindo esta regra hoje (achado 2026-08-22,
+ * durante investigação de um alerta de cache_hit baixo em produção): nenhum
+ * `tests/**` referencia `stable-prefix.ts`/`StablePrefix`. Um comentário antigo
+ * aqui citava um `llm-cache.test.ts` que não existe no repo — removido para não
+ * dar falsa sensação de rede de segurança. Escrever esse teste é candidato a
+ * tarefa separada, não decidido ainda.
  */
 import { createHash } from 'node:crypto';
 
 import { asSchema, type SystemModelMessage, type ToolSet } from 'ai';
 
-/** TTL do bloco compartilhado — knob LLM_CACHE_TTL; doutrina é '1h' (regra 15). */
+/** TTL do bloco compartilhado — knob LLM_CACHE_TTL; doutrina deste módulo é '1h'. */
 export type CacheTtl = '5m' | '1h';
 
 export interface StablePrefix {

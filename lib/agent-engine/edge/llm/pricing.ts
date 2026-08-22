@@ -4,7 +4,7 @@
  *
  * Fonte: https://docs.claude.com/en/docs/about-claude/pricing (conferida 2026-07);
  * cache write cotado no TTL 1h (2× input) — o TTL adotado pela doutrina de caching
- * (CLAUDE.md regra 15); cache read = 0.1× input.
+ * (ver stable-prefix.ts); cache read = 0.1× input.
  *
  * Modelo fora da tabela → custo NULL (desconhecido): mais honesto que inventar 0 —
  * o budget soma coalesce(cost_cents, 0), então modelo sem preço não consome teto;
