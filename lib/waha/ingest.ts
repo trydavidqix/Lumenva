@@ -15,6 +15,7 @@ import { audit } from "@/lib/audit";
 import { blockContactIfStopKeyword } from "@/lib/messaging/stop-keyword";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import { ackToStatus } from "@/lib/types/messaging";
+import type { WahaEnvelope, WahaPayload } from "@/lib/waha/envelope";
 import { bareWaMessageId, chatIdFromWaMessageId } from "@/lib/waha/message-id";
 import { logger } from "@/lib/logger";
 
@@ -25,37 +26,12 @@ interface Session {
   organization_id: string;
 }
 
-export interface WahaPayload {
-  id?: string;
-  from?: string;
-  to?: string;
-  fromMe?: boolean;
-  body?: string;
-  type?: string;
-  hasMedia?: boolean;
-  ack?: number;
-  ackName?: string;
-  participant?: string;
-  author?: string;
-  status?: string;
-  timestamp?: number;
-  mediaUrl?: string;
-  mimetype?: string;
-  /** WAHA >= 2026.x (NOWEB): mídia vem aninhada em payload.media. */
-  media?: { url?: string | null; mimetype?: string | null; filename?: string | null } | null;
-  _data?: {
-    notifyName?: string;
-    pushName?: string;
-    /** NOWEB: o conteúdo real (imageMessage, stickerMessage, …) — fonte do tipo. */
-    message?: Record<string, unknown>;
-  } & Record<string, unknown>;
-}
-
-export interface WahaEnvelope {
-  event?: string;
-  session?: string;
-  payload?: WahaPayload;
-}
+/**
+ * O formato do fio mora em `lib/waha/envelope.ts`, onde é um schema Zod — e o
+ * tipo NASCE dele (`z.infer`). Reexportado aqui porque este módulo era o
+ * dono do tipo e quem já o importava não precisa saber que ele mudou de casa.
+ */
+export type { WahaEnvelope, WahaPayload };
 
 export type ChatIdentity =
   | { kind: "phone"; phone: string; lid: null }

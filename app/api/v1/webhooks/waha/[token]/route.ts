@@ -18,7 +18,8 @@ import { ARCHIVED_AT, queryTolerantToMissingArchived } from "@/lib/channels/arch
 import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { dispatchWahaEvent, type WahaEnvelope } from "@/lib/waha/ingest";
+import { conferirContratoWaha, lerRoteamentoWaha } from "@/lib/waha/envelope";
+import { dispatchWahaEvent } from "@/lib/waha/ingest";
 import { authenticateWahaWebhook } from "@/lib/waha/webhook-auth";
 
 export const dynamic = "force-dynamic";
@@ -50,12 +51,34 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
   }
 
   const rawBody = await req.text();
-  let envelope: WahaEnvelope;
-  try {
-    envelope = JSON.parse(rawBody) as WahaEnvelope;
-  } catch {
-    return fail("invalid_request", "invalid_json", 400, { requestId });
+  // ─── O contrato do fio, em DOIS momentos ─────────────────────────────────
+  //
+  // Isto era `JSON.parse(rawBody) as WahaEnvelope`: um cast, que não checa
+  // nada em execução. Um `payload.from` não-string fazia `parseChatId`
+  // lançar lá dentro do dispatch.
+  //
+  // O estágio 1 confere só o que é preciso para RESOLVER O TENANT e ARQUIVAR
+  // o corpo (session + payload.id). O contrato completo vem depois do
+  // INSERT em webhook_events_log — conferir tudo antes destruiria a
+  // evidência de que o formato mudou. Ver lib/waha/envelope.ts.
+  const roteamento = lerRoteamentoWaha(rawBody);
+  if (!roteamento.ok) {
+    if (roteamento.motivo === "json_invalido") {
+      return fail("invalid_request", "invalid_json", 400, { requestId });
+    }
+    logger.error("[waha.webhook] payload fora do contrato do canal", {
+      request_id: requestId,
+      estagio: "roteamento",
+      campos: roteamento.campos,
+    });
+    return fail("validation_failed", "payload fora do contrato do canal", 400, {
+      requestId,
+      details: { campos: roteamento.campos },
+    });
   }
+  // Nome deliberado: isto ainda NÃO é o envelope conferido. É o que o
+  // estágio 1 garante — sessão e id —, e só.
+  const roteado = roteamento.envelope;
 
   const admin = createAdminClient();
 
@@ -102,7 +125,7 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
       metadata: {
         provider: "waha",
         session: session.waha_session_name,
-        event: envelope.event,
+        event: roteado.event,
         reason: auth.reason,
         had_signature: Boolean(sigHeader),
       },
@@ -111,8 +134,8 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
   }
   const validSignature = auth.signatureVerified;
 
-  const eventType = envelope.event ?? "unknown";
-  const externalId = envelope.payload?.id ?? null;
+  const eventType = roteado.event ?? "unknown";
+  const externalId = roteado.payload?.id ?? null;
 
   const headersJson: Record<string, string> = {};
   req.headers.forEach((value, key) => {
@@ -128,7 +151,7 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
     http_method: "POST",
     headers: headersJson,
     raw_body: rawBody,
-    payload_parsed: envelope as unknown as Record<string, unknown>,
+    payload_parsed: roteado as unknown as Record<string, unknown>,
     signature_header: sigHeader ?? null,
     valid_signature: validSignature,
     event_type: eventType,
@@ -137,8 +160,22 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
     attempts: 0,
   });
 
+  // Estágio 2: o resto do contrato, agora que o corpo cru já está arquivado.
+  const contrato = conferirContratoWaha(roteado);
+  if (!contrato.ok) {
+    logger.error("[waha.webhook] payload fora do contrato do canal", {
+      request_id: requestId,
+      estagio: "conteudo",
+      campos: contrato.campos,
+    });
+    return fail("validation_failed", "payload fora do contrato do canal", 400, {
+      requestId,
+      details: { campos: contrato.campos },
+    });
+  }
+
   try {
-    await dispatchWahaEvent(admin, session, envelope, requestId);
+    await dispatchWahaEvent(admin, session, contrato.envelope, requestId);
   } catch (err) {
     logger.error("waha.webhook: handler failed", {
       error: err instanceof Error ? err.message : String(err),
