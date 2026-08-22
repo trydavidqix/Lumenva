@@ -112,7 +112,7 @@
       "col": 2,
       "type": "service",
       "label": "lib/escalacao/retomada.ts",
-      "sublabel": "devolverAtendimentoAoAgente — solta as TRÊS travas"
+      "sublabel": "devolverAtendimentoAoAgente — solta as TRÊS travas + fecha o agent_case aberto (2026-08-22)"
     },
     {
       "id": "continuidade",

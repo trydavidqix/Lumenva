@@ -168,6 +168,16 @@ então `lerContinuidadeHumana` nunca tinha o que ler na volta, e o resumo do
 checkpoint ficava contaminado para sempre com o motivo do handoff antigo. Ver
 `lib/agent-engine/agent/human-handoff.ts` (d.1).
 
+**Atualizado 2026-08-22 (2ª correção, mesmo dia):** a volta pelo botão "Devolver
+ao automático" nunca fechava o `agent_case` que a correção acima passou a abrir
+— só a tela de Cases (`resolveCaseFromHuman`) sabia fechar, com `actor_user_id`
+real. Um caso órfão ficava `awaiting_human` pra sempre, sem evento de resolução
+e sem rastro de quem devolveu — o mesmo buraco de auditoria que a doutrina RGPD
+do repo exige fechar. `devolverAtendimentoAoAgente` agora fecha o caso aberto
+como parte da devolução, gravando `actor_kind='human'`+`actor_user_id` quando é
+uma pessoa clicando, ou `actor_kind='agent'` quando é a própria IA. Ver
+`lib/escalacao/retomada.ts` (`fecharCasoAbertoAoDevolver`).
+
 Spec: `tests/e2e/escalacao-ciclo.spec.ts`. Seed: `scripts/seed-e2e-escalacao.ts`
 (chama as funções REAIS `openCase` e `performHumanHandoff` — um seed que ligasse
 as travas com `UPDATE` próprio provaria o teste contra uma cópia da regra).
