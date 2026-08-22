@@ -223,7 +223,18 @@ styles/
 
 ## 4. Hooks de Realtime
 
-Toda assinatura de Supabase Realtime no app **passa por** `useRealtimeChannel` — primitivo único responsável por subscribe/unsubscribe, detecção de queda, dedup e handoff de eventos. Os hooks de domínio (`useConversationsRealtime`, etc.) são compositores acima dele.
+Toda assinatura de Supabase Realtime no app **passa por** `useRealtimeChannel` — primitivo único responsável por subscribe/unsubscribe, dedup e handoff de eventos. Os hooks de domínio (`useConversationsRealtime`, etc.) são compositores acima dele.
+
+> **Correção 2026-08-22:** o primitivo só reporta o status EXPLÍCITO do canal
+> (`CHANNEL_ERROR`/`TIMED_OUT`/`CLOSED`) — não cobre o caso mais traiçoeiro,
+> canal que responde `SUBSCRIBED` e nunca entrega nada (socket autenticado
+> tarde demais, RLS filtra tudo, morte silenciosa). Quem detecta E cura isso é
+> `hooks/realtime/useRefetchDeSeguranca.ts`, um hook SEPARADO e opt-in — cada
+> consumidor de domínio precisa plugá-lo explicitamente, lendo `ultimaEntrega`
+> do retorno de `useRealtimeChannel` e comparando com um refetch periódico.
+> `useConversationsRealtime`/`useMessagesRealtime` não tinham essa proteção
+> (só Kanban e timeline de lead tinham) até esta data — achado e corrigido no
+> mesmo commit que esta nota.
 
 ### 4.1 `useRealtimeChannel` — primitivo
 
