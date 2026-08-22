@@ -150,7 +150,19 @@ export async function devolverAtendimentoAoAgente(
   if (updErr) return { ok: false, erro: "assignment_conflict", detalhe: updErr.message };
   if (!atualizada) return { ok: false, erro: "assignment_conflict" };
 
-  // (3) A trava que ninguém soltava. Sem esta linha as outras duas não servem de
+  // (3) Fecha qualquer `agent_cases` aberto desta conversa. Sem isto, um caso
+  // aberto por `performHumanHandoff` (openCase) ficava órfão pra sempre quando a
+  // devolução acontecia por AQUI — o caminho rápido do botão "Devolver ao
+  // agente", sem passar pela tela de Cases (o único lugar que sabia fechar um
+  // caso, via `resolveCaseFromHuman`). A conversa voltava pra IA com auditoria
+  // completa (`ai.reactivated_by_agent` abaixo); o `agent_cases` continuava
+  // `awaiting_human` pra sempre, sem evento de resolução e sem `actor_user_id` —
+  // o mesmo buraco de rastreabilidade que a doutrina RGPD do repo exige fechar.
+  // Fire-and-forget deliberado: falhar aqui não pode travar a devolução real
+  // (as três travas já foram soltas antes desta linha).
+  await fecharCasoAbertoAoDevolver(deps, input.conversationId);
+
+  // (4) A trava que ninguém soltava. Sem esta linha as outras duas não servem de
   // nada: os três guards (worker nativo, harness, before-send) leem daqui.
   if (conv.contact_id !== null) {
     const { error: contatoErr } = await supabase
@@ -167,7 +179,7 @@ export async function devolverAtendimentoAoAgente(
     }
   }
 
-  // (4) Sinal durável de fim do episódio. AWAITED, não fire-and-forget, pela
+  // (5) Sinal durável de fim do episódio. AWAITED, não fire-and-forget, pela
   // mesma razão que a rota original documentava: é o ÚNICO produtor do sinal que
   // retoma um follow-up pausado por passagem a humano (lib/followup/reactivity.ts).
   // Perder aqui órfã o enrollment para sempre.
@@ -187,12 +199,12 @@ export async function devolverAtendimentoAoAgente(
     return { ok: false, erro: "resume_signal_failed", detalhe: emitErr.message };
   }
 
-  // (5) O input estruturado que a IA lê para retomar (invariante 2 da doutrina).
+  // (6) O input estruturado que a IA lê para retomar (invariante 2 da doutrina).
   if (conv.contact_id !== null && continuidade.houveAtendimentoHumano) {
     await gravarCheckpointDeRetomada(supabase, organizationId, conv.contact_id, continuidade);
   }
 
-  // (6) Passagem de atendimento é evento de vida do negócio — a ida já emitia
+  // (7) Passagem de atendimento é evento de vida do negócio — a ida já emitia
   // `handoff_triggered` e a volta não emitia nada, então a linha do tempo mostrava
   // o cliente saindo para uma pessoa e nunca voltando.
   if (conv.contact_id !== null) {
@@ -216,6 +228,91 @@ export async function devolverAtendimentoAoAgente(
   });
 
   return { ok: true, conversationId: input.conversationId, jaEstavaComOAgente, continuidade };
+}
+
+/** `agent_cases.status` que ainda contam como "aberto" — mesmo vocabulário de human-cases.ts. */
+const CASO_ABERTO_STATUS = ["awaiting_human", "awaiting_lead"];
+
+/**
+ * Fecha o `agent_cases` aberto desta conversa, se houver — a peça que faltava
+ * pra devolver o atendimento não deixar um caso órfão pra trás (ver o
+ * comentário no chamador). Usa supabase-js e não `human-cases.ts` (que fala
+ * `pg.Pool`/`Queryable`) porque este caminho só tem o client do request.
+ *
+ * Ator determina o rastro: `deps.actor.type === 'user'` grava `actor_kind=
+ * 'human'` + `actor_user_id` real (uma PESSOA decidiu devolver). Qualquer
+ * outro ator (a própria IA devolvendo via tool, token externo) grava
+ * `actor_kind='agent'` — nunca inventa uma decisão humana que não houve.
+ *
+ * Aceita `awaiting_human` E `awaiting_lead` (diferente de `resolveCaseFromHuman`,
+ * que só sai de `awaiting_human`): devolver o atendimento é a pessoa dizendo
+ * "acabou", independente de o caso estar esperando o humano ou esperando o
+ * lead responder — travar em `awaiting_lead` deixaria o mesmo buraco que este
+ * fix existe pra fechar.
+ *
+ * Fire-and-forget por desenho (ver o comentário no chamador): não bloqueia a
+ * devolução real, só loga se falhar.
+ */
+async function fecharCasoAbertoAoDevolver(
+  deps: RetomadaDeps,
+  conversationId: string,
+): Promise<void> {
+  const { supabase, organizationId, actor } = deps;
+
+  const { data: aberto, error: buscaErr } = await supabase
+    .from("agent_cases")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("conversation_id", conversationId)
+    .in("status", CASO_ABERTO_STATUS)
+    .limit(1)
+    .maybeSingle();
+  if (buscaErr) {
+    logger.error("[escalacao.retomada] falha ao buscar caso aberto pra fechar", {
+      conversation_id: conversationId,
+      error: buscaErr.message,
+    });
+    return;
+  }
+  const caseId = (aberto as { id: string } | null)?.id;
+  if (caseId === undefined) return;
+
+  const { data: fechado, error: fechaErr } = await supabase
+    .from("agent_cases")
+    .update({ status: "resolved", closed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq("organization_id", organizationId)
+    .eq("id", caseId)
+    .in("status", CASO_ABERTO_STATUS)
+    .select("id")
+    .maybeSingle();
+  if (fechaErr || !fechado) {
+    logger.error("[escalacao.retomada] falha ao fechar caso aberto na devolução", {
+      conversation_id: conversationId,
+      case_id: caseId,
+      error: fechaErr?.message ?? "corrida perdida (caso já não estava mais aberto)",
+    });
+    return;
+  }
+
+  const nota = "Atendimento devolvido ao agente — caso fechado automaticamente.";
+  const eventos =
+    actor.type === "user"
+      ? [
+          { organization_id: organizationId, case_id: caseId, kind: "human_replied", actor_kind: "human", actor_user_id: actor.id, human_action: "resolved", body: nota },
+          { organization_id: organizationId, case_id: caseId, kind: "resolved", actor_kind: "human", actor_user_id: actor.id },
+        ]
+      : [
+          { organization_id: organizationId, case_id: caseId, kind: "agent_noted", actor_kind: "agent", body: nota },
+          { organization_id: organizationId, case_id: caseId, kind: "resolved", actor_kind: "agent" },
+        ];
+  const { error: eventoErr } = await supabase.from("agent_case_events").insert(eventos);
+  if (eventoErr) {
+    logger.error("[escalacao.retomada] caso fechado mas evento de resolução não foi gravado", {
+      conversation_id: conversationId,
+      case_id: caseId,
+      error: eventoErr.message,
+    });
+  }
 }
 
 /**
