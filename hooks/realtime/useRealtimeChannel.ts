@@ -215,7 +215,12 @@ export function useRealtimeChannel(opts: UseRealtimeChannelOpts): {
     // PostgreSQL" e nunca entrega evento, porque a RLS filtra do outro lado.
     void esperarAuth(supabase).then(() => {
       if (cancelado || !active) return;
-      active.subscribe((s) => {
+      active.subscribe((s, err) => {
+        if (s === "CHANNEL_ERROR" || s === "TIMED_OUT") {
+          // Canal caiu depois de já ter assinado — vale saber sem abrir devtools.
+          // (`error`/`warn`/`info` são os únicos console.* permitidos pelo lint.)
+          console.error("[realtime] canal degradado", { channelName, status: s, erro: err?.message });
+        }
         // s is one of "SUBSCRIBED" | "CHANNEL_ERROR" | "TIMED_OUT" | "CLOSED"
         const map: Record<string, RealtimeStatus> = {
           SUBSCRIBED: "subscribed",
