@@ -22,6 +22,7 @@ function fakeEngine(name: EngineName = "waha"): MessagingEngine {
     health: async () => ({ state: "up", checkedAt: "2026-08-24T12:00:00.000Z" }),
     send: async () => ({ externalMessageId: "external-1" }),
     downloadMedia: async () => ({ bytes: new Uint8Array(), mimeType: "image/jpeg" }),
+    ingest: async () => undefined,
     subscribe: () => () => undefined,
   };
 }
