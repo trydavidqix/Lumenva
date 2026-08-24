@@ -15,6 +15,7 @@ const ADAPTERS: Record<ChannelProvider, ChannelAdapter | null> = {
  * Fail-closed: provider sem adapter (ou fora da matriz) lança em vez de cair no
  * WAHA por default. Enviar pelo canal errado é pior que não enviar.
  */
+
 export function getAdapter(provider: ChannelProvider): ChannelAdapter {
   const adapter = ADAPTERS[provider];
   if (!adapter) throw new Error(`unknown_channel_provider: ${provider}`);
@@ -27,11 +28,36 @@ export type { MetaCloudEngineConfig } from "./engines/meta-cloud-engine";
 export { createWahaEngine } from "./engines/waha-engine";
 export type { WahaEngineConfig } from "./engines/waha-engine";
 export { hasCapability } from "./gateway/capabilities";
+export { DuplicateEngineRegistrationError, UnknownEngineError } from "./gateway/errors";
 export {
-  DuplicateEngineRegistrationError,
-  UnknownEngineError,
-} from "./gateway/errors";
+  normalizeExternalIdentity,
+  resolveCustomerIdentity,
+} from "./gateway/identity-resolver";
+export type {
+  ExternalIdentity,
+  IdentityLookup,
+  IdentityMatch,
+  IdentityRepository,
+  IdentityResolution,
+} from "./gateway/identity-resolver";
 export { EngineRegistry } from "./gateway/registry";
+export {
+  assertNoAutomaticEngineMigration,
+  chooseRecoveryAction,
+  classifySessionHealth,
+  DEFAULT_SESSION_HEALTH_POLICY,
+  sessionLeaseKey,
+} from "./gateway/session-supervisor";
+export type {
+  RecoveryAction,
+  SessionAuthState,
+  SessionHealth,
+  SessionHealthPolicy,
+  SessionHealthResult,
+  SessionHealthSignals,
+  SessionLeaseScope,
+  SessionLeaseStore,
+} from "./gateway/session-supervisor";
 export { CHANNEL_SESSION_REF_COLUMNS, resolveSessionRef } from "./session-ref";
 export type {
   EngineFactoryContext,
