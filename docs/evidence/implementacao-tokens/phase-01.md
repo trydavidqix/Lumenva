@@ -14,29 +14,60 @@ Fase 1 — convergência CRM + Agent OS sem substituir o runtime operacional atu
 - Phase 6 Learning Flywheel: `c89260f2eca600407b0d1381b11b85d4383304a8`.
 - Phase 7 Durable Benchmark: `f40725a38c372383be300215c90e5b122f7d9410`.
 
-## Convergência estática confirmada
+## Convergência implementada
 
-- CRM atual possui o hot path `lib/agent-engine/agent/inbound-turn.ts` e ele já compõe contexto, compaction, memória, skills, RAG, guardrails, handoff, cases, multimodal e envio via adapter.
-- CRM atual possui o seam canônico `lib/agent-engine/edge/llm/run-model-call.ts` com config por org, BYOK, budget pre-call, cache accounting, usage/cost/latency e tracing.
-- CRM atual possui memória semântica sob `lib/agent-engine/memory/**`.
-- CRM atual possui multi-tenancy/RLS como invariante de arquitetura.
-- Kernel/Product Agents/Policy/Evals estão ausentes da branch convergida e existem em linhas Agent OS separadas; serão portados seletivamente.
-- Migration Agent OS `20260819130000_0123_agent_memory_tables.sql` colide conceitualmente/numérica com o histórico atual; não será copiada com o mesmo número.
+- Agent OS contracts portados em `lib/agent-engine/contracts/agent-os.ts`.
+- Agent Kernel portado como camada de governança, sem substituir `inbound-turn`.
+- Product Agents portados como definições governadas, inicialmente SHADOW-safe.
+- Policy/Approval/Autonomy/Tool Gateway convergidos com kill switch, R0-R4, idempotência e tenant boundary.
+- Shadow/Evals foundation portado com hard gates determinísticos.
+- CRM atual continua dono do hot path de WhatsApp/multimodal, LLM seam, handoff humano, memória semântica e tenancy.
 
-## Baseline executable gates
+## Evidência executável fresca
 
-Os comandos requeridos pelo plano são:
+A branch foi transformada temporariamente em runner de Preview Vercel porque o connector GitHub não expõe shell autenticado. O runner nunca altera produção e será removido antes de qualquer integração com `main`.
 
-```text
-pnpm typecheck
-pnpm test:unit
-pnpm lint:channels
-pnpm lint:tenant-filter
-```
+### Build/TypeScript
 
-**Estado atual:** `NOT_EXECUTED_IN_THIS_TOOL_ENVIRONMENT`.
+- SHA `405e3aa9a7116df1c3add0ea4c9db1914195eafb` (`feat(agent-os): port shadow eval safety gates`): Preview Vercel `READY`.
+- Logs registraram `Compiled successfully` e TypeScript concluído.
 
-Motivo: nesta sessão, o repositório privado está acessível por GitHub API/connector, mas não existe um checkout autenticado com shell/rede para executar `pnpm`. O container local não resolve `github.com`, e o connector GitHub não expõe execução arbitrária de comandos. Isso é registrado como limitação de evidência, não convertido em PASS ou FAIL.
+### Descobertas do gate ampliado
+
+1. `lint:channels` inicialmente falhou por duas dívidas herdadas da `main`:
+   - rota de transporte Meta Cloud API ausente do inventário de dívida conhecida;
+   - menção técnica de provider apenas em comentário de `workflows/repository.ts`.
+   A causa foi reconciliada sem mudança de comportamento no commit `b22b34f964a799eaf79ee7471a4145bb7cac1bb9`.
+
+2. A suíte unitária completa executada dentro da Vercel precisa de `NODE_ENV=test`; com `NODE_ENV=production`, `lib/env.ts` exige segredos de runtime antes da coleta. O runner foi corrigido sem afrouxar a validação de produção.
+
+3. Com `NODE_ENV=test`, a suíte passou a coletar testes normalmente. Foi observado um RED ambiente-específico em `ai-response-worker-model-routing.test.ts`: o próprio teste simula ausência de autenticação do Vercel AI Gateway, premissa que não é portátil para um runner hospedado na própria Vercel. Este caso não é usado como gate da convergência.
+
+4. Regressões observadas GREEN durante a execução ampliada incluem, entre muitas outras:
+   - `tests/unit/escalacao-retomada.test.ts` — 18/18;
+   - `tests/unit/mcp-escalacao-tools.test.ts` — 20/20;
+   - `lib/waha/ingest-celular.test.ts` — 15/15;
+   - `lib/agent-engine/edge/llm/run-model-call.test.ts` — 5/5;
+   - `lib/agent-engine/context/fusion.test.ts` — 10/10;
+   - `tests/unit/gate-messaging-window.test.ts` — 10/10.
+
+### Gate final focado da Fase 1
+
+O SHA `34a484e4afa27bbff2f47170885ba56a3f4dbcf1` configura um script temporário `scripts/verify-implementacao-tokens-phase-01.sh` para executar:
+
+- `pnpm typecheck`;
+- contracts convergence;
+- Agent Kernel convergence;
+- Product Agents convergence;
+- Policy/Tool Gateway convergence;
+- Shadow/Evals convergence;
+- escalation/handoff regressions;
+- WhatsApp/media regressions;
+- `pnpm lint:tenant-filter`;
+- `pnpm lint:channels`;
+- `next build`.
+
+**Estado deste gate:** `QUEUED` no Preview Vercel no momento deste registro. A Fase 1 permanece `IN_PROGRESS` até esse SHA produzir evidência GREEN.
 
 ## Evidência histórica usada apenas como referência
 
@@ -46,10 +77,10 @@ Motivo: nesta sessão, o repositório privado está acessível por GitHub API/co
 - Phase 6 registrou 235/235 testes + typecheck/build PASS na branch histórica.
 - Phase 7 permanece `INCOMPLETE` para decisão de durable engine.
 
-Nenhum desses resultados fecha a Fase 1 convergida; serão rerodados quando houver runner disponível no SHA da branch.
+Nenhum desses resultados substitui evidência da branch convergida.
 
 ## Status da Fase 1
 
 `IN_PROGRESS`
 
-Task 1 tem o mapa de convergência registrado. O gate executável continua pendente e impede marcar a fase como concluída, mas não impede preparar contratos/testes de convergência de forma seletiva.
+A implementação estrutural da convergência está presente. O fechamento depende apenas do gate focado fresco no SHA corrente; Customer Memory não recebe migration antes desse gate ficar verde.
