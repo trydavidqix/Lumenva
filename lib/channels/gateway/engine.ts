@@ -23,6 +23,7 @@ export interface MessagingEngine {
   health(context?: EngineAccountContext): Promise<EngineHealth>;
   send(request: GatewaySendRequest): Promise<GatewaySendResult>;
   downloadMedia(request: GatewayMediaDownloadRequest): Promise<GatewayMediaDownloadResult>;
+  ingest(event: GatewayEventEnvelope): Promise<void>;
   subscribe(handler: GatewayEventHandler): () => void;
 }
 
