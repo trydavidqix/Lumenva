@@ -1,9 +1,12 @@
 import { wahaAdapter } from "../adapters/waha";
 import type { ChannelAdapter, OutboundEnvelope, OutboundKind } from "../types";
-import type { GatewayEventHandler, MessagingEngine } from "../gateway/engine";
+import type {
+  EngineFactoryContext,
+  GatewayEventHandler,
+  MessagingEngine,
+} from "../gateway/engine";
 import type {
   ChannelCapability,
-  EngineFactoryContext,
   GatewayEventEnvelope,
   GatewayMediaDownloadRequest,
   GatewayMediaDownloadResult,
@@ -30,9 +33,7 @@ const WAHA_CAPABILITIES = new Set<ChannelCapability>([
   "audio",
   "document",
   "sticker",
-  "reaction",
   "groups",
-  "presence",
   "profile_picture",
 ]);
 
