@@ -18,12 +18,8 @@ import type { VercelConfig } from "@vercel/config/v1";
 
 const config: VercelConfig = {
   // Temporário na branch implementacao-tokens: usa o Preview como runner dos
-  // gates relevantes da fase sem alterar o script multiplataforma local.
-  // A suíte unitária completa contém casos que deliberadamente testam ausência
-  // de autenticação do Vercel AI Gateway e, por isso, não é portátil para um
-  // runner hospedado na própria Vercel. Remover antes de integração com main.
-  buildCommand:
-    "pnpm typecheck && env NODE_ENV=test pnpm vitest run lib/agent-engine/contracts/agent-os.convergence.test.ts lib/agent-engine/kernel/agent-kernel.convergence.test.ts tests/unit/agent-product-convergence.test.ts tests/unit/agent-policy-tool-gateway-convergence.test.ts tests/unit/agent-shadow-evals-convergence.test.ts tests/unit/escalacao-retomada.test.ts tests/unit/mcp-escalacao-tools.test.ts tests/unit/waha-ingest-media.test.ts tests/unit/waha-media-send.test.ts tests/unit/media-derive.test.ts tests/unit/media-video-derive.test.ts && pnpm lint:tenant-filter && pnpm lint:channels && next build",
+  // gates relevantes da fase. Remover antes de integração com main.
+  buildCommand: "bash scripts/verify-implementacao-tokens-phase-01.sh",
   crons: [
     { path: "/api/v1/cron/lgpd-sla-watcher", schedule: "0 12 * * *" },
   ],
