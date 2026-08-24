@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:webpack": "next dev",
-    "build": "next build",
+    "build": "pnpm typecheck && pnpm lint:channels && pnpm lint:tenant-filter && pnpm test:unit && next build",
     "build:webpack": "next build",
     "start": "next start",
     "lint": "eslint .",
