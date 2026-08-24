@@ -92,13 +92,18 @@ export async function resolveCustomerIdentity(
     return { customerId: null, confidence: "unresolved", reason: "ambiguous" };
   }
 
-  const first = matches.find((match) => match.customerId === customerIds[0]);
+  const customerId = customerIds[0];
+  if (!customerId) {
+    return { customerId: null, confidence: "unresolved", reason: "not_found" };
+  }
+
+  const first = matches.find((match) => match.customerId === customerId);
   if (!first) {
     return { customerId: null, confidence: "unresolved", reason: "not_found" };
   }
 
   return {
-    customerId: customerIds[0],
+    customerId,
     confidence: "exact",
     matchedIdentity: first.matchedIdentity,
   };
