@@ -20,7 +20,7 @@ create table if not exists public.customer_memory (
   constraint customer_memory_org_contact_unique unique (organization_id, contact_id),
   constraint customer_memory_contact_same_org_fk
     foreign key (organization_id, contact_id)
-    references public.contacts (organization_id, id)
+    references contacts (organization_id, id)
     on delete cascade
 );
 
@@ -32,8 +32,6 @@ create index if not exists customer_memory_contact_idx
 
 alter table public.customer_memory enable row level security;
 
--- Tenant isolation is enforced by membership. Application-level roles still
--- decide who may perform each product action; RLS prevents cross-org access.
 drop policy if exists tenant_isolation_customer_memory on public.customer_memory;
 create policy tenant_isolation_customer_memory on public.customer_memory
   for all
@@ -43,7 +41,6 @@ create policy tenant_isolation_customer_memory on public.customer_memory
 revoke all on public.customer_memory from anon;
 grant select, insert, update, delete on public.customer_memory to authenticated;
 
--- Reuse the canonical audit trigger already present in the CRM schema.
 drop trigger if exists trg_customer_memory_audit on public.customer_memory;
 create trigger trg_customer_memory_audit
   after insert or update or delete on public.customer_memory
