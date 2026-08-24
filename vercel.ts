@@ -17,6 +17,11 @@
 import type { VercelConfig } from "@vercel/config/v1";
 
 const config: VercelConfig = {
+  // Temporário na branch implementacao-tokens: transforma o Preview em runner
+  // de verificação sem alterar o script multiplataforma usado por dev/Windows.
+  // Remover antes de qualquer futura integração com main.
+  buildCommand:
+    "pnpm typecheck && env NODE_ENV=test pnpm test:unit && pnpm lint:tenant-filter && pnpm lint:channels && next build",
   crons: [
     { path: "/api/v1/cron/lgpd-sla-watcher", schedule: "0 12 * * *" },
   ],
