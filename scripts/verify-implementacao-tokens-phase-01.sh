@@ -10,6 +10,8 @@ NODE_ENV=test pnpm vitest run \
   tests/unit/agent-shadow-evals-convergence.test.ts \
   tests/unit/escalacao-retomada.test.ts \
   tests/unit/mcp-escalacao-tools.test.ts \
+  tests/unit/capacidade-alcancavel-pelo-agente.test.ts \
+  tests/unit/mcp-attachment-consent.test.ts \
   tests/unit/waha-ingest-media.test.ts \
   tests/unit/waha-media-send.test.ts \
   tests/unit/media-derive.test.ts \
