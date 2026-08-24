@@ -31,42 +31,24 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-// O padrão vive em módulo próprio para poder ser testado sem executar o lint —
-// ver a justificativa das duas fronteiras (issue #118) lá.
 import { nomeiaProvider } from "./lint-channels.pattern";
 
 const ROOTS = ["app", "lib", "components", "workers"];
 const ALLOWED = [
   /^lib\/channels\//,
-  // O transporte que o adapter embrulha; some quando a Fase 3 o absorver.
   /^lib\/waha\//,
-  // Saída de `supabase gen types`: os nomes são COLUNAS. Editar à mão é o defeito.
   /^lib\/database\.types\.ts$/,
 ];
 
-/**
- * Dívida conhecida, medida em 2026-07-27 (Task 7 do plano de seam de canais) e
- * RE-medida em 2026-08-05 ao consertar a fronteira do padrão (issue #118).
- *
- * As 7 entradas marcadas `(#118)` não são dívida nova: elas já violavam o
- * invariante desde sempre e a catraca é que não as enxergava, porque `\b` não
- * fecha antes de `_`. Entram DECLARADAS em vez de consertadas no mesmo passo —
- * congelar o que já existia e reprovar só o novo é o que deixa o gate nascer
- * verde; limpá-las exige renomear coluna de banco e campo de API pública, que é
- * mudança de comportamento e trabalho da Fase 3 do seam.
- *
- * Ordem alfabética dentro de cada grupo, para o diff ficar legível.
- */
 const KNOWN_DEBT: { reason: string; files: string[] }[] = [
   {
     reason:
-      "Superfície de TRANSPORTE do provider legado (control plane de sessão, " +
-      "webhook receiver, download de mídia). Mesma natureza de `lib/waha/`, que " +
-      "já é exceção: não são features perguntando identidade, são o próprio " +
-      "canal. Saem junto com `lib/waha/` na Fase 3. O teste de rota entra pela " +
-      "mesma porta: para exercitar a revogação por canal ele precisa montar as " +
-      "duas linhas da união e dublar o cliente do transporte — sai quando a " +
-      "rota que ele cobre sair.",
+      "Superfície de TRANSPORTE do provider legado/oficial (control plane de sessão, " +
+      "webhook receiver, download de mídia). Mesma natureza de `lib/waha/` e dos " +
+      "adapters em `lib/channels/`: não são features perguntando identidade, são o próprio " +
+      "canal. Saem da dívida quando as rotas de transporte forem absorvidas pelo seam de canais. " +
+      "O teste de rota entra pela mesma porta: para exercitar a revogação por canal ele precisa " +
+      "montar as linhas da união e dublar o cliente do transporte.",
     files: [
       "app/api/v1/channel-sessions/[id]/qr/route.ts",
       "app/api/v1/channel-sessions/[id]/reconnect/route.ts",
@@ -77,11 +59,9 @@ const KNOWN_DEBT: { reason: string; files: string[] }[] = [
       "app/api/v1/messages/[id]/media/route.ts",
       "app/api/v1/onboarding/whatsapp/qr/route.ts",
       "app/api/v1/onboarding/whatsapp/session/route.ts",
+      "app/api/v1/webhooks/meta/[token]/route.ts",
       "app/api/v1/webhooks/waha/[token]/route.ts",
       "app/api/v1/webhooks/waha/route.ts",
-      // (#118) Lê `process.env.WAHA_API_BASE_URL`/`WAHA_API_KEY` só para
-      // decidir se o transporte está configurado — o nome está no ENV, não
-      // numa pergunta de identidade. Sai quando o env virar config de canal.
       "app/app/connections/page.tsx",
       "app/onboarding/connect-whatsapp/page.tsx",
       "lib/agent-engine/edge/crm/session-reconciler.ts",
@@ -100,31 +80,26 @@ const KNOWN_DEBT: { reason: string; files: string[] }[] = [
     files: [
       "app/api/v1/admin/dashboard/kpis/route.ts",
       "app/api/v1/admin/tenants/[id]/health/route.ts",
-      // (#118) Emite `waha_sessions_count` na resposta do admin.
       "app/api/v1/admin/tenants/[id]/route.ts",
       "app/design/sections/SectionPatterns.tsx",
       "app/onboarding/connect-whatsapp/_client.tsx",
       "components/admin/dashboard/AlertItem.tsx",
       "components/admin/dashboard/KPICards.tsx",
       "components/admin/tenants/HealthGrid.tsx",
-      // (#118) Fixture do teste do componente logo abaixo, que já é dívida:
-      // sai junto com ele, pelo mesmo motivo.
       "components/admin/tenants/TenantOverview.test.tsx",
       "components/admin/tenants/TenantOverview.tsx",
       "components/connections/ConnectionsClient.tsx",
-      // (#118) `waha_error` no catálogo de códigos de erro da API pública.
       "lib/api/errors.ts",
     ],
   },
   {
     reason:
-      "(#118) Leem a COLUNA `channel_sessions.waha_session_name`. Aqui o nome do " +
-      "provider está no SCHEMA, não na feature: nenhum destes pergunta 'é WAHA?' " +
+      "Leem a COLUNA `channel_sessions.waha_session_name`. Aqui o nome do " +
+      "provider está no SCHEMA, não na feature: nenhum destes pergunta identidade " +
       "— só leem o identificador da sessão pelo nome que a coluna tem hoje. " +
       "Limpar é renomear a coluna (migration + apêndice no baseline + toda a " +
-      "leitura), que é a mesma mudança de schema que a Fase 3 do seam já prevê " +
-      "ao absorver `lib/waha/`. Consertar aqui, antes disso, espalharia um " +
-      "alias por 3 arquivos sem tirar o nome de lugar nenhum.",
+      "leitura), mudança de schema que deve ser feita no seam de canais e não " +
+      "espalhada como alias temporário.",
     files: [
       "app/api/v1/ai/pacing/route.ts",
       "app/api/v1/cron/contact-avatars/route.ts",
@@ -133,7 +108,7 @@ const KNOWN_DEBT: { reason: string; files: string[] }[] = [
   },
   {
     reason:
-      "`WahaChannelAdapter` — o ChannelAdapter PRÉ-seam do agent-engine (F2-25), " +
+      "`WahaChannelAdapter` — o ChannelAdapter pré-seam do agent-engine, " +
       "abstração paralela à de `lib/channels/`. Unificar as duas é decisão de " +
       "arquitetura com superfície própria, não passo de um lint.",
     files: ["lib/agent-engine/agent/followup-turn.ts", "lib/agent-engine/agent/inbound-turn.ts"],
@@ -141,16 +116,10 @@ const KNOWN_DEBT: { reason: string; files: string[] }[] = [
   {
     reason:
       "Menção em COMENTÁRIO/prosa técnica — não há acoplamento nenhum no código. " +
-      "O regex é o da doutrina (que fala em 'string') e não distingue prosa de " +
-      "código. Medido ao vivo nesta task: o comentário que eu escrevi explicando " +
-      "de onde uma função tinha saído virou um infrator novo. Reescrever prosa " +
-      "correta ('o container converte o áudio no servidor') para escapar de um " +
-      "regex PIORA o código — por isso a decisão é registrar, não reescrever.",
+      "O regex é o da doutrina e não distingue prosa de código. Registrar a prosa " +
+      "histórica evita reescrever documentação correta só para escapar do regex.",
     files: [
       "app/api/v1/ai/agents/[id]/versions/[vid]/test/route.ts",
-      // Phase 8 Task 1 — "reaches WAHA"/"never reaches WAHA" in the SHADOW-mode
-      // docblock, explaining why the shadow path skips the real send. No
-      // provider import/coupling in the code.
       "app/api/v1/ai/workflows/proposals/[id]/decision/route.ts",
       "app/api/v1/ai/workflows/proposals/route.ts",
       "app/api/v1/conversations/[id]/media/route.ts",
@@ -168,9 +137,6 @@ const KNOWN_DEBT: { reason: string; files: string[] }[] = [
       "lib/agent-engine/env.ts",
       "lib/agent-engine/health/circuit.ts",
       "lib/agent-engine/obs/metrics.ts",
-      // Phase 8 Task 1 — "do NOT call WAHA directly" points at the canonical
-      // `sendTurnMessage` boundary this file wraps; pre-existing prose kept
-      // from the Task 8 stub docblock, not new coupling.
       "lib/agent-engine/workflows/proposal/send-once.ts",
       "lib/ai/dispatcher/triggers.ts",
       "lib/ai/runtime/finalize.ts",
@@ -199,9 +165,6 @@ function walk(dir: string): string[] {
   });
 }
 
-// `path.join` devolve `\\` no Windows, enquanto as regras e a dívida usam o
-// caminho canônico do repositório (`/`). Sem normalizar, toda dívida parece
-// simultaneamente nova e obsoleta nesse sistema operacional.
 const offenders = ROOTS.flatMap(walk)
   .map((f) => f.replaceAll("\\", "/"))
   .filter((f) => !ALLOWED.some((re) => re.test(f)))
