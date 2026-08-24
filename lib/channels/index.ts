@@ -42,6 +42,20 @@ export type {
 } from "./gateway/identity-resolver";
 export { EngineRegistry } from "./gateway/registry";
 export {
+  REDACTED,
+  assertGatewayTenantScope,
+  authorizeGatewayToolCall,
+  markExternalContentUntrusted,
+  sanitizeGatewayLogContext,
+  sanitizeGatewayLogValue,
+} from "./gateway/security";
+export type {
+  AuthoritySource,
+  ToolAuthorizationDecision,
+  ToolRisk,
+  UntrustedExternalContent,
+} from "./gateway/security";
+export {
   assertNoAutomaticEngineMigration,
   chooseRecoveryAction,
   classifySessionHealth,
@@ -58,6 +72,16 @@ export type {
   SessionLeaseScope,
   SessionLeaseStore,
 } from "./gateway/session-supervisor";
+export {
+  assertTraceContinuity,
+  createGatewayTrace,
+  traceEvent,
+} from "./gateway/trace";
+export type {
+  GatewayTraceContext,
+  GatewayTraceEvent,
+  GatewayTraceStage,
+} from "./gateway/trace";
 export { CHANNEL_SESSION_REF_COLUMNS, resolveSessionRef } from "./session-ref";
 export type {
   EngineFactoryContext,

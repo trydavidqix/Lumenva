@@ -16,7 +16,8 @@ NODE_ENV=test pnpm vitest run \
   lib/channels/gateway/contracts.test.ts \
   lib/channels/engines/existing-engines.test.ts \
   lib/channels/gateway/session-supervisor.test.ts \
-  lib/channels/gateway/identity-resolver.test.ts
+  lib/channels/gateway/identity-resolver.test.ts \
+  lib/channels/gateway/security.test.ts
 pnpm lint:channels
 pnpm lint:tenant-filter
 pnpm next build
