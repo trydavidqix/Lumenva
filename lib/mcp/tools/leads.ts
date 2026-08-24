@@ -143,7 +143,6 @@ export const crmGetLead: McpToolDefinition<typeof getInputShape> = {
       input.lead_id,
     );
     if ((lead as { organization_id?: string }).organization_id !== ctx.organizationId) {
-      // Defesa em profundidade — service-role bypassa RLS.
       throw new Error("not_found");
     }
     const [enriched] = await enrichLeads(ctx, [lead]);
@@ -164,12 +163,8 @@ const createInputShape = {
   value_cents: z.number().int().nonnegative().optional(),
   currency: z.string().length(3).optional(),
   owner_user_id: z.string().uuid().optional(),
-  /** 0070: o agente pode nascer dono do negócio que ele mesmo abriu. */
   owner_agent_id: z.string().uuid().optional(),
-  expected_close_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  expected_close_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   tags: z.array(z.string()).optional(),
   source: z.string().optional(),
 };
@@ -211,8 +206,7 @@ export const crmCreateLead: McpToolDefinition<typeof createInputShape> = {
 };
 
 // ---------------------------------------------------------------------------
-// add lead note (nota do NEGÓCIO, roteada por contato — não confundir com
-// crm_add_case_note, que grava num caso de escalação humana já aberto)
+// add lead note
 // ---------------------------------------------------------------------------
 
 const addLeadNoteInputShape = {
@@ -220,13 +214,6 @@ const addLeadNoteInputShape = {
   note: z.string().trim().min(1).max(4000),
 };
 
-/**
- * Mesma decisão de roteamento contato→negócio de `emitAgentActivityForContact`
- * (lib/leads/agent-activity.ts), portada pro contexto MCP: aquela função usa
- * pg.Pool (motor do agente, fora do request), e aqui só existe `ctx.supabase`
- * (server core do MCP). A lógica de decisão (`resolveActiveLeadForContact`,
- * `buildLeadActivityRow`) é a MESMA função importada, só o I/O muda.
- */
 export const crmAddLeadNote: McpToolDefinition<typeof addLeadNoteInputShape> = {
   name: "crm_add_lead_note",
   description:
@@ -238,12 +225,12 @@ export const crmAddLeadNote: McpToolDefinition<typeof addLeadNoteInputShape> = {
   requiresRole: "ai_operator",
   requiresScope: "mcp:write",
   handler: async (input, ctx) => {
-    const { data: candidatos, error } = await ctx.supabase
+    const { data: candidatos, error: errCand } = await ctx.supabase
       .from("crm_leads")
       .select("id, organization_id, pipeline_id, status, last_activity_at, created_at")
       .eq("organization_id", ctx.organizationId)
       .eq("contact_id", input.contact_id);
-    if (error) throw new Error(`erro ao buscar leads do contato: ${error.message}`);
+    if (errCand) throw new Error(`erro ao buscar leads do contato: ${errCand.message}`);
 
     const { data: pipelinesDefault } = await ctx.supabase
       .from("crm_pipelines")
@@ -266,12 +253,26 @@ export const crmAddLeadNote: McpToolDefinition<typeof addLeadNoteInputShape> = {
       sourceModule: "mcp.crm_add_lead_note",
       actor: ctx.actor,
       reason: input.note,
-      payload: { note: input.note },
+      payload: {},
     });
-    const { error: insertError } = await ctx.supabase.from("crm_lead_activities").insert(row);
-    if (insertError) throw new Error(`erro ao registrar nota: ${insertError.message}`);
 
-    return { ok: true, lead_id: alvo.leadId };
+    const { error: errInsert } = await ctx.supabase.from("crm_lead_activities").insert({
+      organization_id: row.organization_id,
+      lead_id: row.lead_id,
+      contact_id: row.contact_id,
+      type: row.type,
+      source_module: row.source_module,
+      source_id: row.source_id,
+      actor_kind: row.actor_kind,
+      actor_agent_id: row.actor_agent_id,
+      performed_by_user_id: row.performed_by_user_id,
+      reason: row.reason,
+      evidence: row.evidence,
+      payload: row.payload,
+    });
+    if (errInsert) throw new Error(`erro ao gravar nota: ${errInsert.message}`);
+
+    return { lead_id: alvo.leadId, recorded: true };
   },
 };
 
@@ -282,29 +283,27 @@ export const crmAddLeadNote: McpToolDefinition<typeof addLeadNoteInputShape> = {
 const updateInputShape = {
   lead_id: z.string().uuid(),
   title: z.string().min(2).max(200).optional(),
-  description: z.string().max(2000).nullable().optional(),
-  value_cents: z.number().int().nonnegative().nullable().optional(),
+  description: z.string().max(2000).optional(),
+  contact_id: z.string().uuid().optional(),
+  value_cents: z.number().int().nonnegative().optional(),
   currency: z.string().length(3).optional(),
-  owner_user_id: z.string().uuid().nullable().optional(),
-  owner_agent_id: z.string().uuid().nullable().optional(),
-  expected_close_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .nullable()
-    .optional(),
+  owner_user_id: z.string().uuid().optional(),
+  owner_agent_id: z.string().uuid().optional(),
+  expected_close_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   tags: z.array(z.string()).optional(),
 };
 
 export const crmUpdateLead: McpToolDefinition<typeof updateInputShape> = {
   name: "crm_update_lead",
-  description: "Atualiza campos editáveis de um lead.",
+  description:
+    "Atualiza campos editáveis de um lead. Stage transitions são via crm_move_lead_stage; status é gerenciado por triggers.",
   inputSchema: updateInputShape,
   category: "write",
   requiresRole: "agent",
   requiresScope: "mcp:write",
   handler: async (input, ctx) => {
-    const { lead_id, ...patch } = input;
-    const parsed = updateLeadSchema.parse(patch);
+    const { lead_id, ...rest } = input;
+    const parsed = updateLeadSchema.parse(rest);
     const lead = await updateLeadHandler(
       ctx.supabase,
       {
@@ -325,31 +324,34 @@ export const crmUpdateLead: McpToolDefinition<typeof updateInputShape> = {
 
 const moveInputShape = {
   lead_id: z.string().uuid(),
-  stage_id: z.string().uuid(),
-  position: z.number().optional(),
+  to_stage_id: z.string().uuid(),
+  position_in_stage: z.number().finite().optional(),
+  reason: z.string().max(500).optional(),
 };
 
 export const crmMoveLeadStage: McpToolDefinition<typeof moveInputShape> = {
   name: "crm_move_lead_stage",
-  description: "Move um lead para outro stage do mesmo pipeline. Emite activity e event_log.",
+  description:
+    "Move um lead para outro stage dentro do MESMO pipeline. Cross-pipeline é proibido (use clone). Audit registra from/to stage e reason.",
   inputSchema: moveInputShape,
   category: "write",
   requiresRole: "agent",
   requiresScope: "mcp:write",
   handler: async (input, ctx) => {
-    const result = await moveLeadHandler(
+    const lead = await moveLeadHandler(
       ctx.supabase,
       {
         organization_id: ctx.organizationId,
         actor: ctx.actor,
         requestId: ctx.requestId,
       },
+      input.lead_id,
       {
-        lead_id: input.lead_id,
-        target_stage_id: input.stage_id,
-        target_position: input.position,
+        to_stage_id: input.to_stage_id,
+        position_in_stage: input.position_in_stage,
+        reason: input.reason,
       },
     );
-    return result;
+    return { lead };
   },
 };
