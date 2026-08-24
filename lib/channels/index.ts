@@ -22,6 +22,10 @@ export function getAdapter(provider: ChannelProvider): ChannelAdapter {
 }
 
 export { capabilitiesOf, CHANNEL_CAPABILITIES, DEFAULT_CHANNEL_PROVIDER } from "./capabilities";
+export { createMetaCloudEngine } from "./engines/meta-cloud-engine";
+export type { MetaCloudEngineConfig } from "./engines/meta-cloud-engine";
+export { createWahaEngine } from "./engines/waha-engine";
+export type { WahaEngineConfig } from "./engines/waha-engine";
 export { hasCapability } from "./gateway/capabilities";
 export {
   DuplicateEngineRegistrationError,
@@ -29,7 +33,12 @@ export {
 } from "./gateway/errors";
 export { EngineRegistry } from "./gateway/registry";
 export { CHANNEL_SESSION_REF_COLUMNS, resolveSessionRef } from "./session-ref";
-export type { MessagingEngine, MessagingEngineFactory } from "./gateway/engine";
+export type {
+  EngineFactoryContext,
+  GatewayEventHandler,
+  MessagingEngine,
+  MessagingEngineFactory,
+} from "./gateway/engine";
 export type {
   ChannelCapability,
   ChannelName,
