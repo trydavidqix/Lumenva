@@ -1,3 +1,0 @@
-{
-  "buildCommand": "pnpm typecheck && env NODE_ENV=test pnpm test:unit && pnpm lint:tenant-filter && pnpm lint:channels && next build"
-}
