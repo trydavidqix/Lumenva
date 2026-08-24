@@ -27,9 +27,9 @@
  * straight through.
  *
  * `thread_id` and `side_effect_key` are generated SERVER-SIDE only (Phase 7
- * global constraint, `CLAUDE.md` WhatsApp/WAHA-style idempotency doctrine
- * applied to this domain) — the input type has no field for either, so a
- * caller cannot pass them in even by mistake.
+ * global constraint, existing channel idempotency doctrine applied to this
+ * domain) — the input type has no field for either, so a caller cannot pass
+ * them in even by mistake.
  */
 import { randomUUID } from "node:crypto";
 
