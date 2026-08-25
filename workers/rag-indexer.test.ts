@@ -33,6 +33,8 @@ const sourceId = "00000000-0000-4000-8000-000000000020";
 
 interface HarnessState {
   agent: Record<string, unknown> | null;
+  /** Extra agents `resolveAgentById` can find by id (org's default agent is `agent` above, looked up via `resolveAgent`). */
+  agentsById: Record<string, Record<string, unknown>>;
   sources: Record<string, unknown>[];
   faqItems: Record<string, unknown>[];
   tenantIntegration: Record<string, unknown> | null;
@@ -62,6 +64,7 @@ let state: HarnessState;
 function resetState() {
   state = {
     agent: { id: agentId, organization_id: orgA, active_kb_version_id: "already-active-version", is_active: true, is_default: true },
+    agentsById: {},
     sources: [{ id: sourceId, source_type: "faq", name: "FAQ Trocas" }],
     faqItems: [
       {
@@ -101,8 +104,25 @@ function makeAdmin() {
             eq: (c1: string, v1: unknown) => {
               trackEq(table, c1, v1);
               return {
+                // resolveAgent: .eq("organization_id").eq("is_active").order().order().limit().maybeSingle()
+                // resolveAgentById: .eq("organization_id").eq("id", X).eq("is_active").maybeSingle()
+                // Both start with the same organization_id eq; branch on the 2nd eq's column.
                 eq: (c2: string, v2: unknown) => {
                   trackEq(table, c2, v2);
+                  if (c2 === "id") {
+                    const targetId = v2 as string;
+                    return {
+                      eq: (c3: string, v3: unknown) => {
+                        trackEq(table, c3, v3);
+                        return {
+                          maybeSingle: async () => ({
+                            data: state.agentsById[targetId] ?? null,
+                            error: null,
+                          }),
+                        };
+                      },
+                    };
+                  }
                   return {
                     order: () => ({
                       order: () => ({
@@ -584,6 +604,40 @@ describe("rag-indexer — knowledge_source.updated (FAQ path)", () => {
     for (const f of orgFilters) {
       expect(f.value).toBe(orgA);
     }
+  });
+
+  it("routes to the event's own agent_id, not the org's default agent (multi-agent org)", async () => {
+    // `state.agent` (id = `agentId`) is the org's default agent — the fixture
+    // that resolveAgent()'s org-default fallback would return. This proves
+    // the event instead targets the NON-default agent named in its payload.
+    const otherAgentId = "00000000-0000-4000-8000-000000000040";
+    state.agentsById[otherAgentId] = { id: otherAgentId };
+    resolveIngestionNodesMock.mockResolvedValueOnce(selection("native", [node("chunk-a", 0)]));
+
+    await processRagIndexer(faqEvent({ payload: { agent_id: otherAgentId } }));
+
+    expect(state.filters).toContainEqual({
+      table: "ai_knowledge_sources",
+      column: "agent_id",
+      value: otherAgentId,
+    });
+    expect(state.filters).not.toContainEqual({
+      table: "ai_knowledge_sources",
+      column: "agent_id",
+      value: agentId,
+    });
+  });
+
+  it("falls back to the org's default agent when the event has no payload.agent_id", async () => {
+    resolveIngestionNodesMock.mockResolvedValueOnce(selection("native", [node("chunk-a", 0)]));
+
+    await processRagIndexer(faqEvent());
+
+    expect(state.filters).toContainEqual({
+      table: "ai_knowledge_sources",
+      column: "agent_id",
+      value: agentId,
+    });
   });
 
   it("never marks a `conversations` source failed: it has no ai_faq_items by design (fed by the dedicated kb-conversations-batch cron instead)", async () => {
