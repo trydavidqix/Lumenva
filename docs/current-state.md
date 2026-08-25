@@ -1,11 +1,11 @@
 ---
 type: current-state
 project: DeskcommCRM
-status: draft
-last_updated: 2026-07-29
+status: maintained
+last_updated: 2026-08-25
 generated_by: auditoria documental (Claude Code) — leitura de código, HANDOFFs, plan/, loop/, CI
 confidence: média-alta (métricas de código são CONFIRMADO; estado de épico vem dos HANDOFFs, que são auto-relatados)
-audited_against: origin/main @ 789dfa6 (v1.0.0, 2026-07-27)
+audited_against: main @ 3cd5c48a (origin/main alinhada, 2026-08-25)
 ---
 
 # Estado atual — DeskcommCRM
@@ -14,6 +14,16 @@ Este documento existe porque "o que está pronto" estava espalhado em 5 `HANDOFF
 na raiz, `plan/progress.md`, `loop/checkpoints/`, `tasks/todo.md` e o roadmap do README —
 sem lugar único. Um agente novo (ou o dono, depois de uma semana) não conseguia responder
 "posso subir isso?" sem ler ~1500 linhas.
+
+**Reauditoria de sincronização (2026-08-25, `main` @ `3cd5c48a`):** esta revisão cruzou
+o histórico desde `v1.2.0` com o código, migrations, testes, runbooks, specs e índice.
+O checkout estava limpo e `main` estava alinhada com `origin/main`. Desde a última
+revisão foram incorporados, entre outros, privacidade RGPD/GDPR, providers Google/Gemini,
+Mem0 + Graphiti no worker (atrás de flags), Composio, tools MCP de anexos/notas, validação
+Zod dos webhooks Meta/WAHA, rate limit dos webhooks públicos, hardening de tenant filter,
+Phase 8/10, continuidade de casos humanos e a rede de segurança do realtime do inbox.
+Os números da §1 foram remedidos nesta árvore; as afirmações de execução continuam
+separadas de leitura estática e de evidência externa.
 
 **Aviso de método:** o estado de épico abaixo vem dos HANDOFFs, que são *auto-relatados
 pelas sessões que fizeram o trabalho*. Estão densos em evidência (outputs de teste,
@@ -57,18 +67,18 @@ de fato executado/verificado nesta sessão, registrado em detalhe no §4.10:
 
 ## 1. Números do repositório — CONFIRMADO
 
-**Versão:** `1.0.0`, marcada em 2026-07-27 (`CHANGELOG.md`). Primeira release versionada;
-o projeto vinha sendo desenvolvido publicamente desde abril de 2026 sem tags.
+**Versão:** `1.2.0` marcada em 2026-08-06, com alterações posteriores ainda em
+`[Não lançado]` no `CHANGELOG.md`. A primeira release versionada foi `1.0.0` em 2026-07-27.
 
 | Métrica | Valor |
 |---|---|
-| Arquivos TS/TSX em `app`+`lib`+`components`+`workers` | 987 |
-| Route handlers (`app/api/**/route.ts`) | 169 |
-| Migrations em `supabase/migrations/` | 81 arquivos, até `0092_stage_names_acentos` |
-| Testes unitários (`*.test.ts(x)`) | 221 arquivos |
-| Invariantes de banco (`tests/invariants/`) | 56 arquivos |
-| Specs E2E (`tests/e2e/`) | 19 |
-| Documentos `.md` em `docs/` | 119 (em 23 subpastas) |
+| Arquivos TS/TSX em `app`+`lib`+`components`+`workers` | 1.258 |
+| Route handlers (`app/api/**/route.ts`) | 195 |
+| Migrations em `supabase/migrations/` | 117 arquivos, até `0125_ai_agent_versions_composio_apps` |
+| Testes unitários (`tests/unit/*.test.ts(x)`) | 194 arquivos |
+| Invariantes de banco (`tests/invariants/`) | 75 arquivos |
+| Specs E2E (`tests/e2e/*.spec.ts`) | 37 |
+| Documentos `.md`/`.mdx` em `docs/` | 206 |
 | Import cycles | **0** (graphify, medido em árvore anterior) |
 | `console.log` fora de `lib/logger.ts` | **0** |
 | `: any` / `as any` | 7 |
@@ -79,7 +89,8 @@ quase nenhum `any`. Os god nodes do grafo (`fail` 325 arestas, `createAdminClien
 sendo aplicada, não acoplamento acidental.
 
 **Doutrina de migrations está sendo cumprida** — CONFIRMADO: o apêndice idempotente de
-`baseline.sql` cobre até `migration 0092`, que é a última em `supabase/migrations/`. Os
+`baseline.sql` foi atualizado até a migration `0125`, que é a última em
+`supabase/migrations/`. Os
 artefatos de schema andam juntos como a doutrina exige — o kit self-host recebe as
 mudanças. Esse é o invariante mais fácil de quebrar num projeto open-source e ele está de pé.
 
@@ -96,9 +107,12 @@ correspondentes localizados no repo):
   mídia via Storage, anti-banimento (throttle + jitter + janela de horário), STOP detection.
 - **CRM & pedidos** — kanban com vocabulário configurável por nicho (fractional indexing),
   customer 360, contatos, tags, Nuvemshop.
-- **IA nativa** — agentes com RAG por tenant (pgvector), sentiment, handoff IA→humano,
-  budget por org, MCP server interno.
-- **LGPD** — export e redact via workers, anonimização em cascata, consentimento auditado.
+- **IA nativa** — agentes com RAG por tenant (pgvector), providers Anthropic/OpenAI/Google,
+  Mem0/Graphiti atrás de rollout, Composio para tools externas, sentiment, handoff IA→humano,
+  budget por org e MCP server interno.
+- **Privacidade** — superfície administrativa/API migrada de `lgpd` para `privacy`, com
+  vocabulário RGPD/GDPR, exportação/anonymização via workers e webhooks Nuvemshop mantidos
+  sob o contrato de privacy; referências históricas a LGPD permanecem nos specs e migrations.
 - **Self-host** — `hostgator-setup-kit`, `baseline.sql` auto-curativo, runbook de produção.
 - **Webhooks & automação** — captação + regras QUANDO/SE/ENTÃO + gatilhos externos.
 - **Operação visível** — transparência do motivo de retenção anti-ban, central de avisos,
@@ -157,7 +171,8 @@ Estes são achados de código/config verificados nesta auditoria, não relatos.
 
 O gate de isolamento RLS **roda** — `ci.yml` tem o job `invariants` chamando `pnpm test:db`,
 que sobe `pgvector/pgvector:pg17`, aplica `baseline.sql` em modo install e update, e roda os
-56 arquivos de `tests/invariants/`. Esse buraco está fechado.
+75 arquivos de `tests/invariants/`. Esse buraco está fechado como cobertura versionada;
+GitHub Actions está inativo e a execução atual é manual/local.
 
 O que continua fora: **4 das 32 specs Playwright**. A `vps-webhook-outbound-ssrf.spec.ts`,
 única prova automatizada do guard de SSRF, **passou a rodar** no `e2e.yml`. Mas a
@@ -291,7 +306,7 @@ Dois HANDOFFs também migraram para `docs/handoffs/`. Restam 3 na raiz (`HANDOFF
 ### 4.9 Divergências de estado nos HANDOFFs 🟡
 
 `HANDOFF.md` afirma "Migration seguinte livre: **0058**" e lista pendência de aplicar `0057`
-no dev DB — mas o repo já tem migrations até **0092**. São 34 migrations de deriva. É
+ no dev DB — mas o repo já tem migrations até **0125**. São 67 migrations de deriva. É
 consequência natural de trabalho em branches paralelas, mas ilustra a regra:
 **HANDOFF não é fonte da verdade de schema** — `supabase/migrations/` e `baseline.sql` são.
 **A CONFIRMAR:** se a pendência de dev DB de `0057` ainda existe.
@@ -346,7 +361,7 @@ Resend.
    parâmetro (medido ao construir o gate: 4 dos 9 arquivos da primeira passada eram exatamente
    esse falso positivo — `ai/cases/route.ts` e `[id]/route.ts` delegam a `lib/escalacao/chamados.ts`,
    que filtra corretamente, só que num arquivo diferente do que o predicado lê). Pega só a classe
-   mais simples e mais provável de erro: handler novo que esqueceu o `.eq()` de vez. Os 56 arquivos
+   mais simples e mais provável de erro: handler novo que esqueceu o `.eq()` de vez. Os 75 arquivos
    de invariante (RLS/schema) continuam sendo a prova real de isolamento; este gate é triagem na
    escrita, não substituto.
 
@@ -423,7 +438,8 @@ Resend.
 A primeira passada desta auditoria rodou contra um checkout **556 commits atrás** da
 `origin/main`, e por isso reportou como achado principal um problema (gate de RLS fora do CI)
 que já estava corrigido em produção, e descreveu o épico de Evolução do Harness como "Fase 0,
-Task 1" quando ele estava completo. Tudo acima foi recontado contra `origin/main @ 789dfa6`.
+Task 1" quando ele estava completo. A reauditoria corrente está em `main @ 3cd5c48a`;
+o SHA antigo permanece apenas como referência histórica da primeira passada.
 
 Duas lições que valem para quem mantiver este documento:
 

@@ -2,16 +2,16 @@
 type: index
 project: DeskcommCRM
 status: maintained
-last_updated: 2026-08-11
+last_updated: 2026-08-25
 generated_by: auditoria documental (Claude Code)
 confidence: alta (inventário de arquivos é CONFIRMADO; agrupamento temático é INFERIDO)
-audited_against: ai-platform-foundation @ 7ce49214 (AI Platform Phase 2, Task 8)
+audited_against: main @ 3cd5c48a (sincronização documental e auditoria completa)
 ---
 
 # Índice da documentação — DeskcommCRM
 
-Mapa da documentação versionada de `docs/` — confirme a contagem com
-`git ls-files 'docs/**/*.md' | wc -l`. Existe porque a documentação cresceu sem ponto
+Mapa da documentação versionada de `docs/` — a árvore auditada contém 206 `.md`/`.mdx`.
+Confirme a contagem com `rg --files docs -g '*.md' -g '*.mdx' | wc -l`. Existe porque a documentação cresceu sem ponto
 de entrada: sem este índice, humano e agente não acham o que já foi decidido e
 reescrevem por cima.
 
@@ -156,3 +156,14 @@ anterior à v1.0.0; regenere (`/graphify .`) antes de confiar em detalhe fino.
   se isso está sendo cumprido, e é a lacuna documental mais relevante que sobrou.
 - `docs/growth/` (3 docs) e `docs/brand/` (1) não foram lidos em detalhe — classificados por
   nome de pasta, portanto **INFERIDO**.
+
+### Resultado da auditoria de 2026-08-25
+
+- As mudanças de produto posteriores a `v1.2.0` estão registradas no `CHANGELOG.md` e
+  detalhadas nas fontes técnicas correspondentes (`specs/11`, `specs/13`, `specs/15`,
+  runbooks de AI e `current-state.md`).
+- A contagem de arquivos e migrations foi atualizada contra `main @ 3cd5c48a`.
+- Referências de deploy ao Traefik permanecem apenas no kit que suporta instalações com
+  proxy externo; o runbook principal documenta Caddy como topologia real da VPS verificada.
+- A migração de LGPD para privacy/RGPD é deliberadamente parcial no vocabulário: migrations,
+  webhooks Nuvemshop e histórico de compliance preservam nomes legados para compatibilidade.
