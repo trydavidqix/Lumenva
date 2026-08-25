@@ -1,11 +1,11 @@
 ---
 type: threat-model
 project: DeskcommCRM
-status: draft
-last_updated: 2026-07-29
+status: maintained (reconciled; exploitability still not live-tested)
+last_updated: 2026-08-25
 generated_by: auditoria documental (Claude Code) — leitura de rotas, guards, proxy.ts e lib/env.ts
 confidence: média-alta (superfície e guards são CONFIRMADO por leitura de código; explorabilidade é INFERIDO — nada foi testado contra instância viva)
-audited_against: origin/main @ 789dfa6 (v1.0.0, 2026-07-27)
+audited_against: main @ 3cd5c48a (2026-08-25)
 ---
 
 # Threat model — DeskcommCRM self-host
@@ -34,9 +34,10 @@ São conclusões de leitura de código.
 | `/`, `/login`, `/signup`, `/auth/confirm` | Supabase Auth | ❌ |
 | `/team/accept-invite/:token` | HMAC-SHA256 + `timingSafeEqual` (`lib/auth/invite-token.ts`) | ❌ |
 | `/api/v1/health` | nenhum (por design) | ❌ |
-| `/api/v1/webhooks/waha/*` | HMAC-SHA512 + `timingSafeEqual` (`lib/waha/ingest.ts`) | ❌ |
+| `/api/v1/webhooks/waha/*` | HMAC-SHA512 + `timingSafeEqual` (`lib/waha/ingest.ts`) | ✅ 120/min por sessão |
 | `/api/v1/webhooks/in/:token` | path token + assinatura opcional | ✅ 60/min por token |
-| `/api/v1/webhooks/nuvemshop/*` | HMAC | ❌ |
+| `/api/v1/webhooks/meta/*` | HMAC + Zod envelope | ✅ 120/min por sessão |
+| `/api/v1/webhooks/nuvemshop/*` | HMAC + Zod/event validation | ✅ 30–60/min por loja |
 | `/api/v1/cron/*` (9 rotas) | `Bearer INTERNAL_CRON_SECRET\|INTERNAL_SECRET`, **fail-closed** | ❌ |
 | `/api/internal/*` | `x-internal-secret` ou `Bearer INTERNAL_SECRET`, comparação em tempo constante | ❌ |
 | `/api/mcp` | `Bearer tok_...` validado contra `api_tokens` (hash SHA256) | ❌ |
@@ -51,15 +52,17 @@ São conclusões de leitura de código.
 
 ## 2. Riscos por ordem de exploração
 
-### T1 — Brute force e enumeração sem custo 🔴 CONFIRMADO (ausência), INFERIDO (impacto)
+### T1 — Rate limit incompleto nas superfícies públicas 🟠 RECONCILIADO EM 2026-08-25
 
-`checkRateLimit` existe (`lib/ai/dispatcher/rate-limit.ts`) e é chamado em **2** pontos
-do código: `/api/v1/webhooks/in/:token` e o dispatcher de IA. Nada mais.
+O achado original dizia que `checkRateLimit` só existia em dois pontos. Isso já não
+descreve a árvore atual: auth/API sensíveis e os webhooks públicos Meta, WAHA e Nuvemshop
+têm limites próprios, aplicados antes do ingest pesado. Os sete receivers que estavam sem
+proteção foram corrigidos em `3c3e2d73`.
 
-Não há **nenhum** limite de tentativa em:
+Continuam sem rate limit dedicado, por decisão ou por lacuna residual:
 
-- **`/login`** — e não existe lockout por conta: `grep` por `lockout` / `failed_attempts`
-  não retorna nada. Senha fraca de operador é atacável na velocidade da rede.
+- **`/login`** — não existe lockout por conta; a proteção atual é o limite de request.
+  Senha fraca de operador continua atacável com IPs rotativos.
 - **`/signup`** — criação de organização em massa; num self-host multi-tenant isso é
   exaustão de recurso (e de cota de IA, se as chaves forem da instância).
 - **`/team/accept-invite/:token`** — o HMAC é forte, mas sem limite o atacante pode
@@ -68,9 +71,8 @@ Não há **nenhum** limite de tentativa em:
   constante, mas nada limita o volume de tentativas.
 - **`/api/mcp`** — enumeração de bearer token.
 
-**Mitigação recomendada:** aplicar `checkRateLimit` por prefixo no `proxy.ts` (uma passada
-cobre todo o surface público de uma vez) + limite por identificador nas rotas de auth
-(por e-mail no login, não só por IP — IP rotativo é trivial). Custo baixo, a infra já existe.
+**Mitigação residual:** confirmar em cada instalação que Redis distribuído está configurado
+e decidir se login/convite precisam de limite adicional por identidade, não só por request.
 
 ### T2 — Fallback in-memory do rate limit anula o limite que existe 🟠 CONFIRMADO
 
@@ -86,26 +88,28 @@ O stack de produção do kit inclui `serverless-redis-http` + Redis local (visto
 `docker-compose.prod.yml`), o que resolve — **A CONFIRMAR** se o `install.sh` garante que
 essas duas vars ficam populadas em toda instalação.
 
-### T3 — 89 handlers com service role, sem gate de escrita 🟠 CONFIRMADO (contagem)
+### T3 — handlers com service role e gate heurístico 🟠 CONFIRMADO
 
-`createAdminClient` (service role, **bypassa RLS**) é importado em **89 dos 169** route
-handlers de `app/api/**` (dos quais 166 estão sob `/api/v1/`). A regra da doutrina —
+`createAdminClient` (service role, **bypassa RLS**) aparece em muitos route handlers de
+`app/api/**`. A regra da doutrina —
 "filtre `organization_id` manualmente, resolvido de fonte
-confiável, nunca do body" — é aplicada por revisão humana. Não há lint rule nem teste que
-falhe quando um handler *novo* esquece o filtro.
+confiável, nunca do body" — é aplicada por revisão humana. Desde 2026-08-20 existe
+`pnpm lint:tenant-filter`, um gate heurístico que reprova o caso simples de handler novo
+com client admin e nenhuma menção ao tenant; ele não substitui dataflow review nem os
+invariantes RLS.
 
 Este é o **pior modo de falha do produto**: vazamento cross-tenant. Duas mitigações reais
 existem: as amostras que li (`admin/tenants`, `webhooks/in/:token`, `team/:user_id`) seguem o
-padrão corretamente, e os **56 arquivos de invariante em `tests/invariants/` rodam no CI**
-(job `invariants` → `pnpm test:db`), cobrindo isolamento cross-tenant de verdade. O
+padrão corretamente, e os **75 arquivos de invariante em `tests/invariants/` são a prova
+local do isolamento cross-tenant**; GitHub Actions está inativo, portanto o job histórico
+`invariants` não é executado automaticamente. O
 guard-rail existe **e está ligado** — rebaixei de 🔴 para 🟠 por isso.
 
 **Lacuna residual:** os invariantes provam que os caminhos cobertos isolam; não impedem que
 um handler novo nasça sem filtro e sem invariante correspondente.
 
-**Mitigação recomendada:** regra de ESLint custom (ou teste que varre o diff) que falhe
-quando um arquivo importa `lib/supabase/admin` sem referenciar `organization_id`. Barato,
-determinístico, e transforma disciplina em gate.
+**Mitigação residual:** manter o gate heurístico e acrescentar invariantes para handlers
+novos; a análise não é dataflow e pode deixar passar um filtro incorreto.
 
 ### T4 — Secret de convite com fallback conhecido 🟠 CONFIRMADO no código, mitigado na prática
 
@@ -199,11 +203,12 @@ Não avaliado por falta de execução/instância:
 **Conclusão honesta:** os *mecanismos* de segurança deste projeto são acima da média para
 um CRM open-source — HMAC em tempo constante em toda borda, fail-closed nos crons, hash de
 bearer, RLS com helper central, guard de SSRF testado, LGPD implementada de verdade,
-`beforeSend` higienizando PII, e **56 arquivos de invariante de isolamento rodando em CI**.
+`beforeSend` higienizando PII, e **75 arquivos de invariante de isolamento para execução
+local**.
 
-O que falta é estreito e específico: **limite de tentativa na frente dos guards**. Não há
-falha de desenho aqui; há uma camada ausente, e ela é a mais barata de todas as que já foram
-construídas.
+O que falta é estreito e específico: confirmar Redis distribuído em cada instalação e,
+se necessário, adicionar limite por identidade em login/convite. Não há prova de exploração
+ao vivo nesta auditoria.
 
 ---
 

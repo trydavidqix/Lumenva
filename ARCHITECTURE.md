@@ -13,8 +13,13 @@
 - **Storage (Supabase Storage)**: bucket `whatsapp-media` privado, URLs assinadas.
 - **WhatsApp (WAHA Plus / engine NOWEB)**: HMAC-SHA512 webhooks; throttle anti-banimento; STOP detection.
 - **Filas (event sourcing leve)**: `event_log` table + workers via cron. Trigger Postgres NUNCA faz HTTP.
-- **Rate limit (Upstash Redis)**: contador de **janela fixa** (`INCR` + `EXPIRE`) em `lib/ai/dispatcher/rate-limit.ts`, com fallback in-memory quando Redis falta. ⚠️ Aplicado hoje em apenas 2 pontos (webhook de captação e dispatcher de IA) — o surface público de auth está sem. Ver [`docs/threat-model.md`](docs/threat-model.md) §T1.
-- **AI (Vercel AI Gateway)**: Anthropic primário, OpenAI backup pra embeddings.
+- **Rate limit (Upstash Redis)**: contador de **janela fixa** (`INCR` + `EXPIRE`) com fallback
+  in-memory quando Redis falta. Está aplicado no dispatcher de IA, auth/API sensíveis e nos
+  webhooks públicos Meta, WAHA e Nuvemshop; o fallback continua por processo e não substitui
+  Redis distribuído. Ver [`docs/current-state.md`](docs/current-state.md) §4.3 e
+  [`docs/threat-model.md`](docs/threat-model.md) §T1.
+- **AI (Vercel AI Gateway + providers diretos)**: Anthropic/OpenAI/Google para geração e
+  embeddings configuráveis, com override de embeddings compatível com NVIDIA Build.
 - **Observability (Sentry)**: `beforeSend` scrubs PII (CPF/email/phone) e headers sensíveis.
 
 ## Multi-tenancy
@@ -29,7 +34,8 @@ Detalhes: [`docs/specs/01-spec-platform-base.md`](docs/specs/01-spec-platform-ba
 - Wrappers `ok()` / `fail()` em `lib/api/wrappers.ts`.
 - Auth dual: cookie session (frontend) ou `Authorization: Bearer tok_...` (server-to-server).
 - `X-Request-Id` em toda response, injetado em `proxy.ts` e correlacionado com o audit log.
-- `Idempotency-Key` é o contrato pretendido para POSTs de criação; **implementado hoje em 1 rota** (`lgpd/requests/[id]/approve`). Ver [`docs/current-state.md`](docs/current-state.md) §4.
+- `Idempotency-Key` existe em mutações selecionadas (incluindo aprovação de pedido de privacy);
+  não é uma garantia transversal para todos os POSTs. Ver [`docs/current-state.md`](docs/current-state.md).
 - Detalhes: [`docs/specs/01-spec-platform-base.md`](docs/specs/01-spec-platform-base.md) §API.
 
 ## Fluxo de uma requisição

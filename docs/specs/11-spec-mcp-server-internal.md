@@ -3,15 +3,18 @@ title: Spec Técnica 11 — Internal MCP Server (Tool Catalog)
 parent: docs/research/pre-development/ai-agent-framework-deskcomm-whatsapp/09-handoff.md
 depends_on: 01-spec-platform-base.md, 02-spec-customer-360.md, 03-spec-whatsapp-waha.md, 04-spec-pipeline-attendance.md, 10-spec-ai-agents-runtime.md
 related: 12-spec-ai-agents-ui.md
-version: 0.1
-status: draft (pre-implementation)
-date: 2026-05-05
+version: 0.2
+status: implemented (catalog and runtime; this document is the compatibility contract)
+date: 2026-08-25
 owner: Rafael Melgaço
 ---
 
 # Spec 11 — Internal MCP Server (Tool Catalog)
 
-> Servidor MCP interno que expõe **as operações já existentes do CRM** como tools consumíveis por agentes (Spec 10) e, futuramente, por clientes externos MCP (Cursor, Claude Desktop). Este spec descreve **somente as tools que mapeiam endpoints já existentes em `app/api/v1/`** — não cria CRUD novo, apenas reembala.
+> Servidor MCP interno que expõe operações do CRM como tools consumíveis por agentes (Spec 10).
+> O catálogo atual também contém operações nativas de runtime e ferramentas de operação que
+> não têm um endpoint REST 1:1; nesses casos a implementação em `lib/mcp/tools/` é a fonte
+> executável e esta spec descreve o contrato de segurança, escopo e efeitos.
 
 ---
 
@@ -78,7 +81,28 @@ MCP error codes mapeados:
 
 ## 3. Catálogo de Tools (MVP)
 
-Apenas tools que mapeiam endpoints existentes em `app/api/v1/`. Verificado contra `app/api/v1/` em 2026-05-05.
+O catálogo executável é montado em `lib/mcp/tools/catalogo/index.ts`, por domínio. Verificado
+contra `main @ 3cd5c48a` em 2026-08-25.
+
+### Catálogo executável atual
+
+| Domínio | Arquivo | Estado |
+|---|---|---|
+| Atendimento | `catalogo/atendimento.ts` | ativo |
+| Escalação/casos humanos | `catalogo/escalacao.ts` | ativo |
+| Funil | `catalogo/funil.ts` | ativo |
+| Governança | `catalogo/governanca.ts` | ativo |
+| Anexos | `catalogo/anexos.ts` | ativo; exige pergunta e consentimento explícito antes do upload |
+| Comércio/privacy | `catalogo/comercio.ts` | ativo |
+| Evolução/memória | `catalogo/evolucao.ts` | ativo |
+| Operação | `catalogo/operacao.ts` | ativo |
+| Retenção/follow-up | `catalogo/retencao.ts` | ativo |
+
+Os nomes e schemas não devem ser copiados desta tabela: use `TOOL_CATALOG`/`catalogEntry()`
+como fonte de verdade e os testes do catálogo como gate de coerência. Entre as capacidades
+adicionadas desde o draft original estão `crm_upload_lead_attachment`, `crm_add_lead_note`,
+gestão de casos humanos, filas/tags, privacy requests, memória/evolução, stages, webhooks,
+automações e follow-ups.
 
 ### 3.1 Read tools (sempre seguras)
 

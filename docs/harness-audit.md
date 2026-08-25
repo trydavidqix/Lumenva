@@ -1,11 +1,11 @@
 ---
 type: harness-audit
 project: DeskcommCRM
-status: draft
-last_updated: 2026-07-29
+status: maintained (historical audit with current verification policy)
+last_updated: 2026-08-25
 generated_by: auditoria documental (Claude Code) — verificação de arquivos, CI e configs
 confidence: alta (todos os itens verificados por leitura direta de arquivo/config; nenhum comando executado)
-audited_against: origin/main @ 789dfa6 (v1.0.0, 2026-07-27)
+audited_against: main @ 3cd5c48a (2026-08-25)
 ---
 
 # Auditoria do harness — DeskcommCRM
@@ -34,16 +34,16 @@ Preview no fim da tarefa — `.claude/rules/testing-verification.md` tem o detal
 
 | Nível | Veredito | Evidência |
 |---|---|---|
-| H0 — Não documentado | superado | 119 docs em `docs/`, README de 302 linhas em 3 idiomas, PRDs, specs, `CHANGELOG.md` |
+| H0 — Não documentado | superado | 206 docs em `docs/`, README em 3 idiomas, PRDs, specs, `CHANGELOG.md` |
 | H1 — Documentado | ✅ | `README.md`, `ARCHITECTURE.md`, `VISION.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md` (Keep a Changelog + SemVer) |
 | H2 — Reproduzível | ✅ | Quickstart no README, `docs/SETUP.md`, `.nvmrc` (22), `packageManager` fixo, `pnpm-lock.yaml`, `docker-compose.yml`, `install.sh` do kit self-host, `baseline.sql` |
 | H3 — Verificável | ✅ | `lint` + `typecheck` + `test:unit` + `build`; CI roda os 3 primeiros em PR |
-| H4 — Preparado para agentes | ✅ | `CLAUDE.md` doutrinal forte; `AGENTS.md` **criado nesta auditoria**; documentação técnica extensa; **e o CI roda o gate de isolamento RLS** (job `invariants` → `pnpm test:db`) |
+| H4 — Preparado para agentes | ✅ | `CLAUDE.md` doutrinal forte; `AGENTS.md` **criado nesta auditoria**; documentação técnica extensa; gates locais de tenant/RLS documentados |
 | H5 — Automação avançada | ⚠️ **parcial** | CI confiável e ambiente isolado ✅ (Postgres efêmero pg17, worktrees, gov-loop com maker≠checker e hash-check). Faltam: **4 das 32 specs E2E fora do CI** (28 rodam via `e2e.yml`, ainda não-obrigatório — e enquanto for opcional um PR que o quebre entra na `main`), `format:check` fora do CI, e o comando único local (`gov:verify`) não cobre `test:db`/`test:e2e` |
 
 **Por que H4 e não H5:** a instrução da auditoria é explícita — não atribuir nível só
 porque os arquivos existem, avaliar se o processo está implementado. Aqui está: o gate de
-isolamento multi-tenant roda em CI como check nomeado, em job paralelo, aplicando
+isolamento multi-tenant foi desenhado para rodar em CI como check nomeado, em job paralelo, aplicando
 `baseline.sql` em modo install **e** update contra um Postgres descartável. Isso é o
 processo funcionando, não a intenção.
 
@@ -54,7 +54,7 @@ naturalmente usa como critério de pronto, **não** inclui `test:db` nem `test:e
 pega o que ele deixa passar, mas só depois do push.
 
 **O que puxa este projeto para cima e é incomum num CRM open-source:** doutrina escrita e
-específica (`CLAUDE.md`), Definition of Done de 13 itens, **56 arquivos de invariantes de
+específica (`CLAUDE.md`), Definition of Done de 13 itens, **75 arquivos de invariantes de
 banco**, gate de install+update do `baseline.sql` num Postgres descartável rodando em CI,
 doutrina de QA visual com ambiente fresco estilo VPS, e uma máquina de governança de
 agentes (`loop/`) com maker≠checker e hash-check.
@@ -77,11 +77,11 @@ Legenda: ✅ existente e funcional · ⚠️ existente mas incompleto · ❌ nã
 | 8 | Comando de lint | ✅ | `pnpm lint` (eslint), roda no CI |
 | 9 | Comando de formatação | ✅ | `pnpm format` / `format:check` (Prettier). ⚠️ `format:check` **não está no CI** |
 | 10 | Checagem de tipos | ✅ | `pnpm typecheck` (`tsc --noEmit`, TS 6 estrito), roda no CI |
-| 11 | Testes unitários | ✅ | 221 arquivos `*.test.ts(x)`; `pnpm test:unit` no CI |
-| 12 | Testes de integração | ✅ | **56 arquivos** de invariantes em `tests/invariants/` + `tests/api/`. Excluídos do `test:unit` de propósito (`vitest.config.ts:12`) e rodados pelo job `invariants` do CI via `pnpm test:db` |
-| 13 | Testes E2E | ⚠️ | 20 specs Playwright. **10 rodam no CI** (`e2e.yml`, ainda não-obrigatório), incluindo o P0 `vps-webhook-outbound-ssrf`; o P0 `vps-fresh-onboarding` continua fora (issue #63) |
+| 11 | Testes unitários | ✅ | 194 arquivos `*.test.ts(x)`; executar localmente com `pnpm test:unit` |
+| 12 | Testes de integração | ✅ | **75 arquivos** de invariantes em `tests/invariants/` + `tests/api/`. Excluídos do `test:unit` de propósito (`vitest.config.ts:12`) e executar localmente com `pnpm test:db` |
+| 13 | Testes E2E | ⚠️ | 37 specs Playwright; GitHub Actions está inativo, portanto a execução é manual/local ou via Vercel Preview conforme o runbook |
 | 14 | Comando único de verificação | ⚠️ | `pnpm gov:verify` = `typecheck && lint && test:unit`. **Omite `test:db` e `test:e2e`** — verde localmente não significa verificado. O CI cobre `test:db`, mas só depois do push |
-| 15 | CI executando verificações | ✅ | `ci.yml` tem 2 jobs: `verify` (typecheck + lint + test:unit) e **`invariants` (`pnpm test:db` — isolamento RLS + invariantes de governança, em job paralelo com timeout de 20min)**. Falta E2E e `format:check`. `perf.yml` faz build + bundle size; `publish-image.yml` publica no GHCR |
+| 15 | Verificação automatizada | ⚠️ | Os workflows permanecem versionados, mas GitHub Actions está desabilitado; a prova atual é local (`typecheck`, `lint`, `test:unit`, `test:db` quando aplicável) + Preview |
 | 16 | Proteção contra secrets | ⚠️ | `.gitignore` cobre `.env*` (exceção só para os `.example`) e o Sentry tem `beforeSend` que higieniza PII. **Sem** gitleaks/trufflehog no CI, **sem** pre-commit hook |
 | 17 | Documentação arquitetural | ✅ | `ARCHITECTURE.md` (1 página) + `docs/specs/` (16 docs com schema e payloads) + `docs/architecture/agent-turn` + `graphify-out/` |
 | 18 | Regras para agentes de IA | ✅ | `CLAUDE.md` doutrinal (convenções não-negociáveis, anti-patterns, doutrinas de migration/QA/branch), `.claude/agents/` com frota especializada, `loop/` com maker≠checker. **`AGENTS.md` criado nesta auditoria** — antes, agentes não-Claude entravam sem contexto |

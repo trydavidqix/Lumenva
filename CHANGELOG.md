@@ -8,6 +8,33 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+### Alterado
+
+- **Privacidade:** a superfície administrativa e as rotas públicas de compliance usam
+  `/app/privacy` e `/api/v1/privacy`; nomes `lgpd` que permanecem em migrations, jobs e
+  webhooks Nuvemshop são compatibilidade/histórico, não rotas novas.
+- **IA e memória:** providers Google/Gemini foram adicionados ao runtime; embeddings podem
+  usar o override `EMBEDDING_BASE_URL`/`EMBEDDING_API_KEY`/`EMBEDDING_MODEL_ID`, e Mem0 e
+  Graphiti entram no worker apenas sob feature flag/kill switch. `ai_chunks.embedding` passou
+  para `vector(2048)` para o caminho NVIDIA documentado no runbook.
+- **Tools externas:** Composio suporta sessões `direct_tools` com filtragem por slug exata;
+  o catálogo MCP foi ampliado com tools de anexos, notas, casos humanos, evolução, operação,
+  retenção e privacidade.
+- **Webhooks:** Meta e WAHA validam envelopes com Zod antes do ingest; os receivers públicos
+  têm rate limit próprio e a documentação de WAHA agora aponta o código executável, não o
+  esboço histórico.
+- **Inbox e escalada:** a rede de segurança do realtime cobre conversas e mensagens; handoff
+  nativo abre `agent_case` formal e a devolução fecha o caso aberto com evento auditável.
+- **Flywheel:** a Phase 10 persiste outcomes e agenda o judge/distiller loop em
+  `/api/v1/cron/flywheel-judge-loop`, com aprovação administrativa para aplicar propostas.
+
+### Segurança e operação
+
+- Adicionado `lint:tenant-filter` como gate heurístico para handlers que usam client admin.
+- O limite `maxDuration` do cron do flywheel foi ajustado para o teto de 300s do Vercel Hobby.
+- A validação local e os runbooks são a prova primária enquanto GitHub Actions permanece
+  desabilitado por decisão operacional registrada em `docs/current-state.md` §10.
+
 ## [1.2.0] — 2026-08-06
 
 Versão grande: 122 correções e 62 novidades desde a 1.1.0. O tema é o agente de IA deixar de
