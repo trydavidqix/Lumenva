@@ -26,6 +26,17 @@
 
 ## STATUS: 4/4 FEATURES PROVADAS EM PARIDADE LOCAL↔VPS ✅
 
+> **Correção 2026-08-25:** o "VPS" desta seção (`http://129.121.45.100:18080`, compose
+> `deskcomm-fusion`) **não é a VPS de produção** — produção real é `crm.lumenva.pt`
+> (`root@2.29.8.225`, repo `/root/deskcommcrm`, ver `docs/runbooks/deploy.md`). Refeita a
+> prova contra produção real nesta sessão: **F1 ✅ passou** (rota, RBAC, build confirmados ao
+> vivo). **F3 investigado a fundo** e fechado como comportamento esperado (propostas são
+> org-scoped; o tenant de teste usado não tinha proposta pendente, não é bug). **F2(i) e F2(ii)
+> seguem sem prova de UI na VPS de produção real** — o tenant de teste (`e2e-test-org`) não tem
+> WhatsApp conectado nem conversa/veto seedado; provar exigiria mutar dado nesse tenant, não
+> feito por instrução explícita de não mutar produção sem autorização adicional. Ver
+> `docs/current-state.md` §3 pro estado consolidado.
+
 Todas com screenshot Playwright local E na VPS (http://129.121.45.100:18080), + prova SQL onde há mutação:
 - **F2(i)** aviso do veto na conversa: local + VPS (conversa REAL do agente SDR "Gabriel", veto `outside_window` → "Fora da janela de envio (7h–22h)…").
 - **F1** central de avisos + sino: local (6→2 resolvendo) + VPS (6 avisos reais, incl. handoff genuíno do agente; resolver 6→5, sino atualizado).
