@@ -35,7 +35,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
     <aside
       className={cn(
         "fixed inset-y-0 left-0 z-30 flex flex-col border-r bg-card transition-[width] duration-200",
-        collapsed ? "w-16" : "w-60",
+        collapsed ? "w-16" : "w-16 md:w-60",
       )}
     >
       <div className={cn("flex items-center border-b px-4 h-14", collapsed ? "justify-center" : "justify-start")}>
