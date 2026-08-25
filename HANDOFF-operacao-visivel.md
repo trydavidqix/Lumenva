@@ -19,8 +19,8 @@
 
 | Feature | Status | Prova |
 |---|---|---|
-| F2(i) motivo da retenção na conversa | ✅ local | endpoint GET `/api/v1/conversations/[id]/retention` + `lib/inbox/retention-copy.ts` (código→pt-br leigo) + `RetentionNotice` acima do composer. Typecheck+lint zero no diff. Playwright localhost: `.superpowers/evidence/operacao-visivel-f2i-localhost.png` (veto `outside_window` seedado → "Fora da janela de envio (7h–22h, sem domingo)…"). Falta: prova VPS. |
-| F2(ii) knobs | ✅ local | backend do Terminal B (GET/PUT `/api/v1/ai/pacing`, branch `epic/op-visivel-backend` mergeada); UI = botão "Proteção de envio" no card de Conexões → `AntiBanSheet` (janela, domingo, ritmo+jitter em segundos, teto diário, fuso, escada de warm-up explicada; campo vazio = default do engine). Playwright localhost: salvou janela 8–21 → SQL `channel_knobs` = `8|21`. Evidência `operacao-visivel-f2ii-localhost.png`. Falta: prova VPS. |
+| F2(i) motivo da retenção na conversa | ✅ local + ✅ VPS produção | endpoint GET `/api/v1/conversations/[id]/retention` + `lib/inbox/retention-copy.ts` (código→pt-br leigo) + `RetentionNotice` acima do composer. Typecheck+lint zero no diff. Playwright localhost: `.superpowers/evidence/operacao-visivel-f2i-localhost.png` (veto `outside_window` seedado → "Fora da janela de envio (7h–22h, sem domingo)…"). VPS real (`crm.lumenva.pt`, tenant `e2e-test-org` seedado via `scripts/seed-e2e-operacao-visivel.ts`): mesma copy confirmada ao vivo — ver seção "Atualização 2026-08-25" abaixo. |
+| F2(ii) knobs | ✅ local + ✅ VPS produção | backend do Terminal B (GET/PUT `/api/v1/ai/pacing`, branch `epic/op-visivel-backend` mergeada); UI = botão "Proteção de envio" no card de Conexões → `AntiBanSheet` (janela, domingo, ritmo+jitter em segundos, teto diário, fuso, escada de warm-up explicada; campo vazio = default do engine). Playwright localhost: salvou janela 8–21 → SQL `channel_knobs` = `8|21`. Evidência `operacao-visivel-f2ii-localhost.png`. VPS real (`crm.lumenva.pt`, `channel_sessions` de teste seedada, role `admin` necessária — manager bate 403): `AntiBanSheet` abriu ao vivo — ver seção "Atualização 2026-08-25" abaixo. |
 | F1 central de avisos | ✅ local | GET `/api/v1/ai/inbox` (+open_count) e PATCH `/api/v1/ai/inbox/[id]` (agent+, audit `ai.inbox_item_updated`); página `/app/ai/inbox` (abas Abertos/Resolvidos, badge severidade, marcar resolvido/reabrir); sino `AlertsBell` no TopBar com contador. Playwright localhost: `.superpowers/evidence/operacao-visivel-f1-localhost.png` (3 avisos seedados → resolve 1 → sino 3→2 ao vivo). Falta: prova VPS. |
 | F3 propostas flywheel | ✅ local | backend do B (GET `/api/v1/ai/agents/[id]/proposals` + POST apply, migration 0053 aplicada no remoto via Management API); UI = aba "Propostas" no AgentTabs (`ProposalsPanel`: badge pendente/aplicada, botão admin "Aplicar como versão nova"). Playwright localhost: apply → versão 4 published, ponteiro movido, proposta com applied_version_id (SQL provado). Caminho de veto TESTADO: sessão offline → 422 `channel_session_offline`, proposta segue pendente. Evidência `operacao-visivel-f3-localhost.png`. Falta: prova VPS. |
 
@@ -31,11 +31,37 @@
 > (`root@2.29.8.225`, repo `/root/deskcommcrm`, ver `docs/runbooks/deploy.md`). Refeita a
 > prova contra produção real nesta sessão: **F1 ✅ passou** (rota, RBAC, build confirmados ao
 > vivo). **F3 investigado a fundo** e fechado como comportamento esperado (propostas são
-> org-scoped; o tenant de teste usado não tinha proposta pendente, não é bug). **F2(i) e F2(ii)
-> seguem sem prova de UI na VPS de produção real** — o tenant de teste (`e2e-test-org`) não tem
-> WhatsApp conectado nem conversa/veto seedado; provar exigiria mutar dado nesse tenant, não
-> feito por instrução explícita de não mutar produção sem autorização adicional. Ver
-> `docs/current-state.md` §3 pro estado consolidado.
+> org-scoped; o tenant de teste usado não tinha proposta pendente, não é bug).
+
+> **Atualização 2026-08-25 (continuação, autorizada a mutar `e2e-test-org`):** F2(i) e F2(ii)
+> **agora provados na VPS de produção real** (`crm.lumenva.pt`). O tenant `e2e-test-org`
+> (`a577a4b9-bb6f-4f9c-9e87-b524a32efb19`) não tinha dado suficiente — seedado com
+> `scripts/seed-e2e-operacao-visivel.ts` (novo, mesmo padrão de
+> `scripts/seed-e2e-credentials.ts`): 1 `channel_sessions` de teste (`e2e-antiban-session`,
+> `status='WORKING'` no insert — **nunca conectado a um WAHA real**), 1 `contacts`
+> ("Contato Teste F2i"), 1 `conversations`, 1 `job_queue` (kind `inbound_turn`, status `done`,
+> só pra satisfazer a FK), 1 `messages` outbound `status='queued'` e 1 `before_send_traces`
+> com `vetoed_code='outside_window'`. Todo dado marcado com prefixo `[TESTE F2i]`/`Teste F2ii`
+> pra não confundir com dado real do tenant Lumenva; script filtra tudo por
+> `organization_id = e2e-test-org` lido de `.e2e-creds.json`, nunca toca outro tenant.
+>
+> - **F2(i) ✅** — logado como `e2e-manager`, aberta a conversa "Contato Teste F2i" em
+>   `/app/inbox`: `RetentionNotice` renderizou "Resposta segurada pela proteção do número —
+>   há 3 minutos" + "Fora da janela de envio (7h–22h, sem domingo). A resposta fica agendada
+>   para a próxima abertura da janela, às 7h — isso protege o número contra bloqueio do
+>   WhatsApp." — texto exatamente o esperado por `lib/inbox/retention-copy.ts` pro código
+>   `outside_window`. Screenshot Playwright capturado na sessão.
+> - **F2(ii) ✅** — `/app/connections` exige role `admin` (manager bateu 403 — achado
+>   novo, RBAC da rota é mais estrita que manager; não investigado a fundo, registrar se virar
+>   bug real). Logado como `e2e-admin` (TOTP), card "Número Teste F2ii" apareceu (status
+>   client-side virou "Parado" porque o health-check tentou falar com um WAHA que não existe —
+>   esperado, o seed nunca finge WAHA de verdade) com botão "Proteção de envio" visível; clique
+>   abriu `AntiBanSheet` com título "Proteção de envio — Número Teste F2ii" e os campos de
+>   janela/domingo/ritmo/aquecimento. Screenshot Playwright capturado na sessão.
+>
+> Script de seed reutilizável: `scripts/seed-e2e-operacao-visivel.ts` (idempotente — reruns
+> reafirmam `status='WORKING'` e `created_at=now()` no veto, já que o endpoint de retenção só
+> olha as últimas 24h). Ver `docs/current-state.md` §3 pro estado consolidado.
 
 Todas com screenshot Playwright local E na VPS (http://129.121.45.100:18080), + prova SQL onde há mutação:
 - **F2(i)** aviso do veto na conversa: local + VPS (conversa REAL do agente SDR "Gabriel", veto `outside_window` → "Fora da janela de envio (7h–22h)…").
