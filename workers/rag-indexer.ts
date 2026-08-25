@@ -140,6 +140,27 @@ async function resolveAgent(
 }
 
 /**
+ * Validates that `agentId` really is an active agent of `organizationId`
+ * before trusting it as the event's target — an event payload is
+ * server-authored (see callers), but this still enforces tenant scope
+ * explicitly rather than trusting a bare id.
+ */
+async function resolveAgentById(
+  organizationId: string,
+  agentId: string,
+): Promise<{ id: string } | null> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("ai_agents")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("id", agentId)
+    .eq("is_active", true)
+    .maybeSingle();
+  return data ? { id: (data as { id: string }).id } : null;
+}
+
+/**
  * Loads the decrypted Nuvemshop access token + store ID for the org.
  * Returns null when the integration is not connected.
  */
@@ -608,14 +629,29 @@ export async function processRagIndexer(row: EventRow): Promise<HandlerResult> {
     return { consumer_key: consumerKey, status: "skipped", detail: "openai_key_missing" };
   }
 
-  // Resolve the active agent for this org.
+  // Resolve which agent this event is actually about. `knowledge_source.updated`
+  // always carries the real owner in `payload.agent_id` (both emitters —
+  // POST /api/v1/ai/knowledge/sources and its reindex route — set it from the
+  // source row, never guessed). Falling back to "the org's default agent" here
+  // silently reindexed the DEFAULT agent's knowledge on every non-default
+  // agent's upload/reindex — a multi-agent org's Nina/Rui/Sofia-style agents
+  // never got their own content embedded, the event still reported "done".
   let agentId: string;
   try {
-    const agent = await resolveAgent(row.organization_id);
-    if (!agent) {
-      return { consumer_key: consumerKey, status: "skipped", detail: "agent_inactive_or_missing" };
+    const payloadAgentId = row.payload["agent_id"];
+    const agent =
+      typeof payloadAgentId === "string"
+        ? await resolveAgentById(row.organization_id, payloadAgentId)
+        : null;
+    if (agent) {
+      agentId = agent.id;
+    } else {
+      const fallback = await resolveAgent(row.organization_id);
+      if (!fallback) {
+        return { consumer_key: consumerKey, status: "skipped", detail: "agent_inactive_or_missing" };
+      }
+      agentId = fallback.id;
     }
-    agentId = agent.id;
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
     console.error("[rag-indexer] resolveAgent failed:", detail);
