@@ -28,6 +28,21 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 - **Flywheel:** a Phase 10 persiste outcomes e agenda o judge/distiller loop em
   `/api/v1/cron/flywheel-judge-loop`, com aprovação administrativa para aplicar propostas.
 
+### Corrigido
+
+- **RAG multi-agente:** o worker de reindexação sempre resolvia o agente-alvo pelo default da
+  organização, ignorando qual agente o evento `knowledge_source.updated` realmente descrevia —
+  numa org com mais de um agente ativo, publicar/reindexar conhecimento de um agente não-default
+  reindexava o default em silêncio (evento reportava `done`, mas o agente que mudou nunca
+  recebia os chunks). Agora o worker usa `payload.agent_id` do próprio evento, com o default como
+  fallback só quando o evento não carrega essa informação.
+- **RAG multi-agente:** `/app/ai/knowledge/sources` só permitia configurar o agente default da
+  organização — não havia como gerenciar conhecimento de nenhum outro agente. Adicionado seletor
+  de agente (`?agentId=`) na tela.
+- A fonte de conhecimento `conversations` (auto-criada, alimentada pelo cron dedicado
+  `kb-conversations-batch`) deixou de ser marcada `failed` pelo reindex genérico baseado em FAQ —
+  ela nunca tem itens desse tipo por desenho, então sempre reportava falha mesmo saudável.
+
 ### Segurança e operação
 
 - Adicionado `lint:tenant-filter` como gate heurístico para handlers que usam client admin.
