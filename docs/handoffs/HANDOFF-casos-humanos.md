@@ -9,7 +9,9 @@
 - **Execução:** subagent-driven (implementer fresco/task + task review + review final)
 
 ## Estado atual
-**Waves 1-6 completas e revisadas. Wave 7 (prova E2E) PARCIAL** — interrompida por limite SEMANAL de API (reseta 25/jul 02h). Código todo verde: `test:unit` 533/533, `test:db` 236, typecheck/lint 0.
+**Waves 1-6 completas e revisadas. Wave 7 (prova E2E) fechou de fato — confirmado 2026-08-25.** Código todo verde: `test:unit` 533/533, `test:db` 236, typecheck/lint 0. O épico está em `main` e sendo mantido ativamente — `ddff0978` (22/ago) corrigiu um bug real de continuidade descoberto e resolvido depois desta wave (o `agent_cases` órfão ao devolver atendimento pelo botão rápido). Único débito de processo, não de produto: `tests/e2e/human-cases.spec.ts`, previsto no plano original, nunca foi escrito — a prova ficou manual/ao vivo (ver abaixo) em vez de virar spec Playwright versionado. `tests/e2e/escalacao-ciclo.spec.ts` é hoje a rede de segurança automatizada mais próxima, mas indireta.
+
+*(Estado anterior desta linha, mantido como registro histórico do que a Wave 7 provou ao vivo em julho:)*
 
 ### O que a prova E2E mostrou (docs/evidence/casos-humanos/, 7 telas, cenário real "assinatura inativa após pagamento", agente anthropic real)
 - **PROVADO na tela:** abertura do caso pela IA (summary/blocker escritos pelo agente) · lista com "Aguardando você" · detalhe com blocos rotulados · ação "Preciso de info do cliente" → badge vira "Aguardando o cliente" + painel desabilitado com a razão certa · conclusão → aba "Abertos (0)" + estado vazio. **UX aprovada por mim**: clara, ensina, de-quem-é-a-bola óbvio, 3 ações inequívocas, zero enum cru. O fix do W6 (sem pré-seleção) confirmado ao vivo.
