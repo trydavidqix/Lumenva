@@ -136,11 +136,11 @@ o contrato de governança para agentes de IA externos.
 | Épico | Estado relatado | O que falta |
 |---|---|---|
 | **Follow-up inteligente** (`HANDOFF.md`) | Ondas 1–7 ✅; Onda 8 **em andamento** (8.1 gatilho de silêncio ✅, 8.3 jornada E2E ✅) | gatilho `stage_change`, flywheel, e o fechamento do checklist DoD/PRD da 8.3 |
-| **Evolução do harness** (`HANDOFF-harness-evolution.md`) | **ÉPICO COMPLETO** — Fases 0–4 fecharam, a última (Painel de Evolução) em 2026-07-27. Mais duas continuações entregues: mapeamento de funil do agente (27/jul) e gerenciar etapas do funil (28/jul) | **uma prova em aberto, e é do dono:** ninguém mandou uma mensagem real de WhatsApp fechando o ciclo completo. Receita de 1 min no fim do HANDOFF |
+| **Evolução do harness** (`HANDOFF-harness-evolution.md`) | **ÉPICO COMPLETO** — Fases 0–4 fecharam, a última (Painel de Evolução) em 2026-07-27. Mais duas continuações entregues: mapeamento de funil do agente (27/jul) e gerenciar etapas do funil (28/jul) | **nada** — a prova de ponta a ponta (mensagem real de WhatsApp) já tinha fechado em 2026-07-27 (`evidence/f4-prova-real-whatsapp.png`); esta linha estava desatualizada, corrigido 2026-08-25 |
 | **Operação visível** (`HANDOFF-operacao-visivel.md`) | F1, F2(i), F2(ii), F3 ✅ localhost com evidência Playwright | prova na VPS após publicar (cada feature exige prova dupla: localhost **e** VPS) |
-| **Casos humanos** (`docs/handoffs/HANDOFF-casos-humanos.md`) | Waves 1–6 ✅ e revisadas; Wave 7 (prova E2E) relatada PARCIAL — interrompida por limite de API, não por bug | **A CONFIRMAR** se fechou: o HANDOFF saiu da raiz para `docs/handoffs/`, o que normalmente sinaliza épico encerrado |
-| **Inbox multimodal** (`docs/handoffs/HANDOFF-inbox-multimodal.md`) | Ondas 0–3.1 ✅ com prova real (WhatsApp real, mídia real) | **A CONFIRMAR** o estado das ondas 4–6. **Bloqueios externos que valem revalidar:** chave Google era de gateway (gemini real inacessível) e credencial Anthropic era placeholder (`last4 1234`) — o agente multimodal foi provado só em OpenAI/gpt-4o |
-| **Fase FG / Vendaval** | Não iniciada | O gatilho era a aprovação de G6, que existe (`G6.approved`). O README **não lista mais** a Fase FG em "Próximo" — **A CONFIRMAR** se saiu de escopo ou foi absorvida |
+| **Casos humanos** (`docs/handoffs/HANDOFF-casos-humanos.md`) | **Fechou — confirmado 2026-08-25.** Código em `main`, mantido ativamente (`ddff0978`, 22/ago, corrigiu bug real de continuidade — o mesmo `agent_cases` órfão fechado nesta sessão). Wave 7 foi provada ao vivo (não virou spec Playwright versionado — `tests/e2e/human-cases.spec.ts` do plano original nunca foi escrito) | Dívida de processo, não de produto: escrever `tests/e2e/human-cases.spec.ts` pra não depender só de `escalacao-ciclo.spec.ts` como rede indireta. Não pôde ser reexecutado nesta auditoria por falta de Docker na estação (mesma limitação já registrada em §7) |
+| **Inbox multimodal** (`docs/handoffs/HANDOFF-inbox-multimodal.md`) | Ondas 0–5 (+5.1/5.2/5.3) ✅ — confirmado em `main` (PR #34/#36 mergeados), código+migration+teste+rota-na-nav pra split de mensagens, templates, rascunho IA, notas internas, snooze. *(Correção 2026-08-25: "ondas 4–6" era impreciso — o épico vai só até a onda 5+subondas, não existe onda 6.)* | Nada estrutural. **Único ponto ainda aberto — dado de runtime, não código:** se a credencial Anthropic (era `last4 1234`, placeholder) e a chave Google (era de gateway, não AI Studio direto) foram trocadas por reais — isso vive em `ai_agent_credentials` no banco, não dá pra confirmar por leitura de código |
+| **Fase FG / Vendaval** | **FEITA — absorvida em `main`** (não estava "não iniciada"; corrigido 2026-08-25) | Nada. Mesclada em 3 ondas (`f3654029`, `1cc49d55`, `cd0f4d39`), 221 commits em `lib/agent-engine/` desde então, o mais recente 3 dias antes desta auditoria. `docker-compose.prod.yml` já tem o serviço `worker`. README não lista mais "Fase FG" porque virou trabalho corrente ("IA nativa"/"flywheel"), não porque saiu de escopo. `docs/vendaval-fusion-plan.md` e `docs/vendaval-vps-deploy-comandos.md` cumpriram o papel — candidatos a `docs/archive/` |
 
 ### Próximo no roadmap (não iniciado — CONFIRMADO no README)
 
@@ -399,11 +399,12 @@ Resend.
 
 ## 6. Perguntas para o responsável
 
-1. Qual é a prioridade para "iniciar minimamente o sistema": fechar a Onda 8 de Follow-up,
-   a prova de WhatsApp real que o épico do harness deixou aberta, ou estabilizar segurança
-   (rate limit) antes de tudo?
-2. A Fase FG (Vendaval) saiu de escopo? `G6.approved` existe e o README não a lista mais em
-   "Próximo". `docs/vendaval-fusion-plan.md` e `docs/vendaval-vps-deploy-comandos.md` ainda valem?
+1. Qual é a prioridade para "iniciar minimamente o sistema": fechar a Onda 8 de Follow-up ou
+   estabilizar segurança (rate limit) antes de tudo? *(a prova de WhatsApp real do harness já
+   fechou em 2026-07-27 — não é mais item desta pergunta, corrigido 2026-08-25)*
+2. ~~A Fase FG (Vendaval) saiu de escopo?~~ **Resolvido nesta auditoria**: não saiu de escopo,
+   está absorvida em `main` desde jul/ago-2026 (ver §3). `docs/vendaval-fusion-plan.md` e
+   `docs/vendaval-vps-deploy-comandos.md` cumpriram o papel — mover pra `docs/archive/`.
 3. Casos Humanos Wave 7 e Inbox Multimodal ondas 4–6 fecharam? Os HANDOFFs foram arquivados
    em `docs/handoffs/`, o que sugere sim, mas o texto interno ainda diz PARCIAL.
 4. A credencial Anthropic e a chave direta do Google AI Studio foram providenciadas?

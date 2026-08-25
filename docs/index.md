@@ -146,9 +146,10 @@ anterior à v1.0.0; regenere (`/graphify .`) antes de confiar em detalhe fino.
 
 ## Lacunas conhecidas deste índice
 
-- `docs/vendaval-fusion-plan.md` e `docs/vendaval-vps-deploy-comandos.md` referem-se a uma
-  integração ("Vendaval") cujo status é **A CONFIRMAR** — o README **não a lista mais** em
-  "Próximo", apesar de o gatilho (`loop/checkpoints/G6.approved`) existir.
+- `docs/archive/vendaval-fusion-plan.md` e `docs/archive/vendaval-vps-deploy-comandos.md`
+  (movidos pra archive em 2026-08-25): a integração "Vendaval" **já foi absorvida em `main`**
+  (jul/ago-2026, ver `docs/current-state.md` §3) — os planos ficam como registro histórico, não
+  trabalho pendente.
 - `docs/diagrams/` não tem `.md` e não foi inventariado. `docs/evidence/` é evidência visual
   (18 PNGs), não documentação de leitura.
 - `docs/architecture/` contém só o diagrama do agent-turn; a doutrina (`CLAUDE.md`, DoD item 13)

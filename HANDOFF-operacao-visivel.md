@@ -12,7 +12,7 @@
   Ordem: F2(i) transparência anti-ban → F2(ii) knobs → F1 central de avisos → F3 propostas flywheel.
 - **Dono das telas:** Terminal C (FRONTEND). **Backend:** Terminal B (knobs read/write, apply-proposal).
 - **Onde:** branch `feat/operacao-visivel` (base main pós-fusão b1003cf).
-- **VPS de prova:** http://129.121.45.100:18080 (compose `deskcomm-fusion`, deploy por git bundle — ver docs/vendaval-vps-deploy-comandos.md).
+- **VPS de prova:** http://129.121.45.100:18080 (compose `deskcomm-fusion`, deploy por git bundle — ver docs/archive/vendaval-vps-deploy-comandos.md).
 - **Dados do motor:** `before_send_traces` (vetos por tentativa), `channel_knobs` (+ `channel_sessions.daily_message_limit`), `agent_inbox_items`, `flywheel_distiller_proposals`.
 
 ## Estado atual
