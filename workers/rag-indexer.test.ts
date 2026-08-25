@@ -585,6 +585,23 @@ describe("rag-indexer — knowledge_source.updated (FAQ path)", () => {
       expect(f.value).toBe(orgA);
     }
   });
+
+  it("never marks a `conversations` source failed: it has no ai_faq_items by design (fed by the dedicated kb-conversations-batch cron instead)", async () => {
+    const conversationsSourceId = "00000000-0000-4000-8000-000000000030";
+    state.sources.push({
+      id: conversationsSourceId,
+      source_type: "conversations",
+      name: "",
+    });
+    resolveIngestionNodesMock.mockResolvedValueOnce(selection("native", [node("chunk-a", 0)]));
+
+    await processRagIndexer(faqEvent());
+
+    // Only the FAQ source gets a status write; the conversations source is
+    // skipped entirely, never touched by this generic FAQ-based reindex.
+    expect(state.sourceUpdates).toHaveLength(1);
+    expect(state.sourceUpdates[0]).toMatchObject({ last_index_status: "success" });
+  });
 });
 
 describe("rag-indexer — nuvemshop.product_synced (product path)", () => {

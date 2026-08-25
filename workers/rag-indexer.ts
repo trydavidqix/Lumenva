@@ -563,6 +563,13 @@ async function handleKnowledgeSourceUpdated(
   // Estado por fonte: a tela mostra "Chunks indexados" e a última indexação.
   const agora = new Date().toISOString();
   for (const s of sources) {
+    // `conversations` nunca tem ai_faq_items — é alimentada por um pipeline
+    // dedicado (lib/ai/rag/ingest/conversations.ts via cron
+    // kb-conversations-batch), não por este reindex genérico baseado em FAQ.
+    // Sem este skip, doFonte é sempre 0 aqui e a fonte é marcada `failed` a
+    // cada rodada mesmo quando o pipeline dela nunca rodou ou está saudável.
+    if (s.source_type === "conversations") continue;
+
     // O que REALMENTE entrou, nao o que eu pretendia gravar: contar o planejado
     // fazia a tela anunciar "4 chunks indexados" com zero chunks no banco.
     const doFonte = gravadosPorFonte.get(s.id) ?? 0;
