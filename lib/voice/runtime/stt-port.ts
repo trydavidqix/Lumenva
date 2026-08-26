@@ -1,5 +1,8 @@
+export type VoiceAudioEncoding = "pcm_s16le" | "opus" | "mulaw";
+
 export interface VoiceAudioFrame {
   data: Uint8Array;
+  encoding: VoiceAudioEncoding;
   sampleRateHz: number;
   channels: number;
   timestampMs: number;
