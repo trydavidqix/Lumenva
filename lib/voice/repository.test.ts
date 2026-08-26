@@ -38,7 +38,7 @@ describe("voice repository", () => {
     expect(params).toEqual(["org-a", "call-1", "active"]);
   });
 
-  it("appends provider events idempotently per organization", async () => {
+  it("appends normalized provider events idempotently per organization", async () => {
     const client = db([{ id: "event-1" }]);
     const repo = createVoiceRepository(client);
     await repo.appendProviderEvent({
@@ -47,10 +47,13 @@ describe("voice repository", () => {
       provider: "telnyx",
       providerEventId: "evt-1",
       eventType: "call.answered",
-      payload: { safe: true },
+      attributes: { callControlId: "ctrl-1", hangupCause: null },
       occurredAt: "2026-08-26T11:15:00.000Z",
     });
-    const [sql] = client.query.mock.calls[0]!;
+    const [sql, params] = client.query.mock.calls[0]!;
     expect(sql).toMatch(/on conflict \(organization_id, provider, provider_event_id\) do nothing/i);
+    expect(sql).toMatch(/attributes/i);
+    expect(sql).not.toMatch(/\bpayload\b/i);
+    expect(String(params[5])).toContain("callControlId");
   });
 });
