@@ -64,13 +64,14 @@ export async function PATCH(req: NextRequest): Promise<Response> {
   if (updateError) return fail("internal_error", updateError.message, 500, { requestId });
 
   void audit({
-    action: "voice.config_changed",
+    action: "org.updated",
     actorUserId: user.id,
     organizationId: activeOrg.orgId,
     resourceType: "organization",
     resourceId: activeOrg.orgId,
     requestId,
     metadata: {
+      scope: "voice",
       mode: voice.mode,
       recording_enabled: voice.recording.enabled,
       transcription_enabled: voice.transcription.enabled,
