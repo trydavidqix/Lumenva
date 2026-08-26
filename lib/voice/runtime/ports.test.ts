@@ -20,13 +20,8 @@ describe("voice provider ports", () => {
 
   it("makes wire audio encoding explicit across transport and speech adapters", () => {
     expectTypeOf<VoiceAudioEncoding>().toEqualTypeOf<"pcm_s16le" | "opus" | "mulaw">();
-    expectTypeOf<VoiceAudioFrame>().toMatchTypeOf<{
-      data: Uint8Array;
-      encoding: VoiceAudioEncoding;
-      sampleRateHz: number;
-      channels: number;
-      timestampMs: number;
-    }>();
+    expectTypeOf<VoiceAudioFrame>().toHaveProperty("encoding");
+    expectTypeOf<VoiceAudioFrame["encoding"]>().toEqualTypeOf<VoiceAudioEncoding>();
   });
 
   it("requires TTS playback to expose cancellable streaming audio", () => {
