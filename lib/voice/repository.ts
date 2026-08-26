@@ -1,4 +1,4 @@
-import type { VoiceCallDirection, VoiceCallState } from "./contracts";
+import type { VoiceCallDirection, VoiceCallState, VoiceProvider } from "./contracts";
 
 export interface VoiceQueryable {
   query<T = Record<string, unknown>>(sql: string, params: unknown[]): Promise<{ rows: T[] }>;
@@ -14,17 +14,19 @@ export interface CreateVoiceCallInput {
   callerNumber: string;
   calledNumber: string;
   state: VoiceCallState;
-  provider: string;
+  provider: VoiceProvider;
   providerCallId: string | null;
 }
+
+export type VoiceProviderEventAttribute = string | number | boolean | null;
 
 export interface AppendVoiceProviderEventInput {
   organizationId: string;
   voiceCallId: string;
-  provider: string;
+  provider: VoiceProvider;
   providerEventId: string;
   eventType: string;
-  payload: Record<string, unknown>;
+  attributes: Record<string, VoiceProviderEventAttribute>;
   occurredAt: string;
 }
 
@@ -69,7 +71,7 @@ export function createVoiceRepository(db: VoiceQueryable) {
       const { rows } = await db.query<{ id: string }>(
         `insert into voice_call_events (
            organization_id, voice_call_id, provider, provider_event_id,
-           event_type, payload, occurred_at
+           event_type, attributes, occurred_at
          ) values ($1,$2,$3,$4,$5,$6::jsonb,$7::timestamptz)
          on conflict (organization_id, provider, provider_event_id) do nothing
          returning id`,
@@ -79,7 +81,7 @@ export function createVoiceRepository(db: VoiceQueryable) {
           input.provider,
           input.providerEventId,
           input.eventType,
-          JSON.stringify(input.payload),
+          JSON.stringify(input.attributes),
           input.occurredAt,
         ],
       );
