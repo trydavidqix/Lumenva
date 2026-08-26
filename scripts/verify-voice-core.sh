@@ -7,6 +7,8 @@ NODE_ENV=test pnpm vitest run \
   lib/voice/repository.test.ts \
   lib/voice/config.test.ts \
   lib/voice/engine/contracts.test.ts \
+  lib/voice/engine/factory.test.ts \
+  lib/voice/patter/adapter.test.ts \
   lib/voice/runtime/session.test.ts \
   lib/voice/runtime/barge-in.test.ts \
   lib/voice/runtime/ports.test.ts \
