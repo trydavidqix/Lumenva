@@ -18,6 +18,19 @@ describe("voice realtime session", () => {
     expect(state.phase).toBe("speaking");
   });
 
+  it("fails closed on impossible transitions after the session ended", () => {
+    const ended = reduceVoiceSession(createVoiceSessionState(), { type: "end", reason: "completed", atMs: 10 });
+    expect(() => reduceVoiceSession(ended, { type: "tts_started", atMs: 20 })).toThrow(/invalid voice session transition/i);
+  });
+
+  it("does not process transcripts while the call is held", () => {
+    let state = reduceVoiceSession(createVoiceSessionState(), { type: "customer_speech_started", atMs: 100 });
+    state = reduceVoiceSession(state, { type: "hold", atMs: 200 });
+    expect(() =>
+      reduceVoiceSession(state, { type: "final_transcript", text: "ignorar", confidence: 0.99, atMs: 300 }),
+    ).toThrow(/invalid voice session transition/i);
+  });
+
   it("ends safely after configured silence timeout", () => {
     const state = reduceVoiceSession(createVoiceSessionState(), { type: "silence_timeout", atMs: 20_000 });
     expect(state.phase).toBe("ended");
