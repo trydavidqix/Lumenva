@@ -18,11 +18,27 @@ export type VoiceSessionEvent =
   | { type: "silence_timeout"; atMs: number }
   | { type: "end"; reason: Exclude<VoiceSessionEndReason, null | "silence_timeout">; atMs: number };
 
+const ALLOWED_EVENTS: Record<VoiceSessionPhase, ReadonlySet<VoiceSessionEvent["type"]>> = {
+  idle: new Set(["customer_speech_started", "hold", "silence_timeout", "end"]),
+  listening: new Set(["customer_speech_started", "final_transcript", "hold", "silence_timeout", "end"]),
+  processing: new Set(["customer_speech_started", "tts_started", "hold", "end"]),
+  speaking: new Set(["customer_speech_started", "tts_finished", "hold", "end"]),
+  held: new Set(["resume", "end"]),
+  ended: new Set(),
+};
+
 export function createVoiceSessionState(): VoiceSessionState {
   return { phase: "idle", endReason: null, lastTranscript: null, lastTranscriptConfidence: null };
 }
 
+function assertValidTransition(state: VoiceSessionState, event: VoiceSessionEvent): void {
+  if (!ALLOWED_EVENTS[state.phase].has(event.type)) {
+    throw new Error(`[voice] invalid voice session transition: ${state.phase} -> ${event.type}`);
+  }
+}
+
 export function reduceVoiceSession(state: VoiceSessionState, event: VoiceSessionEvent): VoiceSessionState {
+  assertValidTransition(state, event);
   switch (event.type) {
     case "customer_speech_started":
       return { ...state, phase: "listening", endReason: null };
