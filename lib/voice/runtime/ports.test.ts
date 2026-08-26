@@ -2,6 +2,7 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import type {
   StreamingSttPort,
+  VoiceAudioEncoding,
   VoiceAudioFrame,
   VoiceSttEvent,
 } from "./stt-port";
@@ -15,6 +16,17 @@ describe("voice provider ports", () => {
       | { type: "partial"; text: string; confidence: number | null }
       | { type: "final"; text: string; confidence: number | null }
     >();
+  });
+
+  it("makes wire audio encoding explicit across transport and speech adapters", () => {
+    expectTypeOf<VoiceAudioEncoding>().toEqualTypeOf<"pcm_s16le" | "opus" | "mulaw">();
+    expectTypeOf<VoiceAudioFrame>().toMatchTypeOf<{
+      data: Uint8Array;
+      encoding: VoiceAudioEncoding;
+      sampleRateHz: number;
+      channels: number;
+      timestampMs: number;
+    }>();
   });
 
   it("requires TTS playback to expose cancellable streaming audio", () => {
