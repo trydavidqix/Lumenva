@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   VOICE_CALL_STATES,
   VOICE_PARTICIPANT_ROLES,
+  VOICE_PROVIDERS,
   isVoiceCallState,
+  isVoiceProvider,
   validateVoiceCallContext,
   type VoiceCallContext,
 } from "./contracts";
@@ -27,6 +29,12 @@ describe("voice core contracts", () => {
 
   it("defines only customer, AI and human participants", () => {
     expect(VOICE_PARTICIPANT_ROLES).toEqual(["customer", "ai_agent", "human_agent"]);
+  });
+
+  it("keeps telephony providers a closed vocabulary", () => {
+    expect(VOICE_PROVIDERS).toEqual(["telnyx"]);
+    expect(isVoiceProvider("telnyx")).toBe(true);
+    expect(isVoiceProvider("anything-else")).toBe(false);
   });
 
   it("requires organization identity but permits an unresolved contact at call start", () => {
