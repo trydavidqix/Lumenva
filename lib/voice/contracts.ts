@@ -15,6 +15,10 @@ export type VoiceCallState = (typeof VOICE_CALL_STATES)[number];
 export const VOICE_PARTICIPANT_ROLES = ["customer", "ai_agent", "human_agent"] as const;
 export type VoiceParticipantRole = (typeof VOICE_PARTICIPANT_ROLES)[number];
 
+/** PSTN/SIP providers supported by the voice transport layer. */
+export const VOICE_PROVIDERS = ["telnyx"] as const;
+export type VoiceProvider = (typeof VOICE_PROVIDERS)[number];
+
 export type VoiceCallDirection = "inbound" | "outbound";
 
 export interface VoiceCallContext {
@@ -44,9 +48,14 @@ export interface VoiceTurnOutput {
 }
 
 const VOICE_CALL_STATE_SET = new Set<string>(VOICE_CALL_STATES);
+const VOICE_PROVIDER_SET = new Set<string>(VOICE_PROVIDERS);
 
 export function isVoiceCallState(value: unknown): value is VoiceCallState {
   return typeof value === "string" && VOICE_CALL_STATE_SET.has(value);
+}
+
+export function isVoiceProvider(value: unknown): value is VoiceProvider {
+  return typeof value === "string" && VOICE_PROVIDER_SET.has(value);
 }
 
 export type VoiceCallContextValidation =
