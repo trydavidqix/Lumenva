@@ -18,7 +18,7 @@ describe("Patter media profile", () => {
   });
 
   it("never includes LLM, tools or business policy authority", () => {
-    const profile = buildPatterMediaProfile(DEFAULT_VOICE_TENANT_CONFIG) as Record<string, unknown>;
+    const profile = buildPatterMediaProfile(DEFAULT_VOICE_TENANT_CONFIG) as unknown as Record<string, unknown>;
     expect(profile).not.toHaveProperty("llm");
     expect(profile).not.toHaveProperty("model");
     expect(profile).not.toHaveProperty("tools");
