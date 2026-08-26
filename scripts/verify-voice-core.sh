@@ -12,6 +12,7 @@ NODE_ENV=test pnpm vitest run \
   lib/voice/livekit/session.test.ts \
   lib/voice/telnyx/webhook.test.ts \
   lib/voice/identity/resolve-caller.test.ts \
+  lib/voice/transfer/adapter.test.ts \
   tests/unit/voice-migration-contract.test.ts \
   tests/unit/voice-hardening-migration-contract.test.ts \
   tests/unit/voice-config-surface-contract.test.ts
