@@ -34,5 +34,8 @@ export function createVoiceBrainClient(env = process.env) {
     runTurn(input) {
       return postJson(`${baseUrl}/api/internal/voice/turn`, secret, input);
     },
+    recordEvent(input) {
+      return postJson(`${baseUrl}/api/internal/voice/event`, secret, input);
+    },
   };
 }
