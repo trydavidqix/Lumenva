@@ -35,6 +35,7 @@ NODE_ENV=test pnpm vitest run \
   tests/unit/voice-phone-number-migration-contract.test.ts \
   tests/unit/voice-config-surface-contract.test.ts \
   tests/unit/voice-worker-deploy-contract.test.ts \
+  tests/unit/voice-worker-tenant-binding-contract.test.ts \
   tests/unit/voice-outbound-route-contract.test.ts \
   tests/unit/lumenva-voice-engine-e2e-contract.test.ts
 node --check workers/voice-worker/main.mjs
