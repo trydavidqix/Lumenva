@@ -28,6 +28,9 @@ export function createVoiceBrainClient(env = process.env) {
   const baseUrl = required(env.VOICE_CONTROL_PLANE_URL, "VOICE_CONTROL_PLANE_URL").replace(/\/$/, "");
   const secret = required(env.INTERNAL_SECRET, "INTERNAL_SECRET");
   return {
+    resolveWorkerConfig(input) {
+      return postJson(`${baseUrl}/api/internal/voice/worker-config`, secret, input);
+    },
     resolveContext(input) {
       return postJson(`${baseUrl}/api/internal/voice/context`, secret, input);
     },
