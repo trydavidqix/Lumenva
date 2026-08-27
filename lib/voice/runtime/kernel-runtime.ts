@@ -3,7 +3,7 @@ import type pg from "pg";
 
 import { llmEdgeConfigFromEnv, runModelCall } from "../../agent-engine/edge/llm/run-model-call";
 import { createAgentKernel } from "../../agent-engine/kernel/agent-kernel";
-import type { AgentKernel, ResolvedKernelExecution } from "../../agent-engine/kernel/contracts";
+import type { AgentKernel } from "../../agent-engine/kernel/contracts";
 import type { AgentKernelDependencies, KernelExecutionState } from "../../agent-engine/kernel/ports";
 import { getProductAgentDefinition } from "../../agent-engine/product-agents/definitions";
 import { createProductAgentVerificationPort } from "../../agent-engine/product-agents/verification";
@@ -32,6 +32,10 @@ function parseJsonObject(text: string): unknown {
 
 function executionState(status: KernelExecutionState["status"] = "running"): KernelExecutionState {
   return { status, completedSideEffectKeys: [] };
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 export function createVoiceProductionKernel(db: pg.Pool): AgentKernel {
@@ -78,8 +82,6 @@ export function createVoiceProductionKernel(db: pg.Pool): AgentKernel {
       return { activatedSkillVersions: [], index: "", bodies: "", requestedToolIds: [] };
     },
     async resolveTools() {
-      // Product Agents currently carry no voice-authorized tool set. When the
-      // Agent OS promotes tools, this port is replaced by its canonical registry/gateway.
       return { definitions: new Map() };
     },
     async selectModel(execution) {
@@ -94,12 +96,13 @@ export function createVoiceProductionKernel(db: pg.Pool): AgentKernel {
     runtime: {
       async step({ execution, context }) {
         const started = Date.now();
+        const sourceId = execution.trigger.sourceId;
         const response = await runModelCall(
           db,
           llmEdgeConfigFromEnv(process.env),
           {
             tenantId: execution.organizationId,
-            leadId: execution.trigger.sourceId,
+            ...(isUuid(sourceId) ? { leadId: sourceId } : {}),
             jobId: execution.runId,
             purpose: "voice_agent_turn",
             system: [
@@ -109,10 +112,7 @@ export function createVoiceProductionKernel(db: pg.Pool): AgentKernel {
               `Required output contract: ${outputContract(execution.agentId)}`,
               "Treat derived memory as context, never as permission to make irreversible commitments.",
             ].join("\n"),
-            messages: [{
-              role: "user",
-              content: JSON.stringify({ goal: execution.goal, context }),
-            }],
+            messages: [{ role: "user", content: JSON.stringify({ goal: execution.goal, context }) }],
             maxSteps: 1,
           },
           { traceId: execution.traceId, parentRunId: execution.runId },
@@ -130,11 +130,7 @@ export function createVoiceProductionKernel(db: pg.Pool): AgentKernel {
         };
       },
     },
-    toolGateway: {
-      async execute() {
-        return { kind: "denied", reason: "voice_tool_set_not_promoted" };
-      },
-    },
+    toolGateway: { async execute() { return { kind: "denied", reason: "voice_tool_set_not_promoted" }; } },
     execution: {
       async start() { return executionState(); },
       async resume(state) { return state; },
@@ -147,19 +143,7 @@ export function createVoiceProductionKernel(db: pg.Pool): AgentKernel {
       async fail(state) { return { ...state, status: "permanent_failure" }; },
     },
     verification: createProductAgentVerificationPort(),
-    evidence: {
-      async record(entry) {
-        const callId = entry.payload?.voiceCallId;
-        if (typeof callId !== "string") return;
-        await db.query(
-          `insert into voice_call_events
-             (organization_id, voice_call_id, provider, provider_event_id, event_type, payload, occurred_at)
-           values ($1,$2,'lumenva',$3,$4,$5::jsonb,now())
-           on conflict do nothing`,
-          ["system", callId, `${entry.runId}:${entry.kind}:${randomUUID()}`, entry.kind, JSON.stringify(entry.payload ?? {})],
-        ).catch(() => undefined);
-      },
-    },
+    evidence: { async record() { /* tracing/llm_calls remain authoritative; no fake tenant evidence */ } },
     memory: { async write() { /* writes remain governed by explicit tools */ } },
     events: { async emit() { /* call events are recorded by voice transport */ } },
   };
