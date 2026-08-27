@@ -12,6 +12,7 @@ import {
   getCallContext,
   putCallContext,
 } from "./call-context.mjs";
+import { startVoiceControlServer } from "./control-server.mjs";
 
 function required(name) {
   const value = process.env[name];
@@ -27,10 +28,12 @@ const liveEnabled = enabled("VOICE_LIVE_ENABLED");
 const phoneNumber = required("TELNYX_PHONE_NUMBER");
 const webhookUrl = required("VOICE_WEBHOOK_HOST");
 const port = Number(process.env.PORT ?? 8080);
+const controlPort = Number(process.env.VOICE_CONTROL_PORT ?? 8081);
 if (!Number.isInteger(port) || port <= 0 || port > 65535) throw new Error("PORT must be a valid TCP port");
+if (!Number.isInteger(controlPort) || controlPort <= 0 || controlPort > 65535 || controlPort === port) {
+  throw new Error("VOICE_CONTROL_PORT must be a different valid TCP port");
+}
 
-// CRM is the only persistence/telemetry authority. Patter's own disk history and
-// anonymous telemetry are explicitly disabled to avoid a second copy of call data.
 process.env.PATTER_TELEMETRY_DISABLED = "1";
 process.env.PATTER_DASHBOARD_NOTIFY = "0";
 process.env.PATTER_BIND_HOST = process.env.PATTER_BIND_HOST ?? "0.0.0.0";
@@ -57,8 +60,6 @@ const agent = phone.agent({
     apiKey: required("ELEVENLABS_API_KEY"),
     voiceId: required("ELEVENLABS_VOICE_ID"),
   }),
-  // This prompt is deliberately non-business: onMessage owns the brain and
-  // returns the CRM/Agent OS approved text. Patter only manages the media loop.
   systemPrompt: "You are the Lumenva media shell. Business reasoning is provided externally.",
   firstMessage: "",
 });
@@ -66,11 +67,12 @@ const agent = phone.agent({
 async function onCallStart(data) {
   if (!liveEnabled) throw new Error("voice_live_disabled");
   const endpoints = extractPatterCallEndpoints(data);
+  const direction = endpoints.caller === phoneNumber ? "outbound" : "inbound";
   const context = await brain.resolveContext({
     provider_call_id: endpoints.callId,
     caller_e164: endpoints.caller,
     called_e164: endpoints.called,
-    direction: "inbound",
+    direction,
   });
   putCallContext(endpoints.callId, context);
 }
@@ -81,10 +83,7 @@ async function onMessage(message) {
   if (!context) throw new Error("voice_call_context_missing");
   const transcript = String(message.text ?? "").trim();
   if (!transcript) return "";
-  const result = await brain.runTurn({
-    voice_call_id: context.voice_call_id,
-    transcript,
-  });
+  const result = await brain.runTurn({ voice_call_id: context.voice_call_id, transcript });
   if (result.kind !== "reply" || typeof result.text !== "string" || !result.text.trim()) {
     throw new Error(`voice_turn_blocked:${result.reason ?? "unknown"}`);
   }
@@ -105,10 +104,18 @@ await phone.serve({
   onCallEnd,
   onMessage,
 });
+await startVoiceControlServer({
+  phone,
+  agent,
+  secret: required("INTERNAL_SECRET"),
+  liveEnabled,
+  port: controlPort,
+});
 
 process.stdout.write(JSON.stringify({
   event: "lumenva_voice_worker_ready",
   port,
+  control_port: controlPort,
   live_enabled: liveEnabled,
   active_calls: activeCallCount(),
 }) + "\n");
