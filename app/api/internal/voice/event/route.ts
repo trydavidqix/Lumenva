@@ -13,6 +13,7 @@ export const runtime = "nodejs";
 const stateSchema = z.enum(["connecting", "active", "held", "transferring", "completed", "failed", "canceled"]);
 const bodySchema = z.object({
   voice_call_id: z.string().uuid(),
+  technical_phone_e164: z.string().regex(/^\+[1-9]\d{6,14}$/),
   state: stateSchema,
   provider_event_id: z.string().min(1).max(256),
   provider_call_id: z.string().min(1).max(256).optional(),
@@ -51,11 +52,24 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   const db = getRequestPool();
   const { rows } = await db.query<{ organization_id: string }>(
-    `select organization_id from voice_calls where id = $1 limit 1`,
-    [parsed.data.voice_call_id],
+    `select vc.organization_id
+       from voice_calls vc
+       join voice_phone_numbers vpn
+         on vpn.organization_id = vc.organization_id
+        and vpn.provider = 'telnyx'
+        and vpn.phone_e164 = $2
+        and vpn.enabled = true
+      where vc.id = $1
+        and (
+          (vc.direction = 'inbound' and vc.called_number = $2)
+          or
+          (vc.direction = 'outbound' and vc.caller_number = $2)
+        )
+      limit 1`,
+    [parsed.data.voice_call_id, parsed.data.technical_phone_e164],
   );
   const call = rows[0];
-  if (!call) return fail("voice_call_not_found", "Chamada não encontrada.", 404, { requestId });
+  if (!call) return fail("voice_call_not_found", "Chamada não encontrada ou fora do worker autorizado.", 404, { requestId });
 
   const metrics = parsed.data.metrics ? normalizePatterMetrics(parsed.data.metrics) : undefined;
   const occurredAt = parsed.data.occurred_at ?? new Date().toISOString();
