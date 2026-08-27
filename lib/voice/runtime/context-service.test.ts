@@ -3,8 +3,15 @@ import { createVoiceCallContextService } from "./context-service";
 
 describe("voice call context service", () => {
   it("resolves tenant before caller and persists the call", async () => {
-    const resolveOrganization = vi.fn().mockResolvedValue("org-1");
-    const resolveCaller = vi.fn().mockResolvedValue({ kind: "known", contactId: "contact-1", quickMemory: null });
+    const order: string[] = [];
+    const resolveOrganization = vi.fn(async () => {
+      order.push("organization");
+      return "org-1";
+    });
+    const resolveCaller = vi.fn(async () => {
+      order.push("caller");
+      return { kind: "known" as const, contactId: "contact-1", quickMemory: null };
+    });
     const persistCall = vi.fn().mockResolvedValue("voice-1");
     const loadConfig = vi.fn().mockResolvedValue({ locale: "pt-PT" });
     const service = createVoiceCallContextService({ resolveOrganization, resolveCaller, persistCall, loadConfig });
@@ -21,7 +28,7 @@ describe("voice call context service", () => {
       callerKind: "known",
       locale: "pt-PT",
     });
-    expect(resolveOrganization).toHaveBeenCalledBefore(resolveCaller);
+    expect(order).toEqual(["organization", "caller"]);
     expect(resolveCaller).toHaveBeenCalledWith("org-1", "+351912345678");
   });
 
