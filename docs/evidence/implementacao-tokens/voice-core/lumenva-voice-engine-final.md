@@ -30,8 +30,11 @@ Implemented boundaries include:
 - Patter persistence/dashboard/anonymous telemetry disabled.
 - technical E.164 -> tenant registry (`voice_phone_numbers`) before Caller ID.
 - service-only technical-number -> private worker registry (`voice_worker_endpoints`).
+- explicit `REVOKE ALL` from `anon` and `authenticated` on the private worker-endpoint registry, in addition to RLS with no tenant policies.
 - tenant-scoped Caller ID and compact Customer Memory hydration.
 - authenticated worker -> CRM context/turn/event control-plane endpoints.
+- worker turn/lifecycle requests are bound to that worker's technical Telnyx E.164; CRM verifies the number belongs to the call organization and matches inbound `called_number` or outbound `caller_number` before accepting the request.
+- call lifecycle refuses to reopen terminal (`completed/failed/canceled`) calls and refuses a conflicting provider call id.
 - canonical Agent Kernel production composition for voice using the existing `runModelCall` seam.
 - spoken-delivery policy derived from canonical autonomy; shadow/draft/off never become TTS.
 - customer-safe output extraction only; internal rationale/action/reason fields are not spoken.
@@ -56,9 +59,11 @@ Known green checkpoints during this implementation include:
 - `814dcbead88d8bfabb703ae1a2433da3b1515d78` — READY with governed CRM outbound orchestration implementation.
 - `306a6290ea2bd5f73964d871c487e9ed31d57990` — READY with graceful worker shutdown implementation.
 
-The authoritative gate is `scripts/verify-voice-core.sh`, which runs TypeScript typecheck, the explicit voice unit/eval suite, worker syntax/tests, tenant-filter lint, and Next.js build.
+The authoritative gate is `scripts/verify-voice-core.sh`, which runs TypeScript typecheck, the explicit voice unit/eval suite, worker syntax/tests, tenant-filter lint, and Next.js build. It now also includes the worker technical-number/tenant-binding contract.
 
-At the time of this update, the newest HEAD containing the expanded deployment-hardening/outbound-route gate could not execute a new Vercel Preview because the GitHub status reports `Vercel – crm: failure` with target `upgradeToPro=build-rate-limit`. There are no PR-triggered GitHub Actions runs available as an alternate runner. This is recorded as a CI-runner quota block, not as a passing or failing code test. The latest unexecuted HEAD must not be called final-green until a runner actually executes `scripts/verify-voice-core.sh`.
+Latest code hardening checkpoint before this evidence-only commit: `cabfbec422aea370252a6909c28204306177ed65`.
+
+At the time of this update, the newest HEAD cannot execute a new Vercel Preview because GitHub reports `Vercel – crm: failure` targeting `upgradeToPro=build-rate-limit`; the secondary `lumenva-website` status also points to a Vercel team-invite/access page. These are CI-runner/integration blocks, not reported compiler/test failures. There are no PR-triggered GitHub Actions runs available as an alternate runner. The latest unexecuted HEAD must not be called final-green until a runner actually executes `scripts/verify-voice-core.sh`.
 
 ## Provider-free E2E evidence
 
@@ -78,7 +83,7 @@ Safety evals prove at minimum:
 - empty transcripts consume no model turn;
 - provider-free call lifecycle can complete without Telnyx/STT/TTS credentials.
 
-Worker tests additionally prove outbound pending correlation, duplicate-destination rejection and stale reservation expiry.
+Worker tests additionally prove outbound pending correlation, duplicate-destination rejection and stale reservation expiry. The expanded contract also requires every worker turn/event to carry its technical number, verifies that CRM binds it to the call/tenant/direction, keeps worker endpoint URLs unavailable to tenant roles, and protects terminal/provider identity invariants.
 
 ## Intentionally fail-closed activation state
 
@@ -98,6 +103,8 @@ These are activation/provisioning/verification gates, not reasons to weaken tena
 ## Multiempresa invariant
 
 One worker instance is currently deployed per technical Telnyx number because Patter 0.7.1 has one instance-level `phoneNumber` and no per-call `from` in `LocalCallOptions`. This is an operational shard only: all workers use the same code and call the shared multi-tenant CRM control plane. Tenant identity is never selected from caller-supplied `organization_id`.
+
+Every turn and lifecycle event is additionally checked against the technical E.164 of the worker and the persisted call direction. An inbound worker can operate only on calls whose `called_number` is that technical number; an outbound worker can operate only on calls whose `caller_number` is that technical number, and the number must be enabled in `voice_phone_numbers` for the call organization.
 
 ## Outbound safety invariant
 
