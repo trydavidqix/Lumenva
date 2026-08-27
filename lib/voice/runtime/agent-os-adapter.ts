@@ -14,11 +14,9 @@ export type VoiceAgentTurnResult =
   | { kind: "reply"; text: string; agentId: string; runId: string; traceId: string }
   | { kind: "blocked"; reason: string; agentId?: string; runId?: string; traceId?: string; approvalId?: string };
 
-function extractSpeakableText(output: unknown): string | null {
+export function extractSpeakableVoiceText(output: unknown): string | null {
   if (!output || typeof output !== "object" || Array.isArray(output)) return null;
   const record = output as Record<string, unknown>;
-  // Only fields whose Product-Agent contract explicitly represents customer-facing
-  // copy may be spoken. Never fall back to rationale/action/reason strings.
   for (const key of ["draft", "draftMessage", "text", "message", "reply"] as const) {
     const candidate = record[key];
     if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
@@ -59,7 +57,7 @@ export function createVoiceAgentOsAdapter(deps: {
         return { kind: "blocked", reason: "voice_delivery_not_authorized", agentId, runId: result.runId, traceId: result.traceId };
       }
 
-      const text = extractSpeakableText(result.output);
+      const text = extractSpeakableVoiceText(result.output);
       if (text === null) {
         return { kind: "blocked", reason: "voice_agent_output_not_speakable", agentId, runId: result.runId, traceId: result.traceId };
       }
