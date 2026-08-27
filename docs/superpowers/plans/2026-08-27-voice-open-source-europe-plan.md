@@ -37,7 +37,7 @@
 >   injetado), não integração viva. `whisper.cpp` (fallback sem GPU) não tem adapter ainda. A
 >   troca de fato do worker (`workers/voice-worker/main.mjs` de Patter/Telnyx pra Pipecat) segue
 >   pendente — é o mesmo bloqueio descrito na Fase 2.
-> - **Fase 4 — IMPLEMENTADA PARCIAL** (commit pendente nesta sessão). Versionamento imutável do
+> - **Fase 4 — IMPLEMENTADA PARCIAL** (commit `e9dc37e2`). Versionamento imutável do
 >   perfil de voz (`lib/voice/engine/voice-profile-version.ts` — publicar sempre acrescenta,
 >   nunca reescreve uma versão antiga; `activeVersion` é um ponteiro, rollback é publicar de
 >   novo apontando pra versão anterior); validação runtime do perfil
@@ -51,7 +51,21 @@
 >   cliente do plano ficam pra depois; exigem manuseio real de mídia (upload/playback) que essa
 >   sessão não construiu. Nenhum teste E2E/Playwright novo — a tela em si não é coberta pelo gate
 >   (só typecheck+build a protegem de quebrar), a lógica por trás dela é.
-> - **Fase 5 em diante — não implementadas** (matriz de idiomas, testes E2E, homologação).
+> - **Fase 5 — IMPLEMENTADA PARCIAL** (commit pendente nesta sessão). Matriz de idiomas criada
+>   (`lib/voice/tts/language-matrix.ts`): tier 1 (7 idiomas do plano) + tier 2 (16 locales,
+>   "bálticas" expandido em lv+lt); `evaluateLanguageReadiness` computa PASS/PARTIAL/
+>   NOT_SUPPORTED a partir dos 8 checks do plano (voz M/F, pronúncia, números/datas/nomes,
+>   latência, interrupção, chamada telefónica, licença) — só PASS com os 8 verdadeiros, só
+>   NOT_SUPPORTED com nenhum. `buildLanguageReadinessRegistry` rejeita locale fora das duas
+>   tiers em vez de aceitar silenciosamente. `isLanguageOfferable` é a única pergunta que o
+>   runtime deveria fazer antes de oferecer um idioma — não existe fallback automático de
+>   idioma aqui nem em `fallback-chain.ts` (Fase 4), consistente com a regra do plano. **Não
+>   fiz**: nenhum teste real rodado contra voz nenhuma — isso é infraestrutura de
+>   status/gate, não os 16+7 testes de pronúncia/latência/interrupção/chamada reais em si, que
+>   exigem os adapters da Fase 3 ligados a processos vivos. Sem persistência (não decidi ainda se
+>   o registry mora em `organizations.settings` como o resto ou vira tabela — falta migration se
+>   for tabela).
+> - **Fase 6 em diante — não implementadas** (testes E2E, homologação/lançamento).
 
 **Objetivo:** permitir que cada cliente crie um agent de voz usando o próprio número, escolha uma voz natural por idioma europeu, ajuste o estilo e, opcionalmente, clone uma voz autorizada.
 
