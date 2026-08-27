@@ -13,6 +13,7 @@ import {
   putCallContext,
 } from "./call-context.mjs";
 import { startVoiceControlServer } from "./control-server.mjs";
+import { createPendingOutboundRegistry } from "./pending-outbound.mjs";
 
 function required(name) {
   const value = process.env[name];
@@ -64,6 +65,7 @@ process.env.PATTER_BIND_HOST = process.env.PATTER_BIND_HOST ?? "0.0.0.0";
 const brain = createVoiceBrainClient();
 const workerPolicy = await brain.resolveWorkerConfig({ phone_e164: phoneNumber });
 const recordingEnabled = workerPolicy.recording_enabled === true && workerPolicy.recording_requires_disclosure !== true;
+const pendingOutbound = createPendingOutboundRegistry({ ttlMs: Number(process.env.VOICE_OUTBOUND_PENDING_TTL_MS ?? 60_000) });
 const phone = new Patter({
   carrier: new Telnyx({
     apiKey: required("TELNYX_API_KEY"),
@@ -93,16 +95,24 @@ async function onCallStart(data) {
   if (!liveEnabled) throw new Error("voice_live_disabled");
   const endpoints = extractPatterCallEndpoints(data);
   const direction = endpoints.caller === phoneNumber ? "outbound" : "inbound";
-  const context = await brain.resolveContext({
-    provider_call_id: endpoints.callId,
-    caller_e164: endpoints.caller,
-    called_e164: endpoints.called,
-    direction,
-  });
+  let context;
+  if (direction === "outbound") {
+    const pending = pendingOutbound.consume(endpoints.called);
+    if (!pending) throw new Error("outbound_context_missing_or_ambiguous");
+    context = { voice_call_id: pending.voiceCallId };
+  } else {
+    context = await brain.resolveContext({
+      provider_call_id: endpoints.callId,
+      caller_e164: endpoints.caller,
+      called_e164: endpoints.called,
+      direction,
+    });
+  }
   putCallContext(endpoints.callId, context);
   await brain.recordEvent({
     voice_call_id: context.voice_call_id,
     state: "active",
+    provider_call_id: endpoints.callId,
     provider_event_id: `${endpoints.callId}:active`,
     occurred_at: new Date().toISOString(),
   });
@@ -131,6 +141,7 @@ async function onCallEnd(data) {
       await brain.recordEvent({
         voice_call_id: context.voice_call_id,
         state: "completed",
+        provider_call_id: callId,
         provider_event_id: `${callId}:completed`,
         occurred_at: new Date().toISOString(),
         ...(metrics ? { metrics } : {}),
@@ -157,6 +168,7 @@ await startVoiceControlServer({
   secret: required("INTERNAL_SECRET"),
   liveEnabled,
   port: controlPort,
+  pendingOutbound,
 });
 
 process.stdout.write(JSON.stringify({
