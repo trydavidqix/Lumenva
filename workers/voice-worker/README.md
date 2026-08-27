@@ -35,6 +35,7 @@ This is an operational shard, not a tenant-specific code fork.
 - `ELEVENLABS_API_KEY`
 - `ELEVENLABS_VOICE_ID`
 - optional `VOICE_STT_LANGUAGE` (default `pt`)
+- optional `VOICE_OUTBOUND_PENDING_TTL_MS` (default `60000`)
 - optional `PORT` (default `8080`)
 - optional `VOICE_CONTROL_PORT` (default `8081`)
 
@@ -42,11 +43,19 @@ This is an operational shard, not a tenant-specific code fork.
 
 `VOICE_LIVE_ENABLED` must be explicitly enabled. The CRM turn endpoint also checks canonical Product Agent autonomy and currently blocks `off`, `draft` and `shadow` agents before model work. A worker cannot activate an agent by itself.
 
+Recording is controlled by tenant policy loaded from the CRM control plane. If recording is enabled but the tenant policy requires a disclosure/consent flow, the worker keeps recording OFF until that flow exists; it never silently records just because the carrier can.
+
+## Outbound correlation
+
+The CRM must create a tenant-scoped `voice_calls` row before dialing and send its `voice_call_id` to `POST /v1/calls` together with the target E.164 and the already-governed first message.
+
+Patter only exposes its real provider `callId` after the carrier starts/finishes the call. The worker therefore holds a short-lived pending reservation keyed by destination. On `onCallStart`, it consumes that reservation and binds the real provider call id back to the existing CRM row. A second pending call to the same destination is rejected with `outbound_destination_busy`; no heuristic matching is allowed.
+
 ## Health/control
 
 - media/webhook server: `PORT`
 - internal outbound control: `VOICE_CONTROL_PORT`
 - `GET /healthz` on the control port
-- `POST /v1/calls` requires `x-internal-secret`
+- `POST /v1/calls` requires `x-internal-secret`, `voice_call_id`, target E.164, and an optional pre-approved first message
 
 Do not expose the control port publicly without network-level restrictions in addition to the shared secret.
