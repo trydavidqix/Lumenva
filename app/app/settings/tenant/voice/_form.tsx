@@ -2,7 +2,16 @@
 
 import { useState } from "react";
 
+import type { VoiceProfile, VoiceProfileMode, VoiceProfileProvider } from "@/lib/voice/engine/contracts";
 import type { VoiceTenantConfig } from "@/lib/voice/config";
+
+const VOICE_PROFILE_DEFAULT: VoiceProfile = {
+  mode: "preset",
+  locale: "pt-PT",
+  gender: "female",
+  voiceId: "",
+  provider: "piper",
+};
 
 const DAYS: Array<{ key: keyof VoiceTenantConfig["businessHours"]; label: string }> = [
   { key: "monday", label: "Segunda" },
@@ -14,10 +23,45 @@ const DAYS: Array<{ key: keyof VoiceTenantConfig["businessHours"]; label: string
   { key: "sunday", label: "Domingo" },
 ];
 
-export function VoiceSettingsForm({ initial }: { initial: VoiceTenantConfig }) {
+export function VoiceSettingsForm({
+  initial,
+  initialVoiceProfile,
+  initialVoiceProfileVersion,
+}: {
+  initial: VoiceTenantConfig;
+  initialVoiceProfile: VoiceProfile | null;
+  initialVoiceProfileVersion: number | null;
+}) {
   const [value, setValue] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+
+  const [voiceProfileDraft, setVoiceProfileDraft] = useState<VoiceProfile>(initialVoiceProfile ?? VOICE_PROFILE_DEFAULT);
+  const [activeVoiceProfile, setActiveVoiceProfile] = useState<VoiceProfile | null>(initialVoiceProfile);
+  const [activeVoiceProfileVersion, setActiveVoiceProfileVersion] = useState<number | null>(initialVoiceProfileVersion);
+  const [publishing, setPublishing] = useState(false);
+  const [publishStatus, setPublishStatus] = useState<string | null>(null);
+
+  async function publishVoiceProfile() {
+    setPublishing(true);
+    setPublishStatus(null);
+    try {
+      const response = await fetch("/api/v1/voice/config", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(voiceProfileDraft),
+      });
+      const body = (await response.json()) as { data?: { voiceProfile: VoiceProfile; version: number }; error?: { message: string } };
+      if (!response.ok || !body.data) throw new Error(body.error?.message ?? "Não conseguimos publicar a voz.");
+      setActiveVoiceProfile(body.data.voiceProfile);
+      setActiveVoiceProfileVersion(body.data.version);
+      setPublishStatus(`Publicado — versão ${body.data.version}.`);
+    } catch (error) {
+      setPublishStatus(error instanceof Error ? error.message : "Não conseguimos publicar a voz.");
+    } finally {
+      setPublishing(false);
+    }
+  }
 
   async function save() {
     setSaving(true);
@@ -98,6 +142,94 @@ export function VoiceSettingsForm({ initial }: { initial: VoiceTenantConfig }) {
             );
           })}
         </div>
+      </section>
+
+      <section className="space-y-4 rounded-lg border bg-card p-5">
+        <div>
+          <h2 className="text-base font-semibold">Voz do agente</h2>
+          <p className="text-sm text-muted-foreground">
+            {activeVoiceProfile
+              ? `Ativa (versão ${activeVoiceProfileVersion}): ${activeVoiceProfile.provider} · ${activeVoiceProfile.locale} · ${activeVoiceProfile.gender}${activeVoiceProfile.voiceId ? ` · ${activeVoiceProfile.voiceId}` : ""}`
+              : "Nenhuma voz publicada ainda — usando o padrão do adapter atual."}
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="space-y-1 text-sm">
+            <span className="font-medium">Idioma</span>
+            <input
+              className="w-full rounded-md border bg-background px-3 py-2"
+              value={voiceProfileDraft.locale}
+              onChange={(e) => setVoiceProfileDraft((c) => ({ ...c, locale: e.target.value }))}
+              placeholder="pt-PT"
+            />
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="font-medium">Género</span>
+            <select
+              className="w-full rounded-md border bg-background px-3 py-2"
+              value={voiceProfileDraft.gender}
+              onChange={(e) => setVoiceProfileDraft((c) => ({ ...c, gender: e.target.value as VoiceProfile["gender"] }))}
+            >
+              <option value="female">Feminina</option>
+              <option value="male">Masculina</option>
+              <option value="neutral">Neutra</option>
+            </select>
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="font-medium">Provider</span>
+            <select
+              className="w-full rounded-md border bg-background px-3 py-2"
+              value={voiceProfileDraft.provider}
+              onChange={(e) => setVoiceProfileDraft((c) => ({ ...c, provider: e.target.value as VoiceProfileProvider }))}
+            >
+              <option value="piper">Piper</option>
+              <option value="kokoro">Kokoro</option>
+              <option value="openvoice">OpenVoice (clonada)</option>
+            </select>
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="font-medium">Voz específica (voiceId)</span>
+            <input
+              className="w-full rounded-md border bg-background px-3 py-2"
+              value={voiceProfileDraft.voiceId}
+              onChange={(e) => setVoiceProfileDraft((c) => ({ ...c, voiceId: e.target.value }))}
+              placeholder="ex.: pt-pt-ines"
+            />
+          </label>
+          {voiceProfileDraft.provider === "openvoice" && (
+            <label className="space-y-1 text-sm md:col-span-2">
+              <span className="font-medium">ID do perfil clonado</span>
+              <input
+                className="w-full rounded-md border bg-background px-3 py-2"
+                value={voiceProfileDraft.mode === "cloned" ? voiceProfileDraft.cloneProfileId : ""}
+                onChange={(e) => {
+                  const cloneProfileId = e.target.value;
+                  setVoiceProfileDraft((c) => ({ ...c, mode: "cloned" as VoiceProfileMode, provider: "openvoice", cloneProfileId }));
+                }}
+                placeholder="clone-123 — exige consentimento verificado antes de existir"
+              />
+            </label>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            disabled={publishing || !voiceProfileDraft.voiceId.trim()}
+            onClick={publishVoiceProfile}
+            className="rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-50"
+          >
+            {publishing ? "Publicando…" : "Publicar nova versão"}
+          </button>
+          {publishStatus && (
+            <span className="text-sm text-muted-foreground" role="status">
+              {publishStatus}
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Publicar cria uma versão nova e imutável — não sobrescreve a versão ativa anterior. Prévia de áudio, upload de
+          gravação para clonagem e teste da voz clonada ainda não estão nesta tela.
+        </p>
       </section>
 
       <section className="grid gap-4 rounded-lg border bg-card p-5 md:grid-cols-2">
