@@ -74,7 +74,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   const metrics = parsed.data.metrics ? normalizePatterMetrics(parsed.data.metrics) : undefined;
   const occurredAt = parsed.data.occurred_at ?? new Date().toISOString();
   const terminal = ["completed", "failed", "canceled"].includes(parsed.data.state);
-  await db.query(
+  const updated = await db.query<{ id: string }>(
     `update voice_calls
         set state = $3,
             provider_call_id = coalesce(provider_call_id, $6),
@@ -82,9 +82,17 @@ export async function POST(req: NextRequest): Promise<Response> {
             answered_at = case when $3 = 'active' then coalesce(answered_at, $4::timestamptz) else answered_at end,
             ended_at = case when $5::boolean then coalesce(ended_at, $4::timestamptz) else ended_at end,
             updated_at = now()
-      where id = $1 and organization_id = $2`,
+      where id = $1
+        and organization_id = $2
+        and (state not in ('completed','failed','canceled') or state = $3)
+        and (provider_call_id is null or $6 is null or provider_call_id = $6)
+      returning id`,
     [parsed.data.voice_call_id, call.organization_id, parsed.data.state, occurredAt, terminal, parsed.data.provider_call_id ?? null],
   );
+  if (!updated.rows[0]?.id) {
+    return fail("voice_event_conflict", "Evento de voz conflita com o estado terminal ou provider call id existente.", 409, { requestId });
+  }
+
   await db.query(
     `insert into voice_call_events
        (organization_id, voice_call_id, provider, provider_event_id, event_type, payload, occurred_at)
