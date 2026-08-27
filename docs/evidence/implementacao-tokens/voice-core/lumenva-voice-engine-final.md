@@ -50,8 +50,9 @@ Known green checkpoints during this implementation include:
 - `eb9e35dcc8de4817530518cbacd26eb2bccec2fd` — READY after canonical Kernel LLM-env typing fix.
 - `9821bc7fd3ff973a4abe7b3961f0ae0140ef214b` — READY with provider-free simulator + safety eval suite gated.
 - `8c7067ea7e5dd78b00beca20445e559fe4ea124d` — READY with worker outbound-correlation test gated.
+- `814dcbead88d8bfabb703ae1a2433da3b1515d78` — READY with governed CRM outbound orchestration implementation.
 
-The authoritative gate is `scripts/verify-voice-core.sh`, which runs TypeScript typecheck, the explicit voice unit/eval suite, worker syntax/tests, tenant-filter lint, and Next.js build. Newer commits after the checkpoints above must not be called final-green until their own Preview reaches READY.
+The authoritative gate is `scripts/verify-voice-core.sh`, which runs TypeScript typecheck, the explicit voice unit/eval suite, worker syntax/tests, tenant-filter lint, and Next.js build. The subsequent gate commit `613a68dd4495250b06fd40ea952b7902551def7b` adds the governed-outbound unit file to that explicit suite; its own Preview must reach READY before being called final-green.
 
 ## Provider-free E2E evidence
 
