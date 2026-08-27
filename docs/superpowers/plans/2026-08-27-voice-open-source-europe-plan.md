@@ -21,7 +21,7 @@
 >   direção/contexto/faturamento do worker. Trocar isso sem quebrar o caminho de rollback exige o
 >   runtime Pipecat da Fase 3 — não dá pra fazer isolado sem meio-rewire arriscado. Fase 2 fica
 >   "pronta pro Fase 3 consumir", não "worker já fala SIP".
-> - **Fase 3 — IMPLEMENTADA PARCIAL** (commit pendente nesta sessão). Adapters STT/TTS/clone
+> - **Fase 3 — IMPLEMENTADA PARCIAL** (commit `bac49768`). Adapters STT/TTS/clone
 >   criados atrás dos ports provider-neutros já existentes (`lib/voice/runtime/stt-port.ts`,
 >   `tts-port.ts`): `lib/voice/stt/faster-whisper-adapter.ts` (rejeita transcrição vazia sem
 >   inventar turno, valida locale antes de tocar no client); `lib/voice/tts/voice-catalog.ts`
@@ -37,8 +37,21 @@
 >   injetado), não integração viva. `whisper.cpp` (fallback sem GPU) não tem adapter ainda. A
 >   troca de fato do worker (`workers/voice-worker/main.mjs` de Patter/Telnyx pra Pipecat) segue
 >   pendente — é o mesmo bloqueio descrito na Fase 2.
-> - **Fase 4 em diante — não implementadas** (config UI, matriz de idiomas, testes E2E,
->   homologação).
+> - **Fase 4 — IMPLEMENTADA PARCIAL** (commit pendente nesta sessão). Versionamento imutável do
+>   perfil de voz (`lib/voice/engine/voice-profile-version.ts` — publicar sempre acrescenta,
+>   nunca reescreve uma versão antiga; `activeVersion` é um ponteiro, rollback é publicar de
+>   novo apontando pra versão anterior); validação runtime do perfil
+>   (`lib/voice/engine/voice-profile-schema.ts`, espelha os tipos de `contracts.ts`); cadeia de
+>   fallback clonada→Kokoro→Piper→transferência humana/falha segura
+>   (`lib/voice/tts/fallback-chain.ts` — nunca troca locale/género silenciosamente, só provider/
+>   voz). `app/api/v1/voice/config/route.ts` ganhou `POST` (publica versão nova, audita) e o `GET`
+>   retorna o perfil ativo + histórico. `_form.tsx` ganhou seção "Voz do agente" (idioma/género/
+>   provider/voiceId, botão "Publicar" separado do "Salvar" de sempre). **Não fiz**: prévia de
+>   áudio, upload de gravação para clonagem, teste da voz clonada — passos 5/7/9 da interface do
+>   cliente do plano ficam pra depois; exigem manuseio real de mídia (upload/playback) que essa
+>   sessão não construiu. Nenhum teste E2E/Playwright novo — a tela em si não é coberta pelo gate
+>   (só typecheck+build a protegem de quebrar), a lógica por trás dela é.
+> - **Fase 5 em diante — não implementadas** (matriz de idiomas, testes E2E, homologação).
 
 **Objetivo:** permitir que cada cliente crie um agent de voz usando o próprio número, escolha uma voz natural por idioma europeu, ajuste o estilo e, opcionalmente, clone uma voz autorizada.
 

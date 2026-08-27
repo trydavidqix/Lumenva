@@ -4,6 +4,7 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/server";
 import { parseStoredVoiceTenantConfig } from "@/lib/voice/config";
+import { getActiveVoiceProfile, parseVoiceProfileHistory } from "@/lib/voice/engine/voice-profile-version";
 
 import { VoiceSettingsForm } from "./_form";
 
@@ -23,6 +24,9 @@ export default async function VoiceSettingsPage() {
     .maybeSingle();
   const settings = (data?.settings as Record<string, unknown> | null) ?? {};
   const voice = parseStoredVoiceTenantConfig(settings.voice);
+  const voiceProfileHistory = parseVoiceProfileHistory(settings.voiceProfileHistory);
+  const voiceProfile = getActiveVoiceProfile(voiceProfileHistory);
+  const activeVoiceProfileVersion = voiceProfileHistory.activeVersion;
 
   return (
     <div className="flex h-full flex-col gap-6 p-6">
@@ -32,7 +36,11 @@ export default async function VoiceSettingsPage() {
           Defina quando a IA atende, horários, limites, transferência humana, gravação e transcrição.
         </p>
       </header>
-      <VoiceSettingsForm initial={voice} />
+      <VoiceSettingsForm
+        initial={voice}
+        initialVoiceProfile={voiceProfile}
+        initialVoiceProfileVersion={activeVoiceProfileVersion}
+      />
     </div>
   );
 }
