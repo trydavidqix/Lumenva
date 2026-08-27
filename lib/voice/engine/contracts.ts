@@ -38,12 +38,45 @@ export type VoiceEngineEvent =
       retryable: boolean;
     });
 
+export const VOICE_PROFILE_MODES = ["preset", "customized", "cloned"] as const;
+export type VoiceProfileMode = (typeof VOICE_PROFILE_MODES)[number];
+
+/** Internal open-source TTS providers the VoiceEngine may select a profile from. */
+export const VOICE_PROFILE_PROVIDERS = ["piper", "kokoro", "openvoice"] as const;
+export type VoiceProfileProvider = (typeof VOICE_PROFILE_PROVIDERS)[number];
+
+interface VoiceProfileBase {
+  locale: string;
+  gender: "male" | "female" | "neutral";
+  voiceId: string;
+  provider: VoiceProfileProvider;
+  style?: string;
+  speed?: number;
+  pitch?: number;
+}
+
+/**
+ * Voice a session speaks with. `cloned` is the only mode that carries a
+ * `cloneProfileId` — presence of the field is what proves consent/authorship
+ * was resolved upstream before the profile reached the engine.
+ */
+export type VoiceProfile =
+  | (VoiceProfileBase & { mode: "preset" })
+  | (VoiceProfileBase & { mode: "customized" })
+  | (VoiceProfileBase & { mode: "cloned"; cloneProfileId: string });
+
 export interface VoiceEngineStartInput {
   organizationId: string;
   voiceCallId: string;
   contactId: string | null;
   direction: VoiceCallDirection;
   locale: string;
+  /**
+   * Optional: absent means the implementation picks its own default voice
+   * (e.g. Patter's built-in voice today). Adapters that don't support voice
+   * profiles yet (Patter) are free to ignore it.
+   */
+  voiceProfile?: VoiceProfile;
 }
 
 export interface VoiceTransferTarget {
