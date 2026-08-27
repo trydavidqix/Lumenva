@@ -1,11 +1,27 @@
 # CRM Voice Open-Source Europe — Plano de Implementação
 
-> **Status:** plano canônico registrado em 2026-08-27, aprovado pelo dono do repositório. **Ainda
-> não implementado.** O código atual da branch `implementacao-tokens-voice-core` (ver
-> `docs/handoffs/HANDOFF-voice-core.md` e `docs/superpowers/plans/2026-08-27-voice-core-canonical-status.md`)
-> reflete a arquitetura ANTERIOR (Telnyx + Deepgram + ElevenLabs, número técnico comprado). Este
-> plano supera essa arquitetura para trabalho futuro — ver seção "Relação com a implementação
-> existente" no fim deste documento antes de codar qualquer Fase.
+> **Status:** plano canônico registrado em 2026-08-27, aprovado pelo dono do repositório. O código
+> atual da branch `implementacao-tokens-voice-core` (ver `docs/handoffs/HANDOFF-voice-core.md` e
+> `docs/superpowers/plans/2026-08-27-voice-core-canonical-status.md`) ainda reflete majoritariamente
+> a arquitetura ANTERIOR (Telnyx + Deepgram + ElevenLabs, número técnico comprado) — ver seção
+> "Relação com a implementação existente" no fim deste documento antes de codar qualquer Fase.
+>
+> **Progresso:**
+> - **Fase 1 — IMPLEMENTADA** (commit `f672eb78`). `VoiceEngine` aceita perfil de voz
+>   (preset/customized/cloned, providers piper/kokoro/openvoice); adapter Pipecat criado como
+>   scaffold atrás da mesma interface; adapter Patter intacto pra rollback.
+> - **Fase 2 — IMPLEMENTADA PARCIAL** (commit pendente nesta sessão). `SipGateway` criado
+>   (`lib/voice/sip/gateway.ts`); adapter Asterisk/ARI criado (`lib/voice/sip/asterisk-adapter.ts`);
+>   resolução conexão→número→organização criada (`resolve-organization.ts#resolveByConnection`);
+>   migration `0131_voice_sip_connections.sql` (aditiva, `voice_phone_numbers`/
+>   `voice_worker_endpoints` continuam funcionando pelo caminho Telnyx antigo). **Não fiz**:
+>   `workers/voice-worker/main.mjs` continua exigindo `TELNYX_PHONE_NUMBER` — o SDK Patter+Telnyx
+>   usado hoje pelo worker embute o carrier Telnyx na própria construção (`new Patter({ carrier: new
+>   Telnyx(...), phoneNumber, ... })`); `technical_phone_e164` está espalhado por toda lógica de
+>   direção/contexto/faturamento do worker. Trocar isso sem quebrar o caminho de rollback exige o
+>   runtime Pipecat da Fase 3 — não dá pra fazer isolado sem meio-rewire arriscado. Fase 2 fica
+>   "pronta pro Fase 3 consumir", não "worker já fala SIP".
+> - **Fase 3 em diante — não implementadas.**
 
 **Objetivo:** permitir que cada cliente crie um agent de voz usando o próprio número, escolha uma voz natural por idioma europeu, ajuste o estilo e, opcionalmente, clone uma voz autorizada.
 
