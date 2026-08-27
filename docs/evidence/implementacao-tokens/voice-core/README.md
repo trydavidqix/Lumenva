@@ -9,8 +9,9 @@ Evidência da implementação na branch `implementacao-tokens-voice-core`.
 3. `implementation-status.md` — estado task-by-task e distinção entre código e ativação externa.
 4. `lumenva-voice-engine-final.md` — arquitetura final, invariantes, checkpoints e DoD realista.
 5. `docs/superpowers/plans/2026-08-27-voice-core-canonical-status.md` — mapa de supersessão dos planos históricos.
-6. `patter-adoption-baseline.md` — KEEP/ADAPT/REPLACE/OPTIONAL.
-7. `patter-equivalence.md` — equivalência e decisões de substituição/retenção.
+6. `documentation-closure.md` — confirma quais docs são vigentes, históricos e como interpretar checkboxes antigos.
+7. `patter-adoption-baseline.md` — KEEP/ADAPT/REPLACE/OPTIONAL.
+8. `patter-equivalence.md` — equivalência e decisões de substituição/retenção.
 
 ## Hierarquia documental
 
