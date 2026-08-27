@@ -1,4 +1,4 @@
-import { describe, expectTypeOf, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
 import type {
   StreamingSttPort,
@@ -6,7 +6,7 @@ import type {
   VoiceAudioFrame,
   VoiceSttEvent,
 } from "./stt-port";
-import type { StreamingTtsPort, VoiceTtsPlayback } from "./tts-port";
+import type { StreamingTtsPort, VoiceTtsOptions, VoiceTtsPlayback } from "./tts-port";
 
 describe("voice provider ports", () => {
   it("keeps STT provider neutral and streaming", () => {
@@ -28,5 +28,11 @@ describe("voice provider ports", () => {
     expectTypeOf<StreamingTtsPort>().toHaveProperty("synthesize");
     expectTypeOf<VoiceTtsPlayback>().toHaveProperty("audio");
     expectTypeOf<VoiceTtsPlayback>().toHaveProperty("cancel");
+  });
+
+  it("leaves voice selection optional so a caller without a VoiceProfile still gets a default (Fase 3)", () => {
+    expectTypeOf<VoiceTtsOptions>().toMatchTypeOf<{ locale: string; signal: AbortSignal }>();
+    const withoutVoice: VoiceTtsOptions = { locale: "pt-PT", signal: new AbortController().signal };
+    expect(withoutVoice.voice).toBeUndefined();
   });
 });
