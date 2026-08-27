@@ -8,6 +8,7 @@ export interface VoiceAgentResolutionInput {
 }
 
 export type VoiceAgentResolver = (input: VoiceAgentResolutionInput) => Promise<string | null>;
+export type VoiceDeliveryAuthorizer = (input: { organizationId: string; agentId: string }) => Promise<boolean>;
 
 export type VoiceAgentTurnResult =
   | {
@@ -43,6 +44,7 @@ function extractSpeakableText(output: unknown): string | null {
 export function createVoiceAgentOsAdapter(deps: {
   kernel: AgentKernel;
   resolveAgent: VoiceAgentResolver;
+  authorizeDelivery: VoiceDeliveryAuthorizer;
 }) {
   return {
     async runTurn(input: VoiceAgentResolutionInput): Promise<VoiceAgentTurnResult> {
@@ -69,6 +71,16 @@ export function createVoiceAgentOsAdapter(deps: {
           runId: result.runId,
           traceId: result.traceId,
           ...(result.approvalId !== undefined ? { approvalId: result.approvalId } : {}),
+        };
+      }
+
+      if (!(await deps.authorizeDelivery({ organizationId: input.organizationId, agentId }))) {
+        return {
+          kind: "blocked",
+          reason: "voice_delivery_not_authorized",
+          agentId,
+          runId: result.runId,
+          traceId: result.traceId,
         };
       }
 
