@@ -16,6 +16,7 @@ export const maxDuration = 60;
 
 const bodySchema = z.object({
   voice_call_id: z.string().uuid(),
+  technical_phone_e164: z.string().regex(/^\+[1-9]\d{6,14}$/),
   transcript: z.string().trim().min(1).max(8000),
 });
 
@@ -45,14 +46,25 @@ export async function POST(req: NextRequest): Promise<Response> {
   try {
     const db = getRequestPool();
     const { rows } = await db.query<{ organization_id: string; contact_id: string | null }>(
-      `select organization_id, contact_id
-         from voice_calls
-        where id = $1 and state not in ('completed','failed','canceled')
+      `select vc.organization_id, vc.contact_id
+         from voice_calls vc
+         join voice_phone_numbers vpn
+           on vpn.organization_id = vc.organization_id
+          and vpn.provider = 'telnyx'
+          and vpn.phone_e164 = $2
+          and vpn.enabled = true
+        where vc.id = $1
+          and vc.state not in ('completed','failed','canceled')
+          and (
+            (vc.direction = 'inbound' and vc.called_number = $2)
+            or
+            (vc.direction = 'outbound' and vc.caller_number = $2)
+          )
         limit 1`,
-      [parsed.data.voice_call_id],
+      [parsed.data.voice_call_id, parsed.data.technical_phone_e164],
     );
     const call = rows[0];
-    if (!call) return fail("voice_call_not_active", "Chamada não encontrada ou encerrada.", 409, { requestId });
+    if (!call) return fail("voice_call_not_active", "Chamada não encontrada, encerrada ou fora do worker autorizado.", 409, { requestId });
 
     const service = createVoiceTurnService({
       kernel: createVoiceProductionKernel(db),
