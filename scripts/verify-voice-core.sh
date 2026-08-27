@@ -10,6 +10,7 @@ NODE_ENV=test pnpm vitest run \
   lib/voice/engine/factory.test.ts \
   lib/voice/patter/adapter.test.ts \
   lib/voice/patter/media.test.ts \
+  lib/voice/patter/telemetry.test.ts \
   lib/voice/runtime/agent-os-adapter.test.ts \
   lib/voice/runtime/agent-resolver.test.ts \
   lib/voice/runtime/session.test.ts \
