@@ -63,6 +63,7 @@ process.env.PATTER_BIND_HOST = process.env.PATTER_BIND_HOST ?? "0.0.0.0";
 
 const brain = createVoiceBrainClient();
 const workerPolicy = await brain.resolveWorkerConfig({ phone_e164: phoneNumber });
+const recordingEnabled = workerPolicy.recording_enabled === true && workerPolicy.recording_requires_disclosure !== true;
 const phone = new Patter({
   carrier: new Telnyx({
     apiKey: required("TELNYX_API_KEY"),
@@ -126,12 +127,13 @@ async function onCallEnd(data) {
   const context = getCallContext(callId);
   try {
     if (context) {
+      const metrics = metricsFromCallEnd(data);
       await brain.recordEvent({
         voice_call_id: context.voice_call_id,
         state: "completed",
         provider_event_id: `${callId}:completed`,
         occurred_at: new Date().toISOString(),
-        ...(metricsFromCallEnd(data) ? { metrics: metricsFromCallEnd(data) } : {}),
+        ...(metrics ? { metrics } : {}),
       });
     }
   } finally {
@@ -144,7 +146,7 @@ await phone.serve({
   port,
   dashboard: false,
   tunnel: false,
-  recording: workerPolicy.recording_enabled === true,
+  recording: recordingEnabled,
   onCallStart,
   onCallEnd,
   onMessage,
@@ -162,6 +164,8 @@ process.stdout.write(JSON.stringify({
   port,
   control_port: controlPort,
   live_enabled: liveEnabled,
-  recording_enabled: workerPolicy.recording_enabled === true,
+  recording_enabled: recordingEnabled,
+  recording_blocked_by_disclosure_policy:
+    workerPolicy.recording_enabled === true && workerPolicy.recording_requires_disclosure === true,
   active_calls: activeCallCount(),
 }) + "\n");
