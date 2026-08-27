@@ -3,7 +3,7 @@
 **Data:** 2026-08-27  
 **Repo:** `trydavidqix/CRM`  
 **Branch obrigatória para continuar:** `implementacao-tokens-voice-core`  
-**Último checkpoint de código da implementação:** `cabfbec422aea370252a6909c28204306177ed65`  
+**Último checkpoint de código da implementação:** `ad8e027d` (Fase 2 do plano open-source)  
 **Não alterar/mergear `main` sem autorização explícita.**
 
 ## 1. Comece aqui
@@ -14,14 +14,17 @@ Este documento é o ponto de entrada canônico para Claude/qualquer agente que c
 aprovou um plano novo — `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md` —
 que troca a arquitetura de provedores (Telnyx/Deepgram/ElevenLabs/número técnico comprado) por
 uma pilha open-source com SIP/BYOC do próprio cliente (Asterisk-ARI, Pipecat, faster-whisper,
-Piper/Kokoro, OpenVoice). **É plano registrado, ainda não implementado** — o código descrito neste
-HANDOFF continua sendo o estado real do código nesta data. Leia esse plano ANTES de abrir
-qualquer Fase nova; ele explica explicitamente o que reaproveita deste HANDOFF e o que substitui.
+Piper/Kokoro, OpenVoice). **Fase 1 e Fase 2 já implementadas** (`f672eb78`, `ad8e027d` — ver
+"Progresso" no topo do plano). O worker real ainda roda na arquitetura Patter/Telnyx/Deepgram/
+ElevenLabs descrita neste HANDOFF: Fase 1/2 entregaram primitivas novas (contrato de perfil de
+voz, `SipGateway`, adapter Asterisk/ARI, resolução por conexão SIP) que ainda não substituem o
+worker de produção — isso é Fase 3 em diante. Leia o plano ANTES de abrir Fase 3; ele explica o
+que reaproveita deste HANDOFF e o que substitui.
 
 Leia nesta ordem:
 
 1. `docs/handoffs/HANDOFF-voice-core.md` — este arquivo.
-2. `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md` — plano canônico da PRÓXIMA fase (SIP/BYOC open-source), aprovado 2026-08-27, ainda não implementado.
+2. `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md` — plano canônico da PRÓXIMA fase (SIP/BYOC open-source), aprovado 2026-08-27, Fase 1/2 implementadas (`ad8e027d`), Fase 3+ pendente.
 3. `docs/current-state-voice-core.md` — snapshot atual do Voice Core (arquitetura Telnyx/Deepgram/ElevenLabs ainda vigente no código).
 4. `docs/evidence/implementacao-tokens/voice-core/implementation-status.md` — estado task-by-task.
 5. `docs/evidence/implementacao-tokens/voice-core/lumenva-voice-engine-final.md` — evidência e invariantes finais.
