@@ -29,6 +29,7 @@ Implemented boundaries include:
 - persistent Node voice worker with Patter 0.7.1 + Telnyx + Deepgram + ElevenLabs.
 - Patter persistence/dashboard/anonymous telemetry disabled.
 - technical E.164 -> tenant registry (`voice_phone_numbers`) before Caller ID.
+- service-only technical-number -> private worker registry (`voice_worker_endpoints`).
 - tenant-scoped Caller ID and compact Customer Memory hydration.
 - authenticated worker -> CRM context/turn/event control-plane endpoints.
 - canonical Agent Kernel production composition for voice using the existing `runModelCall` seam.
@@ -41,7 +42,9 @@ Implemented boundaries include:
 - operations panel `Agente de Ligação` backed by tenant-scoped CRM call state.
 - provider-free deterministic E2E simulator and safety evals.
 - safe outbound transport correlation: CRM `voice_call_id` is reserved before dial and bound to the real provider call id on `onCallStart`; ambiguous concurrent same-destination pending calls are rejected.
-- governed outbound orchestration service accepts contact + goal + agent, resolves the phone/worker server-side, requests a customer-safe Agent OS opening, and only then invokes dial transport.
+- governed outbound orchestration accepts contact + goal + agent, resolves destination/source/worker server-side, requests customer-safe Agent OS opening copy, and only then invokes dial transport.
+- product-facing `POST /api/v1/voice/calls` accepts only `contact_id`, Product Agent id and `goal`; no raw phone, first-message or worker URL is accepted from the client.
+- persistent worker container has healthcheck, non-root runtime and graceful SIGTERM/SIGINT disconnect.
 
 ## Verified gates
 
@@ -51,8 +54,11 @@ Known green checkpoints during this implementation include:
 - `9821bc7fd3ff973a4abe7b3961f0ae0140ef214b` — READY with provider-free simulator + safety eval suite gated.
 - `8c7067ea7e5dd78b00beca20445e559fe4ea124d` — READY with worker outbound-correlation test gated.
 - `814dcbead88d8bfabb703ae1a2433da3b1515d78` — READY with governed CRM outbound orchestration implementation.
+- `306a6290ea2bd5f73964d871c487e9ed31d57990` — READY with graceful worker shutdown implementation.
 
-The authoritative gate is `scripts/verify-voice-core.sh`, which runs TypeScript typecheck, the explicit voice unit/eval suite, worker syntax/tests, tenant-filter lint, and Next.js build. The subsequent gate commit `613a68dd4495250b06fd40ea952b7902551def7b` adds the governed-outbound unit file to that explicit suite; its own Preview must reach READY before being called final-green.
+The authoritative gate is `scripts/verify-voice-core.sh`, which runs TypeScript typecheck, the explicit voice unit/eval suite, worker syntax/tests, tenant-filter lint, and Next.js build.
+
+At the time of this update, the newest HEAD containing the expanded deployment-hardening/outbound-route gate could not execute a new Vercel Preview because the GitHub status reports `Vercel – crm: failure` with target `upgradeToPro=build-rate-limit`. There are no PR-triggered GitHub Actions runs available as an alternate runner. This is recorded as a CI-runner quota block, not as a passing or failing code test. The latest unexecuted HEAD must not be called final-green until a runner actually executes `scripts/verify-voice-core.sh`.
 
 ## Provider-free E2E evidence
 
@@ -80,13 +86,14 @@ The implementation is not equivalent to a live production phone number yet. Real
 
 1. Canonical Product Agents intended to speak externally are promoted through the existing governance process from `shadow` to an autonomy level authorized for voice delivery. The voice implementation must not modify that policy itself.
 2. A real Telnyx number/account is provisioned and its technical E.164 is registered to the correct organization.
-3. A persistent voice-worker instance is deployed for that technical number.
+3. A persistent voice-worker instance is deployed for that technical number and registered in `voice_worker_endpoints`.
 4. Runtime secrets are configured: Telnyx credentials, control-plane internal secret, Deepgram key, ElevenLabs key/voice id (or future provider adapters).
 5. Public Telnyx/Patter webhook host is configured and reachable.
 6. A real PSTN inbound/outbound E2E is executed and its provider IDs, audio latency, transfer behavior and actual cost are captured.
 7. Recording remains OFF unless the tenant policy and applicable consent/disclosure flow allow it.
+8. A runner executes the latest `verify-voice-core.sh` after the current Vercel build-rate-limit clears or an alternate CI runner is configured.
 
-These are activation/provisioning gates, not reasons to weaken tenant isolation or Agent OS governance.
+These are activation/provisioning/verification gates, not reasons to weaken tenant isolation or Agent OS governance.
 
 ## Multiempresa invariant
 
@@ -94,7 +101,7 @@ One worker instance is currently deployed per technical Telnyx number because Pa
 
 ## Outbound safety invariant
 
-The raw worker control endpoint is internal only. Product-facing code must not expose a `number + arbitrary text` dial API. The governed CRM orchestration resolves the target from `contactId`, creates a tenant-scoped call, asks Agent OS for customer-safe opening copy, applies delivery governance and only then calls the worker.
+The raw worker control endpoint is internal only. Product-facing code does not expose a `number + arbitrary text` dial API. `POST /api/v1/voice/calls` derives the organization from authenticated context, accepts contact/agent/goal only, resolves the destination and technical source number server-side, creates the tenant-scoped call, asks Agent OS for customer-safe opening copy, applies delivery governance and only then calls the registered worker. Multiple enabled source workers without an explicit routing choice fail closed rather than selecting one implicitly.
 
 ## Remaining real-world proof
 
