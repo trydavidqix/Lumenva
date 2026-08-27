@@ -3,21 +3,27 @@
 **Data:** 2026-08-27  
 **Repo:** `trydavidqix/CRM`  
 **Branch obrigatória para continuar:** `implementacao-tokens-voice-core`  
+**Último checkpoint de código da implementação:** `cabfbec422aea370252a6909c28204306177ed65`  
 **Não alterar/mergear `main` sem autorização explícita.**
 
 ## 1. Comece aqui
 
-Este documento é o ponto de entrada canônico para qualquer agente que continuar o Voice Core. Não recomece pelo plano mestre nem pelo plano antigo de LiveKit.
+Este documento é o ponto de entrada canônico para Claude/qualquer agente que continuar o Voice Core. Não recomece pelo plano mestre nem pelo plano antigo LiveKit-first.
 
-Leia, nesta ordem:
+Leia nesta ordem:
 
-1. `docs/evidence/implementacao-tokens/voice-core/implementation-status.md`
-2. `docs/evidence/implementacao-tokens/voice-core/lumenva-voice-engine-final.md`
-3. `docs/superpowers/plans/2026-08-27-lumenva-voice-engine-patter-plan.md`
-4. `docs/evidence/implementacao-tokens/voice-core/patter-equivalence.md`
-5. `docs/evidence/implementacao-tokens/voice-core/patter-adoption-baseline.md`
-6. `docs/superpowers/plans/2026-08-26-nucleo-ligacao-integration-plan.md` apenas como histórico/spec pai
-7. `docs/superpowers/plans/2026-08-23-implementacao-tokens-master-plan.md` para o panorama do CRM completo
+1. `docs/handoffs/HANDOFF-voice-core.md` — este arquivo.
+2. `docs/current-state-voice-core.md` — snapshot atual do Voice Core.
+3. `docs/evidence/implementacao-tokens/voice-core/implementation-status.md` — estado task-by-task.
+4. `docs/evidence/implementacao-tokens/voice-core/lumenva-voice-engine-final.md` — evidência e invariantes finais.
+5. `docs/superpowers/plans/2026-08-27-voice-core-canonical-status.md` — mapa de supersessão documental.
+6. `docs/superpowers/plans/2026-08-27-lumenva-voice-engine-patter-plan.md` — plano executável mais recente.
+7. `docs/evidence/implementacao-tokens/voice-core/patter-equivalence.md`.
+8. `docs/evidence/implementacao-tokens/voice-core/patter-adoption-baseline.md`.
+9. `docs/superpowers/plans/2026-08-26-nucleo-ligacao-integration-plan.md` apenas como histórico/spec pai.
+10. `docs/superpowers/plans/2026-08-23-implementacao-tokens-master-plan.md` somente para panorama do CRM completo.
+
+`docs/current-state.md` é um snapshot global antigo e **não deve ser usado como fonte atual do Voice Core**. Para voz, use `docs/current-state-voice-core.md`.
 
 ## 2. Arquitetura vigente
 
@@ -25,21 +31,21 @@ Leia, nesta ordem:
 PSTN
   -> Telnyx
   -> Lumenva Voice Worker persistente
-       -> Patter (mídia/telefonia)
-       -> Deepgram STT
-       -> ElevenLabs TTS
+       -> Patter OSS (mídia/telefonia; substituível)
+       -> Deepgram STT (adapter atual)
+       -> ElevenLabs TTS (adapter atual)
        -> VAD / barge-in / recording transport
        -> CRM control plane autenticado
   -> número técnico resolve organização
   -> Caller ID resolve contacto dentro da organização
   -> Customer Memory
   -> Agent Kernel / Product Agent existente
-  -> runModelCall / model router canônico
+  -> runModelCall / model seam canônico
   -> Tool Gateway / políticas / handoff
   -> resposta customer-safe volta ao worker para TTS
 ```
 
-LiveKit **não** é dependência do caminho normal IA <-> cliente. Ele permanece opcional para browser-human takeover. A arquitetura histórica do plano de 2026-08-26 que mostrava `Telnyx -> LiveKit -> Voice Runtime` foi superada deliberadamente.
+LiveKit **não** é dependência do caminho normal IA <-> cliente. Ele permanece opcional para browser-human takeover. A arquitetura histórica `Telnyx -> LiveKit -> Voice Runtime` foi superada deliberadamente.
 
 ## 3. O que já existe no código
 
@@ -60,22 +66,23 @@ LiveKit **não** é dependência do caminho normal IA <-> cliente. Ele permanece
 - lifecycle terminal não reabre por evento tardio;
 - `provider_call_id` conflitante não substitui o persistido;
 - outbound governado cria `voice_call_id` antes do dial e correlaciona provider call depois;
-- endpoint de produto `POST /api/v1/voice/calls` recebe contact + agent + goal, nunca número bruto/first message/control URL;
+- `POST /api/v1/voice/calls` recebe `contact_id + agent_id + goal`, nunca número bruto/first message/control URL;
 - abertura outbound passa por Agent OS + delivery policy antes de discar;
 - Product Agent `shadow/draft/off` não fala externamente;
 - transferência humana em duas fases;
 - recording tenant-controlled e fail-closed quando disclosure/consentimento é necessário;
-- painel `Agente de Ligação` tenant-scoped;
+- métricas/custos/lifecycle normalizados no CRM;
+- painel base `Agente de Ligação` tenant-scoped;
 - simulador provider-free, safety evals e testes de correlação outbound;
-- graceful shutdown do worker;
+- graceful shutdown, healthcheck e runtime non-root do worker;
 - gate `scripts/verify-voice-core.sh`.
 
 ## 4. Segurança/invariantes — NÃO QUEBRAR
 
-1. Não criar `Voice Agent`, `Sales Voice Agent` ou LLM runtime paralelo.
+1. Não criar `Voice Agent`, `Sales Voice Agent` ou runtime LLM paralelo.
 2. Patter é implementation detail substituível; não recebe CRM tools, identidade, routing ou model selection.
 3. Nunca confiar em `organization_id` vindo de cliente/worker para escolher tenant.
-4. Resolver organização pelo número técnico antes de resolver Caller ID.
+4. Resolver organização pelo número técnico antes de Caller ID.
 5. Nunca fazer lookup global de telefone entre tenants.
 6. Todo turno LLM continua no seam canônico (`runModelCall`/Agent Kernel).
 7. Não expor `voice_worker_endpoints` para tenant/anon.
@@ -85,12 +92,12 @@ LiveKit **não** é dependência do caminho normal IA <-> cliente. Ele permanece
 11. Não trocar `provider_call_id` depois de estabelecido.
 12. Não ativar recording só porque existe capacidade técnica.
 13. Não promover Product Agents de `shadow` dentro do Voice Core para “fazer funcionar”; autonomia é governance do Agent OS.
-14. Não reintroduzir LiveKit como requisito do caminho normal sem decisão arquitetural nova e explícita.
+14. Não reintroduzir LiveKit como requisito do caminho normal sem nova decisão arquitetural explícita.
 15. Não mergear para `main` automaticamente.
 
 ## 5. Verificação
 
-O comando autoritativo é:
+Comando autoritativo:
 
 ```bash
 bash scripts/verify-voice-core.sh
@@ -100,26 +107,24 @@ Ele executa typecheck, suíte Voice Core/evals, worker syntax/tests, tenant bind
 
 ### Estado conhecido do CI
 
-No fechamento documental desta sessão, não havia execução fresca do gate completo para o HEAD mais recente. O GitHub mostrava:
+No fechamento documental desta sessão, não havia execução fresca do gate completo para o HEAD documental mais recente. O GitHub mostrava:
 
 - `Vercel – crm`: failure apontando para `upgradeToPro=build-rate-limit`;
 - `Vercel – lumenva-website`: failure apontando para team invite/access.
 
-Não interpretar esses dois status como falha de compilação/teste. Também não chamar o HEAD de final-green sem rodar o gate em um runner funcional.
+Não interpretar esses status como falha de compilação/teste e também não chamar o HEAD de `final-green` sem rodar o gate em runner funcional. Checkpoints verdes anteriores estão enumerados em `lumenva-voice-engine-final.md`.
 
-Checkpoints verdes anteriores estão enumerados em `lumenva-voice-engine-final.md`.
+## 6. O que falta para LIVE — somente ativação/prova externa
 
-## 6. O que falta para LIVE — recursos/provas externas
-
-Isto não é backlog arquitetural escondido; é ativação/provisionamento:
+Isto **não é backlog arquitetural escondido**:
 
 - Telnyx real: conta, número, connection id, API key e public key;
-- worker persistente realmente hospedado para o número técnico;
-- `voice_worker_endpoints.control_url` apontando para esse worker;
+- worker persistente realmente hospedado por número técnico;
+- `voice_phone_numbers` e `voice_worker_endpoints` configurados;
 - `VOICE_CONTROL_PLANE_URL` e `VOICE_WEBHOOK_HOST` alcançáveis;
 - Deepgram e ElevenLabs reais ou adapters substitutos;
 - `INTERNAL_SECRET` consistente worker/control plane;
-- `VOICE_LIVE_ENABLED=true` somente quando os outros gates estiverem prontos;
+- `VOICE_LIVE_ENABLED=true` somente após os demais gates;
 - Product Agent com autonomia autorizada para voz;
 - chamada PSTN inbound real;
 - chamada PSTN outbound real;
@@ -127,20 +132,20 @@ Isto não é backlog arquitetural escondido; é ativação/provisionamento:
 - captura de latência/custo/provider IDs reais;
 - validação legal/operacional de recording antes de ligá-lo.
 
-## 7. Próxima ação recomendada ao Claude
+## 7. Próxima ação para Claude
 
-Primeiro, faça uma auditoria read-only do HEAD contra este handoff e rode `bash scripts/verify-voice-core.sh` em ambiente capaz. Se houver vermelho real, corrija o código na mesma branch e atualize `implementation-status.md` + `lumenva-voice-engine-final.md` com evidência fresca. Se o gate ficar verde, o próximo trabalho útil é **activation runbook/provisionamento real**, não redesenhar o núcleo.
+1. Faça auditoria read-only do HEAD contra este handoff.
+2. Rode `bash scripts/verify-voice-core.sh` em ambiente capaz.
+3. Se houver vermelho **real de código**, corrija na mesma branch e atualize os documentos canônicos.
+4. Se o gate ficar verde, avance para activation runbook/provisionamento real — não redesenhe o núcleo.
+5. Preserve quatro estados distintos:
+   - `IMPLEMENTED`;
+   - `VERIFIED PROVIDER-FREE`;
+   - `VERIFIED LIVE`;
+   - `BLOCKED EXTERNAL`.
+6. Nunca transformar `BLOCKED EXTERNAL` em bug imaginário ou em autorização para enfraquecer governance/RLS.
 
-Ao entrar na ativação, mantenha separado:
-
-- `IMPLEMENTED`: existe no código;
-- `VERIFIED PROVIDER-FREE`: provado sem carrier real;
-- `VERIFIED LIVE`: provado em PSTN real;
-- `BLOCKED EXTERNAL`: falta conta/credencial/runner/serviço externo.
-
-Nunca converter `BLOCKED EXTERNAL` em checkbox de código concluído nem em defeito imaginário.
-
-## 8. Arquivos de maior relevância
+## 8. Arquivos críticos
 
 - `workers/voice-worker/main.mjs`
 - `workers/voice-worker/brain-client.mjs`
@@ -163,10 +168,10 @@ Nunca converter `BLOCKED EXTERNAL` em checkbox de código concluído nem em defe
 - `supabase/migrations/20260827020000_0130_voice_worker_endpoint_privileges.sql`
 - `scripts/verify-voice-core.sh`
 
-## 9. Definition of Done correta neste ponto
+## 9. Definition of Done neste ponto
 
-**Código do núcleo:** implementar todas as fronteiras acima e manter os invariantes.  
+**Código do núcleo:** fronteiras e invariantes implementados.  
 **Verificação do HEAD:** gate fresco obrigatório antes de declarar final-green.  
 **Produção LIVE:** somente após PSTN real + transferência + métricas reais + governance/recording aprovados.
 
-Essas três coisas são estados diferentes. Não colapsá-las em “pronto/não pronto”.
+Esses estados são diferentes. Não colapsá-los em “pronto/não pronto”.
