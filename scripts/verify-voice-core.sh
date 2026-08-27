@@ -16,6 +16,7 @@ NODE_ENV=test pnpm vitest run \
   lib/voice/runtime/session.test.ts \
   lib/voice/runtime/barge-in.test.ts \
   lib/voice/runtime/ports.test.ts \
+  lib/voice/human-browser/adapter.test.ts \
   lib/voice/livekit/session.test.ts \
   lib/voice/telnyx/webhook.test.ts \
   lib/voice/telnyx/orchestrator.test.ts \
