@@ -11,6 +11,7 @@ NODE_ENV=test pnpm vitest run \
   lib/voice/engine/voice-profile-schema.test.ts \
   lib/voice/engine/voice-profile-version.test.ts \
   lib/voice/tts/fallback-chain.test.ts \
+  lib/voice/tts/language-matrix.test.ts \
   lib/voice/patter/adapter.test.ts \
   lib/voice/patter/media.test.ts \
   lib/voice/patter/telemetry.test.ts \
