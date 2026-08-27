@@ -38,5 +38,7 @@ node --check workers/voice-worker/main.mjs
 node --check workers/voice-worker/brain-client.mjs
 node --check workers/voice-worker/call-context.mjs
 node --check workers/voice-worker/control-server.mjs
+node --check workers/voice-worker/pending-outbound.mjs
+node --test workers/voice-worker/pending-outbound.test.mjs
 pnpm lint:tenant-filter
 pnpm next build
