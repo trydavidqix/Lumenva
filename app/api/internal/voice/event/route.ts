@@ -15,6 +15,7 @@ const bodySchema = z.object({
   voice_call_id: z.string().uuid(),
   state: stateSchema,
   provider_event_id: z.string().min(1).max(256),
+  provider_call_id: z.string().min(1).max(256).optional(),
   occurred_at: z.string().datetime().optional(),
   metrics: z.object({
     carrierMs: z.number().nonnegative().optional(),
@@ -62,12 +63,13 @@ export async function POST(req: NextRequest): Promise<Response> {
   await db.query(
     `update voice_calls
         set state = $3,
+            provider_call_id = coalesce(provider_call_id, $6),
             started_at = case when $3 = 'active' then coalesce(started_at, $4::timestamptz) else started_at end,
             answered_at = case when $3 = 'active' then coalesce(answered_at, $4::timestamptz) else answered_at end,
             ended_at = case when $5::boolean then coalesce(ended_at, $4::timestamptz) else ended_at end,
             updated_at = now()
       where id = $1 and organization_id = $2`,
-    [parsed.data.voice_call_id, call.organization_id, parsed.data.state, occurredAt, terminal],
+    [parsed.data.voice_call_id, call.organization_id, parsed.data.state, occurredAt, terminal, parsed.data.provider_call_id ?? null],
   );
   await db.query(
     `insert into voice_call_events
