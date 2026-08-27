@@ -13,6 +13,9 @@ NODE_ENV=test pnpm vitest run \
   lib/voice/patter/telemetry.test.ts \
   lib/voice/runtime/agent-os-adapter.test.ts \
   lib/voice/runtime/agent-resolver.test.ts \
+  lib/voice/runtime/delivery-policy.test.ts \
+  lib/voice/runtime/context-service.test.ts \
+  lib/voice/runtime/turn-service.test.ts \
   lib/voice/runtime/session.test.ts \
   lib/voice/runtime/barge-in.test.ts \
   lib/voice/runtime/ports.test.ts \
@@ -20,11 +23,16 @@ NODE_ENV=test pnpm vitest run \
   lib/voice/livekit/session.test.ts \
   lib/voice/telnyx/webhook.test.ts \
   lib/voice/telnyx/orchestrator.test.ts \
+  lib/voice/identity/resolve-organization.test.ts \
   lib/voice/identity/resolve-caller.test.ts \
   lib/voice/transfer/adapter.test.ts \
   lib/voice/transfer/engine-transport.test.ts \
   tests/unit/voice-migration-contract.test.ts \
   tests/unit/voice-hardening-migration-contract.test.ts \
+  tests/unit/voice-phone-number-migration-contract.test.ts \
   tests/unit/voice-config-surface-contract.test.ts
+node --check workers/voice-worker/main.mjs
+node --check workers/voice-worker/brain-client.mjs
+node --check workers/voice-worker/call-context.mjs
 pnpm lint:tenant-filter
 pnpm next build
