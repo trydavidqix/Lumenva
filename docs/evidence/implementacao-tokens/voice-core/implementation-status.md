@@ -5,12 +5,13 @@ Canonical status: `docs/superpowers/plans/2026-08-27-voice-core-canonical-status
 Parent spec: `docs/superpowers/plans/2026-08-26-nucleo-ligacao-integration-plan.md`  
 Master plan: `docs/superpowers/plans/2026-08-23-implementacao-tokens-master-plan.md`  
 Branch de trabalho: `implementacao-tokens-voice-core`  
-Último checkpoint de código da implementação: `cabfbec422aea370252a6909c28204306177ed65`  
+Último checkpoint de código da implementação Patter/Telnyx (este documento): `cabfbec422aea370252a6909c28204306177ed65`  
+Checkpoint mais recente do repositório (Fase 1/2 do plano open-source, aditivo, não descrito neste documento): `ad8e027d`  
 Data: 2026-08-27
 
 ## Estado de referência
 
-O Voice Core foi implementado como **canal de voz do Agent OS existente**, não como segunda plataforma de agentes. A arquitetura vigente usa `Lumenva Voice Worker` persistente com Patter como implementation detail de mídia/telefonia, Telnyx como carrier PSTN, Deepgram/ElevenLabs como adapters atuais de STT/TTS e CRM/Agent OS como autoridade de identidade, memória, modelos, tools, políticas, handoff e observabilidade.
+O Voice Core foi implementado como **canal de voz do Agent OS existente**, não como segunda plataforma de agentes. A arquitetura vigente EM PRODUÇÃO usa `Lumenva Voice Worker` persistente com Patter como implementation detail de mídia/telefonia, Telnyx como carrier PSTN, Deepgram/ElevenLabs como adapters atuais de STT/TTS e CRM/Agent OS como autoridade de identidade, memória, modelos, tools, políticas, handoff e observabilidade. Este documento descreve essa arquitetura — para o progresso do plano open-source SIP/BYOC que a substitui, ver a seção "Progresso" no topo de `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md`.
 
 A arquitetura antiga que colocava LiveKit no caminho obrigatório foi superada. LiveKit é opcional e reservado ao adapter de atendimento humano no navegador.
 
@@ -59,10 +60,14 @@ Inclui typecheck, suíte Voice Core/evals, worker syntax/tests, tenant binding, 
 
 ### Estado do runner em 2026-08-27
 
-O HEAD documental mais recente ainda não possui execução fresca do gate completo. Status observados:
+Gate rodado localmente e verde em `ad8e027d` (typecheck, 35 arquivos/124 testes vitest, worker
+3/3, `lint:tenant-filter`, `next build` limpo). O runner Vercel segue bloqueado externamente:
 
 - `Vercel – crm`: `build-rate-limit`;
 - `Vercel – lumenva-website`: acesso/team invite.
+
+Isso não é bloqueio real — a validação local é a prova primária enquanto GitHub Actions/Vercel
+CI permanecerem indisponíveis (`docs/current-state.md` §10).
 
 Não converter isso em “passou” nem “falhou”. O próximo agente deve rodar o gate em runner funcional antes de declarar `final-green`. Checkpoints verdes anteriores estão em `lumenva-voice-engine-final.md`.
 

@@ -3,7 +3,8 @@
 **Data:** 2026-08-27  
 **Repo:** `trydavidqix/CRM`  
 **Branch vigente:** `implementacao-tokens-voice-core`  
-**Último checkpoint de código desta implementação:** `cabfbec422aea370252a6909c28204306177ed65`  
+**Último checkpoint de código desta implementação (Telnyx/Deepgram/ElevenLabs):** `cabfbec422aea370252a6909c28204306177ed65`  
+**Último checkpoint do repositório (Fase 1/2 do plano open-source, aditivas):** `ad8e027d`  
 **Não mergear para `main` sem autorização explícita.**
 
 ## Por que este documento existe
@@ -13,15 +14,17 @@ O Voice Core nasceu a partir do plano mestre de `implementacao-tokens` e do plan
 **Atualização 2026-08-27 (mesmo dia, sessão posterior ao gate verde):** o dono do repositório
 aprovou `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md` como o plano canônico
 para a PRÓXIMA fase do Voice Core — Telnyx/Deepgram/ElevenLabs/número técnico dão lugar a
-Asterisk-ARI/SIP-BYOC/faster-whisper/Piper-Kokoro/OpenVoice. **Isto é registro de plano, não
-implementação** — o código desta branch nesta data ainda é a arquitetura Telnyx/Deepgram/ElevenLabs
-descrita abaixo, com gate verde fresco. Não redesenhar/descartar os contratos e testes existentes
-ao iniciar esse novo plano; o `VoiceEngine` provider-neutral é reaproveitado, não recriado.
+Asterisk-ARI/SIP-BYOC/faster-whisper/Piper-Kokoro/OpenVoice. **Fase 1 e Fase 2 já implementadas**
+(`f672eb78`, `ad8e027d`): perfil de voz no `VoiceEngine`, adapter Pipecat scaffold, `SipGateway`,
+adapter Asterisk/ARI, resolução conexão→número→organização. São primitivas novas, aditivas — o
+worker de PRODUÇÃO ainda roda a arquitetura Telnyx/Deepgram/ElevenLabs descrita abaixo, sem
+nenhuma mudança. Não redesenhar/descartar os contratos e testes existentes ao seguir esse plano;
+o `VoiceEngine` provider-neutral é reaproveitado, não recriado.
 
 Para decisões de Voice Core, a ordem de autoridade documental é:
 
 1. `docs/handoffs/HANDOFF-voice-core.md`
-2. `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md` — plano canônico da PRÓXIMA fase (SIP/BYOC open-source), aprovado 2026-08-27, ainda não implementado
+2. `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md` — plano canônico da PRÓXIMA fase (SIP/BYOC open-source), aprovado 2026-08-27, Fase 1/2 implementadas (`ad8e027d`), Fase 3+ pendente
 3. `docs/evidence/implementacao-tokens/voice-core/implementation-status.md`
 4. `docs/evidence/implementacao-tokens/voice-core/lumenva-voice-engine-final.md`
 5. este documento — descreve a arquitetura ATUALMENTE implementada (Telnyx/Deepgram/ElevenLabs)

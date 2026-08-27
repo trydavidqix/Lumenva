@@ -7,6 +7,13 @@
 
 > `docs/current-state.md` é um snapshot global mais antigo do CRM e não representa o estado atual do Voice Core. Para voz, este arquivo + `docs/handoffs/HANDOFF-voice-core.md` são as referências atuais.
 
+**Atualização 2026-08-27:** Fase 1 e Fase 2 do plano open-source SIP/BYOC
+(`docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md`) já foram implementadas
+(`f672eb78`, `ad8e027d`) — perfil de voz no `VoiceEngine`, adapter Pipecat scaffold, `SipGateway`,
+adapter Asterisk/ARI, resolução conexão→número→organização, migration `voice_sip_connections`.
+São primitivas novas, aditivas — **o worker de produção descrito abaixo continua rodando
+Patter/Telnyx/Deepgram/ElevenLabs sem nenhuma mudança**; a substituição do worker é Fase 3+.
+
 ## Estado resumido
 
 O Voice Core foi implementado como canal de voz do Agent OS existente. O CRM continua sendo a fonte de verdade para tenant, cliente, memória, agentes, modelos, tools, políticas, handoff e auditoria.
@@ -62,7 +69,10 @@ bash scripts/verify-voice-core.sh
 
 Há checkpoints anteriores verdes documentados em `docs/evidence/implementacao-tokens/voice-core/lumenva-voice-engine-final.md`.
 
-O HEAD mais recente ainda precisa de execução fresca do gate completo. O runner Vercel observado estava bloqueado externamente por `build-rate-limit` no CRM e team invite/access no projeto secundário. Não interpretar isso como teste verde ou vermelho.
+Gate rodado localmente em `ad8e027d` (2026-08-27): typecheck limpo, 35 arquivos/124 testes
+(vitest) verdes, worker 3/3 verde, `lint:tenant-filter` ok, `next build` limpo. O runner Vercel
+segue bloqueado externamente por `build-rate-limit`/team-invite — irrelevante enquanto a
+verificação local continuar sendo a prova primária (`docs/current-state.md` §10).
 
 ## Ativação externa pendente
 
@@ -81,4 +91,8 @@ Não é dívida arquitetural de código:
 
 ## Próxima ação
 
-O próximo agente deve começar em `docs/handoffs/HANDOFF-voice-core.md`, rodar o gate em um runner funcional e, se o código permanecer verde, seguir para provisionamento/ativação real. Não redesenhar o núcleo a partir do plano histórico LiveKit-first.
+O próximo agente deve começar em `docs/handoffs/HANDOFF-voice-core.md` e seguir pra Fase 3 do
+plano open-source (runtime Pipecat + faster-whisper + Piper/Kokoro + OpenVoice) — é onde o worker
+de produção finalmente troca de carrier. Não redesenhar o núcleo a partir do plano histórico
+LiveKit-first. Não mergear/ativar Telnyx real sem decidir antes se ainda vale a pena, dado que o
+plano aprovado substitui essa arquitetura por SIP/BYOC.
