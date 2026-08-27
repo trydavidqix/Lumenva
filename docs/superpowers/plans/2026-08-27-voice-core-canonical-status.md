@@ -10,15 +10,24 @@
 
 O Voice Core nasceu a partir do plano mestre de `implementacao-tokens` e do plano de integração de 2026-08-26, mas a arquitetura evoluiu durante a implementação após a avaliação do Patter OSS. Este documento resolve qualquer divergência entre planos históricos e o código/evidência atuais.
 
+**Atualização 2026-08-27 (mesmo dia, sessão posterior ao gate verde):** o dono do repositório
+aprovou `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md` como o plano canônico
+para a PRÓXIMA fase do Voice Core — Telnyx/Deepgram/ElevenLabs/número técnico dão lugar a
+Asterisk-ARI/SIP-BYOC/faster-whisper/Piper-Kokoro/OpenVoice. **Isto é registro de plano, não
+implementação** — o código desta branch nesta data ainda é a arquitetura Telnyx/Deepgram/ElevenLabs
+descrita abaixo, com gate verde fresco. Não redesenhar/descartar os contratos e testes existentes
+ao iniciar esse novo plano; o `VoiceEngine` provider-neutral é reaproveitado, não recriado.
+
 Para decisões de Voice Core, a ordem de autoridade documental é:
 
 1. `docs/handoffs/HANDOFF-voice-core.md`
-2. `docs/evidence/implementacao-tokens/voice-core/implementation-status.md`
-3. `docs/evidence/implementacao-tokens/voice-core/lumenva-voice-engine-final.md`
-4. este documento
-5. `docs/superpowers/plans/2026-08-27-lumenva-voice-engine-patter-plan.md`
-6. `docs/superpowers/plans/2026-08-26-nucleo-ligacao-integration-plan.md` — histórico/spec pai
-7. `docs/superpowers/plans/2026-08-23-implementacao-tokens-master-plan.md` — panorama maior do CRM
+2. `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md` — plano canônico da PRÓXIMA fase (SIP/BYOC open-source), aprovado 2026-08-27, ainda não implementado
+3. `docs/evidence/implementacao-tokens/voice-core/implementation-status.md`
+4. `docs/evidence/implementacao-tokens/voice-core/lumenva-voice-engine-final.md`
+5. este documento — descreve a arquitetura ATUALMENTE implementada (Telnyx/Deepgram/ElevenLabs)
+6. `docs/superpowers/plans/2026-08-27-lumenva-voice-engine-patter-plan.md`
+7. `docs/superpowers/plans/2026-08-26-nucleo-ligacao-integration-plan.md` — histórico/spec pai
+8. `docs/superpowers/plans/2026-08-23-implementacao-tokens-master-plan.md` — panorama maior do CRM
 
 Código + evidência recente vencem qualquer texto histórico divergente.
 

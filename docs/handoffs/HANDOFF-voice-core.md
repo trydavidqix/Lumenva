@@ -10,18 +10,27 @@
 
 Este documento é o ponto de entrada canônico para Claude/qualquer agente que continuar o Voice Core. Não recomece pelo plano mestre nem pelo plano antigo LiveKit-first.
 
+**Atualização 2026-08-27 (mesma data, sessão posterior ao gate verde):** o dono do repositório
+aprovou um plano novo — `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md` —
+que troca a arquitetura de provedores (Telnyx/Deepgram/ElevenLabs/número técnico comprado) por
+uma pilha open-source com SIP/BYOC do próprio cliente (Asterisk-ARI, Pipecat, faster-whisper,
+Piper/Kokoro, OpenVoice). **É plano registrado, ainda não implementado** — o código descrito neste
+HANDOFF continua sendo o estado real do código nesta data. Leia esse plano ANTES de abrir
+qualquer Fase nova; ele explica explicitamente o que reaproveita deste HANDOFF e o que substitui.
+
 Leia nesta ordem:
 
 1. `docs/handoffs/HANDOFF-voice-core.md` — este arquivo.
-2. `docs/current-state-voice-core.md` — snapshot atual do Voice Core.
-3. `docs/evidence/implementacao-tokens/voice-core/implementation-status.md` — estado task-by-task.
-4. `docs/evidence/implementacao-tokens/voice-core/lumenva-voice-engine-final.md` — evidência e invariantes finais.
-5. `docs/superpowers/plans/2026-08-27-voice-core-canonical-status.md` — mapa de supersessão documental.
-6. `docs/superpowers/plans/2026-08-27-lumenva-voice-engine-patter-plan.md` — plano executável mais recente.
-7. `docs/evidence/implementacao-tokens/voice-core/patter-equivalence.md`.
-8. `docs/evidence/implementacao-tokens/voice-core/patter-adoption-baseline.md`.
-9. `docs/superpowers/plans/2026-08-26-nucleo-ligacao-integration-plan.md` apenas como histórico/spec pai.
-10. `docs/superpowers/plans/2026-08-23-implementacao-tokens-master-plan.md` somente para panorama do CRM completo.
+2. `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md` — plano canônico da PRÓXIMA fase (SIP/BYOC open-source), aprovado 2026-08-27, ainda não implementado.
+3. `docs/current-state-voice-core.md` — snapshot atual do Voice Core (arquitetura Telnyx/Deepgram/ElevenLabs ainda vigente no código).
+4. `docs/evidence/implementacao-tokens/voice-core/implementation-status.md` — estado task-by-task.
+5. `docs/evidence/implementacao-tokens/voice-core/lumenva-voice-engine-final.md` — evidência e invariantes finais.
+6. `docs/superpowers/plans/2026-08-27-voice-core-canonical-status.md` — mapa de supersessão documental.
+7. `docs/superpowers/plans/2026-08-27-lumenva-voice-engine-patter-plan.md` — plano executável da arquitetura atual (Patter).
+8. `docs/evidence/implementacao-tokens/voice-core/patter-equivalence.md`.
+9. `docs/evidence/implementacao-tokens/voice-core/patter-adoption-baseline.md`.
+10. `docs/superpowers/plans/2026-08-26-nucleo-ligacao-integration-plan.md` apenas como histórico/spec pai.
+11. `docs/superpowers/plans/2026-08-23-implementacao-tokens-master-plan.md` somente para panorama do CRM completo.
 
 `docs/current-state.md` é um snapshot global antigo e **não deve ser usado como fonte atual do Voice Core**. Para voz, use `docs/current-state-voice-core.md`.
 
