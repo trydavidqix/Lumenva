@@ -30,9 +30,11 @@ NODE_ENV=test pnpm vitest run \
   tests/unit/voice-migration-contract.test.ts \
   tests/unit/voice-hardening-migration-contract.test.ts \
   tests/unit/voice-phone-number-migration-contract.test.ts \
-  tests/unit/voice-config-surface-contract.test.ts
+  tests/unit/voice-config-surface-contract.test.ts \
+  tests/unit/lumenva-voice-engine-e2e-contract.test.ts
 node --check workers/voice-worker/main.mjs
 node --check workers/voice-worker/brain-client.mjs
 node --check workers/voice-worker/call-context.mjs
+node --check workers/voice-worker/control-server.mjs
 pnpm lint:tenant-filter
 pnpm next build
