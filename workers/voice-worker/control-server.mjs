@@ -23,30 +23,37 @@ async function readJson(req) {
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 
-export function startVoiceControlServer({ phone, agent, secret, liveEnabled, port }) {
+export function startVoiceControlServer({ phone, agent, secret, liveEnabled, port, pendingOutbound }) {
   const server = http.createServer(async (req, res) => {
     const path = (req.url ?? "").split("?", 1)[0];
     if (req.method === "GET" && path === "/healthz") {
-      return json(res, 200, { status: "ok", live_enabled: liveEnabled });
+      return json(res, 200, { status: "ok", live_enabled: liveEnabled, pending_outbound: pendingOutbound.size() });
     }
     if (req.method !== "POST" || path !== "/v1/calls") return json(res, 404, { error: "not_found" });
     if (!safeEqual(req.headers["x-internal-secret"] ?? "", secret)) return json(res, 401, { error: "unauthenticated" });
     if (!liveEnabled) return json(res, 409, { error: "voice_live_disabled" });
 
+    let reserved;
     try {
       const body = await readJson(req);
       const to = String(body?.to_e164 ?? "").trim();
+      const voiceCallId = String(body?.voice_call_id ?? "").trim();
       if (!/^\+[1-9]\d{6,14}$/.test(to)) return json(res, 422, { error: "invalid_e164" });
+      if (!voiceCallId) return json(res, 422, { error: "voice_call_id_required" });
       const firstMessage = typeof body?.first_message === "string" ? body.first_message.trim().slice(0, 500) : undefined;
+      reserved = pendingOutbound.reserve({ toE164: to, voiceCallId });
       await phone.call({
         to,
         agent,
         ...(firstMessage ? { firstMessage } : {}),
         wait: false,
       });
-      return json(res, 202, { accepted: true });
+      return json(res, 202, { accepted: true, voice_call_id: voiceCallId });
     } catch (error) {
-      return json(res, 500, { error: error instanceof Error ? error.message : "outbound_failed" });
+      if (reserved) pendingOutbound.release(reserved.toE164, reserved.voiceCallId);
+      const code = error instanceof Error ? error.message : "outbound_failed";
+      const status = code === "outbound_destination_busy" ? 409 : 500;
+      return json(res, status, { error: code });
     }
   });
   return new Promise((resolve, reject) => {
