@@ -24,6 +24,29 @@ function enabled(name) {
   return /^(1|true|yes|on)$/i.test(process.env[name] ?? "");
 }
 
+function number(value) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
+function metricsFromCallEnd(data) {
+  const metrics = data?.metrics;
+  if (!metrics || typeof metrics !== "object") return undefined;
+  const latency = metrics.latency_avg ?? {};
+  const cost = metrics.cost ?? {};
+  const normalized = {
+    carrierMs: number(latency.carrier_ms),
+    sttMs: number(latency.stt_ms),
+    agentMs: number(latency.llm_total_ms ?? latency.llm_ms),
+    ttsMs: number(latency.tts_ms),
+    e2eMs: number(latency.total_ms),
+    interruptionMs: number(latency.bargein_ms),
+    carrierCostCents: number(cost.telephony) === undefined ? undefined : cost.telephony * 100,
+    sttCostCents: number(cost.stt) === undefined ? undefined : cost.stt * 100,
+    ttsCostCents: number(cost.tts) === undefined ? undefined : cost.tts * 100,
+  };
+  return Object.fromEntries(Object.entries(normalized).filter(([, value]) => value !== undefined));
+}
+
 const liveEnabled = enabled("VOICE_LIVE_ENABLED");
 const phoneNumber = required("TELNYX_PHONE_NUMBER");
 const webhookUrl = required("VOICE_WEBHOOK_HOST");
@@ -39,6 +62,7 @@ process.env.PATTER_DASHBOARD_NOTIFY = "0";
 process.env.PATTER_BIND_HOST = process.env.PATTER_BIND_HOST ?? "0.0.0.0";
 
 const brain = createVoiceBrainClient();
+const workerPolicy = await brain.resolveWorkerConfig({ phone_e164: phoneNumber });
 const phone = new Patter({
   carrier: new Telnyx({
     apiKey: required("TELNYX_API_KEY"),
@@ -54,7 +78,7 @@ const phone = new Patter({
 const agent = phone.agent({
   stt: new DeepgramSTT({
     apiKey: required("DEEPGRAM_API_KEY"),
-    language: process.env.VOICE_STT_LANGUAGE ?? "pt",
+    language: process.env.VOICE_STT_LANGUAGE ?? workerPolicy.locale ?? "pt",
   }),
   tts: new ElevenLabsTTS({
     apiKey: required("ELEVENLABS_API_KEY"),
@@ -75,6 +99,12 @@ async function onCallStart(data) {
     direction,
   });
   putCallContext(endpoints.callId, context);
+  await brain.recordEvent({
+    voice_call_id: context.voice_call_id,
+    state: "active",
+    provider_event_id: `${endpoints.callId}:active`,
+    occurred_at: new Date().toISOString(),
+  });
 }
 
 async function onMessage(message) {
@@ -92,7 +122,21 @@ async function onMessage(message) {
 
 async function onCallEnd(data) {
   const callId = String(data?.callId ?? data?.call_id ?? data?.id ?? "").trim();
-  if (callId) deleteCallContext(callId);
+  if (!callId) return;
+  const context = getCallContext(callId);
+  try {
+    if (context) {
+      await brain.recordEvent({
+        voice_call_id: context.voice_call_id,
+        state: "completed",
+        provider_event_id: `${callId}:completed`,
+        occurred_at: new Date().toISOString(),
+        ...(metricsFromCallEnd(data) ? { metrics: metricsFromCallEnd(data) } : {}),
+      });
+    }
+  } finally {
+    deleteCallContext(callId);
+  }
 }
 
 await phone.serve({
@@ -100,6 +144,7 @@ await phone.serve({
   port,
   dashboard: false,
   tunnel: false,
+  recording: workerPolicy.recording_enabled === true,
   onCallStart,
   onCallEnd,
   onMessage,
@@ -117,5 +162,6 @@ process.stdout.write(JSON.stringify({
   port,
   control_port: controlPort,
   live_enabled: liveEnabled,
+  recording_enabled: workerPolicy.recording_enabled === true,
   active_calls: activeCallCount(),
 }) + "\n");
