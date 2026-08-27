@@ -10,7 +10,7 @@
 > - **Fase 1 — IMPLEMENTADA** (commit `f672eb78`). `VoiceEngine` aceita perfil de voz
 >   (preset/customized/cloned, providers piper/kokoro/openvoice); adapter Pipecat criado como
 >   scaffold atrás da mesma interface; adapter Patter intacto pra rollback.
-> - **Fase 2 — IMPLEMENTADA PARCIAL** (commit pendente nesta sessão). `SipGateway` criado
+> - **Fase 2 — IMPLEMENTADA PARCIAL** (commit `ad8e027d`). `SipGateway` criado
 >   (`lib/voice/sip/gateway.ts`); adapter Asterisk/ARI criado (`lib/voice/sip/asterisk-adapter.ts`);
 >   resolução conexão→número→organização criada (`resolve-organization.ts#resolveByConnection`);
 >   migration `0131_voice_sip_connections.sql` (aditiva, `voice_phone_numbers`/
@@ -21,7 +21,24 @@
 >   direção/contexto/faturamento do worker. Trocar isso sem quebrar o caminho de rollback exige o
 >   runtime Pipecat da Fase 3 — não dá pra fazer isolado sem meio-rewire arriscado. Fase 2 fica
 >   "pronta pro Fase 3 consumir", não "worker já fala SIP".
-> - **Fase 3 em diante — não implementadas.**
+> - **Fase 3 — IMPLEMENTADA PARCIAL** (commit pendente nesta sessão). Adapters STT/TTS/clone
+>   criados atrás dos ports provider-neutros já existentes (`lib/voice/runtime/stt-port.ts`,
+>   `tts-port.ts`): `lib/voice/stt/faster-whisper-adapter.ts` (rejeita transcrição vazia sem
+>   inventar turno, valida locale antes de tocar no client); `lib/voice/tts/voice-catalog.ts`
+>   (catalogação por idioma/país/género/nome/qualidade/licença/latência, licença incompatível
+>   nunca entra no catálogo); `lib/voice/tts/piper-adapter.ts` e `kokoro-adapter.ts`
+>   (`cancel()` aborta a stream real, pra barge-in); `lib/voice/clone/openvoice-adapter.ts`
+>   (clonagem é caminho separado — `cloneProfileId` fixo na construção, nunca aceita override de
+>   voz por chamada, exige consentimento verificado antes de qualquer criação de perfil,
+>   revogação independente). `VoiceTtsOptions` ganhou campo opcional `voice` (voiceId/style/
+>   speed/pitch) pra esses adapters saberem qual voz falar — antes só carregava `locale`.
+>   **Não fiz**: nenhum desses adapters está ligado ao worker de produção nem a um processo
+>   Pipecat/faster-whisper/Piper/Kokoro/OpenVoice real — são seams testáveis (interface + client
+>   injetado), não integração viva. `whisper.cpp` (fallback sem GPU) não tem adapter ainda. A
+>   troca de fato do worker (`workers/voice-worker/main.mjs` de Patter/Telnyx pra Pipecat) segue
+>   pendente — é o mesmo bloqueio descrito na Fase 2.
+> - **Fase 4 em diante — não implementadas** (config UI, matriz de idiomas, testes E2E,
+>   homologação).
 
 **Objetivo:** permitir que cada cliente crie um agent de voz usando o próprio número, escolha uma voz natural por idioma europeu, ajuste o estilo e, opcionalmente, clone uma voz autorizada.
 

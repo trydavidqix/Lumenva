@@ -11,6 +11,13 @@ NODE_ENV=test pnpm vitest run \
   lib/voice/patter/adapter.test.ts \
   lib/voice/patter/media.test.ts \
   lib/voice/patter/telemetry.test.ts \
+  lib/voice/pipecat/adapter.test.ts \
+  lib/voice/sip/asterisk-adapter.test.ts \
+  lib/voice/stt/faster-whisper-adapter.test.ts \
+  lib/voice/tts/voice-catalog.test.ts \
+  lib/voice/tts/piper-adapter.test.ts \
+  lib/voice/tts/kokoro-adapter.test.ts \
+  lib/voice/clone/openvoice-adapter.test.ts \
   lib/voice/runtime/agent-os-adapter.test.ts \
   lib/voice/runtime/agent-resolver.test.ts \
   lib/voice/runtime/delivery-policy.test.ts \
