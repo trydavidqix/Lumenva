@@ -111,6 +111,7 @@ async function onCallStart(data) {
   putCallContext(endpoints.callId, context);
   await brain.recordEvent({
     voice_call_id: context.voice_call_id,
+    technical_phone_e164: phoneNumber,
     state: "active",
     provider_call_id: endpoints.callId,
     provider_event_id: `${endpoints.callId}:active`,
@@ -124,7 +125,11 @@ async function onMessage(message) {
   if (!context) throw new Error("voice_call_context_missing");
   const transcript = String(message.text ?? "").trim();
   if (!transcript) return "";
-  const result = await brain.runTurn({ voice_call_id: context.voice_call_id, transcript });
+  const result = await brain.runTurn({
+    voice_call_id: context.voice_call_id,
+    technical_phone_e164: phoneNumber,
+    transcript,
+  });
   if (result.kind !== "reply" || typeof result.text !== "string" || !result.text.trim()) {
     throw new Error(`voice_turn_blocked:${result.reason ?? "unknown"}`);
   }
@@ -140,6 +145,7 @@ async function onCallEnd(data) {
       const metrics = metricsFromCallEnd(data);
       await brain.recordEvent({
         voice_call_id: context.voice_call_id,
+        technical_phone_e164: phoneNumber,
         state: "completed",
         provider_call_id: callId,
         provider_event_id: `${callId}:completed`,
