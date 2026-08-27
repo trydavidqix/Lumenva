@@ -65,7 +65,7 @@
 >   exigem os adapters da Fase 3 ligados a processos vivos. Sem persistência (não decidi ainda se
 >   o registry mora em `organizations.settings` como o resto ou vira tabela — falta migration se
 >   for tabela).
-> - **Fase 6 — AUDITADA, GAP FECHADO PARCIAL** (commit pendente nesta sessão). Comparei os 13
+> - **Fase 6 — AUDITADA, GAP FECHADO PARCIAL** (commit `fce93bd9`). Comparei os 13
 >   testes unitários exigidos pelo plano contra a suíte existente:
 >
 >   | Teste exigido | Estado |
@@ -103,6 +103,34 @@
 >   Gate completo: 47 arquivos, 198 testes (era 194).
 > - **Fase 7 — não implementada** (homologação/lançamento — depende inteiramente de ativação
 >   externa: número real, Asterisk real, credenciais reais).
+>
+> **Atualização 2026-08-27 (sessão de infraestrutura, fora do código deste plano)**: validado
+> ao vivo, na VPS de produção (`root@2.29.8.225`), que Asterisk/ARI/PJSIP cabe e funciona como
+> gateway SIP standalone — ainda **sem** nenhum consumidor Pipecat conectado, então isso NÃO
+> avança nenhuma Fase 3-7 de código, só prova que a peça de telefonia da Fase 2/7 é viável
+> nesse host:
+> - Asterisk instalado nativo via systemd (não Docker, ~55MB RAM) — cabe na VPS atual (2 CPU,
+>   3.7GB RAM). Pipecat + faster-whisper NÃO cabem aqui (precisam 1-2GB+ RAM, idealmente GPU);
+>   vão precisar de VPS separada quando a Fase 3 for ligada a um processo real.
+> - ARI (REST+WebSocket) só em `127.0.0.1:8088`, nunca exposto publicamente.
+> - Endpoint PJSIP de teste `1000` criado, registro e chamada validados ponta a ponta com
+>   Zoiper (iOS) via UDP/5060.
+> - **Firewall Hetzner Cloud (`lumenva-crm-firewall`) estava bloqueando UDP/5060 e UDP/8000-8100**
+>   — root cause do 408 Request Timeout inicial; não era problema do telefone, da rede do
+>   telefone, nem do `iptables`/`ufw` da própria VPS (esses já estavam abertos). Corrigido
+>   adicionando as duas regras Incoming na Hetzner Cloud Console.
+> - **Bug de config encontrado e corrigido**: AOR nomeada `1000-aor` (diferente do nome do
+>   endpoint `1000`) causava `AOR '' not found for endpoint '1000'` no `res_pjsip_registrar` —
+>   REGISTER autenticava certo (401→200 do digest) mas falhava ao gravar o contact. Fix: renomear
+>   a AOR pra bater com o nome do endpoint (`[1000] type=aor`, padrão usual do pjsip.conf).
+> - Dialplan de teste (`voicecore-test` context, `Answer()` → `Stasis(voicecore-test)`) confirmado
+>   recebendo e atendendo chamada real (CDR `ANSWERED`). Erro esperado e correto nesse ponto:
+>   `Stasis app 'voicecore-test' doesn't exist` — não há nenhum app ARI escutando ainda, porque
+>   Pipecat (Fase 3) não está ligado a esse Asterisk. Esse é exatamente o próximo fio a puxar
+>   quando a Fase 3 for da fase "adapter testável" pra "processo vivo".
+> - Nenhuma mudança de código neste repositório resultou dessa sessão — é só configuração de
+>   infraestrutura na VPS (systemd units, `/etc/asterisk/*.conf`) e uma regra de firewall na
+>   Hetzner Cloud Console. Nada pendente de commit.
 
 **Objetivo:** permitir que cada cliente crie um agent de voz usando o próprio número, escolha uma voz natural por idioma europeu, ajuste o estilo e, opcionalmente, clone uma voz autorizada.
 

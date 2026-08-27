@@ -3,7 +3,7 @@
 **Data:** 2026-08-27  
 **Repo:** `trydavidqix/CRM`  
 **Branch obrigatória para continuar:** `implementacao-tokens-voice-core`  
-**Último checkpoint de código da implementação:** `ad8e027d` (Fase 2 do plano open-source)  
+**Último checkpoint de código da implementação:** `fce93bd9` (Fase 6 do plano open-source, gate 47 arquivos/198 testes verde)  
 **Não alterar/mergear `main` sem autorização explícita.**
 
 ## 1. Comece aqui
@@ -14,17 +14,28 @@ Este documento é o ponto de entrada canônico para Claude/qualquer agente que c
 aprovou um plano novo — `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md` —
 que troca a arquitetura de provedores (Telnyx/Deepgram/ElevenLabs/número técnico comprado) por
 uma pilha open-source com SIP/BYOC do próprio cliente (Asterisk-ARI, Pipecat, faster-whisper,
-Piper/Kokoro, OpenVoice). **Fase 1 e Fase 2 já implementadas** (`f672eb78`, `ad8e027d` — ver
-"Progresso" no topo do plano). O worker real ainda roda na arquitetura Patter/Telnyx/Deepgram/
-ElevenLabs descrita neste HANDOFF: Fase 1/2 entregaram primitivas novas (contrato de perfil de
-voz, `SipGateway`, adapter Asterisk/ARI, resolução por conexão SIP) que ainda não substituem o
-worker de produção — isso é Fase 3 em diante. Leia o plano ANTES de abrir Fase 3; ele explica o
-que reaproveita deste HANDOFF e o que substitui.
+Piper/Kokoro, OpenVoice). **Fases 1 a 6 já implementadas/auditadas** (`f672eb78` até `fce93bd9`
+— ver "Progresso" no topo do plano). O worker real ainda roda na arquitetura Patter/Telnyx/
+Deepgram/ElevenLabs descrita neste HANDOFF: Fases 1-6 entregaram primitivas novas (contrato de
+perfil de voz, `SipGateway`, adapter Asterisk/ARI, resolução por conexão SIP, adapters STT/TTS/
+clone open-source, versionamento imutável, matriz de idiomas, registry de clone) que ainda não
+substituem o worker de produção — isso é Fase 3 em diante (rewire do worker) e Fase 7 (homologação).
+Leia o plano ANTES de continuar; ele explica o que reaproveita deste HANDOFF e o que substitui.
+
+**Atualização 2026-08-27 (sessão de infraestrutura, sem mudança de código neste repo):**
+validado ao vivo, na VPS de produção (`root@2.29.8.225`), que Asterisk/ARI/PJSIP roda como
+gateway SIP standalone (systemd nativo, ~55MB RAM, cabe na VPS de 3.7GB) — registro e chamada
+de teste confirmados via Zoiper (iOS). Detalhes completos (fix de firewall Hetzner, bug de AOR)
+estão no bloco "Atualização 2026-08-27 (sessão de infraestrutura...)" no fim da seção Progresso
+do plano canônico. **Isso não avança nenhuma Fase de código** — não há nenhum processo Pipecat
+ligado a esse Asterisk ainda; a chamada de teste cai em `Stasis app 'voicecore-test' doesn't
+exist` de propósito, porque nada está escutando. Pipecat/faster-whisper NÃO cabem nessa VPS —
+vão precisar de host separado quando a Fase 3 virar processo vivo.
 
 Leia nesta ordem:
 
 1. `docs/handoffs/HANDOFF-voice-core.md` — este arquivo.
-2. `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md` — plano canônico da PRÓXIMA fase (SIP/BYOC open-source), aprovado 2026-08-27, Fase 1/2 implementadas (`ad8e027d`), Fase 3+ pendente.
+2. `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md` — plano canônico da PRÓXIMA fase (SIP/BYOC open-source), aprovado 2026-08-27, Fases 1-6 implementadas/auditadas (`fce93bd9`), Fase 3 rewire do worker + Fase 7 pendentes.
 3. `docs/current-state-voice-core.md` — snapshot atual do Voice Core (arquitetura Telnyx/Deepgram/ElevenLabs ainda vigente no código).
 4. `docs/evidence/implementacao-tokens/voice-core/implementation-status.md` — estado task-by-task.
 5. `docs/evidence/implementacao-tokens/voice-core/lumenva-voice-engine-final.md` — evidência e invariantes finais.
