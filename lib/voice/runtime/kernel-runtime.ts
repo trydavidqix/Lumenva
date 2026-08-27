@@ -38,6 +38,14 @@ function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
+function voiceLlmEnv() {
+  return {
+    ...(process.env.ANTHROPIC_API_KEY ? { ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY } : {}),
+    ...(process.env.OPENAI_API_KEY ? { OPENAI_API_KEY: process.env.OPENAI_API_KEY } : {}),
+    ...(process.env.LLM_CACHE_TTL ? { LLM_CACHE_TTL: process.env.LLM_CACHE_TTL } : {}),
+  };
+}
+
 export function createVoiceProductionKernel(db: pg.Pool): AgentKernel {
   const deps: AgentKernelDependencies = {
     async resolveAgent(input) {
@@ -99,7 +107,7 @@ export function createVoiceProductionKernel(db: pg.Pool): AgentKernel {
         const sourceId = execution.trigger.sourceId;
         const response = await runModelCall(
           db,
-          llmEdgeConfigFromEnv(process.env),
+          llmEdgeConfigFromEnv(voiceLlmEnv()),
           {
             tenantId: execution.organizationId,
             ...(isUuid(sourceId) ? { leadId: sourceId } : {}),
