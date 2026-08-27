@@ -51,7 +51,7 @@
 >   cliente do plano ficam pra depois; exigem manuseio real de mídia (upload/playback) que essa
 >   sessão não construiu. Nenhum teste E2E/Playwright novo — a tela em si não é coberta pelo gate
 >   (só typecheck+build a protegem de quebrar), a lógica por trás dela é.
-> - **Fase 5 — IMPLEMENTADA PARCIAL** (commit pendente nesta sessão). Matriz de idiomas criada
+> - **Fase 5 — IMPLEMENTADA PARCIAL** (commit `f4853c80`). Matriz de idiomas criada
 >   (`lib/voice/tts/language-matrix.ts`): tier 1 (7 idiomas do plano) + tier 2 (16 locales,
 >   "bálticas" expandido em lv+lt); `evaluateLanguageReadiness` computa PASS/PARTIAL/
 >   NOT_SUPPORTED a partir dos 8 checks do plano (voz M/F, pronúncia, números/datas/nomes,
@@ -65,7 +65,44 @@
 >   exigem os adapters da Fase 3 ligados a processos vivos. Sem persistência (não decidi ainda se
 >   o registry mora em `organizations.settings` como o resto ou vira tabela — falta migration se
 >   for tabela).
-> - **Fase 6 em diante — não implementadas** (testes E2E, homologação/lançamento).
+> - **Fase 6 — AUDITADA, GAP FECHADO PARCIAL** (commit pendente nesta sessão). Comparei os 13
+>   testes unitários exigidos pelo plano contra a suíte existente:
+>
+>   | Teste exigido | Estado |
+>   |---|---|
+>   | seleção de voz por locale | JÁ COBERTO — `voice-catalog.test.ts` |
+>   | escolha masculina/feminina | JÁ COBERTO — `voice-catalog.test.ts` |
+>   | velocidade, tom e estilo | JÁ COBERTO — `piper-adapter.test.ts`/`kokoro-adapter.test.ts` |
+>   | perfil clonado exige consentimento | JÁ COBERTO — `openvoice-adapter.test.ts` |
+>   | perfil revogado não pode ser usado | **GAP FECHADO** — `clone-profile-registry.ts` novo |
+>   | voz inexistente é rejeitada | JÁ COBERTO — `voice-catalog.test.ts` (null) + `clone-profile-registry.test.ts` (clone) |
+>   | voz de outro tenant é rejeitada | **GAP FECHADO** — `clone-profile-registry.ts` novo |
+>   | idioma sem voz aprovada falha com segurança | JÁ COBERTO — `fallback-chain.test.ts` |
+>   | fallback respeita a mesma língua | JÁ COBERTO — `fallback-chain.test.ts` |
+>   | transcript vazio não gera resposta | JÁ COBERTO — `faster-whisper-adapter.test.ts` + `evals.test.ts` |
+>   | interrupção cancela TTS | JÁ COBERTO — `piper-adapter.test.ts`/`kokoro-adapter.test.ts` (`cancel()`) |
+>   | evento duplicado não duplica chamada | JÁ COBERTO (pré-existente) — `repository.test.ts` |
+>   | evento tardio não reabre chamada | JÁ COBERTO (pré-existente) — `voice-worker-tenant-binding-contract.test.ts` |
+>
+>   Criei `lib/voice/clone/clone-profile-registry.ts`: `assertCloneProfileUsable`/
+>   `isCloneProfileUsable` rejeitam perfil de clone desconhecido, revogado, ou de outra
+>   organização — antes disso nada checava posse nem revogação entre `openvoice-adapter.ts`
+>   (que só sabe criar/revogar) e `fallback-chain.ts` (que só recebe `cloneAvailable` como
+>   booleano de fora, sem função nenhuma pra computar esse booleano). Esse é o elo que faltava.
+>
+>   **Testes de integração (11 itens do plano)**: nenhum é testável sem infraestrutura viva —
+>   Asterisk real, Pipecat real, SIP/BYOC real, reinício de worker real, perda de conexão real.
+>   Três têm um proxy provider-free hoje (`simulator.test.ts`/`evals.test.ts` provam o caminho
+>   CRM→Agent OS sem processo externo nenhum: Pipecat→STT→Agent OS→TTS, transferência humana,
+>   encerramento); isolamento entre organizações já é coberto por
+>   `voice-worker-tenant-binding-contract.test.ts` e `asterisk-adapter.test.ts`. Os outros 6
+>   (Asterisk/ARI inbound, Asterisk/ARI outbound, SIP/BYOC real, perda de conexão, timeout de
+>   STT, timeout de TTS, worker reiniciado durante chamada) ficam `BLOCKED EXTERNAL` — não vou
+>   fabricar teste de integração contra nada que não existe.
+>
+>   Gate completo: 47 arquivos, 198 testes (era 194).
+> - **Fase 7 — não implementada** (homologação/lançamento — depende inteiramente de ativação
+>   externa: número real, Asterisk real, credenciais reais).
 
 **Objetivo:** permitir que cada cliente crie um agent de voz usando o próprio número, escolha uma voz natural por idioma europeu, ajuste o estilo e, opcionalmente, clone uma voz autorizada.
 

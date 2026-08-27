@@ -22,6 +22,7 @@ NODE_ENV=test pnpm vitest run \
   lib/voice/tts/piper-adapter.test.ts \
   lib/voice/tts/kokoro-adapter.test.ts \
   lib/voice/clone/openvoice-adapter.test.ts \
+  lib/voice/clone/clone-profile-registry.test.ts \
   lib/voice/runtime/agent-os-adapter.test.ts \
   lib/voice/runtime/agent-resolver.test.ts \
   lib/voice/runtime/delivery-policy.test.ts \
