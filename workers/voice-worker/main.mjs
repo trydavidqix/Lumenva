@@ -162,7 +162,7 @@ await phone.serve({
   onCallEnd,
   onMessage,
 });
-await startVoiceControlServer({
+const controlServer = await startVoiceControlServer({
   phone,
   agent,
   secret: required("INTERNAL_SECRET"),
@@ -170,6 +170,18 @@ await startVoiceControlServer({
   port: controlPort,
   pendingOutbound,
 });
+
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  process.stdout.write(JSON.stringify({ event: "lumenva_voice_worker_shutdown", signal, active_calls: activeCallCount() }) + "\n");
+  await new Promise((resolve) => controlServer.close(() => resolve()));
+  await phone.disconnect();
+  process.exit(0);
+}
+process.once("SIGTERM", () => void shutdown("SIGTERM"));
+process.once("SIGINT", () => void shutdown("SIGINT"));
 
 process.stdout.write(JSON.stringify({
   event: "lumenva_voice_worker_ready",
