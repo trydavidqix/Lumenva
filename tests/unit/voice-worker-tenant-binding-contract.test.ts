@@ -31,6 +31,13 @@ describe("voice worker tenant binding", () => {
     expect(route).toContain("vc.caller_number = $2");
   });
 
+  it("does not reopen terminal calls or accept a different provider call id", () => {
+    const route = read("app/api/internal/voice/event/route.ts");
+    expect(route).toContain("state not in ('completed','failed','canceled') or state = $3");
+    expect(route).toContain("provider_call_id is null or $6 is null or provider_call_id = $6");
+    expect(route).toContain("voice_event_conflict");
+  });
+
   it("keeps private worker endpoints service-only even if grants change later", () => {
     const migration = read("supabase/migrations/20260827020000_0130_voice_worker_endpoint_privileges.sql");
     expect(migration).toContain("revoke all on table public.voice_worker_endpoints from anon");
