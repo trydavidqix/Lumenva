@@ -27,6 +27,7 @@
     "test:shell": "bash tests/shell/update-guard.test.sh",
     "test:invariants": "bash scripts/test-db.sh",
     "test:harness": "node --test scripts/check-harness-consistency.test.mjs",
+    "test:voice:qa": "bash scripts/verify-voice-qa.sh provider-free",
     "lint:channels": "tsx scripts/lint-channels.ts",
     "lint:tenant-filter": "tsx scripts/lint-tenant-filter.ts",
     "knowledge:obsidian:export": "tsx scripts/obsidian-export.ts",
