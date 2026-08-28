@@ -22,7 +22,7 @@ describe("Asterisk RTP media bridge", () => {
     await new Promise<void>((resolve) => sender.bind(0, "127.0.0.1", resolve));
     const inbound = Buffer.from([0x80, 0x00, 0x00, 0x01, 0xaa]);
     sender.send(inbound, session.port, "127.0.0.1");
-    await expect(session.packets().next()).resolves.toMatchObject({ done: false, value: inbound });
+    await expect(session.packets()[Symbol.asyncIterator]().next()).resolves.toMatchObject({ done: false, value: inbound });
     const outbound = Buffer.from([0x80, 0x00, 0x00, 0x02, 0xcc]);
     const received = new Promise<Buffer>((resolve) => sender.once("message", (packet) => resolve(packet)));
     await session.send(outbound);
