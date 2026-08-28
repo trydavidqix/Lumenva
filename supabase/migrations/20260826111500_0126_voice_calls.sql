@@ -2,6 +2,12 @@
 -- Voice is a channel into the existing Agent OS; this schema stores transport
 -- state only and does not create a parallel agent or customer model.
 
+-- contacts.id is globally primary-keyed in the CRM, but the composite foreign
+-- key below must also have an exact unique target in PostgreSQL. This index is
+-- redundant for lookup purposes and keeps the tenant boundary explicit.
+create unique index if not exists contacts_org_id_unique_for_voice_fk
+  on public.contacts (organization_id, id);
+
 create table if not exists public.voice_calls (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations(id) on delete cascade,
