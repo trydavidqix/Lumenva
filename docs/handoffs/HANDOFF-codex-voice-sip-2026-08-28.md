@@ -4,11 +4,12 @@
 > do teste na VPS e contém frases históricas que dizem que não havia Asterisk real acessível.
 > Isso ficou superado. A bridge foi ligada parcialmente ao Asterisk real da VPS, o worker rodou
 > como serviço de teste e `/healthz` respondeu. O estado consolidado e a lista correta de tarefas
-> estão em `docs/handoffs/HANDOFF-voice-sip-2026-08-28.md` e em
-> `docs/current-state-voice-core.md`. Não repetir a configuração do Asterisk/ARI/worker.
+> estão em `docs/current-state-voice-core.md` e neste próprio documento, na seção de pendências.
+> Não repetir a configuração do Asterisk/ARI/worker.
 
 **Branch:** `implementacao-tokens-voice-core` (única branch alterada nesta sessão — `main` não foi tocada)
-**Commits desta sessão:** `8f888ccd` → `10b7a0e8` (13 commits, listados abaixo)
+**Commits desta sessão:** `8f888ccd` → `88fcad66` (inclui as fatias de código, correções e a
+sincronização documental; histórico detalhado abaixo)
 **Não mergear pra `main` sem autorização explícita do dono do repo.**
 
 Este documento é o resumo cronológico e técnico de tudo que uma sessão Claude fez nesta branch
