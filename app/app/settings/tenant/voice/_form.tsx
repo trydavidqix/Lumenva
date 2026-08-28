@@ -11,6 +11,9 @@ const VOICE_PROFILE_DEFAULT: VoiceProfile = {
   gender: "female",
   voiceId: "",
   provider: "piper",
+  tone: "",
+  style: "",
+  speed: 1,
 };
 
 const DAYS: Array<{ key: keyof VoiceTenantConfig["businessHours"]; label: string }> = [
@@ -96,8 +99,9 @@ export function VoiceSettingsForm({
             <option value="after_hours">IA fora do horário</option>
             <option value="overflow">IA em overflow / ocupado</option>
           </select>
-        </label>
-        <label className="space-y-1 text-sm">
+              </label>
+          )}
+          <label className="space-y-1 text-sm">
           <span className="font-medium">Idioma</span>
           <input className="w-full rounded-md border bg-background px-3 py-2" value={value.locale} onChange={(e) => setValue((c) => ({ ...c, locale: e.target.value }))} />
         </label>
@@ -149,7 +153,7 @@ export function VoiceSettingsForm({
           <h2 className="text-base font-semibold">Voz do agente</h2>
           <p className="text-sm text-muted-foreground">
             {activeVoiceProfile
-              ? `Ativa (versão ${activeVoiceProfileVersion}): ${activeVoiceProfile.provider} · ${activeVoiceProfile.locale} · ${activeVoiceProfile.gender}${activeVoiceProfile.voiceId ? ` · ${activeVoiceProfile.voiceId}` : ""}`
+              ? `Ativa (versão ${activeVoiceProfileVersion}): ${activeVoiceProfile.provider} · ${activeVoiceProfile.locale} · ${activeVoiceProfile.gender}${activeVoiceProfile.voiceId ? ` · ${activeVoiceProfile.voiceId}` : ""}${activeVoiceProfile.tone ? ` · ${activeVoiceProfile.tone}` : ""}${activeVoiceProfile.style ? ` · ${activeVoiceProfile.style}` : ""}${activeVoiceProfile.speed ? ` · ${activeVoiceProfile.speed}x` : ""}`
               : "Nenhuma voz publicada ainda — usando o padrão do adapter atual."}
           </p>
         </div>
@@ -210,6 +214,37 @@ export function VoiceSettingsForm({
               />
             </label>
           )}
+          <label className="space-y-1 text-sm">
+            <span className="font-medium">Tom</span>
+            <input
+              className="w-full rounded-md border bg-background px-3 py-2"
+              value={voiceProfileDraft.tone ?? ""}
+              onChange={(e) => setVoiceProfileDraft((c) => ({ ...c, tone: e.target.value || undefined }))}
+              placeholder="ex.: caloroso, profissional"
+            />
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="font-medium">Estilo</span>
+            <input
+              className="w-full rounded-md border bg-background px-3 py-2"
+              value={voiceProfileDraft.style ?? ""}
+              onChange={(e) => setVoiceProfileDraft((c) => ({ ...c, style: e.target.value || undefined }))}
+              placeholder="ex.: conversacional"
+            />
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="font-medium">Velocidade</span>
+            <input
+              type="number"
+              min={0.5}
+              max={2}
+              step={0.05}
+              className="w-full rounded-md border bg-background px-3 py-2"
+              value={voiceProfileDraft.speed ?? 1}
+              onChange={(e) => setVoiceProfileDraft((c) => ({ ...c, speed: Number(e.target.value) }))}
+            />
+            <span className="text-xs text-muted-foreground">Entre 0,5 e 2,0.</span>
+          </label>
         </div>
         <div className="flex items-center gap-3">
           <button

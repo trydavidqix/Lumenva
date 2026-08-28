@@ -49,7 +49,7 @@ describe("VoiceProfile runtime schema (Fase 4)", () => {
     ).toThrow();
   });
 
-  it("keeps style/speed/pitch optional but bounds them when present", () => {
+  it("keeps tone/style/speed/pitch optional but bounds them when present", () => {
     expect(() =>
       parseVoiceProfile({
         mode: "customized",
@@ -71,5 +71,19 @@ describe("VoiceProfile runtime schema (Fase 4)", () => {
       style: "warm",
     });
     expect(ok).toMatchObject({ speed: 1.1, pitch: -2, style: "warm" });
+  });
+
+  it("accepts a bounded tone alongside style and speed", () => {
+    const profile = parseVoiceProfile({
+      mode: "customized",
+      locale: "pt-PT",
+      gender: "female",
+      voiceId: "ines",
+      provider: "kokoro",
+      tone: "warm",
+      style: "conversational",
+      speed: 0.95,
+    });
+    expect(profile).toMatchObject({ tone: "warm", style: "conversational", speed: 0.95 });
   });
 });

@@ -8,6 +8,7 @@ export interface PiperClient {
     text: string;
     voiceId: string;
     locale: string;
+    tone?: string;
     speed?: number;
     pitch?: number;
     signal: AbortSignal;
@@ -35,6 +36,7 @@ export function createPiperTtsPort(deps: { client: PiperClient; defaultVoiceId: 
         text: trimmed,
         voiceId: options.voice?.voiceId ?? deps.defaultVoiceId,
         locale,
+        tone: options.voice?.tone,
         speed: options.voice?.speed,
         pitch: options.voice?.pitch,
         signal: boundary.signal,

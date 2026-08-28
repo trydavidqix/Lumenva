@@ -50,6 +50,8 @@ interface VoiceProfileBase {
   gender: "male" | "female" | "neutral";
   voiceId: string;
   provider: VoiceProfileProvider;
+  /** Optional delivery tone hint (for example, warm or professional). */
+  tone?: string;
   style?: string;
   speed?: number;
   pitch?: number;

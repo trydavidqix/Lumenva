@@ -9,6 +9,7 @@ import type { VoiceAudioFrame } from "./stt-port";
  */
 export interface VoiceTtsSelection {
   voiceId: string;
+  tone?: string;
   style?: string;
   speed?: number;
   pitch?: number;

@@ -18,18 +18,18 @@ describe("Piper TTS adapter (Fase 3)", () => {
     );
   });
 
-  it("prefers the profile's voice, speed and pitch over the default", async () => {
+  it("prefers the profile's voice, tone, speed and pitch over the default", async () => {
     const synthesizeStream = vi.fn().mockReturnValue(frames());
     const port = createPiperTtsPort({ client: { synthesizeStream }, defaultVoiceId: "pt-pt-ines" });
 
     await port.synthesize("bom dia", {
       locale: "pt-PT",
       signal: new AbortController().signal,
-      voice: { voiceId: "pt-pt-tiago", speed: 1.1, pitch: -2 },
+      voice: { voiceId: "pt-pt-tiago", tone: "professional", speed: 1.1, pitch: -2 },
     });
 
     expect(synthesizeStream).toHaveBeenCalledWith(
-      expect.objectContaining({ voiceId: "pt-pt-tiago", speed: 1.1, pitch: -2 }),
+      expect.objectContaining({ voiceId: "pt-pt-tiago", tone: "professional", speed: 1.1, pitch: -2 }),
     );
   });
 
