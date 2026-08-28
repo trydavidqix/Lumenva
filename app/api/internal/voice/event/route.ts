@@ -163,10 +163,37 @@ export async function POST(req: NextRequest): Promise<Response> {
         and organization_id = $2
         and (state not in ('completed','failed','canceled') or state = $3)
         and (provider_call_id is null or $6 is null or provider_call_id = $6)
+        and not exists (
+          select 1
+            from voice_call_events vce
+           where vce.organization_id = $2
+             and vce.voice_call_id = $1
+             and vce.provider = 'lumenva'
+             and vce.provider_event_id = $7
+        )
       returning id`,
-    [parsed.data.voice_call_id, call.organization_id, parsed.data.state, occurredAt, terminal, parsed.data.provider_call_id ?? null],
+    [
+      parsed.data.voice_call_id,
+      call.organization_id,
+      parsed.data.state,
+      occurredAt,
+      terminal,
+      parsed.data.provider_call_id ?? null,
+      parsed.data.provider_event_id,
+    ],
   );
   if (!updated.rows[0]?.id) {
+    const { rows: duplicate } = await db.query<{ id: string }>(
+      `select id
+         from voice_call_events
+        where organization_id = $1
+          and voice_call_id = $2
+          and provider = 'lumenva'
+          and provider_event_id = $3
+        limit 1`,
+      [call.organization_id, parsed.data.voice_call_id, parsed.data.provider_event_id],
+    );
+    if (duplicate[0]?.id) return ok({ recorded: true }, { requestId });
     return fail("voice_event_conflict", "Evento de voz conflita com o estado terminal ou provider call id existente.", 409, { requestId });
   }
 

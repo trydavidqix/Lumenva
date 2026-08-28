@@ -63,9 +63,11 @@ export function createVoiceOrganizationResolver(db: VoiceOrganizationQueryable) 
         `select organization_id
            from voice_phone_numbers
           where connection_id = $1
+            and provider = 'asterisk'
             and phone_e164 = $2
             and organization_id = $3
             and enabled = true
+            and ownership_verified_at is not null
           limit 2`,
         [connection.id, calledE164, connection.organization_id],
       );
