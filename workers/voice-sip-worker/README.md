@@ -54,6 +54,15 @@ foi implantado em lugar nenhum.
   env → ARI real → SQL real → HTTP real → `/healthz` real → shutdown real. Pula sozinho (exit 0)
   sem `SUPABASE_DB_URL` setado.
 
+## Bridge RTP bidirecional
+
+`lib/voice/sip/rtp-media-bridge.ts` abre um endpoint UDP local, cria um bridge `mixing` no
+ARI, cria um canal `externalMedia` com `direction=both`/`format=ulaw` e adiciona o canal da
+chamada e o canal externo ao mesmo bridge. O adapter encaminha bytes RTP opacos nos dois
+sentidos; codec, VAD, STT, TTS e diálogo continuam responsabilidade do runtime de mídia/Pipecat
+e do Agent OS existente. `rtp-media-bridge.test.ts` usa sockets UDP reais e prova envio/recepção
+bidirecional, além da ordem dos comandos ARI. Estado: `IMPLEMENTED` + `VERIFIED PROVIDER-FREE`.
+
 ## O que falta pra isto virar um worker de verdade
 
 Isto é lista, não segredo escondido — cada item exige infraestrutura que não existe nesta sessão:
@@ -83,6 +92,10 @@ Isto é lista, não segredo escondido — cada item exige infraestrutura que nã
    Pipecat/faster-whisper — ver `docs/handoffs/HANDOFF-voice-core.md`). Nenhum cliente concreto
    foi implementado pra eles nesta tarefa; tentar fingir um sem processo real do outro lado
    produziria código não verificável, o que a doutrina do projeto trata como falso-verde.
+   O adapter RTP fornece o contrato de transporte, mas não prova áudio live: falta runtime
+   externo compatível que consuma/produza RTP e Asterisk real com chamada SIP/BYOC. Sem esses
+   processos e credenciais autorizadas, live media permanece `BLOCKED EXTERNAL`/`NOT_PROVEN`;
+   nenhum deploy ou teste na VPS foi executado.
 6. Nenhum `docker-compose`/systemd/Dockerfile pro Asterisk existe neste repo — a instância de
    teste na VPS foi configurada manualmente fora do Git (ver HANDOFF). `main.mjs` nunca foi
    apontado pra esse Asterisk real nem pra nenhum outro — só pro servidor falso local do smoke
