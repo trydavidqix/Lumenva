@@ -1,6 +1,6 @@
 # Estado atual — Voice Core
 
-**Data:** 2026-08-27  
+**Data:** 2026-08-28 (atualizado após 5 fatias da Fase 3, mesmo dia)  
 **Repo:** `trydavidqix/CRM`  
 **Branch:** `implementacao-tokens-voice-core`  
 **Escopo:** somente Núcleo de Ligação / Lumenva Voice Engine.
@@ -60,8 +60,22 @@ LiveKit não participa do caminho normal de IA; permanece opcional para takeover
 - healthcheck, non-root e graceful shutdown do worker;
 - cliente ARI real do Asterisk (REST + WebSocket), `lib/voice/sip/asterisk-ari-client.ts`
   (`createAsteriskAriConnection`), implementando `AriClient` e estendendo com `AriConnection` —
-  ver nota 2026-08-28 no plano canônico e `workers/voice-sip-worker/README.md`. Testado contra
-  servidor ARI falso local real (não mock de função); sem Asterisk real conectado nesta sessão.
+  testado contra servidor ARI falso local real (não mock de função); sem Asterisk real conectado
+  nesta sessão;
+- `lib/voice/sip/asterisk-adapter.ts#parseInboundEvent` reconhece `StasisStart`, `StasisEnd` e
+  `ChannelHangupRequest` (antes só o primeiro) — mesma normalização/isolamento de tenant nos três;
+- `lib/voice/sip/asterisk-listener.ts` (`createAsteriskAriListener`) liga o `AriConnection` ao
+  `SipGateway.parseInboundEvent` de verdade: consome o stream ARI e produz
+  `{status: "normalized", event}` ou `{status: "rejected", error, raw}` por evento sem derrubar o
+  loop num evento inesperado; testado com `createVoiceOrganizationResolver` **real** (não
+  mockado) contra banco falso — resolução conexão→número→organização provada de ponta a ponta;
+- reconexão automática do WebSocket do listener com backoff exponencial (sem teto de tentativas)
+  quando a conexão cai sem `close()` explícito — testado com queda de conexão forçada de verdade
+  (`socket.terminate()`), não só fechamento limpo simulado;
+- `app/api/internal/voice/event` aceita `connection_id` + `phone_e164` como caminho alternativo a
+  `technical_phone_e164` (Telnyx) — `.superRefine()` garante exatamente um dos dois,
+  `organization_id` nunca vem do corpo, só do join (`voice_sip_connections` →
+  `voice_phone_numbers`), mesma lógica de direção do caminho Telnyx.
 
 ## Verificação
 
@@ -78,12 +92,23 @@ Gate rodado localmente em `ad8e027d` (2026-08-27): typecheck limpo, 35 arquivos/
 segue bloqueado externamente por `build-rate-limit`/team-invite — irrelevante enquanto a
 verificação local continuar sendo a prova primária (`docs/current-state.md` §10).
 
-Gate rerodado localmente em 2026-08-28 (após o cliente ARI): typecheck limpo, gate completo
-(`bash scripts/verify-voice-core.sh`) verde incluindo o teste novo
-(`lib/voice/sip/asterisk-ari-client.test.ts`, 8 testes contra servidor HTTP+WS local real) e o
-smoke test do listener (`npx tsx workers/voice-sip-worker/ari-listener.smoke.mjs`), sem tocar
-`main.mjs`. Estado: `IMPLEMENTED` + `VERIFIED PROVIDER-FREE` para essa fatia — nunca
-`VERIFIED LIVE`, não há Asterisk real alcançável desta sessão.
+Gate rerodado localmente 5 vezes em 2026-08-28, uma por fatia (cliente ARI → reconhecimento de
+mais eventos ARI → listener ligado ao resolver real → reconexão automática → extensão da rota
+`/event`) — verde em todas, sempre incluindo os testes novos da fatia e sem regressão nos
+anteriores. Estado final desta sessão: `IMPLEMENTED` + `VERIFIED PROVIDER-FREE` em cada peça —
+**nunca `VERIFIED LIVE`**, não há Asterisk real nem processo Pipecat/faster-whisper/Piper/Kokoro
+alcançável desta sessão (sandbox sem GPU, sem rede até a VPS de produção).
+
+Detalhe por fatia (commits em `implementacao-tokens-voice-core`, todos com nota datada
+correspondente em `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md`):
+
+1. `8f888ccd` — `asterisk-ari-client.ts` + testes reais HTTP+WS + smoke `.mjs` via `tsx`.
+2. `eb0abcc0` — `StasisEnd`/`ChannelHangupRequest` reconhecidos em `asterisk-adapter.ts`.
+3. `cecdf0e1` — `asterisk-listener.ts` ligado ao resolver de tenant real; helper de servidor ARI
+   falso extraído pra `lib/voice/sip/testing/fake-ari-server.ts`.
+4. `c71748fd` — reconexão automática com backoff exponencial, testada com queda forçada real.
+5. `2eb7a8d4` — `app/api/internal/voice/event` aceita `connection_id`+`phone_e164` (decisão do
+   dono do repositório: estender a rota existente em vez de criar uma nova).
 
 ## Ativação externa pendente
 
@@ -102,8 +127,21 @@ Não é dívida arquitetural de código:
 
 ## Próxima ação
 
-O próximo agente deve começar em `docs/handoffs/HANDOFF-voice-core.md` e seguir pra Fase 3 do
-plano open-source (runtime Pipecat + faster-whisper + Piper/Kokoro + OpenVoice) — é onde o worker
-de produção finalmente troca de carrier. Não redesenhar o núcleo a partir do plano histórico
-LiveKit-first. Não mergear/ativar Telnyx real sem decidir antes se ainda vale a pena, dado que o
-plano aprovado substitui essa arquitetura por SIP/BYOC.
+O próximo agente deve começar em `docs/handoffs/HANDOFF-voice-core.md` (seção "Próxima ação",
+atualizada 2026-08-28). Resumo do que bloqueia progresso de código agora, em ordem:
+
+1. **Decisão de produto/arquitetura pendente**: criar o equivalente SIP/BYOC de
+   `app/api/internal/voice/context` (a rota que cria a linha `voice_calls` pra uma chamada
+   Telnyx nova). Sem isso, uma chamada SIP nova nunca tem `voice_call_id`, e o listener
+   (`asterisk-listener.ts`) não tem o que chamar em `/event` — a extensão dessa rota (item 5
+   acima) fica sem consumidor real até essa peça existir.
+2. Decisão de build/deploy do processo de produção (`tsx` direto vs. pipeline de build novo pros
+   workers) — ver `workers/voice-sip-worker/README.md`.
+3. Ligar tudo isso a um Asterisk real quando houver um alcançável pela sessão.
+4. Pipecat/faster-whisper/Piper/Kokoro/OpenVoice seguem `BLOCKED EXTERNAL` — não implementar
+   cliente concreto pra eles sem primeiro confirmar, numa sessão dedicada com GPU/host adequado,
+   que dá pra rodar o processo real.
+
+Não redesenhar o núcleo a partir do plano histórico LiveKit-first. Não mergear/ativar Telnyx real
+sem decidir antes se ainda vale a pena, dado que o plano aprovado substitui essa arquitetura por
+SIP/BYOC. Não mergear/ativar nada desta branch pra `main` sem autorização explícita.

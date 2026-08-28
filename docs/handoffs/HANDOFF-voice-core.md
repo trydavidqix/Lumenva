@@ -1,9 +1,10 @@
 # HANDOFF — Lumenva Voice Core
 
-**Data:** 2026-08-27  
+**Data:** 2026-08-27 (última atualização de conteúdo: 2026-08-28, 5 fatias da Fase 3)  
 **Repo:** `trydavidqix/CRM`  
 **Branch obrigatória para continuar:** `implementacao-tokens-voice-core`  
-**Último checkpoint de código da implementação:** `fce93bd9` (Fase 6 do plano open-source, gate 47 arquivos/198 testes verde)  
+**Checkpoint de código do fechamento da Fase 6 (histórico):** `fce93bd9` (gate 47 arquivos/198 testes verde)  
+**Último checkpoint de código nesta branch:** `2eb7a8d4` (2026-08-28 — cliente ARI real, reconhecimento de mais eventos ARI, listener ligado ao resolver de tenant real, reconexão automática, extensão de `app/api/internal/voice/event` pro SIP/BYOC; ver as 5 notas datadas 2026-08-28 na seção "Progresso" de `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md`)  
 **Não alterar/mergear `main` sem autorização explícita.**
 
 ## 1. Comece aqui
