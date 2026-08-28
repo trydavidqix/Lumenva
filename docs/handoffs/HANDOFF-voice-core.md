@@ -187,17 +187,29 @@ forçada de verdade (`dropConnection()` novo no helper de teste), não só fecha
 simulado. 2 testes novos + smoke test estendido, ambos verdes 5x seguidas pra descartar
 flakiness de timing.
 
-O próximo fio agora é: (b) **decisão de produto/arquitetura, não só técnica**: como um evento
-normalizado (`connectionId`-based) deveria chegar ao CRM, já que `app/api/internal/voice/event`
-foi desenhado pro mundo Telnyx (`technical_phone_e164`) — criar esse mapeamento sem spec seria
-inventar regra de negócio, então isso precisa de decisão explícita antes de codar; (c) decidir
-como o processo roda em produção sem pipeline de build novo (`tsx` direto é a opção mais leve,
-ver README); (d) ligar isso a um Asterisk real quando houver um alcançável pela sessão; (e) o que
-existe hoje reconecta contra o mesmo endpoint configurado na criação — não há descoberta de um
-Asterisk diferente nem alerta/observabilidade se ficar reconectando repetidamente, isso pertence
-ao processo de produção real que ainda não existe. Pipecat/faster-whisper/Piper/Kokoro seguem
-`BLOCKED EXTERNAL` — não tentar implementar cliente concreto pra eles sem primeiro confirmar,
-numa sessão dedicada, que dá pra rodar o processo real (Python/modelo) no ambiente disponível.
+**Atualização 2026-08-28 (quinta fatia, mesma data):** item (b) abaixo — **decisão tomada pelo
+dono do repositório: estender a rota existente.** `app/api/internal/voice/event` agora aceita
+`connection_id` + `phone_e164` como caminho alternativo a `technical_phone_e164`
+(`.superRefine()` garante exatamente um dos dois), mesma lógica de direção do caminho Telnyx,
+`organization_id` sempre resolvido por join, nunca do corpo. 7 testes novos
+(`app/api/internal/voice/event/route.test.ts`, padrão de mock de `getRequestPool` já usado em
+outras rotas — unitário, não `test:db`). **Achado ao tentar fechar o ciclo completo**: isso
+sozinho não basta — não existe equivalente SIP/BYOC de `app/api/internal/voice/context` (a rota
+que cria a row `voice_calls` pra uma chamada nova). Sem essa peça, nenhum `voice_call_id` existe
+pra uma chamada SIP nova, então **o listener ainda não chama `/event`** — chamaria sempre em vão.
+Confirmado também: quando o listener virar processo de produção, a resolução de tenant precisa
+ser uma chamada HTTP pro CRM (não conexão direta a Postgres do worker), por causa da fronteira já
+documentada em `workers/voice-worker/README.md` ("the worker has no database credentials").
+
+O próximo fio agora é: (b2) criar o equivalente SIP/BYOC de `/context` (nova decisão de
+produto/arquitetura, mesma natureza da anterior); (c) decidir como o processo roda em produção
+sem pipeline de build novo (`tsx` direto é a opção mais leve, ver README); (d) ligar isso a um
+Asterisk real quando houver um alcançável pela sessão; (e) o que existe hoje reconecta contra o
+mesmo endpoint configurado na criação — não há descoberta de um Asterisk diferente nem
+alerta/observabilidade se ficar reconectando repetidamente, isso pertence ao processo de produção
+real que ainda não existe. Pipecat/faster-whisper/Piper/Kokoro seguem `BLOCKED EXTERNAL` — não
+tentar implementar cliente concreto pra eles sem primeiro confirmar, numa sessão dedicada, que dá
+pra rodar o processo real (Python/modelo) no ambiente disponível.
 
 1. Faça auditoria read-only do HEAD contra este handoff.
 2. Rode `bash scripts/verify-voice-core.sh` em ambiente capaz.

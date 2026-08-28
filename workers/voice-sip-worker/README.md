@@ -40,12 +40,16 @@ Isto é lista, não segredo escondido — cada item exige infraestrutura que nã
 2. ~~Ligar esse listener a `resolveOrganizationByConnection`~~ — **feito** (2026-08-28):
    `asterisk-listener.ts` já usa o `SipGateway` (que já chama `resolveOrganizationByConnection`
    internamente) pra cada evento, testado contra o resolver real.
-3. Encaminhar eventos normalizados pra o CRM — **decisão pendente, não implementação esquecida**.
-   `app/api/internal/voice/event` foi desenhado pro mundo Telnyx (`voice_call_id` +
-   `technical_phone_e164`); o mundo SIP/BYOC identifica por `connectionId`, não por número
-   técnico comprado. Não existe spec dizendo como mapear um `NormalizedSipCallEvent` pra esse
-   payload, ou se a rota deveria mudar — decidir isso é um passo de produto/arquitetura antes de
-   codar, não uma invenção silenciosa.
+3. Encaminhar eventos normalizados pra o CRM — **parcialmente feito** (2026-08-28, decisão do
+   dono do repo: estender a rota existente). `app/api/internal/voice/event` agora aceita
+   `connection_id` + `phone_e164` como caminho alternativo a `technical_phone_e164`, com a mesma
+   lógica de direção e sem confiar em `organization_id` do corpo — testado
+   (`app/api/internal/voice/event/route.test.ts`). **O que ainda falta, e é o motivo de o
+   listener ainda não chamar essa rota**: não existe equivalente SIP/BYOC de
+   `app/api/internal/voice/context` (a rota que cria a row `voice_calls` pra uma chamada Telnyx
+   nova) — sem isso, nenhum `voice_call_id` existe pra uma chamada SIP nova, então chamar
+   `/event` sempre daria `voice_call_not_found`. Essa rota de criação de contexto SIP é a próxima
+   decisão real.
 4. Decisão de build: `asterisk-ari-client.ts` é TypeScript; os workers em `workers/**` rodam sem
    step de build (`node main.mjs` puro). Rodar via `tsx` em produção é uma opção mais leve que
    criar um pipeline de build novo pros workers — mas isso é uma decisão de infraestrutura

@@ -112,6 +112,30 @@
 >   listener fica reconectando repetidamente (isso pertenceria ao processo de produção real, que
 >   ainda não existe); e o encaminhamento pro CRM continua a mesma decisão pendente da fatia
 >   anterior.
+> - **Atualização 2026-08-28 (quinta fatia, mesma data): decisão do dono do repositório —
+>   estender a rota existente em vez de criar uma nova.** `app/api/internal/voice/event` agora
+>   aceita dois caminhos de binding mutuamente exclusivos, validados por `.superRefine()`:
+>   `technical_phone_e164` (Telnyx, inalterado) OU `connection_id` + `phone_e164` (SIP/BYOC) —
+>   nunca os dois, nunca nenhum. O caminho novo faz join em `voice_sip_connections`
+>   (`gateway='asterisk'`, `verified=true`, `enabled=true`) → `voice_phone_numbers`
+>   (`connection_id`), com a mesma lógica de direção (`vc.direction='inbound' and
+>   vc.called_number=phone_e164` / `outbound` com `caller_number`) que o caminho Telnyx já usa —
+>   `organization_id` nunca vem do corpo da requisição, só do join, no caminho novo e no antigo.
+>   7 testes novos (`app/api/internal/voice/event/route.test.ts`, seguindo o padrão de mock de
+>   `getRequestPool` já usado em outras rotas do repo — não é `test:db`/Postgres real, é unitário
+>   com pool falso, proporcional ao tamanho da mudança); teste de contrato estático existente
+>   (`tests/unit/voice-worker-tenant-binding-contract.test.ts`) continua verde sem alteração.
+>   `pnpm typecheck`, `pnpm lint`, `pnpm lint:tenant-filter` e gate completo verdes.
+>   **Não fiz, de propósito — e é o motivo de isto ainda não fechar o ciclo**: não existe, em
+>   lugar nenhum, um equivalente SIP/BYOC de `app/api/internal/voice/context` (a rota que cria a
+>   row `voice_calls` para uma chamada Telnyx nova). Sem essa peça, um `voice_call_id` pro mundo
+>   SIP nunca existe pra essa rota nova encontrar — ou seja, **o listener (`asterisk-listener.ts`)
+>   ainda não chama essa rota**, porque chamaria sempre em vão. Essa é a próxima decisão real, e
+>   descobri isso só ao tentar fechar o encaminhamento de ponta a ponta: estender só o `/event`
+>   não bastava. Também confirmei uma fronteira de segurança já documentada
+>   (`workers/voice-worker/README.md`: "The worker has no database credentials") — quando o
+>   listener SIP virar processo de produção, a resolução de tenant também precisa ser uma chamada
+>   HTTP pro CRM, não uma conexão direta a Postgres a partir do worker.
 > - **Fase 4 — IMPLEMENTADA PARCIAL** (commit `e9dc37e2`). Versionamento imutável do
 >   perfil de voz (`lib/voice/engine/voice-profile-version.ts` — publicar sempre acrescenta,
 >   nunca reescreve uma versão antiga; `activeVersion` é um ponteiro, rollback é publicar de
