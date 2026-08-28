@@ -1,5 +1,12 @@
 # HANDOFF pro Codex — Voice Core SIP/BYOC (sessão Claude 2026-08-28)
 
+> **ERRATA 2026-08-28 — ler antes do restante deste arquivo.** Este handoff foi escrito antes
+> do teste na VPS e contém frases históricas que dizem que não havia Asterisk real acessível.
+> Isso ficou superado. A bridge foi ligada parcialmente ao Asterisk real da VPS, o worker rodou
+> como serviço de teste e `/healthz` respondeu. O estado consolidado e a lista correta de tarefas
+> estão em `docs/handoffs/HANDOFF-voice-sip-2026-08-28.md` e em
+> `docs/current-state-voice-core.md`. Não repetir a configuração do Asterisk/ARI/worker.
+
 **Branch:** `implementacao-tokens-voice-core` (única branch alterada nesta sessão — `main` não foi tocada)
 **Commits desta sessão:** `8f888ccd` → `10b7a0e8` (13 commits, listados abaixo)
 **Não mergear pra `main` sem autorização explícita do dono do repo.**
@@ -147,25 +154,21 @@ export SUPABASE_DB_URL="postgresql://..."   # opcional — sem isso, main.smoke.
 bash scripts/verify-voice-core.sh
 ```
 
-Verde nesta sessão em todas as 8 fatias. Cobre: `pnpm typecheck`, suíte vitest completa de voice
-(agora ~50 arquivos incluindo os novos), syntax check + smoke tests dos workers `.mjs`,
-`pnpm lint:tenant-filter`, `pnpm next build`.
+As 8 fatias passaram nos checkpoints anteriores. No último snapshot, a suíte Voice passou com
+43 ficheiros/199 testes; o gate completo não fechou porque `pnpm typecheck` esgotou o heap do
+runner. Não chamar o gate de verde sem uma nova execução completa.
 
 ## O que está **verificado** vs. o que **não está**
 
 Tudo acima é `IMPLEMENTED` + `VERIFIED PROVIDER-FREE` (a fatia 8 também `VERIFIED` contra
-Postgres real). **Nada é `VERIFIED LIVE`** — nunca houve conexão com um Asterisk de verdade nesta
-sessão, só servidores falsos locais que imitam o protocolo.
+Postgres real). A bridge foi ligada parcialmente a Asterisk real na VPS e o worker respondeu
+`/healthz`, mas **não é `VERIFIED LIVE`**: não houve chamada telefónica completa com áudio de IA.
 
 ## O que fica pendente pro Codex (ordem de prioridade)
 
-1. **Ligar `workers/voice-sip-worker/main.mjs` a um Asterisk real.** Este é o único item de
-   infraestrutura que falta pro código já escrito. A sessão Claude não tinha rede até a VPS de
-   produção (`root@2.29.8.225`, onde já existe Asterisk/ARI/PJSIP validado e funcionando via
-   Zoiper, ver `docs/handoffs/HANDOFF-voice-core.md` seção 1). Se o Codex tiver esse acesso: subir
-   `main.mjs` lá (ou numa VPS que alcance o Asterisk), apontar as env vars pro Asterisk real,
-   registrar o app Stasis de verdade no dialplan (hoje só existe `voicecore-test`), e então validar
-   uma chamada real.
+1. **Concluir o teste contra Asterisk real.** A bridge já foi ligada parcialmente na VPS. Falta
+   registrar uma extensão/softphone ou conexão SIP/BYOC real, manter `SIP_CONNECTION_ID` no
+   dialplan e concluir inbound/outbound com trace completo.
 
 2. **Melhorias de robustez, não bloqueantes:**
    - Alerta/observabilidade se o listener ficar reconectando repetidamente contra um endpoint
@@ -173,15 +176,13 @@ sessão, só servidores falsos locais que imitam o protocolo.
    - Descoberta de um Asterisk alternativo — hoje a reconexão automática só tenta de novo contra
      o mesmo `ARI_BASE_URL` configurado na criação.
 
-3. **Revisar a decisão de "Postgres direto no worker"** (ver fatia 8) — se um dia fizer sentido
-   criar um endpoint HTTP leve só pra validação de conexão SIP, isso eliminaria a exceção à regra
-   "worker sem credencial de banco".
+3. **Ligar o caminho de áudio real:** Asterisk/RTP → Pipecat → faster-whisper → Agent OS →
+   Piper/Kokoro → Asterisk. Os adapters existem; os processos live/media bridge ainda precisam
+   ser executados num host adequado. OpenVoice, catálogo, preview e consentimento continuam
+   pendentes.
 
-4. **`BLOCKED EXTERNAL` — não tentar sem confirmar antes que dá pra rodar de verdade:** Pipecat,
-   faster-whisper, Piper, Kokoro, OpenVoice. São processos Python/ML que precisam de GPU/host que
-   a sessão Claude não tinha (a VPS de produção atual, 2 CPU/3.7GB RAM, já foi validada como
-   insuficiente). Nenhum cliente concreto foi implementado pra eles. Não finja uma implementação
-   sem processo real do outro lado — vira código não verificável.
+4. **Rodar o gate completo** num runner com heap suficiente, depois testar transferência,
+   reinício, perda de conexão, latência e custo.
 
 ## Invariantes de segurança — NÃO QUEBRAR
 

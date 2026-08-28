@@ -1,11 +1,13 @@
 # Estado atual — Voice Core
 
-**Data:** 2026-08-28 (atualizado após 8 fatias da Fase 3, mesmo dia)  
+**Data:** 2026-08-28 (atualizado após validação parcial na VPS, mesmo dia)  
 **Repo:** `trydavidqix/CRM`  
 **Branch:** `implementacao-tokens-voice-core`  
 **Escopo:** somente Núcleo de Ligação / Lumenva Voice Engine.
 
-> `docs/current-state.md` é um snapshot global mais antigo do CRM e não representa o estado atual do Voice Core. Para voz, este arquivo + `docs/handoffs/HANDOFF-voice-core.md` são as referências atuais.
+> `docs/current-state.md` é um snapshot global do CRM. Para voz, este arquivo + `docs/handoffs/HANDOFF-voice-core.md` são referências do Voice Core. O handoff `docs/handoffs/HANDOFF-codex-voice-sip-2026-08-28.md` contém a atualização operacional mais recente desta branch.
+
+> **Errata operacional 2026-08-28:** a afirmação histórica abaixo de que esta sessão não alcançava Asterisk real ficou superada. A branch foi ligada a um Asterisk real na VPS: ARI autenticou, o worker foi executado como serviço de teste e `/healthz` respondeu. Isso prova bridge/sinalização parcial, não chamada completa nem áudio de IA.
 
 **Atualização 2026-08-27:** Fase 1 e Fase 2 do plano open-source SIP/BYOC
 (`docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md`) já foram implementadas
@@ -42,7 +44,7 @@ existe o pipeline SIP/BYOC completo (código pronto e testado, ver "Implementado
 ```text
 Cliente/PSTN
   -> conexão SIP/BYOC verificada (voice_sip_connections)
-  -> Asterisk/ARI (real ou, nesta sessão, servidor falso local)
+  -> Asterisk/ARI (real na VPS; servidor falso usado nos testes automatizados)
   -> workers/voice-sip-worker/main.mjs (createVoiceSipWorker)
        -> AriConnection (REST+WS real)
        -> SipGateway (valida/normaliza, isolamento de tenant)
@@ -52,9 +54,9 @@ Cliente/PSTN
   -> mesmo CRM/Agent OS de sempre
 ```
 
-Diferença chave: nenhum runtime de voz (Pipecat/faster-whisper/Piper/Kokoro) está ligado ainda —
-esse pipeline hoje só prova o lado telefonia/CRM; a substituição de mídia/STT/TTS segue
-`BLOCKED EXTERNAL`.
+Diferença chave: nenhum runtime de áudio de IA (Pipecat/faster-whisper/Piper/Kokoro) está ligado
+ainda. A bridge hoje prova eventos/telefonia/CRM parcialmente; a substituição de mídia/STT/TTS
+continua pendente.
 
 ## Implementado
 
@@ -80,8 +82,7 @@ esse pipeline hoje só prova o lado telefonia/CRM; a substituição de mídia/ST
 - healthcheck, non-root e graceful shutdown do worker;
 - cliente ARI real do Asterisk (REST + WebSocket), `lib/voice/sip/asterisk-ari-client.ts`
   (`createAsteriskAriConnection`), implementando `AriClient` e estendendo com `AriConnection` —
-  testado contra servidor ARI falso local real (não mock de função); sem Asterisk real conectado
-  nesta sessão;
+  testado contra servidor ARI falso local real e ligado a Asterisk real na VPS;
 - `lib/voice/sip/asterisk-adapter.ts#parseInboundEvent` reconhece `StasisStart`, `StasisEnd` e
   `ChannelHangupRequest` (antes só o primeiro) — mesma normalização/isolamento de tenant nos três;
 - `lib/voice/sip/asterisk-listener.ts` (`createAsteriskAriListener`) liga o `AriConnection` ao
@@ -118,7 +119,8 @@ esse pipeline hoje só prova o lado telefonia/CRM; a substituição de mídia/ST
   arquivo (diferente do worker Telnyx, que não tem credencial de banco). **Provado com Postgres
   nativo real** (disponível nesta sessão) — `main.smoke.mjs` semeia schema mínimo e roda o
   `main.mjs` de ponta a ponta: env → ARI real → SQL real → HTTP real → `/healthz` real → shutdown
-  real. Pula sozinho sem `SUPABASE_DB_URL`.
+  real. Pula sozinho sem `SUPABASE_DB_URL`. Na VPS, o worker também foi executado como serviço
+  de teste e respondeu `/healthz`; a chamada completa com áudio ainda não foi provada.
 
 ## Verificação
 
@@ -140,9 +142,9 @@ mais eventos ARI → listener ligado ao resolver real → reconexão automática
 `/event` → extensão de `/context` → cliente HTTP + forwarder → entrypoint real) — verde em
 todas, sempre incluindo os testes novos da fatia e sem regressão nos anteriores. Estado final
 desta sessão: `IMPLEMENTED` + `VERIFIED PROVIDER-FREE` em cada peça, com a fatia 8 também
-`VERIFIED` contra **Postgres real** (não fake) — **nunca `VERIFIED LIVE`**, não há Asterisk real
-nem processo Pipecat/faster-whisper/Piper/Kokoro alcançável desta sessão (sandbox sem GPU, sem
-rede até a VPS de produção).
+`VERIFIED` contra **Postgres real** (não fake). A bridge foi ligada a Asterisk real na VPS e o
+worker respondeu no serviço de teste. Continua **não `VERIFIED LIVE`**: não há chamada telefónica
+completa nem processo Pipecat/faster-whisper/Piper/Kokoro ligado ao áudio.
 
 Detalhe por fatia (commits em `implementacao-tokens-voice-core`, todos com nota datada
 correspondente em `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md`):
@@ -182,18 +184,16 @@ Não é dívida arquitetural de código:
 O próximo agente deve começar em `docs/handoffs/HANDOFF-voice-core.md` (seção "Próxima ação",
 atualizada 2026-08-28). Resumo do que bloqueia progresso de código agora, em ordem:
 
-1. **Nenhuma decisão de produto pendente, nenhuma peça de orquestração faltando, e o entrypoint
-   de produção já existe e está testado** — inclusive contra Postgres real. Não há mais código de
-   lógica a escrever pra este pipeline.
-2. **O único item de infraestrutura real que falta**: ligar `workers/voice-sip-worker/main.mjs` a
-   um Asterisk de verdade quando houver um alcançável pela sessão (esta sessão não alcança nem o
-   da VPS de produção nem nenhum outro).
+1. **Bridge de sinalização já ligada parcialmente a Asterisk real.** Falta registrar um softphone
+   ou conexão SIP/BYOC real e concluir uma chamada inbound/outbound com trace completo.
+2. **Maior pendência de implementação:** ligar o caminho de áudio Asterisk/RTP → Pipecat →
+   faster-whisper → Agent OS → Piper/Kokoro → Asterisk. Os adapters existem; os processos live e
+   media bridge ainda não estão ligados.
 3. Melhorias de robustez não-bloqueantes: alerta/observabilidade se o listener ficar reconectando
    repetidamente contra um endpoint morto; descoberta de um Asterisk alternativo (hoje reconecta
    só contra o mesmo endpoint configurado na criação).
-4. Pipecat/faster-whisper/Piper/Kokoro/OpenVoice seguem `BLOCKED EXTERNAL` — não implementar
-   cliente concreto pra eles sem primeiro confirmar, numa sessão dedicada com GPU/host adequado,
-   que dá pra rodar o processo real.
+4. OpenVoice e catálogo/UI de voz continuam pendentes: preview, consentimento, revogação,
+   eliminação e clonagem devem ser implementados antes de oferecer essas opções ao cliente.
 
 Não redesenhar o núcleo a partir do plano histórico LiveKit-first. Não mergear/ativar Telnyx real
 sem decidir antes se ainda vale a pena, dado que o plano aprovado substitui essa arquitetura por

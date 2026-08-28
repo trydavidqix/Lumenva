@@ -4,7 +4,7 @@
 **Repo:** `trydavidqix/CRM`  
 **Branch obrigatória para continuar:** `implementacao-tokens-voice-core`  
 **Checkpoint de código do fechamento da Fase 6 (histórico):** `fce93bd9` (gate 47 arquivos/198 testes verde)  
-**Último checkpoint de código nesta branch:** `b46ea128` (2026-08-28 — cliente ARI real, reconhecimento de mais eventos ARI, listener ligado ao resolver de tenant real, reconexão automática, `/context`+`/event` aceitando o caminho SIP/BYOC, forwarder ligando tudo isso via HTTP, e `main.mjs` — o entrypoint de produção real, provado de ponta a ponta com Postgres nativo real nesta sessão; ver as 8 notas datadas 2026-08-28 na seção "Progresso" de `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md`)  
+**Último checkpoint de código nesta branch:** `8de44e30` (2026-08-28 — inclui as 8 fatias anteriores e a hidratação de `SIP_CONNECTION_ID` via ARI REST quando `channelvars` não vem no evento; bridge ligada parcialmente ao Asterisk real da VPS, worker em serviço de teste e `/healthz` respondendo; ver o handoff operacional atualizado `HANDOFF-codex-voice-sip-2026-08-28.md`)  
 **Não alterar/mergear `main` sem autorização explícita.**
 
 ## 1. Comece aqui
@@ -23,15 +23,14 @@ clone open-source, versionamento imutável, matriz de idiomas, registry de clone
 substituem o worker de produção — isso é Fase 3 em diante (rewire do worker) e Fase 7 (homologação).
 Leia o plano ANTES de continuar; ele explica o que reaproveita deste HANDOFF e o que substitui.
 
-**Atualização 2026-08-27 (sessão de infraestrutura, sem mudança de código neste repo):**
+**Atualização 2026-08-27 (sessão de infraestrutura, sem mudança de código nesta branch):**
 validado ao vivo, na VPS de produção (`root@2.29.8.225`), que Asterisk/ARI/PJSIP roda como
 gateway SIP standalone (systemd nativo, ~55MB RAM, cabe na VPS de 3.7GB) — registro e chamada
 de teste confirmados via Zoiper (iOS). Detalhes completos (fix de firewall Hetzner, bug de AOR)
 estão no bloco "Atualização 2026-08-27 (sessão de infraestrutura...)" no fim da seção Progresso
-do plano canônico. **Isso não avança nenhuma Fase de código** — não há nenhum processo Pipecat
-ligado a esse Asterisk ainda; a chamada de teste cai em `Stasis app 'voicecore-test' doesn't
-exist` de propósito, porque nada está escutando. Pipecat/faster-whisper NÃO cabem nessa VPS —
-vão precisar de host separado quando a Fase 3 virar processo vivo.
+do plano canônico. **Isso não prova chamada completa nem áudio de IA** — o worker SIP/BYOC já foi
+ligado parcialmente ao Asterisk real e responde como serviço de teste, mas Pipecat/faster-whisper
+não estão ligados ao áudio. Esses processos precisarão de host separado quando forem executados.
 
 Leia nesta ordem:
 
@@ -248,21 +247,20 @@ cabeçalho do arquivo: este processo lê Postgres direto (`createVoiceOrganizati
 pra validar a conexão SIP localmente antes de qualquer chamada de rede, diferente do worker
 Telnyx ("no database credentials") — não existe endpoint HTTP leve só pra esse check hoje, fica
 marcado como ponto a revisar. **Prova real, não só provider-free**: `main.smoke.mjs` sobe um
-Postgres **nativo real** (disponível nesta sessão — diferente de GPU/Asterisk) com schema mínimo
+Postgres **nativo real** (disponível nesta sessão) com schema mínimo
 semeado, mais Asterisk falso e CRM falso, e roda o `main.mjs` de ponta a ponta: env → ARI real →
 SQL real → HTTP real → `/healthz` real → shutdown real. Pula sozinho sem `SUPABASE_DB_URL`. Gate
 completo verde. **Consequência da decisão de `tsx`, documentada**: este processo não pode ser um
 container standalone leve como o worker Telnyx — precisa do checkout completo do repo. **Ainda
-não fiz**: nenhuma conexão com Asterisk real (só o falso local), nenhum Dockerfile/deploy real,
+não fiz**: nenhuma chamada completa com Asterisk real, nenhum Dockerfile/deploy final,
 nenhuma descoberta de Asterisk alternativo se a reconexão ficar tentando contra um endpoint
 morto repetidamente.
 
-O próximo fio agora é: (d) ligar isso a um Asterisk real quando houver um alcançável pela sessão
-— o único item de infraestrutura real que falta pro código já escrito; (e) alerta/observabilidade
-se o listener ficar reconectando repetidamente, e descoberta de Asterisk alternativo — melhorias
-de robustez, não bloqueio. Pipecat/faster-whisper/Piper/Kokoro seguem `BLOCKED EXTERNAL` — não
-tentar implementar cliente concreto pra eles sem primeiro confirmar, numa sessão dedicada, que dá
-pra rodar o processo real (Python/modelo) no ambiente disponível.
+**Errata 2026-08-28:** a bridge foi ligada parcialmente ao Asterisk real da VPS, o worker foi
+instalado como serviço de teste e `/healthz` respondeu. Isso não prova chamada completa nem áudio
+de IA. O próximo fio é registrar uma extensão/softphone ou conexão SIP/BYOC real, concluir
+inbound/outbound e ligar o caminho Asterisk/RTP → Pipecat → faster-whisper → Agent OS →
+Piper/Kokoro → Asterisk. O gate completo ainda precisa rodar num runner com heap suficiente.
 
 1. Faça auditoria read-only do HEAD contra este handoff.
 2. Rode `bash scripts/verify-voice-core.sh` em ambiente capaz.

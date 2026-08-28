@@ -5,6 +5,13 @@
 > `docs/superpowers/plans/2026-08-27-voice-core-canonical-status.md`) ainda reflete majoritariamente
 > a arquitetura ANTERIOR (Telnyx + Deepgram + ElevenLabs, número técnico comprado) — ver seção
 > "Relação com a implementação existente" no fim deste documento antes de codar qualquer Fase.
+
+> **Errata operacional 2026-08-28:** as notas abaixo foram escritas durante a implementação e
+> algumas dizem que não havia Asterisk real nem worker vivo. Isso ficou superado. A branch chegou
+> a `8de44e30`; a bridge foi ligada parcialmente ao Asterisk real da VPS, o worker foi executado
+> como serviço de teste e `/healthz` respondeu. O gate completo no último snapshot ficou
+> `NOT_PROVEN` por `pnpm typecheck` esgotar o heap. O áudio Pipecat/STT/TTS e a chamada completa
+> continuam pendentes. Estado consolidado: `docs/handoffs/HANDOFF-voice-sip-2026-08-28.md`.
 >
 > **Progresso:**
 > - **Fase 1 — IMPLEMENTADA** (commit `f672eb78`). `VoiceEngine` aceita perfil de voz
@@ -751,8 +758,10 @@ atender e fazer chamadas reais
 
 ## Relação com a implementação existente (`implementacao-tokens-voice-core`)
 
-Registrado em 2026-08-27 ao lado do gate verde fresco da branch (`bash scripts/verify-voice-core.sh`,
+Registrado em 2026-08-27 ao lado do gate verde fresco daquele snapshot (`bash scripts/verify-voice-core.sh`,
 35 arquivos de teste/114 testes, `next build` limpo — ver `2026-08-27-voice-core-canonical-status.md`).
+O estado posterior está no handoff operacional de 2026-08-28; não tratar esta linha histórica como
+prova do HEAD atual.
 
 **O que muda de arquitetura, não é incremento:**
 
