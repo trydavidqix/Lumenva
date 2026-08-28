@@ -4,7 +4,7 @@
 **Repo:** `trydavidqix/CRM`  
 **Branch obrigatória para continuar:** `implementacao-tokens-voice-core`  
 **Checkpoint de código do fechamento da Fase 6 (histórico):** `fce93bd9` (gate 47 arquivos/198 testes verde)  
-**Último checkpoint de código nesta branch:** `00c44c48` (2026-08-28 — cliente ARI real, reconhecimento de mais eventos ARI, listener ligado ao resolver de tenant real, reconexão automática, `/context`+`/event` aceitando o caminho SIP/BYOC, e o forwarder que liga tudo isso de verdade (`brain-client.ts`+`event-forwarder.ts`, provado como pipeline real no smoke test); ver as 7 notas datadas 2026-08-28 na seção "Progresso" de `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md`)  
+**Último checkpoint de código nesta branch:** 2026-08-28 — cliente ARI real, reconhecimento de mais eventos ARI, listener ligado ao resolver de tenant real, reconexão automática, `/context`+`/event` aceitando o caminho SIP/BYOC, forwarder ligando tudo isso via HTTP, e `main.mjs` — o entrypoint de produção real, provado de ponta a ponta com Postgres nativo real nesta sessão; ver as 8 notas datadas 2026-08-28 na seção "Progresso" de `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md`  
 **Não alterar/mergear `main` sem autorização explícita.**
 
 ## 1. Comece aqui
@@ -231,16 +231,30 @@ canal resolvendo o mesmo `voice_call_id` via HTTP de verdade. 9 testes novos, ga
 é só ligar isso a um processo de produção de longa duração de verdade, não mais escrever a lógica
 de orquestração.
 
-O próximo fio agora é: (c) decidir como o processo de produção roda sem pipeline de build novo
-(`tsx` direto é a opção mais leve, ver README) — e, dentro dele, montar o `main.mjs`/`.ts` real
-que lê env vars, mantém o listener+forwarder vivos, e trata erros de rede sem derrubar o
-processo (usando o que já existe, não reescrevendo); (d) ligar isso a um Asterisk real quando
-houver um alcançável pela sessão; (e) o que existe hoje reconecta contra o mesmo endpoint
-configurado na criação — não há descoberta de um Asterisk diferente nem alerta/observabilidade se
-ficar reconectando repetidamente, isso pertence ao processo de produção real que ainda não
-existe. Pipecat/faster-whisper/Piper/Kokoro seguem `BLOCKED EXTERNAL` — não tentar implementar
-cliente concreto pra eles sem primeiro confirmar, numa sessão dedicada, que dá pra rodar o
-processo real (Python/modelo) no ambiente disponível.
+**Atualização 2026-08-28 (oitava fatia, mesma data): decisão (c) tomada — `tsx` direto — e
+entrypoint real construído.** `workers/voice-sip-worker/main.mjs` (`createVoiceSipWorker`) lê env
+vars, monta ARI+gateway+listener+forwarder, expõe `GET /healthz`, nunca derruba o loop numa falha
+de encaminhamento, desliga gracioso em `SIGTERM`/`SIGINT`. Decisão explícita e documentada no
+cabeçalho do arquivo: este processo lê Postgres direto (`createVoiceOrganizationResolver` via
+`createPool`, não `pg.Pool` cru — o pitfall de erro-de-cliente-ocioso já documentado neste repo)
+pra validar a conexão SIP localmente antes de qualquer chamada de rede, diferente do worker
+Telnyx ("no database credentials") — não existe endpoint HTTP leve só pra esse check hoje, fica
+marcado como ponto a revisar. **Prova real, não só provider-free**: `main.smoke.mjs` sobe um
+Postgres **nativo real** (disponível nesta sessão — diferente de GPU/Asterisk) com schema mínimo
+semeado, mais Asterisk falso e CRM falso, e roda o `main.mjs` de ponta a ponta: env → ARI real →
+SQL real → HTTP real → `/healthz` real → shutdown real. Pula sozinho sem `SUPABASE_DB_URL`. Gate
+completo verde. **Consequência da decisão de `tsx`, documentada**: este processo não pode ser um
+container standalone leve como o worker Telnyx — precisa do checkout completo do repo. **Ainda
+não fiz**: nenhuma conexão com Asterisk real (só o falso local), nenhum Dockerfile/deploy real,
+nenhuma descoberta de Asterisk alternativo se a reconexão ficar tentando contra um endpoint
+morto repetidamente.
+
+O próximo fio agora é: (d) ligar isso a um Asterisk real quando houver um alcançável pela sessão
+— o único item de infraestrutura real que falta pro código já escrito; (e) alerta/observabilidade
+se o listener ficar reconectando repetidamente, e descoberta de Asterisk alternativo — melhorias
+de robustez, não bloqueio. Pipecat/faster-whisper/Piper/Kokoro seguem `BLOCKED EXTERNAL` — não
+tentar implementar cliente concreto pra eles sem primeiro confirmar, numa sessão dedicada, que dá
+pra rodar o processo real (Python/modelo) no ambiente disponível.
 
 1. Faça auditoria read-only do HEAD contra este handoff.
 2. Rode `bash scripts/verify-voice-core.sh` em ambiente capaz.
@@ -277,6 +291,7 @@ processo real (Python/modelo) no ambiente disponível.
 - `lib/voice/sip/testing/fake-ari-server.ts`
 - `lib/voice/sip/brain-client.ts`
 - `lib/voice/sip/event-forwarder.ts`
+- `workers/voice-sip-worker/main.mjs`
 - `workers/voice-sip-worker/ari-listener.smoke.mjs`
 - `workers/voice-sip-worker/README.md`
 - `supabase/migrations/20260827013000_0128_voice_phone_numbers.sql`

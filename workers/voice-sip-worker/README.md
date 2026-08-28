@@ -1,8 +1,10 @@
-# Voice SIP Worker (Fase 3, scaffold — não é o worker de produção)
+# Voice SIP Worker (Fase 3 — código completo, ainda não implantado)
 
 **Status: nada aqui está em produção.** O worker real continua sendo
 `workers/voice-worker/main.mjs` (Patter/Telnyx/Deepgram/ElevenLabs) — não toque nele a partir
-deste diretório sem uma decisão explícita de troca de arquitetura.
+deste diretório sem uma decisão explícita de troca de arquitetura. `main.mjs` deste diretório é um
+processo real e testado (não mais um scaffold), mas nunca rodou contra um Asterisk de verdade nem
+foi implantado em lugar nenhum.
 
 ## O que existe hoje
 
@@ -36,6 +38,21 @@ deste diretório sem uma decisão explícita de troca de arquitetura.
   `ari-listener.smoke.mjs` agora prova o pipeline inteiro — Asterisk falso → listener → forwarder
   → CRM falso — como processo real, incluindo os dois eventos do mesmo canal resolvendo o mesmo
   `voice_call_id` via HTTP de verdade.
+- **`main.mjs` (`createVoiceSipWorker`) — o entrypoint de produção de verdade.** Lê env vars
+  (`ARI_BASE_URL`/`ARI_USERNAME`/`ARI_PASSWORD`/`ARI_APP_NAME`/`SIP_OUTBOUND_CONTEXT`/
+  `VOICE_CONTROL_PLANE_URL`/`INTERNAL_SECRET`/`SUPABASE_DB_URL`/`PORT`), monta
+  ARI→gateway→listener→forwarder, expõe `GET /healthz`
+  (`processedEvents`/`rejectedEvents`/`forwardFailures`), nunca derruba o loop numa falha de
+  encaminhamento (loga e segue), desliga gracioso em `SIGTERM`/`SIGINT`. Roda via
+  `npx tsx workers/voice-sip-worker/main.mjs` a partir da raiz do repo — decisão de build tomada
+  (ver item 4 abaixo). **Decisão explícita, documentada no cabeçalho do arquivo**: diferente do
+  worker Telnyx, este processo lê Postgres diretamente (`createVoiceOrganizationResolver` via
+  `createPool`, não um `pg.Pool` cru) pra validar a conexão SIP localmente antes de qualquer
+  chamada de rede — não existe endpoint HTTP leve só pra esse check hoje; fica marcado como ponto
+  a revisar. `main.smoke.mjs` prova tudo isso com **Postgres nativo real** (disponível nesta
+  sessão), não só Asterisk/CRM falsos — schema mínimo semeado, `main.mjs` real de ponta a ponta:
+  env → ARI real → SQL real → HTTP real → `/healthz` real → shutdown real. Pula sozinho (exit 0)
+  sem `SUPABASE_DB_URL` setado.
 
 ## O que falta pra isto virar um worker de verdade
 
@@ -49,21 +66,17 @@ Isto é lista, não segredo escondido — cada item exige infraestrutura que nã
 2. ~~Ligar esse listener a `resolveOrganizationByConnection`~~ — **feito** (2026-08-28):
    `asterisk-listener.ts` já usa o `SipGateway` (que já chama `resolveOrganizationByConnection`
    internamente) pra cada evento, testado contra o resolver real.
-3. ~~Encaminhar eventos normalizados pra o CRM~~ — **feito, ponta a ponta** (2026-08-28).
-   `/context` e `/event` aceitam o caminho SIP/BYOC (fatias 5/6), e agora
-   `lib/voice/sip/brain-client.ts` + `lib/voice/sip/event-forwarder.ts` (fatia 7) fazem essas
-   chamadas de verdade a partir de um evento normalizado do listener — provado como processo real
-   contra Asterisk falso + CRM falso no `ari-listener.smoke.mjs`. **O que ainda falta**: nada
-   disto está fiado a um processo de produção de longa duração — é a peça de orquestração
-   testada, mas ainda "na bancada", não "ligada na tomada" (isso é o item 4 abaixo).
-4. Decisão de build: `asterisk-ari-client.ts`, `asterisk-listener.ts`, `brain-client.ts` e
-   `event-forwarder.ts` são TypeScript; os workers em `workers/**` rodam sem step de build
-   (`node main.mjs` puro). Rodar via `tsx` em produção é uma opção mais leve que criar um
-   pipeline de build novo pros workers (e é o que os smoke tests já fazem) — mas isso é uma
-   decisão de infraestrutura explícita a tomar antes de virar processo de produção, não algo
-   resolvido implicitamente por este scaffold. É dentro dela que um `main.mjs`/`.ts` de verdade
-   (lendo env vars, com loop de vida longa, tratando erros de rede sem derrubar o processo)
-   usaria o forwarder do item 3.
+3. ~~Encaminhar eventos normalizados pra o CRM~~ — **feito, ponta a ponta, e ligado num processo
+   real** (2026-08-28). `/context` e `/event` aceitam o caminho SIP/BYOC (fatias 5/6),
+   `lib/voice/sip/brain-client.ts` + `lib/voice/sip/event-forwarder.ts` (fatia 7) fazem as
+   chamadas de verdade, e `main.mjs` (fatia 8, abaixo) os usa como processo de longa duração de
+   verdade — não é mais peça solta "na bancada".
+4. ~~Decisão de build~~ — **feita e implementada** (2026-08-28): `tsx` direto, sem pipeline de
+   build novo. `main.mjs` é o entrypoint real (item acima). Consequência dessa escolha, também
+   explícita: este processo **não roda como container standalone leve** igual o worker Telnyx —
+   precisa do checkout completo do repo + `node_modules` da raiz + `tsx`. Não há `Dockerfile`
+   pra isto ainda; criar um (se algum dia fizer sentido) teria que empacotar o repo inteiro, não
+   só este diretório.
 5. Pipecat/faster-whisper/Piper/Kokoro/OpenVoice reais — **`BLOCKED EXTERNAL`**. São processos
    Python/ML sem contrato de servidor documentado neste repo; rodá-los exige um host GPU/CPU
    dedicado (a VPS de produção atual, 2 CPU/3.7GB RAM, já foi validada como insuficiente pra
@@ -71,7 +84,9 @@ Isto é lista, não segredo escondido — cada item exige infraestrutura que nã
    foi implementado pra eles nesta tarefa; tentar fingir um sem processo real do outro lado
    produziria código não verificável, o que a doutrina do projeto trata como falso-verde.
 6. Nenhum `docker-compose`/systemd/Dockerfile pro Asterisk existe neste repo — a instância de
-   teste na VPS foi configurada manualmente fora do Git (ver HANDOFF).
+   teste na VPS foi configurada manualmente fora do Git (ver HANDOFF). `main.mjs` nunca foi
+   apontado pra esse Asterisk real nem pra nenhum outro — só pro servidor falso local do smoke
+   test.
 
 ## Próxima ação
 

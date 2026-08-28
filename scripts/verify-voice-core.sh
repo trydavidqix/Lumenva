@@ -64,5 +64,9 @@ node --check workers/voice-worker/pending-outbound.mjs
 node --test workers/voice-worker/pending-outbound.test.mjs
 node --check workers/voice-sip-worker/ari-listener.smoke.mjs
 npx tsx workers/voice-sip-worker/ari-listener.smoke.mjs
+node --check workers/voice-sip-worker/main.mjs
+node --check workers/voice-sip-worker/main.smoke.mjs
+# Skips itself (exit 0) when SUPABASE_DB_URL is unset — needs a real local Postgres.
+npx tsx workers/voice-sip-worker/main.smoke.mjs
 pnpm lint:tenant-filter
 pnpm next build

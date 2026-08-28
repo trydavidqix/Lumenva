@@ -179,6 +179,35 @@
 >   nem a um Asterisk real — é a peça de orquestração que faltava, testada, mas ainda não
 >   "ligada na tomada". A decisão de build/deploy (`tsx` vs. pipeline novo) continua a próxima,
 >   e é dentro dela que um `main.mjs`/`.ts` de verdade usaria este forwarder.
+> - **Atualização 2026-08-28 (oitava fatia, mesma data): decisão de build tomada — `tsx` direto —
+>   e entrypoint de produção real construído.** `workers/voice-sip-worker/main.mjs`
+>   (`createVoiceSipWorker`) é o processo de longa duração de verdade: lê env vars
+>   (`ARI_BASE_URL`/`ARI_USERNAME`/`ARI_PASSWORD`/`ARI_APP_NAME`/`SIP_OUTBOUND_CONTEXT`/
+>   `VOICE_CONTROL_PLANE_URL`/`INTERNAL_SECRET`/`SUPABASE_DB_URL`/`PORT`), monta
+>   `AriConnection`+`SipGateway`+`AsteriskAriListener`+`SipEventForwarder`, expõe
+>   `GET /healthz` (contadores `processedEvents`/`rejectedEvents`/`forwardFailures`), nunca
+>   derruba o loop numa falha de encaminhamento (loga e segue, mesma filosofia
+>   fail-open-for-availability da reconexão automática), e desliga graciosamente em
+>   `SIGTERM`/`SIGINT` (fecha listener, servidor de health, pool). **Decisão explícita e
+>   documentada no cabeçalho do arquivo**: diferente do worker Telnyx ("the worker has no
+>   database credentials"), este processo lê `voice_sip_connections`/`voice_phone_numbers`
+>   direto via Postgres (`createVoiceOrganizationResolver`, código já testado, agora usado através
+>   de `createPool` — não um `new pg.Pool()` cru, que não tem o listener de erro por-cliente que
+>   este repo já documentou como pitfall real) — porque a validação local do gateway precisa
+>   rejeitar conexão não verificada antes de qualquer chamada de rede, e não existe endpoint HTTP
+>   leve só pra esse check hoje. Fica marcado como ponto a revisar, não como violação silenciosa.
+>   **Prova de verdade, não só provider-free**: `workers/voice-sip-worker/main.smoke.mjs` sobe um
+>   Postgres nativo real (disponível nesta sessão, diferente de GPU/Asterisk) com o schema mínimo
+>   de `voice_sip_connections`/`voice_phone_numbers` semeado, mais Asterisk falso e CRM falso, e
+>   roda o `main.mjs` real de ponta a ponta: env parsing → conexão ARI real → resolução de tenant
+>   via SQL real → encaminhamento HTTP real → `/healthz` real → shutdown gracioso real. Pula
+>   sozinho (exit 0) quando `SUPABASE_DB_URL` não está setado, então não quebra ambiente sem
+>   Postgres. Gate completo (incluindo esse smoke test) verde. **Ainda não fiz**: nenhuma conexão
+>   com Asterisk real (só o servidor falso local), nenhum deploy real deste processo (nem
+>   Dockerfile — a decisão de `tsx` significa que isto roda a partir do checkout completo do
+>   repo, não como container standalone leve tipo o worker Telnyx), e nenhuma descoberta de
+>   Asterisk alternativo se a reconexão ficar tentando repetidamente contra um endpoint morto.
+>   Pipecat/faster-whisper/Piper/Kokoro seguem `BLOCKED EXTERNAL`, sem mudança.
 > - **Fase 4 — IMPLEMENTADA PARCIAL** (commit `e9dc37e2`). Versionamento imutável do
 >   perfil de voz (`lib/voice/engine/voice-profile-version.ts` — publicar sempre acrescenta,
 >   nunca reescreve uma versão antiga; `activeVersion` é um ponteiro, rollback é publicar de
