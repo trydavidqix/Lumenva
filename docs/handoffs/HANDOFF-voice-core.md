@@ -4,7 +4,7 @@
 **Repo:** `trydavidqix/CRM`  
 **Branch obrigatória para continuar:** `implementacao-tokens-voice-core`  
 **Checkpoint de código do fechamento da Fase 6 (histórico):** `fce93bd9` (gate 47 arquivos/198 testes verde)  
-**Último checkpoint de código nesta branch:** `84f395b5` (2026-08-28 — cliente ARI real, reconhecimento de mais eventos ARI, listener ligado ao resolver de tenant real, reconexão automática, `/context` e `/event` aceitando o caminho SIP/BYOC via `connection_id`; ver as 6 notas datadas 2026-08-28 na seção "Progresso" de `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md`)  
+**Último checkpoint de código nesta branch:** 2026-08-28 — cliente ARI real, reconhecimento de mais eventos ARI, listener ligado ao resolver de tenant real, reconexão automática, `/context`+`/event` aceitando o caminho SIP/BYOC, e o forwarder que liga tudo isso de verdade (`brain-client.ts`+`event-forwarder.ts`, provado como pipeline real no smoke test); ver as 7 notas datadas 2026-08-28 na seção "Progresso" de `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md`  
 **Não alterar/mergear `main` sem autorização explícita.**
 
 ## 1. Comece aqui
@@ -215,16 +215,32 @@ SIP** — mas ninguém ainda os chama de verdade; `asterisk-listener.ts` continu
 `NormalizedSipCallEvent` em memória. Ligar o listener a essas rotas é trabalho do processo de
 produção real (item c abaixo), não uma lacuna de contrato.
 
+**Atualização 2026-08-28 (sétima fatia, mesma data):** o cliente HTTP citado acima foi escrito —
+`lib/voice/sip/brain-client.ts` (`createSipVoiceBrainClient`, sibling TS de
+`workers/voice-worker/brain-client.mjs`) + `lib/voice/sip/event-forwarder.ts`
+(`createSipEventForwarder`) ligam um `AsteriskListenerResult` normalizado a `/context`+`/event`
+de verdade: `StasisStart→active`, `StasisEnd`/`ChannelHangupRequest→completed`,
+`provider_event_id: "<channelId>:<eventType>"` (evita colisão de idempotência entre os dois
+estados do mesmo canal), sem cache local de `voice_call_id` (chama `/context` de novo a cada
+evento — idempotente, trade-off documentado no próprio arquivo). Testado com servidor HTTP real
+local pro `brain-client.ts` e `brainClient` falso pro `event-forwarder.ts` (protocolo já provado
+no primeiro). Smoke test estendido: sobe um CRM falso local e prova o pipeline inteiro — Asterisk
+falso → listener → forwarder → CRM falso — como processo real, com os dois eventos do mesmo
+canal resolvendo o mesmo `voice_call_id` via HTTP de verdade. 9 testes novos, gate completo verde.
+**Isso fecha, em código testado, o encaminhamento ponta a ponta que faltava** — o que resta agora
+é só ligar isso a um processo de produção de longa duração de verdade, não mais escrever a lógica
+de orquestração.
+
 O próximo fio agora é: (c) decidir como o processo de produção roda sem pipeline de build novo
-(`tsx` direto é a opção mais leve, ver README) — **e, dentro dele, escrever o cliente HTTP que
-chama `/context` e `/event`** a partir do listener, o único pedaço que falta pra fechar o
-encaminhamento ponta a ponta em código; (d) ligar isso a um Asterisk real quando houver um
-alcançável pela sessão; (e) o que existe hoje reconecta contra o mesmo endpoint configurado na
-criação — não há descoberta de um Asterisk diferente nem alerta/observabilidade se ficar
-reconectando repetidamente, isso pertence ao processo de produção real que ainda não existe.
-Pipecat/faster-whisper/Piper/Kokoro seguem `BLOCKED EXTERNAL` — não tentar implementar cliente
-concreto pra eles sem primeiro confirmar, numa sessão dedicada, que dá pra rodar o processo real
-(Python/modelo) no ambiente disponível.
+(`tsx` direto é a opção mais leve, ver README) — e, dentro dele, montar o `main.mjs`/`.ts` real
+que lê env vars, mantém o listener+forwarder vivos, e trata erros de rede sem derrubar o
+processo (usando o que já existe, não reescrevendo); (d) ligar isso a um Asterisk real quando
+houver um alcançável pela sessão; (e) o que existe hoje reconecta contra o mesmo endpoint
+configurado na criação — não há descoberta de um Asterisk diferente nem alerta/observabilidade se
+ficar reconectando repetidamente, isso pertence ao processo de produção real que ainda não
+existe. Pipecat/faster-whisper/Piper/Kokoro seguem `BLOCKED EXTERNAL` — não tentar implementar
+cliente concreto pra eles sem primeiro confirmar, numa sessão dedicada, que dá pra rodar o
+processo real (Python/modelo) no ambiente disponível.
 
 1. Faça auditoria read-only do HEAD contra este handoff.
 2. Rode `bash scripts/verify-voice-core.sh` em ambiente capaz.
@@ -259,6 +275,8 @@ concreto pra eles sem primeiro confirmar, numa sessão dedicada, que dá pra rod
 - `lib/voice/sip/asterisk-ari-client.ts`
 - `lib/voice/sip/asterisk-listener.ts`
 - `lib/voice/sip/testing/fake-ari-server.ts`
+- `lib/voice/sip/brain-client.ts`
+- `lib/voice/sip/event-forwarder.ts`
 - `workers/voice-sip-worker/ari-listener.smoke.mjs`
 - `workers/voice-sip-worker/README.md`
 - `supabase/migrations/20260827013000_0128_voice_phone_numbers.sql`
