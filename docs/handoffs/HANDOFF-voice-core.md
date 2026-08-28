@@ -4,7 +4,7 @@
 **Repo:** `trydavidqix/CRM`  
 **Branch obrigatória para continuar:** `implementacao-tokens-voice-core`  
 **Checkpoint de código do fechamento da Fase 6 (histórico):** `fce93bd9` (gate 47 arquivos/198 testes verde)  
-**Último checkpoint de código nesta branch:** 2026-08-28 — cliente ARI real, reconhecimento de mais eventos ARI, listener ligado ao resolver de tenant real, reconexão automática, `/context` e `/event` aceitando o caminho SIP/BYOC (`connection_id`); ver as 6 notas datadas 2026-08-28 na seção "Progresso" de `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md`  
+**Último checkpoint de código nesta branch:** `84f395b5` (2026-08-28 — cliente ARI real, reconhecimento de mais eventos ARI, listener ligado ao resolver de tenant real, reconexão automática, `/context` e `/event` aceitando o caminho SIP/BYOC via `connection_id`; ver as 6 notas datadas 2026-08-28 na seção "Progresso" de `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md`)  
 **Não alterar/mergear `main` sem autorização explícita.**
 
 ## 1. Comece aqui

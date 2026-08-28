@@ -114,9 +114,9 @@ correspondente em `docs/superpowers/plans/2026-08-27-voice-open-source-europe-pl
 4. `c71748fd` — reconexão automática com backoff exponencial, testada com queda forçada real.
 5. `2eb7a8d4` — `app/api/internal/voice/event` aceita `connection_id`+`phone_e164` (decisão do
    dono do repositório: estender a rota existente em vez de criar uma nova).
-6. (próximo commit) — `app/api/internal/voice/context` aceita `connection_id` (mesma decisão:
-   estender em vez de criar rota nova); contrato HTTP `/context`+`/event` fica coerente ponta a
-   ponta pro mundo SIP.
+6. `84f395b5` — `app/api/internal/voice/context` aceita `connection_id` (mesma decisão: estender
+   em vez de criar rota nova); contrato HTTP `/context`+`/event` fica coerente ponta a ponta pro
+   mundo SIP.
 
 ## Ativação externa pendente
 
