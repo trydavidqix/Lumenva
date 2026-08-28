@@ -36,6 +36,26 @@ Cliente/PSTN
 
 LiveKit não participa do caminho normal de IA; permanece opcional para takeover humano no navegador.
 
+**O diagrama acima é o que roda em produção hoje.** Em paralelo, aditivo e ainda não implantado,
+existe o pipeline SIP/BYOC completo (código pronto e testado, ver "Implementado" abaixo):
+
+```text
+Cliente/PSTN
+  -> conexão SIP/BYOC verificada (voice_sip_connections)
+  -> Asterisk/ARI (real ou, nesta sessão, servidor falso local)
+  -> workers/voice-sip-worker/main.mjs (createVoiceSipWorker)
+       -> AriConnection (REST+WS real)
+       -> SipGateway (valida/normaliza, isolamento de tenant)
+       -> AsteriskAriListener (consome eventos, reconecta sozinho)
+       -> SipEventForwarder -> brain-client
+  -> app/api/internal/voice/context + /event (aceitam connection_id)
+  -> mesmo CRM/Agent OS de sempre
+```
+
+Diferença chave: nenhum runtime de voz (Pipecat/faster-whisper/Piper/Kokoro) está ligado ainda —
+esse pipeline hoje só prova o lado telefonia/CRM; a substituição de mídia/STT/TTS segue
+`BLOCKED EXTERNAL`.
+
 ## Implementado
 
 - `VoiceEngine` provider-neutral e factory;

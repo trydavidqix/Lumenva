@@ -1,6 +1,6 @@
 # HANDOFF — Lumenva Voice Core
 
-**Data:** 2026-08-27 (última atualização de conteúdo: 2026-08-28, 5 fatias da Fase 3)  
+**Data:** 2026-08-27 (última atualização de conteúdo: 2026-08-28, 8 fatias da Fase 3)  
 **Repo:** `trydavidqix/CRM`  
 **Branch obrigatória para continuar:** `implementacao-tokens-voice-core`  
 **Checkpoint de código do fechamento da Fase 6 (histórico):** `fce93bd9` (gate 47 arquivos/198 testes verde)  
@@ -73,6 +73,12 @@ LiveKit **não** é dependência do caminho normal IA <-> cliente. Ele permanece
 
 ## 3. O que já existe no código
 
+> Esta lista é o caminho **Telnyx/vigente em produção**. O pipeline SIP/BYOC (Fases 1-6 do plano
+> open-source + as 8 fatias de 2026-08-28 desta sessão) também existe em código, testado, mas
+> ainda não substitui nada aqui — ver seção "Progresso" do plano canônico
+> (`docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md`) e
+> `docs/current-state-voice-core.md` pro inventário completo dos dois caminhos.
+
 - contratos provider-neutral `VoiceEngine` e factory;
 - adapters Patter isolados;
 - worker Node persistente em `workers/voice-worker/**`;
@@ -140,7 +146,9 @@ Não interpretar esses status como falha de compilação/teste e também não ch
 
 ## 6. O que falta para LIVE — somente ativação/prova externa
 
-Isto **não é backlog arquitetural escondido**:
+Isto **não é backlog arquitetural escondido**. Lista específica do caminho Telnyx; o equivalente
+pro caminho SIP/BYOC é bem mais curto hoje — só "um Asterisk real alcançável" e Pipecat/
+faster-whisper/Piper/Kokoro (`BLOCKED EXTERNAL`), ver seção 7 abaixo:
 
 - Telnyx real: conta, número, connection id, API key e public key;
 - worker persistente realmente hospedado por número técnico;
@@ -292,6 +300,7 @@ pra rodar o processo real (Python/modelo) no ambiente disponível.
 - `lib/voice/sip/brain-client.ts`
 - `lib/voice/sip/event-forwarder.ts`
 - `workers/voice-sip-worker/main.mjs`
+- `workers/voice-sip-worker/main.smoke.mjs`
 - `workers/voice-sip-worker/ari-listener.smoke.mjs`
 - `workers/voice-sip-worker/README.md`
 - `supabase/migrations/20260827013000_0128_voice_phone_numbers.sql`
