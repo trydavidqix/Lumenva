@@ -139,8 +139,8 @@ correspondente em `docs/superpowers/plans/2026-08-27-voice-open-source-europe-pl
    mundo SIP.
 7. `00c44c48` — `brain-client.ts` + `event-forwarder.ts` ligam o listener às duas rotas de
    verdade; pipeline completo provado como processo real no smoke test.
-8. (próximo commit) — `workers/voice-sip-worker/main.mjs`, entrypoint de produção real; decisão
-   de build (`tsx`) tomada; provado com Postgres nativo real, não só fake.
+8. `b46ea128` — `workers/voice-sip-worker/main.mjs`, entrypoint de produção real; decisão de
+   build (`tsx`) tomada; provado com Postgres nativo real, não só fake.
 
 ## Ativação externa pendente
 
