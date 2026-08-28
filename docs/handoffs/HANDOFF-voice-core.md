@@ -162,11 +162,18 @@ implementado nesta fatia — `lib/voice/sip/asterisk-ari-client.ts` +
 `workers/voice-sip-worker/ari-listener.smoke.mjs`, ver nota datada no plano canônico
 (`docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md`, Fase 3) e
 `workers/voice-sip-worker/README.md`. Estado: `IMPLEMENTED` + `VERIFIED PROVIDER-FREE` (protocolo
-ARI real contra servidor HTTP+WS local, não Asterisk real). O próximo fio agora é: (a) decidir
-como um listener de longa duração roda em produção sem step de build novo pros workers (`tsx` em
-produção vs. pipeline de build — ver README do novo diretório), (b) tratar mais tipos de evento
-ARI além de `StasisStart` em `asterisk-adapter.ts` (`StasisEnd`, `ChannelHangupRequest`), (c)
-ligar isso a um Asterisk real quando houver um alcançável pela sessão. Pipecat/faster-whisper/
+ARI real contra servidor HTTP+WS local, não Asterisk real).
+
+**Atualização 2026-08-28 (segunda fatia, mesma data):** item (b) abaixo foi feito —
+`asterisk-adapter.ts#parseInboundEvent` agora reconhece `StasisEnd` e `ChannelHangupRequest`
+além de `StasisStart`, mesma normalização/isolamento de tenant nos três, `eventType` retornado
+carrega o tipo real. 2 testes novos, suíte 11/11 verde, gate completo verde. Não construído: o
+que um consumidor faz com um evento de término (isso é o listener do item a, ainda não existe).
+
+O próximo fio agora é: (a) decidir como um listener de longa duração roda em produção sem step de
+build novo pros workers (`tsx` em produção vs. pipeline de build — ver README do novo diretório) e
+liga os eventos já reconhecidos a `resolveOrganizationByConnection` + `app/api/internal/voice/event`,
+(c) ligar isso a um Asterisk real quando houver um alcançável pela sessão. Pipecat/faster-whisper/
 Piper/Kokoro seguem `BLOCKED EXTERNAL` — não tentar implementar cliente concreto pra eles sem
 primeiro confirmar, numa sessão dedicada, que dá pra rodar o processo real (Python/modelo) no
 ambiente disponível.

@@ -35,10 +35,25 @@ interface AriChannel {
   channelvars?: Record<string, unknown>;
 }
 
-interface AriStasisStartEvent {
+interface AriLifecycleEvent {
   type?: unknown;
   timestamp?: unknown;
   channel?: AriChannel;
+}
+
+/**
+ * The three ARI event types this gateway understands. `StasisStart` is a new
+ * inbound leg; `StasisEnd`/`ChannelHangupRequest` both signal call
+ * termination (Asterisk can emit either depending on who hangs up and when)
+ * — the Voice Core's call-state machine (not this file) decides what a
+ * termination event means for an already-known call. Any other event type
+ * stays rejected as unsupported, same as before.
+ */
+const SUPPORTED_ARI_EVENT_TYPES = ["StasisStart", "StasisEnd", "ChannelHangupRequest"] as const;
+type SupportedAriEventType = (typeof SUPPORTED_ARI_EVENT_TYPES)[number];
+
+function isSupportedAriEventType(value: unknown): value is SupportedAriEventType {
+  return typeof value === "string" && (SUPPORTED_ARI_EVENT_TYPES as readonly string[]).includes(value);
 }
 
 function normalizeE164(value: unknown, field: string): string {
@@ -58,8 +73,9 @@ function requireConnectionId(channel: AriChannel | undefined): string {
 
 /**
  * First SIP/BYOC gateway (Fase 2 do plano open-source). Speaks Asterisk ARI
- * `StasisStart` events for inbound and originates outbound calls over a
- * verified customer connection — no purchased technical number involved.
+ * `StasisStart` (new inbound leg), `StasisEnd`/`ChannelHangupRequest` (call
+ * termination) events, and originates outbound calls over a verified
+ * customer connection — no purchased technical number involved.
  */
 export function createAsteriskSipGateway(deps: {
   directory: AsteriskConnectionDirectory;
@@ -72,13 +88,14 @@ export function createAsteriskSipGateway(deps: {
     gateway: "asterisk",
 
     async parseInboundEvent(rawBody): Promise<NormalizedSipCallEvent> {
-      let event: AriStasisStartEvent;
+      let event: AriLifecycleEvent;
       try {
-        event = JSON.parse(rawBody) as AriStasisStartEvent;
+        event = JSON.parse(rawBody) as AriLifecycleEvent;
       } catch {
         throw new Error("[voice] invalid Asterisk ARI JSON");
       }
-      if (event.type !== "StasisStart") throw new Error("[voice] unsupported Asterisk ARI event type");
+      if (!isSupportedAriEventType(event.type)) throw new Error("[voice] unsupported Asterisk ARI event type");
+      const eventType = event.type;
       if (typeof event.timestamp !== "string" || !event.timestamp.trim()) {
         throw new Error("[voice] invalid Asterisk ARI event envelope");
       }
@@ -102,7 +119,7 @@ export function createAsteriskSipGateway(deps: {
         connectionId,
         gateway: "asterisk",
         providerEventId: channelId,
-        eventType: "StasisStart",
+        eventType,
         occurredAt: event.timestamp,
         direction: "inbound",
         callerE164,
