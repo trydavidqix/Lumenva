@@ -20,18 +20,23 @@ deste diretório sem uma decisão explícita de troca de arquitetura.
   `{status: "normalized", event}` ou `{status: "rejected", error, raw}` por evento, sem derrubar
   o loop num evento inesperado. Testado com o resolver de tenant real
   (`createVoiceOrganizationResolver`) contra um banco falso — prova de verdade da resolução
-  conexão→número→organização, não mock da função. `ari-listener.smoke.mjs` já exercita isso como
-  processo real (conectar → normalizar → sobreviver a evento não suportado → normalizar →
+  conexão→número→organização, não mock da função. Reconecta sozinho com backoff exponencial
+  (sem teto de tentativas) quando o WebSocket cai sem `close()` explícito ter sido chamado —
+  testado com queda de conexão forçada de verdade (`dropConnection()` em
+  `lib/voice/sip/testing/fake-ari-server.ts`), não só simulação de fechamento limpo.
+  `ari-listener.smoke.mjs` já exercita tudo isso como processo real (conectar → normalizar →
+  sobreviver a evento não suportado → normalizar → reconectar sozinho após queda → normalizar →
   fechar).
 
 ## O que falta pra isto virar um worker de verdade
 
 Isto é lista, não segredo escondido — cada item exige infraestrutura que não existe nesta sessão:
 
-1. Um processo de longa duração de verdade que registre o app Stasis real (não `voicecore-test`
-   de teste) contra um Asterisk verdadeiro e mantenha a conexão WS viva com **reconexão**
-   automática em caso de queda — `createAsteriskAriListener` já consome o stream e sobrevive a
-   eventos ruins, mas não reconecta sozinho se o WebSocket cair.
+1. ~~Reconexão automática do WebSocket~~ — **feito** (2026-08-28): `createAsteriskAriListener`
+   reconecta sozinho com backoff exponencial quando a conexão cai sem `close()` explícito. Falta
+   ainda: o processo de longa duração de verdade que registre o app Stasis real (não
+   `voicecore-test` de teste) contra um Asterisk verdadeiro — o que existe hoje só reconecta
+   contra o mesmo endpoint configurado na criação, não descobre um Asterisk novo.
 2. ~~Ligar esse listener a `resolveOrganizationByConnection`~~ — **feito** (2026-08-28):
    `asterisk-listener.ts` já usa o `SipGateway` (que já chama `resolveOrganizationByConnection`
    internamente) pra cada evento, testado contra o resolver real.

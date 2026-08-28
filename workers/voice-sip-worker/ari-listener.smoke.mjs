@@ -6,7 +6,9 @@
 // WebSocket, same protocol shape as `lib/voice/sip/testing/fake-ari-server.ts`)
 // and proves the full flow a real listener process would need:
 // connect -> normalize a StasisStart -> survive an unsupported event type
-// without dying -> normalize a ChannelHangupRequest -> close.
+// without dying -> normalize a ChannelHangupRequest -> survive an
+// unexpected WebSocket drop by reconnecting on its own -> normalize an
+// event on the reconnected socket -> close.
 //
 // This does NOT talk to a real Asterisk instance — there is none reachable
 // from this environment. It proves the client/listener's real network
@@ -56,6 +58,7 @@ function startFakeAriServer() {
       resolve({
         baseUrl: `http://127.0.0.1:${port}`,
         sendEvent: (payload) => activeSocket?.send(JSON.stringify(payload)),
+        dropConnection: () => { activeSocket?.terminate(); activeSocket = null; },
         close: () => new Promise((r) => { wss.close(); server.close(() => r()); }),
       });
     });
@@ -85,7 +88,12 @@ async function main() {
   });
 
   console.log("[smoke] connecting listener...");
-  const listener = await createAsteriskAriListener({ connection, gateway, appName: "voicecore-test" });
+  const listener = await createAsteriskAriListener({
+    connection,
+    gateway,
+    appName: "voicecore-test",
+    reconnectDelayMs: 50,
+  });
   const iterator = listener.events()[Symbol.asyncIterator]();
   console.log("[smoke] connected.");
 
@@ -116,6 +124,18 @@ async function main() {
   }
   console.log("[smoke] normalized ChannelHangupRequest:", thirdResult.event);
 
+  console.log("[smoke] dropping the connection to test automatic reconnection...");
+  const afterReconnect = iterator.next();
+  fakeAri.dropConnection();
+  await new Promise((r) => setTimeout(r, 300));
+  fakeAri.sendEvent(stasisEvent("StasisStart", "channel-smoke-reconnected"));
+
+  const reconnectResult = (await afterReconnect).value;
+  if (reconnectResult.status !== "normalized" || reconnectResult.event.providerEventId !== "channel-smoke-reconnected") {
+    throw new Error(`[smoke] expected reconnection to recover and normalize the next event, got: ${JSON.stringify(reconnectResult)}`);
+  }
+  console.log("[smoke] reconnected automatically and normalized the next event:", reconnectResult.event);
+
   await listener.close();
   const afterClose = await iterator.next();
   if (!afterClose.done) {
@@ -125,7 +145,7 @@ async function main() {
 
   await fakeAri.close();
   console.log(
-    "[smoke] PASS — connect -> normalize -> survive unsupported event -> normalize -> close, proven against a real local ARI-shaped server.",
+    "[smoke] PASS — connect -> normalize -> survive unsupported event -> normalize -> reconnect after a drop -> normalize -> close, proven against a real local ARI-shaped server.",
   );
 }
 

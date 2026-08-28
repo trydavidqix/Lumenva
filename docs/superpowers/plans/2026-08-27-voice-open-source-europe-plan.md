@@ -95,6 +95,23 @@
 >   mapeamento seria criar regra de negócio sem PRD por trás — fica registrado como a próxima
 >   decisão explícita a tomar, não implementado às cegas. Também não construí reconexão automática
 >   do WebSocket em caso de queda, nem liguei isso a um Asterisk real.
+> - **Atualização 2026-08-28 (quarta fatia, mesma data): reconexão automática do WebSocket.**
+>   `createAsteriskAriListener` agora reconecta sozinho com backoff exponencial
+>   (`reconnectDelayMs` inicial, dobra até `maxReconnectDelayMs`, sem teto de tentativas — um
+>   Asterisk inalcançável é condição pra continuar tentando, não pra desistir) quando o stream
+>   termina **sem** `close()` explícito ter sido chamado; um `close()` explícito continua
+>   encerrando o iterador de vez, sem reconectar. `wait` é injetável pra testes não dependerem de
+>   tempo real. Testado com uma queda de conexão forçada de verdade (`dropConnection()` novo em
+>   `lib/voice/sip/testing/fake-ari-server.ts`, via `socket.terminate()` — sem handshake de
+>   fechamento limpo, simulando queda de rede/reinício de servidor) contra o mesmo servidor real
+>   HTTP+WS, provando que o listener volta a normalizar eventos no socket novo sem intervenção. 2
+>   testes novos (reconecta sozinho; não reconecta depois de `close()` explícito), rodados 5x
+>   seguidas pra descartar flakiness de timing — todas verdes. Smoke test estendido provando a
+>   mesma reconexão como processo real via `tsx`. Suíte `lib/voice/sip/` inteira verde, gate
+>   completo verde. **Não fiz**: nenhum limite de tentativas nem alerta/observabilidade quando o
+>   listener fica reconectando repetidamente (isso pertenceria ao processo de produção real, que
+>   ainda não existe); e o encaminhamento pro CRM continua a mesma decisão pendente da fatia
+>   anterior.
 > - **Fase 4 — IMPLEMENTADA PARCIAL** (commit `e9dc37e2`). Versionamento imutável do
 >   perfil de voz (`lib/voice/engine/voice-profile-version.ts` — publicar sempre acrescenta,
 >   nunca reescreve uma versão antiga; `activeVersion` é um ponteiro, rollback é publicar de

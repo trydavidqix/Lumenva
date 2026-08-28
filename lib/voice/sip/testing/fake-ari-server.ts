@@ -13,6 +13,8 @@ export interface FakeAriServer {
   username: string;
   password: string;
   wsSend(payload: unknown): void;
+  /** Forcibly terminates the current WS connection without a clean close handshake — simulates an unexpected drop (network blip, server restart), not a graceful client-initiated close(). */
+  dropConnection(): void;
   lastRequest: { method: string; url: string; authHeader: string | null } | null;
   respondNextOriginateWith: { status: number; body: unknown } | null;
   close(): Promise<void>;
@@ -30,6 +32,7 @@ export function startFakeAriServer(options?: { username?: string; password?: str
       lastRequest: null,
       respondNextOriginateWith: null,
       wsSend: () => {},
+      dropConnection: () => {},
       close: async () => {},
     };
 
@@ -97,6 +100,10 @@ export function startFakeAriServer(options?: { username?: string; password?: str
 
     state.wsSend = (payload: unknown) => {
       activeSocket?.send(JSON.stringify(payload));
+    };
+    state.dropConnection = () => {
+      activeSocket?.terminate();
+      activeSocket = null;
     };
 
     server.listen(0, "127.0.0.1", () => {
