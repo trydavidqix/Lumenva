@@ -18,18 +18,18 @@ describe("Kokoro TTS adapter (Fase 3)", () => {
     );
   });
 
-  it("forwards the profile's style along with voice/speed/pitch", async () => {
+  it("forwards the profile's tone and style along with voice/speed/pitch", async () => {
     const synthesizeStream = vi.fn().mockReturnValue(frames());
     const port = createKokoroTtsPort({ client: { synthesizeStream }, defaultVoiceId: "pt-pt-beatriz" });
 
     await port.synthesize("bom dia", {
       locale: "pt-PT",
       signal: new AbortController().signal,
-      voice: { voiceId: "pt-pt-marta", style: "warm", speed: 0.95 },
+      voice: { voiceId: "pt-pt-marta", tone: "warm", style: "conversational", speed: 0.95 },
     });
 
     expect(synthesizeStream).toHaveBeenCalledWith(
-      expect.objectContaining({ voiceId: "pt-pt-marta", style: "warm", speed: 0.95 }),
+      expect.objectContaining({ voiceId: "pt-pt-marta", tone: "warm", style: "conversational", speed: 0.95 }),
     );
   });
 

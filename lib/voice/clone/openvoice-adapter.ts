@@ -13,6 +13,7 @@ export interface OpenVoiceClient {
     text: string;
     cloneProfileId: string;
     locale: string;
+    tone?: string;
     speed?: number;
     pitch?: number;
     signal: AbortSignal;
@@ -90,6 +91,7 @@ export function createOpenVoiceTtsPort(deps: { client: OpenVoiceClient; clonePro
         text: trimmed,
         cloneProfileId: deps.cloneProfileId,
         locale: options.locale,
+        tone: options.voice?.tone,
         speed: options.voice?.speed,
         pitch: options.voice?.pitch,
         signal: internalController.signal,

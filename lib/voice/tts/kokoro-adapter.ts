@@ -8,6 +8,7 @@ export interface KokoroClient {
     text: string;
     voiceId: string;
     locale: string;
+    tone?: string;
     style?: string;
     speed?: number;
     pitch?: number;
@@ -37,6 +38,7 @@ export function createKokoroTtsPort(deps: { client: KokoroClient; defaultVoiceId
         text: trimmed,
         voiceId: options.voice?.voiceId ?? deps.defaultVoiceId,
         locale,
+        tone: options.voice?.tone,
         style: options.voice?.style,
         speed: options.voice?.speed,
         pitch: options.voice?.pitch,

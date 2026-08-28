@@ -13,6 +13,7 @@ const VoiceProfileBaseSchema = z.object({
   gender: z.enum(["male", "female", "neutral"]),
   voiceId: z.string().min(1).max(128),
   provider: z.enum(VOICE_PROFILE_PROVIDERS),
+  tone: z.string().min(1).max(64).optional(),
   style: z.string().min(1).max(64).optional(),
   speed: z.number().min(0.5).max(2).optional(),
   pitch: z.number().min(-12).max(12).optional(),
