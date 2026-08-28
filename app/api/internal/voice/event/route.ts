@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { NextRequest } from "next/server";
+import type pg from "pg";
 import { z } from "zod";
 
 import { ok, fail } from "@/lib/api/wrappers";
@@ -10,26 +11,117 @@ import { normalizePatterMetrics } from "@/lib/voice/patter/telemetry";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+const E164 = /^\+[1-9]\d{6,14}$/;
 const stateSchema = z.enum(["connecting", "active", "held", "transferring", "completed", "failed", "canceled"]);
-const bodySchema = z.object({
-  voice_call_id: z.string().uuid(),
-  technical_phone_e164: z.string().regex(/^\+[1-9]\d{6,14}$/),
-  state: stateSchema,
-  provider_event_id: z.string().min(1).max(256),
-  provider_call_id: z.string().min(1).max(256).optional(),
-  occurred_at: z.string().datetime().optional(),
-  metrics: z.object({
-    carrierMs: z.number().nonnegative().optional(),
-    sttMs: z.number().nonnegative().optional(),
-    agentMs: z.number().nonnegative().optional(),
-    ttsMs: z.number().nonnegative().optional(),
-    e2eMs: z.number().nonnegative().optional(),
-    interruptionMs: z.number().nonnegative().optional(),
-    carrierCostCents: z.number().nonnegative().optional(),
-    sttCostCents: z.number().nonnegative().optional(),
-    ttsCostCents: z.number().nonnegative().optional(),
-  }).optional(),
-});
+const bodySchema = z
+  .object({
+    voice_call_id: z.string().uuid(),
+    // Telnyx path (legacy, purchased technical number): identifies the
+    // worker/tenant boundary by itself.
+    technical_phone_e164: z.string().regex(E164).optional(),
+    // SIP/BYOC path (Fase 2 do plano open-source): identifies the boundary
+    // by a verified customer connection, not a purchased number — so it
+    // needs the customer's own number too, to bind direction the same way
+    // the Telnyx path does.
+    connection_id: z.string().min(1).max(256).optional(),
+    phone_e164: z.string().regex(E164).optional(),
+    state: stateSchema,
+    provider_event_id: z.string().min(1).max(256),
+    provider_call_id: z.string().min(1).max(256).optional(),
+    occurred_at: z.string().datetime().optional(),
+    metrics: z.object({
+      carrierMs: z.number().nonnegative().optional(),
+      sttMs: z.number().nonnegative().optional(),
+      agentMs: z.number().nonnegative().optional(),
+      ttsMs: z.number().nonnegative().optional(),
+      e2eMs: z.number().nonnegative().optional(),
+      interruptionMs: z.number().nonnegative().optional(),
+      carrierCostCents: z.number().nonnegative().optional(),
+      sttCostCents: z.number().nonnegative().optional(),
+      ttsCostCents: z.number().nonnegative().optional(),
+    }).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const hasTelnyx = Boolean(data.technical_phone_e164);
+    const hasSip = Boolean(data.connection_id);
+    if (hasTelnyx === hasSip) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "exactly one of technical_phone_e164 or connection_id is required",
+      });
+    }
+    if (hasSip && !data.phone_e164) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "phone_e164 is required when connection_id is used" });
+    }
+  });
+
+interface BoundCall {
+  organization_id: string;
+}
+
+/** Legacy path: a purchased Telnyx number identifies the worker/tenant boundary by itself. */
+async function bindByTechnicalNumber(
+  db: pg.Pool,
+  voiceCallId: string,
+  technicalPhoneE164: string,
+): Promise<BoundCall | undefined> {
+  const { rows } = await db.query<BoundCall>(
+    `select vc.organization_id
+       from voice_calls vc
+       join voice_phone_numbers vpn
+         on vpn.organization_id = vc.organization_id
+        and vpn.provider = 'telnyx'
+        and vpn.phone_e164 = $2
+        and vpn.enabled = true
+      where vc.id = $1
+        and (
+          (vc.direction = 'inbound' and vc.called_number = $2)
+          or
+          (vc.direction = 'outbound' and vc.caller_number = $2)
+        )
+      limit 1`,
+    [voiceCallId, technicalPhoneE164],
+  );
+  return rows[0];
+}
+
+/**
+ * SIP/BYOC path (Fase 2 do plano open-source): no purchased number exists —
+ * the boundary is a verified customer connection plus the customer's own
+ * number, mirroring the same direction-based binding the Telnyx path uses.
+ * An unverified/disabled/unknown connection never matches, same tenant
+ * isolation invariant as `lib/voice/sip/asterisk-adapter.ts`.
+ */
+async function bindByVerifiedConnection(
+  db: pg.Pool,
+  voiceCallId: string,
+  connectionId: string,
+  phoneE164: string,
+): Promise<BoundCall | undefined> {
+  const { rows } = await db.query<BoundCall>(
+    `select vc.organization_id
+       from voice_calls vc
+       join voice_sip_connections vsc
+         on vsc.organization_id = vc.organization_id
+        and vsc.gateway = 'asterisk'
+        and vsc.external_connection_id = $2
+        and vsc.verified = true
+        and vsc.enabled = true
+       join voice_phone_numbers vpn
+         on vpn.connection_id = vsc.id
+        and vpn.phone_e164 = $3
+        and vpn.enabled = true
+      where vc.id = $1
+        and (
+          (vc.direction = 'inbound' and vc.called_number = $3)
+          or
+          (vc.direction = 'outbound' and vc.caller_number = $3)
+        )
+      limit 1`,
+    [voiceCallId, connectionId, phoneE164],
+  );
+  return rows[0];
+}
 
 function timingSafeEq(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -51,24 +143,9 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (!parsed.success) return fail("validation_failed", "Evento de voz inválido.", 422, { requestId });
 
   const db = getRequestPool();
-  const { rows } = await db.query<{ organization_id: string }>(
-    `select vc.organization_id
-       from voice_calls vc
-       join voice_phone_numbers vpn
-         on vpn.organization_id = vc.organization_id
-        and vpn.provider = 'telnyx'
-        and vpn.phone_e164 = $2
-        and vpn.enabled = true
-      where vc.id = $1
-        and (
-          (vc.direction = 'inbound' and vc.called_number = $2)
-          or
-          (vc.direction = 'outbound' and vc.caller_number = $2)
-        )
-      limit 1`,
-    [parsed.data.voice_call_id, parsed.data.technical_phone_e164],
-  );
-  const call = rows[0];
+  const call = parsed.data.technical_phone_e164
+    ? await bindByTechnicalNumber(db, parsed.data.voice_call_id, parsed.data.technical_phone_e164)
+    : await bindByVerifiedConnection(db, parsed.data.voice_call_id, parsed.data.connection_id!, parsed.data.phone_e164!);
   if (!call) return fail("voice_call_not_found", "Chamada não encontrada ou fora do worker autorizado.", 404, { requestId });
 
   const metrics = parsed.data.metrics ? normalizePatterMetrics(parsed.data.metrics) : undefined;
