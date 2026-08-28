@@ -113,52 +113,64 @@ async function main() {
   console.log("[smoke] starting the real production entrypoint (createVoiceSipWorker)...");
   const runPromise = worker.run();
 
-  // Give the worker time to bind its healthz server and connect to the fake ARI.
-  await new Promise((r) => setTimeout(r, 300));
+  try {
+    // Give the worker time to bind its healthz server and connect to the fake ARI.
+    await new Promise((r) => setTimeout(r, 300));
 
-  await new Promise((r) => setTimeout(r, 20));
-  fakeAri.sendEvent({
-    type: "StasisStart",
-    timestamp: new Date().toISOString(),
-    channel: {
-      id: "channel-main-smoke-1",
-      caller: { number: "+351911234567" },
-      connected: { number: "+351211234567" },
-      channelvars: { SIP_CONNECTION_ID: "sip-conn-abc" }, // seeded in the smoke test's Postgres database
-    },
-  });
+    await new Promise((r) => setTimeout(r, 20));
+    fakeAri.sendEvent({
+      type: "StasisStart",
+      timestamp: new Date().toISOString(),
+      channel: {
+        id: "channel-main-smoke-1",
+        caller: { number: "+351911234567" },
+        connected: { number: "+351211234567" },
+        channelvars: { SIP_CONNECTION_ID: "sip-conn-abc" }, // seeded in the smoke test's Postgres database
+      },
+    });
 
-  await new Promise((r) => setTimeout(r, 300));
+    await new Promise((r) => setTimeout(r, 300));
 
-  const contextCalls = fakeCrm.requestsReceived.filter((r) => r.path === "/api/internal/voice/context");
-  const eventCalls = fakeCrm.requestsReceived.filter((r) => r.path === "/api/internal/voice/event");
-  if (contextCalls.length !== 1 || eventCalls.length !== 1) {
-    throw new Error(`[smoke] expected 1 /context + 1 /event call after a real Postgres-backed resolution, got: ${JSON.stringify(fakeCrm.requestsReceived)}`);
+    const contextCalls = fakeCrm.requestsReceived.filter((r) => r.path === "/api/internal/voice/context");
+    const eventCalls = fakeCrm.requestsReceived.filter((r) => r.path === "/api/internal/voice/event");
+    if (contextCalls.length !== 1 || eventCalls.length !== 1) {
+      throw new Error(`[smoke] expected 1 /context + 1 /event call after a real Postgres-backed resolution, got: ${JSON.stringify(fakeCrm.requestsReceived)}`);
+    }
+    if (contextCalls[0].body.connection_id !== "sip-conn-abc" || eventCalls[0].body.state !== "active") {
+      throw new Error(`[smoke] unexpected forwarded payload: ${JSON.stringify(fakeCrm.requestsReceived)}`);
+    }
+    console.log("[smoke] real Postgres resolved the tenant and the worker forwarded to the fake CRM:", fakeCrm.requestsReceived);
+
+    console.log("[smoke] checking /healthz on the real running server...");
+    const healthzPort = worker.healthzPort();
+    if (!healthzPort) throw new Error("[smoke] expected the healthz server to be bound by now");
+    const health = await httpGetJson(`http://127.0.0.1:${healthzPort}/healthz`);
+    if (health.status !== 200 || health.body.status !== "ok") {
+      throw new Error(`[smoke] expected /healthz to report ok, got: ${JSON.stringify(health)}`);
+    }
+    console.log("[smoke] /healthz reports:", health.body);
+
+    console.log("[smoke] PASS — real entrypoint: env parsing -> real Postgres tenant resolution -> real HTTP forward -> graceful shutdown.");
+  } finally {
+    // Must run on the failure path too — otherwise the listener/healthz
+    // server/pool stay open and the process never exits on its own,
+    // hanging the whole verify-voice-core.sh gate instead of failing fast.
+    console.log("[smoke] stopping the worker (graceful shutdown)...");
+    await worker.stop("SIGTERM-smoke");
+    await runPromise;
+    await fakeAri.close();
+    await fakeCrm.close();
   }
-  if (contextCalls[0].body.connection_id !== "sip-conn-abc" || eventCalls[0].body.state !== "active") {
-    throw new Error(`[smoke] unexpected forwarded payload: ${JSON.stringify(fakeCrm.requestsReceived)}`);
-  }
-  console.log("[smoke] real Postgres resolved the tenant and the worker forwarded to the fake CRM:", fakeCrm.requestsReceived);
-
-  console.log("[smoke] checking /healthz on the real running server...");
-  const healthzPort = worker.healthzPort();
-  if (!healthzPort) throw new Error("[smoke] expected the healthz server to be bound by now");
-  const health = await httpGetJson(`http://127.0.0.1:${healthzPort}/healthz`);
-  if (health.status !== 200 || health.body.status !== "ok") {
-    throw new Error(`[smoke] expected /healthz to report ok, got: ${JSON.stringify(health)}`);
-  }
-  console.log("[smoke] /healthz reports:", health.body);
-
-  console.log("[smoke] stopping the worker (graceful shutdown)...");
-  await worker.stop("SIGTERM-smoke");
-  await runPromise;
-
-  await fakeAri.close();
-  await fakeCrm.close();
-  console.log("[smoke] PASS — real entrypoint: env parsing -> real Postgres tenant resolution -> real HTTP forward -> graceful shutdown.");
 }
 
-main().catch((error) => {
-  console.error("[smoke] FAIL:", error);
-  process.exitCode = 1;
-});
+main()
+  .catch((error) => {
+    console.error("[smoke] FAIL:", error);
+    process.exitCode = 1;
+  })
+  .finally(() => {
+    // Belt and suspenders: if anything still holds the event loop open
+    // (a stray timer, an unclosed handle), force the process to end
+    // instead of hanging the gate silently.
+    process.exit(process.exitCode ?? 0);
+  });
