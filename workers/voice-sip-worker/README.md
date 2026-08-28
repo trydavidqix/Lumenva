@@ -21,9 +21,10 @@ deste diretório sem uma decisão explícita de troca de arquitetura.
 Isto é lista, não segredo escondido — cada item exige infraestrutura que não existe nesta sessão:
 
 1. Um processo listener de longa duração que registre o app Stasis real (não `voicecore-test` de
-   teste) contra um Asterisk de verdade, mantenha a conexão WS viva com reconexão, e trate todos
-   os tipos de evento ARI relevantes (`StasisStart`, `StasisEnd`, `ChannelHangupRequest`) — hoje
-   `asterisk-adapter.ts#parseInboundEvent` só reconhece `StasisStart`.
+   teste) contra um Asterisk de verdade e mantenha a conexão WS viva com reconexão.
+   `asterisk-adapter.ts#parseInboundEvent` já reconhece os três tipos de evento relevantes
+   (`StasisStart`, `StasisEnd`, `ChannelHangupRequest`, desde 2026-08-28) — falta o processo que
+   os consome de verdade e decide o que um evento de término faz ao estado da chamada.
 2. Ligar esse listener a `resolveOrganizationByConnection` (`lib/voice/identity/resolve-organization.ts`)
    pra resolução real de tenant por conexão SIP verificada — o listener nunca deve confiar em
    `organization_id` vindo do payload do Asterisk.

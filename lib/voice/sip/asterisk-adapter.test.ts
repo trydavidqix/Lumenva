@@ -40,6 +40,41 @@ describe("Asterisk/ARI SIP gateway (Fase 2)", () => {
     expect(directory.resolveOrganizationByConnection).toHaveBeenCalledWith("sip-conn-abc", "+351211234567");
   });
 
+  it.each(["StasisEnd", "ChannelHangupRequest"] as const)(
+    "parses a %s event into a normalized SIP call event",
+    async (eventType) => {
+      const directory = directoryResolving("org-1");
+      const gateway = createAsteriskSipGateway({
+        directory,
+        ariClient: { originate: vi.fn() },
+        outboundContext: "lumenva-voice",
+      });
+      const rawBody = JSON.stringify({
+        type: eventType,
+        timestamp: "2026-08-27T00:05:00.000Z",
+        channel: {
+          id: "channel-1",
+          caller: { number: "+351911234567" },
+          connected: { number: "+351211234567" },
+          channelvars: { SIP_CONNECTION_ID: "sip-conn-abc" },
+        },
+      });
+
+      await expect(gateway.parseInboundEvent(rawBody)).resolves.toEqual({
+        organizationId: "org-1",
+        connectionId: "sip-conn-abc",
+        gateway: "asterisk",
+        providerEventId: "channel-1",
+        eventType,
+        occurredAt: "2026-08-27T00:05:00.000Z",
+        direction: "inbound",
+        callerE164: "+351911234567",
+        calledE164: "+351211234567",
+        attributes: { callControlId: "channel-1", callSessionId: null },
+      });
+    },
+  );
+
   it("rejects a channel with no SIP_CONNECTION_ID — connection unknown", async () => {
     const gateway = createAsteriskSipGateway({
       directory: directoryResolving("org-1"),

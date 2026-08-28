@@ -58,6 +58,20 @@
 >   documentado neste repo, viabilidade de rodar num sandbox sem GPU não confirmada; ver
 >   `workers/voice-sip-worker/README.md` para o raciocínio completo). Nenhum listener de produção
 >   de longa duração foi criado — só a prova do cliente/protocolo. `main.mjs` continua idêntico.
+> - **Atualização 2026-08-28 (segunda fatia, mesma data): mais eventos ARI reconhecidos.**
+>   `lib/voice/sip/asterisk-adapter.ts#parseInboundEvent` reconhecia só `StasisStart`; agora
+>   também aceita `StasisEnd` e `ChannelHangupRequest` (os dois jeitos do Asterisk sinalizar fim
+>   de chamada, dependendo de quem desliga e quando) — a mesma normalização/isolamento de tenant
+>   (`SIP_CONNECTION_ID` obrigatório, `resolveOrganizationByConnection`) se aplica aos três; o
+>   campo `eventType` do `NormalizedSipCallEvent` retornado agora carrega o tipo real, não mais
+>   `"StasisStart"` hardcoded. Qualquer outro tipo (`ChannelDestroyed` etc.) continua rejeitado
+>   como antes — teste existente preservado. 2 testes novos (`asterisk-adapter.test.ts`), suíte
+>   11/11 verde, `pnpm typecheck` limpo, gate completo (`bash scripts/verify-voice-core.sh`)
+>   verde. **Não fiz**: nenhuma interpretação do que um evento de término *significa* pro estado
+>   da chamada (isso é do consumidor/listener, ainda não construído — ver
+>   `workers/voice-sip-worker/README.md`), e não mexi em como `direction` (hoje sempre
+>   `"inbound"` neste adapter) deveria se comportar pro lado Stasis de uma chamada outbound
+>   originada — ficou como estava, fora de escopo desta fatia.
 > - **Fase 4 — IMPLEMENTADA PARCIAL** (commit `e9dc37e2`). Versionamento imutável do
 >   perfil de voz (`lib/voice/engine/voice-profile-version.ts` — publicar sempre acrescenta,
 >   nunca reescreve uma versão antiga; `activeVersion` é um ponteiro, rollback é publicar de
