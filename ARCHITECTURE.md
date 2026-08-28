@@ -22,6 +22,24 @@
   embeddings configuráveis, com override de embeddings compatível com NVIDIA Build.
 - **Observability (Sentry)**: `beforeSend` scrubs PII (CPF/email/phone) e headers sensíveis.
 
+## Voz por SIP/BYOC
+
+O cliente mantém o próprio número. A camada de voz entra entre a operadora SIP/BYOC e o CRM:
+Asterisk/ARI recebe a chamada, o worker SIP normaliza eventos e Pipecat conduz o áudio;
+faster-whisper faz STT e Piper ou Kokoro faz TTS. OpenVoice é apenas uma opção de clonagem autorizada.
+
+O CRM continua sendo a autoridade para organização, contacto, memória, Agent OS, tokens,
+políticas, tools, handoff e auditoria. O runtime de voz não cria um segundo agente, não acessa
+tools comerciais diretamente e não pode trocar tenant ou idioma silenciosamente.
+
+A camada de sinalização (controle da chamada: ARI, tenant, listener, forwarder pro CRM) está
+implementada e testada de ponta a ponta em `origin/implementacao-tokens-voice-core` (`d3c97cbd`),
+mas não está integrada nesta branch. O caminho de áudio real (Pipecat/faster-whisper/Piper/Kokoro)
+está bloqueado por infraestrutura — precisa de host com mais recursos que a VPS atual, decisão de
+custo pendente do dono — e o deploy do Asterisk ainda não está versionado no Git. Detalhes e
+estado real: [`docs/voice/open-source-europe.md`](docs/voice/open-source-europe.md) e
+[`docs/handoffs/HANDOFF-voice-vps-config-2026-08-28.md`](docs/handoffs/HANDOFF-voice-vps-config-2026-08-28.md).
+
 ## Multi-tenancy
 
 `organization_id uuid not null` em toda tabela tenant-aware. RLS via helper. Service role bypassa RLS — handlers admin **DEVEM** filtrar `organization_id` manualmente, resolvido de fonte confiável (cookie/JWT/webhook secret/path token), nunca do body.
@@ -83,6 +101,7 @@ pelos 10 endpoints em `app/api/v1/cron/`. Contrato: [`docs/specs/07-spec-events-
 | **Sentry** | erros + performance, `beforeSend` higieniza PII | `sentry.*.config.ts`, `instrumentation*.ts` | opcional |
 | **Resend** | e-mail transacional (convite de time) | `lib/email/` | opcional — o convite cai em copy-to-clipboard |
 | **MCP** | CRM exposto como tools para agentes | `app/api/mcp/`, `lib/mcp/` | — |
+| **Asterisk/ARI + Pipecat** | Voz SIP/BYOC e runtime provider-neutral | `docs/voice/` e branch Voice Core | bridge parcial; áudio live ainda pendente |
 
 ## Hardening
 

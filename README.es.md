@@ -58,7 +58,7 @@ El proyecto nació como un CRM de e-commerce — y la comunidad open source lo l
 - 🔌 **MCP-ready** — servidor MCP interno para los agentes integrados; contrato público para agentes externos en construcción. El CRM como infraestructura para cualquier agente de IA.
 - 💬 **WhatsApp-nativo vía WAHA** — multi-número, anti-baneo (throttle + jitter + ventanas de horario), medios vía Storage, detección de STOP.
 - 👥 **Gobernanza de atención** — RBAC server-side de verdad, asignación/transferencia auditadas, cola con posición, enrutamiento automático y alcance de visualización por rol.
-- 🏢 **Multi-tenant + privacidad por diseño (LGPD)** — RLS en toda tabla tenant-aware con test de aislamiento como gate de CI; anonimización preferida sobre borrado; log de auditoría append-only con retención de 5 años.
+- 🏢 **Multi-tenant + privacidad por diseño (RGPD/GDPR)** — RLS en toda tabla tenant-aware con test de aislamiento; anonimización preferida sobre borrado; log de auditoría append-only con retención de 5 años. GitHub Actions está deshabilitado; consulta los gates locales en [`CLAUDE.md`](CLAUDE.md).
 - 🖥️ **Self-hosted de verdad** — tus datos en tu VPS; instalación con 1 comando; sin versión paga, sin funciones bloqueadas.
 
 ### 🔌 Webhooks & Automatizaciones
@@ -136,7 +136,7 @@ pnpm test:db       # Postgres efímero + baseline install/update + invariantes
 pnpm test:e2e      # Playwright (requiere dev server)
 ```
 
-El CI ejecuta `typecheck`, `lint` y `test:unit` en cada PR. Un segundo job — **`invariants`** — levanta un Postgres limpio, aplica `supabase/baseline.sql` en modo install (`ON_ERROR_STOP=1`) y luego en modo update (probando idempotencia), y ejecuta **364 tests de invariante** repartidos en 56 archivos, cubriendo RBAC, asignación, alcance de visualización, enrutamiento, follow-up, webhooks y automatizaciones.
+Los workflows `verify` e `invariants` permanecen versionados como referencia, pero GitHub Actions está deshabilitado en este repositorio. La verificación actual es local: `pnpm typecheck`, `pnpm lint`, `pnpm lint:channels`, `pnpm lint:tenant-filter`, `pnpm test:unit` y, cuando corresponda, `pnpm test:db` (Postgres limpio + instalación/actualización de `baseline.sql`). Hay 78 archivos de invariantes en `tests/invariants/`, que cubren RBAC, asignación, alcance de visualización, enrutamiento, follow-up, webhooks y automatizaciones.
 
 Entre ellos está el **test de aislamiento RLS**: crea 2 organizaciones, simula los claims JWT por el mismo camino `auth.uid()` / `fn_user_org_ids()` que usan las policies de producción, y prueba que un usuario de la org A ve **cero filas** de la org B en `conversations`, `messages`, `contacts` y `crm_leads`. Antes, un caso de control prueba que las filas de la org B realmente existen en la base — sin él, el test pasaría contra una tabla vacía.
 

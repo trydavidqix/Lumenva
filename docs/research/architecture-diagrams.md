@@ -1,8 +1,8 @@
 ---
 title: DeskcommCRM — Diagramas de Arquitetura
-version: 0.1
+version: 0.2
 status: em revisão
-date: 2026-04-28
+date: 2026-08-28
 owner: Rafael Melgaço
 referencia_arquitetural: docs/research/reference-synthesis.md
 formato: Mermaid
@@ -10,13 +10,13 @@ formato: Mermaid
 
 # DeskcommCRM — Diagramas de Arquitetura
 
-Este documento consolida os diagramas canônicos do DeskcommCRM em sintaxe Mermaid. Serve como referência visual única para discussões de arquitetura, onboarding técnico, revisão de PRs estruturais e auditoria LGPD. Os diagramas aderem ao modelo C4 (níveis 1, 2 e 3), complementados por ER, sequência, deployment, fluxo de dados e máquinas de estado. Toda decisão arquitetural representada aqui foi herdada do bundle de referência (`reference-synthesis.md`) ou explicitada nos sub-PRDs `01` a `06`.
+Este documento consolida os diagramas canônicos do DeskcommCRM em sintaxe Mermaid. Serve como referência visual única para discussões de arquitetura, onboarding técnico, revisão de PRs estruturais e auditoria LGPD. Os diagramas aderem ao modelo C4 (níveis 1, 2 e 3), complementados por ER, sequência, deployment, fluxo de dados e máquinas de estado. A arquitetura de voz SIP/BYOC abaixo representa a implementação candidata confirmada na branch `origin/implementacao-tokens-voice-core` (`d3c97cbd`), ainda não integrada no checkout consolidado. O estado e os limites dessa integração estão em [`docs/voice/open-source-europe.md`](../voice/open-source-europe.md).
 
 ---
 
 ## 1. C4 Level 1 — System Context
 
-Visão macro do DeskcommCRM como sistema único, mostrando os atores humanos (operadores BPO, lojistas, clientes finais) e os sistemas externos (Nuvemshop, WhatsApp via WAHA, AI Gateway, ANPD). O foco é responder "quem fala com quem" e "qual é a fronteira do produto". O DeskcommCRM concentra a lógica de negócio; tudo que aparece ao redor é dependência ou usuário.
+Visão macro do DeskcommCRM como sistema único, mostrando os atores humanos (operadores BPO, lojistas, clientes finais) e os sistemas externos (Nuvemshop, WhatsApp via WAHA, SIP/BYOC, AI Gateway, ANPD). O foco é responder "quem fala com quem" e "qual é a fronteira do produto". O DeskcommCRM concentra a lógica de negócio; tudo que aparece ao redor é dependência ou usuário.
 
 ```mermaid
 graph TD
@@ -30,6 +30,8 @@ graph TD
 
     Nuvemshop[Nuvemshop API<br/>OAuth + 8 webhooks<br/>+ catálogo + pedidos]
     WAHA[WAHA Plus<br/>WhatsApp HTTP API<br/>multi-sessão NOWEB]
+    SIP[SIP/BYOC<br/>número do cliente<br/>operadora SIP]
+    Voice[Asterisk/ARI + Voice Core<br/>sinalização confirmada<br/>áudio de IA pendente]
     AIGW[Vercel AI Gateway<br/>Anthropic primário<br/>OpenAI fallback]
     Sentry[Sentry<br/>error tracking]
 
@@ -40,6 +42,8 @@ graph TD
 
     Cliente <-->|conversa via WhatsApp| WAHA
     WAHA <-->|webhooks + send| DeskcommCRM
+    SIP <-->|chamada SIP| Voice
+    Voice <-->|contexto, eventos, tenant| DeskcommCRM
 
     DeskcommCRM <-->|OAuth + webhooks + sync| Nuvemshop
     DeskcommCRM -->|chat completion + embeddings| AIGW
@@ -50,12 +54,12 @@ graph TD
 
 ## 2. C4 Level 2 — Container Diagram
 
-Decomposição do DeskcommCRM em containers de runtime. O Next.js App é o monolito hospedado na Vercel; Supabase entrega Postgres, Realtime e Storage gerenciados; Upstash provê Redis para rate-limit; WAHA Plus roda em VPS Hostgator próprio (Docker); o MCP server é projeto separado entrando na Fase 2. A linha pontilhada para o MCP marca componentes ainda não construídos no MVP.
+Decomposição do DeskcommCRM em containers de runtime. O Next.js App é o monolito hospedado na Vercel; Supabase entrega Postgres, Realtime e Storage gerenciados; Upstash provê Redis para rate-limit; WAHA Plus roda em VPS própria. O MCP server é endpoint interno já presente no Next.js (`/api/mcp`), não um projeto separado. Voice Core é uma integração candidata: a sinalização SIP/BYOC está implementada na branch candidata, mas o áudio live e o deploy versionado do Asterisk continuam pendentes.
 
 ```mermaid
 graph TB
     subgraph Vercel
-        NextApp[Next.js 14+ App Router<br/>Route Handlers + Server Actions<br/>Cron Vercel]
+        NextApp[Next.js 16 App Router<br/>Route Handlers + Server Actions<br/>Cron Vercel]
         AIGW[Vercel AI Gateway<br/>fallback Anthropic→OpenAI]
     end
 
@@ -67,12 +71,15 @@ graph TB
     end
 
     subgraph Upstash
-        Redis[(Redis<br/>sliding-window rate limit<br/>idempotency cache)]
+        Redis[(Redis<br/>fixed-window rate limit<br/>idempotency cache)]
     end
 
     subgraph HostgatorVPS
         Nginx[Nginx<br/>proxy_buffering off]
         WAHA[WAHA Plus<br/>engine NOWEB<br/>N sessões]
+        Asterisk[Asterisk 22 + ARI<br/>SIP/BYOC gateway]
+        VoiceWorker[Voice SIP worker<br/>tenant validation + forwarder]
+        VoiceAudio[Pipecat + faster-whisper<br/>Piper/Kokoro<br/>BLOCKED EXTERNAL]:::future
     end
 
     Sentry[Sentry SaaS]
@@ -80,7 +87,7 @@ graph TB
     OpenAI[OpenAI API]
     NS[Nuvemshop API]
 
-    MCP[MCP Server<br/>Node 20 ESM<br/>Fase 2]:::future
+    MCP[MCP endpoint interno<br/>/api/mcp + lib/mcp]
 
     NextApp <--> PG
     NextApp <--> RT
@@ -93,11 +100,13 @@ graph TB
     NextApp <-->|REST + webhooks| NS
     Nginx --> WAHA
     NextApp <-->|webhook receive + send| Nginx
+    Asterisk <--> VoiceWorker
+    VoiceWorker <-->|HTTP /context + /event| NextApp
+    VoiceWorker -.-> VoiceAudio
     NextApp -->|errors| Sentry
     WAHA -->|errors| Sentry
 
-    MCP -.->|REST API Bearer| NextApp
-    MCP -.-> Anthropic
+    NextApp -->|MCP tools in-process| MCP
 
     classDef future stroke-dasharray: 5 5,stroke:#888,color:#888
 ```
@@ -610,7 +619,7 @@ sequenceDiagram
 
 ## 10. Deployment Diagram
 
-Topologia física de produção. Vercel hospeda o Next.js (Edge + serverless), Supabase entrega os 3 serviços gerenciados, Upstash o Redis, Hostgator VPS roda WAHA atrás de Nginx. AI Gateway é proxy interno da Vercel para Anthropic e OpenAI. Sentry recebe telemetria do Next.js e do host WAHA. Conexões críticas: Realtime via WebSocket persistente, webhooks WAHA via HTTPS, AI calls via HTTPS com observability nativa.
+Topologia física de produção e dos componentes candidatos. Vercel hospeda o Next.js (Edge + serverless), Supabase entrega os serviços gerenciados, Upstash o Redis, e a VPS de telefonia roda WAHA/Asterisk e o worker SIP. AI Gateway é proxy interno da Vercel para os providers configurados. Sentry recebe telemetria do Next.js e dos workers quando configurado. Voice Core não é produção integrada: o Asterisk foi configurado manualmente na VPS e o caminho Pipecat/STT/TTS está bloqueado por capacidade do host.
 
 ```mermaid
 graph LR
@@ -632,7 +641,12 @@ graph LR
     subgraph Hostgator[Hostgator VPS]
         Nginx[Nginx<br/>TLS + buffering off]
         WAHA[WAHA Plus<br/>Docker NOWEB]
+        Asterisk[Asterisk 22 + ARI<br/>SIP/BYOC]
+        VoiceWorker[Voice SIP worker<br/>sinalização + forwarder]
+        VoiceAudio[Pipecat + STT/TTS<br/>não provado / bloqueado]:::future
     end
+
+    SIP[SIP/BYOC<br/>número do cliente / operadora]
 
     Sentry[Sentry SaaS]
 
@@ -651,12 +665,43 @@ graph LR
     WAHA --> Nginx
     Nginx -.->|webhook HTTPS| App
     App -->|send HTTPS| Nginx
+    SIP <-->|SIP/RTP| Asterisk
+    Asterisk <--> VoiceWorker
+    VoiceWorker <-->|HTTPS /context + /event| App
+    VoiceWorker -.-> VoiceAudio
 
     App -->|telemetry| Sentry
     WAHA -->|telemetry| Sentry
+    VoiceWorker -->|telemetry quando configurado| Sentry
 ```
 
 ---
+
+## 10.1. Voice Core — sequência de sinalização (candidata)
+
+O diagrama separa controle da chamada de áudio. O worker resolve o tenant pela conexão SIP
+verificada, encaminha eventos/contexto ao CRM e mantém reconexão com o ARI. Não representa uma
+chamada PSTN/SIP completa nem execução live de Pipecat, faster-whisper, Piper/Kokoro ou OpenVoice;
+esses pontos permanecem `NOT_PROVEN`/`BLOCKED EXTERNAL` conforme o estado de 2026-08-28.
+
+```mermaid
+sequenceDiagram
+    participant Carrier as Operadora SIP/BYOC
+    participant ARI as Asterisk/ARI
+    participant Worker as Voice SIP worker
+    participant CRM as DeskcommCRM /api/internal/voice
+    participant Audio as Pipecat + STT/TTS
+
+    Carrier->>ARI: chamada SIP inbound
+    ARI->>Worker: StasisStart / evento de canal
+    Worker->>ARI: resolver SIP_CONNECTION_ID + listener
+    Worker->>CRM: POST /context (tenant + ligação)
+    CRM-->>Worker: contexto autorizado (agente/policy)
+    Worker->>CRM: POST /event (estado normalizado)
+    Worker-.->Audio: RTP/media bridge (pendente)
+    Audio-.->Worker: áudio bidirecional (não provado)
+    Worker->>ARI: hangup/transfer conforme evento autorizado
+```
 
 ## 11. Data Flow — RAG ingestion pipeline
 

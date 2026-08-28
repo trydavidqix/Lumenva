@@ -4,9 +4,13 @@ phase: 9
 title: Phase 10 Flywheel Loop E2E Validation
 status: in-progress
 date: 2026-08-18
+verification_note: historical runbook; no current external execution implied
 ---
 
 # Phase 9: End-to-End Validation — Phase 10 Flywheel
+
+> Historical validation plan. GitHub Actions is disabled; executing these steps requires
+> explicit access to the target environment and fresh evidence.
 
 **Goal:** Prove judge loop works: cron fires → outcomes persisted → dashboard reads metrics.
 
@@ -152,4 +156,3 @@ Judge latency:
 Outcomes count: 
 Dashboard visible: 
 Issues: 
-

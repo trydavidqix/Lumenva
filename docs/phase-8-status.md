@@ -5,9 +5,14 @@ title: Phase 8 — LangGraph Approval Workflows (Production Rollout)
 status: production-live
 last_updated: 2026-08-18 (Feature flags activated)
 audited_against: origin/main @ 89172f40 (Flags ON in Supabase Cloud)
+verification_note: historical snapshot; production flags and deployment require fresh external evidence
 ---
 
-# Phase 8: LangGraph Approval Workflows — Production Live
+# Phase 8: LangGraph Approval Workflows — Historical Production Snapshot
+
+> This document records an activation reported on 2026-08-18. It is not current proof of
+> production availability. GitHub Actions is disabled and the referenced external resources
+> must be rechecked before relying on this status.
 
 ## Summary
 
@@ -91,7 +96,8 @@ Both flags ACTIVE in production (2026-08-18 19:23 UTC). Vercel redeploy triggere
 | `pnpm test:e2e` | .env.e2e missing (requires Supabase local setup) | E2E against staging env not run |
 | `pnpm test:unit` | vitest compilation timeout (large monorepo) | Unit suite not verified |
 
-**Workaround:** GitHub Actions CI will run all tests remotely when PR merges. Local PC too constrained for full test suite.
+**Workaround (historical):** GitHub Actions was expected to run tests remotely. Actions is now
+disabled at repository level; use the local gates and a final Vercel Preview instead.
 
 ### Next Steps (7-day Observation)
 

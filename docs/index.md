@@ -2,15 +2,15 @@
 type: index
 project: DeskcommCRM
 status: maintained
-last_updated: 2026-08-25
-generated_by: auditoria documental (Claude Code)
+last_updated: 2026-08-28
+generated_by: auditoria documental sincronizada — CRM consolidado e Voice Core
 confidence: alta (inventário de arquivos é CONFIRMADO; agrupamento temático é INFERIDO)
-audited_against: main @ 3cd5c48a (sincronização documental e auditoria completa)
+audited_against: codex/crm-consolidated @ 54e86839 (sincronização documental de voz; inventário recontado em 2026-08-28)
 ---
 
 # Índice da documentação — DeskcommCRM
 
-Mapa da documentação versionada de `docs/` — a árvore auditada contém 206 `.md`/`.mdx`.
+Mapa da documentação versionada de `docs/` — a árvore auditada contém 211 `.md`/`.mdx`.
 Confirme a contagem com `rg --files docs -g '*.md' -g '*.mdx' | wc -l`. Existe porque a documentação cresceu sem ponto
 de entrada: sem este índice, humano e agente não acham o que já foi decidido e
 reescrevem por cima.
@@ -34,6 +34,15 @@ de menor precedência e registre.
 | [`CONTRIBUTING.md`](../CONTRIBUTING.md) | Como contribuir |
 | [`CHANGELOG.md`](../CHANGELOG.md) | Mudanças por versão (SemVer). **Quem roda VPS lê antes de `update.sh`** — mudança que exige ação manual aparece sob "⚠️ Requer atenção" |
 | [`docs/current-state.md`](current-state.md) | **O que está pronto, incompleto e quebrado hoje** |
+
+### Voz
+
+| Doc | Conteúdo |
+|---|---|
+| [`voice/open-source-europe.md`](voice/open-source-europe.md) | Decisão SIP/BYOC, stack open-source europeia e estado real da integração |
+| [`handoffs/HANDOFF-voice-sip-2026-08-28.md`](handoffs/HANDOFF-voice-sip-2026-08-28.md) | Estado sincronizado, alterações, provas, bloqueios e próximos passos do Voice Core |
+| [`handoffs/HANDOFF-voice-vps-config-2026-08-28.md`](handoffs/HANDOFF-voice-vps-config-2026-08-28.md) | Resultado da leitura da VPS e estado do benchmark cloud de áudio |
+| [`evidence/voice-vps-config-2026-08-28/README.md`](evidence/voice-vps-config-2026-08-28/README.md) | Índice da evidência de configuração da VPS; sem credenciais e sem prova de chamada completa |
 
 ## 2. Produto e intenção
 

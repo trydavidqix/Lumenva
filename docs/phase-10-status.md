@@ -4,11 +4,12 @@ phase: 10
 title: Phase 10 Flywheel Auto-Improvement Loop
 status: MVP COMPLETE (2026-08-18 21:45 UTC)
 audience: Product, Engineering, Operations
+verification_note: historical snapshot; GitHub Actions disabled 2026-08-20, production state requires fresh evidence
 ---
 
 # Phase 10: Flywheel Auto-Improvement Loop
 
-**Status:** ✅ **MVP DONE** — All 4 tasks complete. Ready for QA + e2e validation.
+**Status:** ✅ **MVP DONE (snapshot 2026-08-18)** — All 4 tasks were reported complete. This is a historical status document, not current production proof. GitHub Actions is disabled; rerun the local/Preview gates before activation or release decisions.
 
 **Timeline:** Investigation (30min) → Task 1-4 (4 hours) → Validation pending
 
@@ -132,7 +133,7 @@ Enables: "Did approved proposals improve conversions?"
 - [x] Schema migrated to staging
 - [x] Feature flags OFF (no auto-enable needed)
 - [ ] Baseline SQL updated
-- [ ] CI tests pass (GitHub Actions)
+- [ ] Local verification gates pass (`pnpm typecheck`, `pnpm lint`, `pnpm test:unit`; add `pnpm test:db` for schema/RLS)
 - [ ] E2E validated (manual + playwright)
 - [ ] Runbook prepared
 - [ ] Sentry/monitoring configured
