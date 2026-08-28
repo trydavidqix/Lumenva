@@ -72,6 +72,29 @@
 >   `workers/voice-sip-worker/README.md`), e não mexi em como `direction` (hoje sempre
 >   `"inbound"` neste adapter) deveria se comportar pro lado Stasis de uma chamada outbound
 >   originada — ficou como estava, fora de escopo desta fatia.
+> - **Atualização 2026-08-28 (terceira fatia, mesma data): listener real ligado ao resolver de
+>   tenant.** `lib/voice/sip/asterisk-listener.ts` (`createAsteriskAriListener`) conecta o
+>   `AriConnection` ao `SipGateway.parseInboundEvent` — cada evento bruto do stream ARI vira um
+>   `NormalizedSipCallEvent` (`status: "normalized"`) ou um resultado `"rejected"` (tipo não
+>   suportado, tenant desconhecido, etc.) **sem derrubar o loop**, porque um Asterisk real manda
+>   tipos de evento que o gateway não reconhece o tempo todo. Testado com o resolver de tenant
+>   **de verdade** (`createVoiceOrganizationResolver`, não uma função mockada) contra um banco
+>   falso em memória com o mesmo formato de `voice_sip_connections`/`voice_phone_numbers` — prova
+>   real de que conexão SIP → número → organização funciona ponta a ponta, não só que uma função
+>   foi chamada. Extraído `lib/voice/sip/testing/fake-ari-server.ts` (helper de servidor ARI falso
+>   HTTP+WS real, compartilhado agora por `asterisk-ari-client.test.ts` e
+>   `asterisk-listener.test.ts`, sem duplicar a lógica do servidor). Smoke test do processo real
+>   (`workers/voice-sip-worker/ari-listener.smoke.mjs`) estendido pra provar
+>   conectar → normalizar `StasisStart` → sobreviver a um evento não suportado →
+>   normalizar `ChannelHangupRequest` → fechar, como processo Node de verdade via `tsx`. 4 testes
+>   novos do listener, suíte `lib/voice/sip/` inteira 23/23 verde, `pnpm typecheck` limpo, gate
+>   completo verde. **Não fiz, de propósito**: nenhum encaminhamento do evento normalizado pro CRM
+>   — `app/api/internal/voice/event` foi desenhado pro mundo Telnyx (`voice_call_id` +
+>   `technical_phone_e164`), o mundo SIP/BYOC identifica por `connectionId`, e não existe
+>   spec/contrato dizendo como mapear um pro outro (ou se a rota deveria mudar). Inventar esse
+>   mapeamento seria criar regra de negócio sem PRD por trás — fica registrado como a próxima
+>   decisão explícita a tomar, não implementado às cegas. Também não construí reconexão automática
+>   do WebSocket em caso de queda, nem liguei isso a um Asterisk real.
 > - **Fase 4 — IMPLEMENTADA PARCIAL** (commit `e9dc37e2`). Versionamento imutável do
 >   perfil de voz (`lib/voice/engine/voice-profile-version.ts` — publicar sempre acrescenta,
 >   nunca reescreve uma versão antiga; `activeVersion` é um ponteiro, rollback é publicar de

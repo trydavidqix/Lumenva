@@ -15,22 +15,32 @@ deste diretório sem uma decisão explícita de troca de arquitetura.
   (`createAsteriskAriConnection`), implementando a interface `AriClient` já definida em
   `lib/voice/sip/asterisk-adapter.ts` e estendendo com `AriConnection`
   (`connectEvents`/`answer`/`hangup`) sem alterar aquele arquivo nem seus testes existentes.
+- `lib/voice/sip/asterisk-listener.ts` (`createAsteriskAriListener`) já liga o `AriConnection` ao
+  `SipGateway.parseInboundEvent` — consome o stream ARI e produz
+  `{status: "normalized", event}` ou `{status: "rejected", error, raw}` por evento, sem derrubar
+  o loop num evento inesperado. Testado com o resolver de tenant real
+  (`createVoiceOrganizationResolver`) contra um banco falso — prova de verdade da resolução
+  conexão→número→organização, não mock da função. `ari-listener.smoke.mjs` já exercita isso como
+  processo real (conectar → normalizar → sobreviver a evento não suportado → normalizar →
+  fechar).
 
 ## O que falta pra isto virar um worker de verdade
 
 Isto é lista, não segredo escondido — cada item exige infraestrutura que não existe nesta sessão:
 
-1. Um processo listener de longa duração que registre o app Stasis real (não `voicecore-test` de
-   teste) contra um Asterisk de verdade e mantenha a conexão WS viva com reconexão.
-   `asterisk-adapter.ts#parseInboundEvent` já reconhece os três tipos de evento relevantes
-   (`StasisStart`, `StasisEnd`, `ChannelHangupRequest`, desde 2026-08-28) — falta o processo que
-   os consome de verdade e decide o que um evento de término faz ao estado da chamada.
-2. Ligar esse listener a `resolveOrganizationByConnection` (`lib/voice/identity/resolve-organization.ts`)
-   pra resolução real de tenant por conexão SIP verificada — o listener nunca deve confiar em
-   `organization_id` vindo do payload do Asterisk.
-3. Encaminhar eventos normalizados pra `app/api/internal/voice/event` (mesmo padrão de auth
-   `x-internal-secret` que `workers/voice-worker/brain-client.mjs` já usa) — reaproveitar esse
-   padrão, não inventar um novo.
+1. Um processo de longa duração de verdade que registre o app Stasis real (não `voicecore-test`
+   de teste) contra um Asterisk verdadeiro e mantenha a conexão WS viva com **reconexão**
+   automática em caso de queda — `createAsteriskAriListener` já consome o stream e sobrevive a
+   eventos ruins, mas não reconecta sozinho se o WebSocket cair.
+2. ~~Ligar esse listener a `resolveOrganizationByConnection`~~ — **feito** (2026-08-28):
+   `asterisk-listener.ts` já usa o `SipGateway` (que já chama `resolveOrganizationByConnection`
+   internamente) pra cada evento, testado contra o resolver real.
+3. Encaminhar eventos normalizados pra o CRM — **decisão pendente, não implementação esquecida**.
+   `app/api/internal/voice/event` foi desenhado pro mundo Telnyx (`voice_call_id` +
+   `technical_phone_e164`); o mundo SIP/BYOC identifica por `connectionId`, não por número
+   técnico comprado. Não existe spec dizendo como mapear um `NormalizedSipCallEvent` pra esse
+   payload, ou se a rota deveria mudar — decidir isso é um passo de produto/arquitetura antes de
+   codar, não uma invenção silenciosa.
 4. Decisão de build: `asterisk-ari-client.ts` é TypeScript; os workers em `workers/**` rodam sem
    step de build (`node main.mjs` puro). Rodar via `tsx` em produção é uma opção mais leve que
    criar um pipeline de build novo pros workers — mas isso é uma decisão de infraestrutura

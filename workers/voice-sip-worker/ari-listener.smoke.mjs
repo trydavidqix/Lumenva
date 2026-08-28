@@ -1,23 +1,24 @@
 #!/usr/bin/env -S npx tsx
-// Smoke test for the Fase 3 Asterisk ARI client, run as a real Node process
+// Smoke test for the Fase 3 Asterisk ARI listener, run as a real Node process
 // (not a vitest suite) via `npx tsx workers/voice-sip-worker/ari-listener.smoke.mjs`.
 //
 // It starts a minimal fake local Asterisk ARI server (real HTTP + real
-// WebSocket, same protocol shape as `lib/voice/sip/asterisk-ari-client.test.ts`)
+// WebSocket, same protocol shape as `lib/voice/sip/testing/fake-ari-server.ts`)
 // and proves the full flow a real listener process would need:
-// connect -> receive a StasisStart event -> answer the channel -> close.
+// connect -> normalize a StasisStart -> survive an unsupported event type
+// without dying -> normalize a ChannelHangupRequest -> close.
 //
 // This does NOT talk to a real Asterisk instance — there is none reachable
-// from this environment. It proves the client's real network behavior as a
-// standalone process, not a fake-only unit test. Wiring this into an actual
-// long-running listener process bound to `main` (voicecore-test app name,
-// tenant resolution via `resolveByConnection`, forwarding events to
-// `app/api/internal/voice/event`) is deliberately out of scope — see
-// `workers/voice-sip-worker/README.md`.
+// from this environment. It proves the client/listener's real network
+// behavior as a standalone process, not a fake-only unit test. Forwarding
+// the normalized events to the CRM (app/api/internal/voice/event) is
+// deliberately out of scope — see `workers/voice-sip-worker/README.md`.
 
 import http from "node:http";
 import { WebSocketServer } from "ws";
 import { createAsteriskAriConnection } from "../../lib/voice/sip/asterisk-ari-client.ts";
+import { createAsteriskSipGateway } from "../../lib/voice/sip/asterisk-adapter.ts";
+import { createAsteriskAriListener } from "../../lib/voice/sip/asterisk-listener.ts";
 
 const USERNAME = "voicecore";
 const PASSWORD = "s3cret";
@@ -32,11 +33,6 @@ function startFakeAriServer() {
       if (req.headers.authorization !== expectedAuth) {
         res.writeHead(401, { "content-type": "application/json" });
         res.end(JSON.stringify({ message: "authentication failed" }));
-        return;
-      }
-      if (req.method === "POST" && /^\/ari\/channels\/[^/]+\/answer$/.test(url.pathname)) {
-        res.writeHead(200, { "content-type": "application/json" });
-        res.end("{}");
         return;
       }
       res.writeHead(404, { "content-type": "application/json" });
@@ -66,39 +62,71 @@ function startFakeAriServer() {
   });
 }
 
+function stasisEvent(type, channelId) {
+  return {
+    type,
+    timestamp: new Date().toISOString(),
+    channel: {
+      id: channelId,
+      caller: { number: "+351911234567" },
+      connected: { number: "+351211234567" },
+      channelvars: { SIP_CONNECTION_ID: "sip-conn-abc" },
+    },
+  };
+}
+
 async function main() {
   const fakeAri = await startFakeAriServer();
-  const client = createAsteriskAriConnection({ baseUrl: fakeAri.baseUrl, username: USERNAME, password: PASSWORD });
+  const connection = createAsteriskAriConnection({ baseUrl: fakeAri.baseUrl, username: USERNAME, password: PASSWORD });
+  const gateway = createAsteriskSipGateway({
+    directory: { resolveOrganizationByConnection: async () => "org-smoke-1" },
+    ariClient: { originate: async () => ({ channelId: "unused" }) },
+    outboundContext: "lumenva-voice",
+  });
 
-  console.log("[smoke] connecting to fake ARI event stream...");
-  const stream = await client.connectEvents("voicecore-test");
+  console.log("[smoke] connecting listener...");
+  const listener = await createAsteriskAriListener({ connection, gateway, appName: "voicecore-test" });
+  const iterator = listener.events()[Symbol.asyncIterator]();
   console.log("[smoke] connected.");
 
-  const iterator = stream.events()[Symbol.asyncIterator]();
-  const receivedPromise = iterator.next();
+  const first = iterator.next();
+  const second = iterator.next();
+  const third = iterator.next();
 
   await new Promise((r) => setTimeout(r, 20));
-  const stasisStart = { type: "StasisStart", timestamp: new Date().toISOString(), channel: { id: "channel-smoke-1" } };
-  fakeAri.sendEvent(stasisStart);
+  fakeAri.sendEvent(stasisEvent("StasisStart", "channel-smoke-1"));
+  fakeAri.sendEvent({ type: "ChannelVarset", timestamp: new Date().toISOString() }); // unsupported, must not crash the loop
+  fakeAri.sendEvent(stasisEvent("ChannelHangupRequest", "channel-smoke-1"));
 
-  const received = await receivedPromise;
-  if (received.done || JSON.stringify(received.value) !== JSON.stringify(stasisStart)) {
-    throw new Error(`[smoke] expected to receive the StasisStart event, got: ${JSON.stringify(received)}`);
+  const firstResult = (await first).value;
+  if (firstResult.status !== "normalized" || firstResult.event.eventType !== "StasisStart") {
+    throw new Error(`[smoke] expected StasisStart to normalize, got: ${JSON.stringify(firstResult)}`);
   }
-  console.log("[smoke] received StasisStart:", received.value);
+  console.log("[smoke] normalized StasisStart:", firstResult.event);
 
-  await client.answer(stasisStart.channel.id);
-  console.log("[smoke] answered channel.");
+  const secondResult = (await second).value;
+  if (secondResult.status !== "rejected") {
+    throw new Error(`[smoke] expected the unsupported event to be rejected, got: ${JSON.stringify(secondResult)}`);
+  }
+  console.log("[smoke] correctly rejected unsupported event without crashing:", secondResult.error.message);
 
-  await stream.close();
+  const thirdResult = (await third).value;
+  if (thirdResult.status !== "normalized" || thirdResult.event.eventType !== "ChannelHangupRequest") {
+    throw new Error(`[smoke] expected ChannelHangupRequest to normalize, got: ${JSON.stringify(thirdResult)}`);
+  }
+  console.log("[smoke] normalized ChannelHangupRequest:", thirdResult.event);
+
+  await listener.close();
   const afterClose = await iterator.next();
   if (!afterClose.done) {
-    throw new Error("[smoke] expected the event stream to end after close()");
+    throw new Error("[smoke] expected the listener to end after close()");
   }
-  console.log("[smoke] event stream closed cleanly.");
+  console.log("[smoke] listener closed cleanly.");
 
   await fakeAri.close();
-  console.log("[smoke] PASS — connect -> StasisStart -> answer -> close proven against a real local ARI-shaped server.");
+  console.log(
+    "[smoke] PASS — connect -> normalize -> survive unsupported event -> normalize -> close, proven against a real local ARI-shaped server.",
+  );
 }
 
 main().catch((error) => {
