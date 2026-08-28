@@ -44,6 +44,7 @@ NODE_ENV=test pnpm vitest run \
   lib/voice/transfer/engine-transport.test.ts \
   lib/voice/testing/simulator.test.ts \
   lib/voice/testing/evals.test.ts \
+  app/api/internal/voice/context/route.test.ts \
   app/api/internal/voice/event/route.test.ts \
   tests/unit/voice-migration-contract.test.ts \
   tests/unit/voice-hardening-migration-contract.test.ts \
