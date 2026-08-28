@@ -19,6 +19,8 @@ NODE_ENV=test pnpm vitest run \
   lib/voice/sip/asterisk-adapter.test.ts \
   lib/voice/sip/asterisk-ari-client.test.ts \
   lib/voice/sip/asterisk-listener.test.ts \
+  lib/voice/sip/brain-client.test.ts \
+  lib/voice/sip/event-forwarder.test.ts \
   lib/voice/stt/faster-whisper-adapter.test.ts \
   lib/voice/tts/voice-catalog.test.ts \
   lib/voice/tts/piper-adapter.test.ts \

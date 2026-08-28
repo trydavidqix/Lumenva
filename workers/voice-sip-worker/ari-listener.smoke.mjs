@@ -2,25 +2,28 @@
 // Smoke test for the Fase 3 Asterisk ARI listener, run as a real Node process
 // (not a vitest suite) via `npx tsx workers/voice-sip-worker/ari-listener.smoke.mjs`.
 //
-// It starts a minimal fake local Asterisk ARI server (real HTTP + real
-// WebSocket, same protocol shape as `lib/voice/sip/testing/fake-ari-server.ts`)
-// and proves the full flow a real listener process would need:
-// connect -> normalize a StasisStart -> survive an unsupported event type
-// without dying -> normalize a ChannelHangupRequest -> survive an
-// unexpected WebSocket drop by reconnecting on its own -> normalize an
-// event on the reconnected socket -> close.
+// It starts a minimal fake local Asterisk ARI server AND a minimal fake
+// local CRM server (both real HTTP/WebSocket, same protocol shapes as
+// `lib/voice/sip/testing/fake-ari-server.ts` and
+// `lib/voice/sip/brain-client.test.ts`) and proves the full flow a real
+// production process would need: connect -> normalize a StasisStart ->
+// survive an unsupported event type without dying -> normalize a
+// ChannelHangupRequest -> survive an unexpected WebSocket drop by
+// reconnecting on its own -> normalize an event on the reconnected socket
+// -> forward every normalized event as real HTTP calls to /context and
+// /event -> close.
 //
-// This does NOT talk to a real Asterisk instance — there is none reachable
-// from this environment. It proves the client/listener's real network
-// behavior as a standalone process, not a fake-only unit test. Forwarding
-// the normalized events to the CRM (app/api/internal/voice/event) is
-// deliberately out of scope — see `workers/voice-sip-worker/README.md`.
+// This does NOT talk to a real Asterisk or a real CRM instance — neither is
+// reachable from this environment. It proves the pipeline's real network
+// behavior as a standalone process, not a fake-only unit test.
 
 import http from "node:http";
 import { WebSocketServer } from "ws";
 import { createAsteriskAriConnection } from "../../lib/voice/sip/asterisk-ari-client.ts";
 import { createAsteriskSipGateway } from "../../lib/voice/sip/asterisk-adapter.ts";
 import { createAsteriskAriListener } from "../../lib/voice/sip/asterisk-listener.ts";
+import { createSipVoiceBrainClient } from "../../lib/voice/sip/brain-client.ts";
+import { createSipEventForwarder } from "../../lib/voice/sip/event-forwarder.ts";
 
 const USERNAME = "voicecore";
 const PASSWORD = "s3cret";
@@ -60,6 +63,50 @@ function startFakeAriServer() {
         sendEvent: (payload) => activeSocket?.send(JSON.stringify(payload)),
         dropConnection: () => { activeSocket?.terminate(); activeSocket = null; },
         close: () => new Promise((r) => { wss.close(); server.close(() => r()); }),
+      });
+    });
+  });
+}
+
+function startFakeCrmServer() {
+  return new Promise((resolve) => {
+    const requestsReceived = [];
+    let voiceCallCounter = 0;
+    const voiceCallIdsByProviderCallId = new Map();
+
+    const server = http.createServer((req, res) => {
+      let raw = "";
+      req.on("data", (chunk) => (raw += chunk));
+      req.on("end", () => {
+        const body = raw ? JSON.parse(raw) : {};
+        requestsReceived.push({ path: req.url, body });
+
+        if (req.url === "/api/internal/voice/context") {
+          if (!voiceCallIdsByProviderCallId.has(body.provider_call_id)) {
+            voiceCallCounter += 1;
+            voiceCallIdsByProviderCallId.set(body.provider_call_id, `voice-call-${voiceCallCounter}`);
+          }
+          const voiceCallId = voiceCallIdsByProviderCallId.get(body.provider_call_id);
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify({ data: { voice_call_id: voiceCallId, contact_id: null, caller_kind: "unknown", locale: "pt" } }));
+          return;
+        }
+        if (req.url === "/api/internal/voice/event") {
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify({ data: { recorded: true } }));
+          return;
+        }
+        res.writeHead(404, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: { code: "not_found" } }));
+      });
+    });
+
+    server.listen(0, "127.0.0.1", () => {
+      const { port } = server.address();
+      resolve({
+        baseUrl: `http://127.0.0.1:${port}`,
+        requestsReceived,
+        close: () => new Promise((r) => server.close(() => r())),
       });
     });
   });
@@ -136,6 +183,28 @@ async function main() {
   }
   console.log("[smoke] reconnected automatically and normalized the next event:", reconnectResult.event);
 
+  console.log("[smoke] forwarding normalized events to a fake local CRM over real HTTP...");
+  const fakeCrm = await startFakeCrmServer();
+  const brainClient = createSipVoiceBrainClient({ baseUrl: fakeCrm.baseUrl, secret: "s3cret-smoke" });
+  const forwarder = createSipEventForwarder({ brainClient });
+
+  await forwarder.forward(firstResult); // StasisStart -> active
+  await forwarder.forward(thirdResult); // ChannelHangupRequest -> completed
+
+  const contextCalls = fakeCrm.requestsReceived.filter((r) => r.path === "/api/internal/voice/context");
+  const eventCalls = fakeCrm.requestsReceived.filter((r) => r.path === "/api/internal/voice/event");
+  if (contextCalls.length !== 2 || eventCalls.length !== 2) {
+    throw new Error(`[smoke] expected 2 /context + 2 /event calls, got: ${JSON.stringify(fakeCrm.requestsReceived)}`);
+  }
+  if (eventCalls[0].body.state !== "active" || eventCalls[1].body.state !== "completed") {
+    throw new Error(`[smoke] expected active then completed states, got: ${JSON.stringify(eventCalls.map((c) => c.body.state))}`);
+  }
+  if (eventCalls[0].body.voice_call_id !== eventCalls[1].body.voice_call_id) {
+    throw new Error("[smoke] expected both events for the same channel to resolve the same voice_call_id");
+  }
+  console.log("[smoke] forwarded StasisStart (active) and ChannelHangupRequest (completed) to the fake CRM, same voice_call_id:", eventCalls[0].body.voice_call_id);
+
+  await fakeCrm.close();
   await listener.close();
   const afterClose = await iterator.next();
   if (!afterClose.done) {
@@ -145,7 +214,7 @@ async function main() {
 
   await fakeAri.close();
   console.log(
-    "[smoke] PASS — connect -> normalize -> survive unsupported event -> normalize -> reconnect after a drop -> normalize -> close, proven against a real local ARI-shaped server.",
+    "[smoke] PASS — connect -> normalize -> survive unsupported event -> normalize -> reconnect after a drop -> normalize -> forward to CRM over real HTTP -> close.",
   );
 }
 

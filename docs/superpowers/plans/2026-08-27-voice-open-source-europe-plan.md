@@ -156,6 +156,29 @@
 >   trabalho de "processo de produção real" (decisão de build/deploy, item pendente separado);
 >   esta fatia só prova que o contrato HTTP das duas rotas agora é coerente ponta a ponta pro
 >   mundo SIP, não que existe um consumidor real ligado a elas.
+> - **Atualização 2026-08-28 (sétima fatia, mesma data): o listener liga de verdade às duas
+>   rotas.** `lib/voice/sip/brain-client.ts` (`createSipVoiceBrainClient`) — sibling TypeScript
+>   de `workers/voice-worker/brain-client.mjs`, mesmo header `x-internal-secret`, mesmo formato de
+>   erro — expõe `resolveContext`/`recordEvent` fazendo HTTP real pra `/context`/`/event`.
+>   `lib/voice/sip/event-forwarder.ts` (`createSipEventForwarder`) consome um
+>   `AsteriskListenerResult` normalizado, mapeia `StasisStart→active`,
+>   `StasisEnd`/`ChannelHangupRequest→completed`, chama `resolveContext` (idempotente — mesmo
+>   `provider_call_id` sempre resolve o mesmo `voice_call_id`, então chamar em todo evento é
+>   seguro) e depois `recordEvent` com `provider_event_id: "<channelId>:<eventType>"` (mesma
+>   convenção `${callId}:${state}` do worker Telnyx, evita colisão entre StasisStart e
+>   StasisEnd/ChannelHangupRequest do mesmo canal na chave de idempotência do `/event`).
+>   Deliberadamente sem estado local (sem cache `channelId -> voiceCallId` como
+>   `call-context.mjs` do worker Telnyx tem) — trade-off documentado no próprio arquivo, revisitar
+>   só se virar hot path medido. Testado com servidor HTTP real local (protocolo, não
+>   `vi.fn()`) pro `brain-client.ts`, e com `brainClient` falso (mapeamento/orquestração, já que o
+>   protocolo já foi provado) pro `event-forwarder.ts`. Smoke test estendido: agora sobe também um
+>   CRM falso local e prova, como processo Node real, o pipeline inteiro — Asterisk falso →
+>   listener → forwarder → CRM falso, StasisStart e ChannelHangupRequest do mesmo canal
+>   resolvendo o **mesmo** `voice_call_id` de verdade via HTTP. 9 testes novos, gate completo
+>   verde. **Ainda não fiz**: nada disto está fiado a um processo de produção de longa duração
+>   nem a um Asterisk real — é a peça de orquestração que faltava, testada, mas ainda não
+>   "ligada na tomada". A decisão de build/deploy (`tsx` vs. pipeline novo) continua a próxima,
+>   e é dentro dela que um `main.mjs`/`.ts` de verdade usaria este forwarder.
 > - **Fase 4 — IMPLEMENTADA PARCIAL** (commit `e9dc37e2`). Versionamento imutável do
 >   perfil de voz (`lib/voice/engine/voice-profile-version.ts` — publicar sempre acrescenta,
 >   nunca reescreve uma versão antiga; `activeVersion` é um ponteiro, rollback é publicar de
