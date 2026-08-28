@@ -2,10 +2,10 @@
 type: threat-model
 project: DeskcommCRM
 status: maintained (reconciled; exploitability still not live-tested)
-last_updated: 2026-08-25
-generated_by: auditoria documental (Claude Code) — leitura de rotas, guards, proxy.ts e lib/env.ts
+last_updated: 2026-08-28
+generated_by: auditoria documental sincronizada — leitura de rotas, guards, proxy.ts e lib/env.ts
 confidence: média-alta (superfície e guards são CONFIRMADO por leitura de código; explorabilidade é INFERIDO — nada foi testado contra instância viva)
-audited_against: main @ 3cd5c48a (2026-08-25)
+audited_against: codex/crm-consolidated @ 54e86839 (2026-08-28)
 ---
 
 # Threat model — DeskcommCRM self-host
@@ -67,7 +67,7 @@ Continuam sem rate limit dedicado, por decisão ou por lacuna residual:
   exaustão de recurso (e de cota de IA, se as chaves forem da instância).
 - **`/team/accept-invite/:token`** — o HMAC é forte, mas sem limite o atacante pode
   sondar indefinidamente e sem custo, e sem gerar sinal de alerta.
-- **Os 9 crons e `/api/internal/*`** — o secret é forte e a comparação é em tempo
+- **Os 10 crons e `/api/internal/*`** — o secret é forte e a comparação é em tempo
   constante, mas nada limita o volume de tentativas.
 - **`/api/mcp`** — enumeração de bearer token.
 
@@ -100,7 +100,7 @@ invariantes RLS.
 
 Este é o **pior modo de falha do produto**: vazamento cross-tenant. Duas mitigações reais
 existem: as amostras que li (`admin/tenants`, `webhooks/in/:token`, `team/:user_id`) seguem o
-padrão corretamente, e os **75 arquivos de invariante em `tests/invariants/` são a prova
+padrão corretamente, e os **78 arquivos de invariante em `tests/invariants/` são a prova
 local do isolamento cross-tenant**; GitHub Actions está inativo, portanto o job histórico
 `invariants` não é executado automaticamente. O
 guard-rail existe **e está ligado** — rebaixei de 🔴 para 🟠 por isso.
@@ -194,7 +194,7 @@ Não avaliado por falta de execução/instância:
 |---|---|---|---|
 | T1 | Sem rate limit em login/signup/convite/crons/MCP | 🔴 | baixo — infra já existe |
 | T2 | Rate limit degrada silenciosamente para memória | 🟠 | baixo |
-| T3 | Service role sem gate de escrita para handler novo | 🟠 | médio (lint rule) — invariantes já cobrem em CI |
+| T3 | Service role sem gate de escrita para handler novo | 🟠 | médio (lint rule) — invariantes cobrem quando executados localmente |
 | T4 | `"dev-fallback"` como secret de convite | 🟠 | trivial |
 | T5 | 3 secrets fora do `.env.example` | 🟠 | trivial |
 | T7 | Sem scan de secret no CI + 116 PNGs de evidência sem revisão de PII | 🟡 | baixo |
@@ -202,8 +202,8 @@ Não avaliado por falta de execução/instância:
 
 **Conclusão honesta:** os *mecanismos* de segurança deste projeto são acima da média para
 um CRM open-source — HMAC em tempo constante em toda borda, fail-closed nos crons, hash de
-bearer, RLS com helper central, guard de SSRF testado, LGPD implementada de verdade,
-`beforeSend` higienizando PII, e **75 arquivos de invariante de isolamento para execução
+bearer, RLS com helper central, guard de SSRF testado, RGPD implementado de verdade,
+`beforeSend` higienizando PII, e **78 arquivos de invariante de isolamento para execução
 local**.
 
 O que falta é estreito e específico: confirmar Redis distribuído em cada instalação e,

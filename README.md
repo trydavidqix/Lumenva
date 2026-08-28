@@ -11,7 +11,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript)](https://www.typescriptlang.org)
 [![Supabase](https://img.shields.io/badge/Supabase-Postgres%2BAuth%2BStorage-3ecf8e?logo=supabase)](https://supabase.com)
 [![Self-hosted](https://img.shields.io/badge/self--hosted-1%20comando-orange)](hostgator-setup-kit/)
-[![CI](https://github.com/melgarafael/DeskcommCRM/actions/workflows/ci.yml/badge.svg)](https://github.com/melgarafael/DeskcommCRM/actions/workflows/ci.yml)
+[![Verificação local](https://img.shields.io/badge/verificação-local%20%7C%20Vercel%20Preview-blue)](docs/current-state.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 [**🧭 Visão**](VISION.md) · [**📘 Setup Guide**](docs/SETUP.md) · [**🏗️ Arquitetura**](ARCHITECTURE.md) · [**🤝 Contribuir**](CONTRIBUTING.md) · [**📋 PRDs**](docs/prd/) · [**🗺️ Roadmap**](#%EF%B8%8F-roadmap)
@@ -70,7 +70,7 @@ O projeto nasceu como CRM de e-commerce e a comunidade o levou muito além: hoje
 - 🔌 **MCP-ready** — MCP server interno pros agentes; contrato público pra agentes externos em construção. O CRM como infraestrutura pra qualquer agente de IA.
 - 💬 **WhatsApp-native via WAHA** — multi-número, anti-banimento (throttle + jitter + janela de horário), mídia via Storage, STOP detection.
 - 👥 **Governança de atendimento** — RBAC server-side de verdade, atribuição/transferência auditada, fila com posição, roteamento automático e escopo de visualização por papel.
-- 🏢 **Multi-tenant + LGPD by-design** — RLS em toda tabela tenant-aware com teste de isolamento como gate de CI; anonimização preferida sobre delete; audit append-only com retenção 5 anos.
+- 🏢 **Multi-tenant + RGPD by-design** — RLS em toda tabela tenant-aware com teste de isolamento; anonimização preferida sobre delete; audit append-only com retenção 5 anos. GitHub Actions está desabilitado; veja os gates locais em [`CLAUDE.md`](CLAUDE.md).
 - 🖥️ **Self-hosted de verdade** — seus dados na sua VPS; instalação com 1 comando; sem versão paga, sem feature travada.
 
 ### 🧠 Memória e conhecimento dos agentes
@@ -183,7 +183,7 @@ pnpm test:db       # Postgres efêmero + baseline install/update + invariantes
 pnpm test:e2e      # Playwright (requer dev server)
 ```
 
-O job **`verify`** roda `typecheck`, `lint`, `lint:channels`, `test:unit` e `test:shell` em todo PR. Um segundo job — **`invariants`** — sobe um Postgres limpo, aplica o `supabase/baseline.sql` em modo install (`ON_ERROR_STOP=1`) e depois em modo update (provando idempotência), e roda **364 testes de invariante** distribuídos em 56 arquivos, cobrindo RBAC, atribuição, escopo de visualização, roteamento, follow-up, webhooks e automações.
+Os workflows `verify` e `invariants` permanecem versionados como referência, mas o GitHub Actions está desabilitado no repositório. A verificação atual é local: `pnpm typecheck`, `pnpm lint`, `pnpm lint:channels`, `pnpm lint:tenant-filter`, `pnpm test:unit` e, quando aplicável, `pnpm test:db` (Postgres limpo + `baseline.sql` em install/update). Há 78 arquivos de invariantes em `tests/invariants/`, cobrindo RBAC, atribuição, escopo de visualização, roteamento, follow-up, webhooks e automações.
 
 Entre eles está o **teste de isolamento RLS**: cria 2 organizações, simula os claims JWT pelo mesmo caminho `auth.uid()` / `fn_user_org_ids()` que as policies de produção usam, e prova que um usuário da org A enxerga **zero linhas** da org B em `conversations`, `messages`, `contacts` e `crm_leads`. Antes disso, um caso de controle prova que as linhas da org B realmente existem no banco — sem ele, o teste passaria mesmo com a tabela vazia.
 
@@ -214,7 +214,7 @@ Esse projeto é open source pra comunidade. Toda contribuição é bem-vinda —
 
 **Antes de abrir PR:**
 
-1. Leia [`CLAUDE.md`](CLAUDE.md) (~5 min) — convenções não-negociáveis (multi-tenancy, RLS, audit, LGPD).
+1. Leia [`CLAUDE.md`](CLAUDE.md) (~5 min) — convenções não-negociáveis (multi-tenancy, RLS, audit, RGPD/privacy).
 2. Leia [`CONTRIBUTING.md`](CONTRIBUTING.md) — fluxo de branches, commits, epic-executor.
 3. Siga o [Código de Conduta](CODE_OF_CONDUCT.md).
 

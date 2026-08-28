@@ -11,7 +11,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript)](https://www.typescriptlang.org)
 [![Supabase](https://img.shields.io/badge/Supabase-Postgres%2BAuth%2BStorage-3ecf8e?logo=supabase)](https://supabase.com)
 [![Self-hosted](https://img.shields.io/badge/self--hosted-one%20command-orange)](hostgator-setup-kit/)
-[![CI](https://github.com/melgarafael/DeskcommCRM/actions/workflows/ci.yml/badge.svg)](https://github.com/melgarafael/DeskcommCRM/actions/workflows/ci.yml)
+[![Local verification](https://img.shields.io/badge/verification-local%20%7C%20Vercel%20Preview-blue)](docs/current-state.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 [**🧭 Vision**](VISION.md) · [**📘 Setup Guide**](docs/SETUP.md) · [**🏗️ Architecture**](ARCHITECTURE.md) · [**🤝 Contributing**](CONTRIBUTING.md) · [**📋 PRDs**](docs/prd/) · [**🗺️ Roadmap**](#%EF%B8%8F-roadmap)
@@ -59,7 +59,7 @@ The project was born as an e-commerce CRM — and the open-source community took
 - 🔌 **MCP-ready** — internal MCP server for the built-in agents; a public contract for external agents is in the works. The CRM as infrastructure for any AI agent.
 - 💬 **WhatsApp-native via WAHA** — multi-number, anti-ban (throttle + jitter + time windows), media via Storage, STOP detection.
 - 👥 **Support governance** — real server-side RBAC, audited assignment/transfer, queue with position, automatic routing and per-role visibility scopes.
-- 🏢 **Multi-tenant + privacy by design (LGPD)** — RLS on every tenant-aware table with an isolation test as a CI gate; anonymization preferred over deletion; append-only audit log with 5-year retention.
+- 🏢 **Multi-tenant + privacy by design (GDPR/RGPD)** — RLS on every tenant-aware table with an isolation test; anonymization preferred over deletion; append-only audit log with 5-year retention. GitHub Actions is disabled; see the local gates in [`CLAUDE.md`](CLAUDE.md).
 - 🖥️ **Truly self-hosted** — your data on your VPS; one-command install; no paid tier, no gated features.
 
 ### 🔌 Webhooks & Automations
@@ -137,7 +137,7 @@ pnpm test:db       # ephemeral Postgres + baseline install/update + invariants
 pnpm test:e2e      # Playwright (requires dev server)
 ```
 
-CI runs `typecheck`, `lint` and `test:unit` on every PR. A second job — **`invariants`** — boots a clean Postgres, applies `supabase/baseline.sql` in install mode (`ON_ERROR_STOP=1`) and then in update mode (proving idempotency), and runs **364 invariant tests** across 56 files covering RBAC, assignment, visibility scoping, routing, follow-up, webhooks and automations.
+The `verify` and `invariants` workflows remain versioned as reference, but GitHub Actions is disabled for this repository. Current verification is local: `pnpm typecheck`, `pnpm lint`, `pnpm lint:channels`, `pnpm lint:tenant-filter`, `pnpm test:unit` and, when applicable, `pnpm test:db` (clean Postgres plus `baseline.sql` install/update). There are 78 invariant files under `tests/invariants/`, covering RBAC, assignment, visibility scoping, routing, follow-up, webhooks and automations.
 
 Among them is the **RLS isolation test**: it creates 2 organizations, simulates JWT claims through the same `auth.uid()` / `fn_user_org_ids()` path production policies use, and proves a user of org A sees **zero rows** of org B in `conversations`, `messages`, `contacts` and `crm_leads`. A control case first proves org B's rows actually exist in the database — without it, the test would pass against an empty table.
 

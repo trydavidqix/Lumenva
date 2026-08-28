@@ -10,6 +10,15 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ### Alterado
 
+- **Voz:** documentação sincronizada com a decisão de SIP/BYOC para o número do próprio cliente e
+  com o estado real da branch Voice Core `d3c97cbd`. Confirmado por leitura de código: a camada
+  de sinalização (ARI, listener, reconexão, rotas CRM, forwarder, worker) está implementada e
+  testada de ponta a ponta, não é mais scaffold; testada parcialmente também na VPS. Áudio
+  Pipecat/STT/TTS e chamada telefónica completa continuam bloqueados por infraestrutura (host
+  com mais recursos, decisão de custo pendente do dono) e o deploy do Asterisk ainda não está
+  versionado no Git. O código ainda não foi integrado nesta branch. O schema Voice foi aplicado
+  no banco usado pela VPS após autorização explícita; não há ativação de `VOICE_LIVE_ENABLED=true`.
+
 - **Privacidade:** a superfície administrativa e as rotas públicas de compliance usam
   `/app/privacy` e `/api/v1/privacy`; nomes `lgpd` que permanecem em migrations, jobs e
   webhooks Nuvemshop são compatibilidade/histórico, não rotas novas.

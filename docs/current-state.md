@@ -2,10 +2,10 @@
 type: current-state
 project: DeskcommCRM
 status: maintained
-last_updated: 2026-08-25
-generated_by: auditoria documental (Claude Code) — leitura de código, HANDOFFs, plan/, loop/, CI
+last_updated: 2026-08-28
+generated_by: auditoria documental sincronizada — CRM consolidado, branch Voice Core e teste controlado na VPS
 confidence: média-alta (métricas de código são CONFIRMADO; estado de épico vem dos HANDOFFs, que são auto-relatados)
-audited_against: main @ 3cd5c48a (origin/main alinhada, 2026-08-25)
+audited_against: codex/crm-consolidated @ 54e86839; origin/implementacao-tokens-voice-core @ d3c97cbd (2026-08-28)
 ---
 
 # Estado atual — DeskcommCRM
@@ -15,15 +15,22 @@ na raiz, `plan/progress.md`, `loop/checkpoints/`, `tasks/todo.md` e o roadmap do
 sem lugar único. Um agente novo (ou o dono, depois de uma semana) não conseguia responder
 "posso subir isso?" sem ler ~1500 linhas.
 
-**Reauditoria de sincronização (2026-08-25, `main` @ `3cd5c48a`):** esta revisão cruzou
+**Reauditoria de sincronização (2026-08-25, `main` @ `3cd5c48a`; histórico):** esta revisão cruzou
 o histórico desde `v1.2.0` com o código, migrations, testes, runbooks, specs e índice.
 O checkout estava limpo e `main` estava alinhada com `origin/main`. Desde a última
 revisão foram incorporados, entre outros, privacidade RGPD/GDPR, providers Google/Gemini,
 Mem0 + Graphiti no worker (atrás de flags), Composio, tools MCP de anexos/notas, validação
 Zod dos webhooks Meta/WAHA, rate limit dos webhooks públicos, hardening de tenant filter,
 Phase 8/10, continuidade de casos humanos e a rede de segurança do realtime do inbox.
-Os números da §1 foram remedidos nesta árvore; as afirmações de execução continuam
+Os números da §1 foram remedidos naquela árvore; as afirmações de execução continuam
 separadas de leitura estática e de evidência externa.
+
+**Reauditoria de manutenção (2026-08-28, `codex/crm-consolidated` @ `54e86839`):** a árvore
+consolidada foi conferida após as correções de RAG multi-agente e a sincronização documental
+do Voice Core. A tabela da §1 foi atualizada para este checkout; o código de voz continua
+deliberadamente fora dele e está descrito separadamente na §11. Esta revisão não reexecutou
+a suíte: `node_modules` continua incompleto e os serviços externos necessários para E2E não
+estão ativos.
 
 **Aviso de método:** o estado de épico abaixo vem dos HANDOFFs, que são *auto-relatados
 pelas sessões que fizeram o trabalho*. Estão densos em evidência (outputs de teste,
@@ -31,7 +38,7 @@ screenshots), o que é bom sinal, mas nada aqui foi re-verificado por execução
 auditoria — a auditoria é read-only por instrução. Métricas de código, contagem de
 arquivos, conteúdo de CI e cobertura de padrão **foram** verificados diretamente.
 
-**Revisão de manutenção (2026-07-30, `origin/main` @ `b190bbf`):** as contagens da §1 e as
+**Revisão de manutenção (2026-07-30, `origin/main` @ `b190bbf`; histórico):** as contagens da §1 e as
 versões de biblioteca do `AGENTS.md` foram remedidas por um mantenedor na revisão do PR #60.
 Onde a régua divergiu, ela passou a ser declarada junto do número. O estado de épico (§2–§3)
 **não** foi re-verificado nesta revisão — segue valendo o aviso acima.
@@ -73,12 +80,12 @@ de fato executado/verificado nesta sessão, registrado em detalhe no §4.10:
 | Métrica | Valor |
 |---|---|
 | Arquivos TS/TSX em `app`+`lib`+`components`+`workers` | 1.258 |
-| Route handlers (`app/api/**/route.ts`) | 195 |
+| Route handlers (`app/api/**/route.ts`) | 194 |
 | Migrations em `supabase/migrations/` | 117 arquivos, até `0125_ai_agent_versions_composio_apps` |
 | Testes unitários (`tests/unit/*.test.ts(x)`) | 194 arquivos |
-| Invariantes de banco (`tests/invariants/`) | 75 arquivos |
+| Invariantes de banco (`tests/invariants/`) | 78 arquivos |
 | Specs E2E (`tests/e2e/*.spec.ts`) | 37 |
-| Documentos `.md`/`.mdx` em `docs/` | 206 |
+| Documentos `.md`/`.mdx` em `docs/` | 211 |
 | Import cycles | **0** (graphify, medido em árvore anterior) |
 | `console.log` fora de `lib/logger.ts` | **0** |
 | `: any` / `as any` | 7 |
@@ -171,7 +178,7 @@ Estes são achados de código/config verificados nesta auditoria, não relatos.
 
 O gate de isolamento RLS **roda** — `ci.yml` tem o job `invariants` chamando `pnpm test:db`,
 que sobe `pgvector/pgvector:pg17`, aplica `baseline.sql` em modo install e update, e roda os
-75 arquivos de `tests/invariants/`. Esse buraco está fechado como cobertura versionada;
+78 arquivos de `tests/invariants/`. Esse buraco está fechado como cobertura versionada;
 GitHub Actions está inativo e a execução atual é manual/local.
 
 O que continua fora: **4 das 32 specs Playwright**. A `vps-webhook-outbound-ssrf.spec.ts`,
@@ -361,7 +368,7 @@ Resend.
    parâmetro (medido ao construir o gate: 4 dos 9 arquivos da primeira passada eram exatamente
    esse falso positivo — `ai/cases/route.ts` e `[id]/route.ts` delegam a `lib/escalacao/chamados.ts`,
    que filtra corretamente, só que num arquivo diferente do que o predicado lê). Pega só a classe
-   mais simples e mais provável de erro: handler novo que esqueceu o `.eq()` de vez. Os 75 arquivos
+   mais simples e mais provável de erro: handler novo que esqueceu o `.eq()` de vez. Os 78 arquivos
    de invariante (RLS/schema) continuam sendo a prova real de isolamento; este gate é triagem na
    escrita, não substituto.
 
@@ -425,8 +432,9 @@ Resend.
 - Se os E2E passam hoje — exigiriam Docker, banco e app rodando.
 - Estado real do banco de dev/produção — nenhuma conexão foi aberta.
 - Números de teste citados nos HANDOFFs (533 unit, 236 db, 547 unit em datas diferentes) —
-  auto-relatados e não reconciliam entre si. Contei **221 arquivos** de teste unitário e
-  **56** de invariante, compatível com mais de mil casos, mas não valida número específico.
+  auto-relatados e não reconciliam entre si. O inventário deste checkout contém **194 arquivos**
+  em `tests/unit/` e **75** em `tests/invariants/`; isso conta arquivos, não casos executados,
+  e não substitui uma execução da suíte.
 - Cobertura de teste (%) — `coverage` está configurado no Vitest, mas nenhum relatório foi gerado.
 - Se `docs/architecture/` cumpre o "mapa vivo" exigido pelo item 13 do DoD (contém só o
   diagrama do agent-turn).
@@ -571,3 +579,77 @@ editados ou um workflow novo for adicionado). Verificado via `GET` do mesmo endp
 vencida, limite de gasto atingido, etc.) — é ação de conta que só o dono resolve em
 Settings → Billing & plans do GitHub, e ficou sem efeito prático já que a decisão foi desligar
 Actions em vez de consertar o billing.
+
+---
+
+## 11. Voz open-source para linhas europeias — estado em 2026-08-28
+
+O checkout atual é `codex/crm-consolidated` em `54e86839486849ad5b14a19851eb1f3696d93605`.
+Neste snapshot não existem ficheiros rastreados em `lib/voice/**`, `workers/voice-worker/**` ou
+`workers/voice-runtime/**`. Logo, a voz SIP/BYOC ainda não está integrada nesta branch.
+
+Existe uma implementação candidata em `origin/implementacao-tokens-voice-core` em
+`d3c97cbd8d3ca8ca5616e05f23411e52520a5a3a`. Ela deve ser tratada como trabalho separado até ser
+comparada, integrada seletivamente e validada no mesmo snapshot do CRM.
+
+### Duas arquiteturas na mesma branch — não são opções concorrentes
+
+A branch candidata contém código de **duas gerações**, não três caminhos em disputa:
+
+1. **Geração antiga (ainda em produção na própria branch candidata):** Telnyx (carrier PSTN pago,
+   EUA) + Patter (mídia) + Deepgram (STT pago) + ElevenLabs (TTS pago). Implementada e testada
+   localmente, nunca provou chamada PSTN real. LiveKit chegou a ser desenho obrigatório num plano
+   ainda mais antigo; hoje é só opcional, reservado a takeover humano pelo navegador — não compete
+   com nada.
+2. **Geração aprovada em 2026-08-27 pelo dono (a atual, substitui a 1):** Asterisk/ARI (SIP/BYOC,
+   número do próprio cliente) + Pipecat + faster-whisper + Piper/Kokoro + OpenVoice — 100%
+   open-source, sem vendor pago obrigatório. É esta que os docs abaixo descrevem.
+
+A geração 1 fica como rede de segurança até a 2 provar chamada real de ponta a ponta; não apagar
+sem decisão explícita.
+
+### Decisão funcional
+
+O cliente conserva o próprio número. O sistema usa SIP/BYOC para entrar no meio da ligação, sem
+comprar ou substituir um número técnico. O cliente poderá escolher idioma europeu, género, voz,
+velocidade, tom e estilo. Clonagem é opcional e exige consentimento verificável e revogável.
+
+### Estado de prova — camada de sinalização (controle da chamada)
+
+Confirmado por leitura direta do código em `d3c97cbd` (não é mais scaffold): o "rewire" do
+worker de sinalização SIP/BYOC **está feito**. `workers/voice-sip-worker/main.mjs` é entrypoint
+de produção real — liga ARI (Asterisk) → validação de tenant local via Postgres →
+`AsteriskAriListener` com reconexão automática por backoff → `SipEventForwarder` chamando
+`/api/internal/voice/context` e `/event` do CRM por HTTP real. Testado ponta a ponta com
+Postgres nativo real, servidor ARI falso (HTTP+WS reais) e HTTP real — não é mock vazio. Na VPS,
+o worker rodou isoladamente como serviço de teste, `/healthz` respondeu, ARI real autenticou
+(Asterisk 22.5.2, dialplan `voicecore-test`) e a suíte Voice passou com 43 ficheiros/199 testes.
+
+**O que falta não é mais "religar o worker"; são duas lacunas de infraestrutura:**
+
+- **Áudio de IA (Pipecat/faster-whisper/Piper/Kokoro/OpenVoice): `BLOCKED EXTERNAL`.** São
+  processos Python/ML sem contrato de servidor documentado no repo. A VPS de produção atual
+  (2 CPU/3.7GB) já foi validada como insuficiente. Precisa de host com mais recursos —
+  **custo recorrente, exige autorização explícita do dono antes de provisionar** (regra de
+  segurança do repo). Decisão tomada em 2026-08-28: antes de comprometer um host fixo, testar
+  viabilidade (roda sem GPU? latência aceitável?) num sandbox cloud efêmero e barato/gratuito
+  (ex.: Codex Cloud) — não serve como host de produção (sem IP público fixo), só para
+  responder "isso é viável" antes de gastar.
+- **Deploy do Asterisk não está versionado.** A instância na VPS foi configurada manualmente,
+  fora do Git — não existe `pjsip.conf`/`extensions.conf`/unidade systemd capturados no repo.
+  Escrever essa receita "de memória" arrisca divergir do que já roda na VPS; a via seleccionada
+  é extrair a config real da VPS primeiro (ver handoff novo abaixo) e só depois versionar.
+
+O gate completo (`bash scripts/verify-voice-core.sh`) ficou `NOT_PROVEN` no último snapshot
+porque `pnpm typecheck` esgotou o heap do runner — não é reprovação do código, é limite do
+runner. Ainda não há prova de áudio de IA, chamada PSTN/SIP completa, transferência, latência,
+custo ou voz clonada em produção. O schema Voice foi aplicado no banco usado pela VPS após
+autorização explícita; isso não significa que a branch consolidada recebeu o código nem que
+produção está ativada.
+
+**Veredito:** `SINALIZAÇÃO SIP/BYOC IMPLEMENTADA E TESTADA (PROVIDER-FREE) NO REF CANDIDATO /
+ÁUDIO DE IA BLOQUEADO POR INFRAESTRUTURA (DECISÃO DE HOST PENDENTE) / DEPLOY DO ASTERISK NÃO
+VERSIONADO / NÃO INTEGRADO NO CONSOLIDADO`.
+
+Próxima ação e detalhe de execução: [`docs/handoffs/HANDOFF-voice-vps-config-2026-08-28.md`](handoffs/HANDOFF-voice-vps-config-2026-08-28.md).
+Referência resumida: [`docs/voice/open-source-europe.md`](voice/open-source-europe.md).

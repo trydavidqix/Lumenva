@@ -2,10 +2,10 @@
 type: harness-audit
 project: DeskcommCRM
 status: maintained (historical audit with current verification policy)
-last_updated: 2026-08-25
-generated_by: auditoria documental (Claude Code) — verificação de arquivos, CI e configs
+last_updated: 2026-08-28
+generated_by: auditoria documental sincronizada — verificação de arquivos, configs e política de execução
 confidence: alta (todos os itens verificados por leitura direta de arquivo/config; nenhum comando executado)
-audited_against: main @ 3cd5c48a (2026-08-25)
+audited_against: codex/crm-consolidated @ 54e86839 (2026-08-28)
 ---
 
 # Auditoria do harness — DeskcommCRM
@@ -34,12 +34,12 @@ Preview no fim da tarefa — `.claude/rules/testing-verification.md` tem o detal
 
 | Nível | Veredito | Evidência |
 |---|---|---|
-| H0 — Não documentado | superado | 206 docs em `docs/`, README em 3 idiomas, PRDs, specs, `CHANGELOG.md` |
+| H0 — Não documentado | superado | 211 docs em `docs/`, README em 3 idiomas, PRDs, specs, `CHANGELOG.md` |
 | H1 — Documentado | ✅ | `README.md`, `ARCHITECTURE.md`, `VISION.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md` (Keep a Changelog + SemVer) |
 | H2 — Reproduzível | ✅ | Quickstart no README, `docs/SETUP.md`, `.nvmrc` (22), `packageManager` fixo, `pnpm-lock.yaml`, `docker-compose.yml`, `install.sh` do kit self-host, `baseline.sql` |
-| H3 — Verificável | ✅ | `lint` + `typecheck` + `test:unit` + `build`; CI roda os 3 primeiros em PR |
+| H3 — Verificável | ✅ | `lint` + `typecheck` + `test:unit` + `build`; execução local documentada e workflows versionados (Actions inativo) |
 | H4 — Preparado para agentes | ✅ | `CLAUDE.md` doutrinal forte; `AGENTS.md` **criado nesta auditoria**; documentação técnica extensa; gates locais de tenant/RLS documentados |
-| H5 — Automação avançada | ⚠️ **parcial** | CI confiável e ambiente isolado ✅ (Postgres efêmero pg17, worktrees, gov-loop com maker≠checker e hash-check). Faltam: **4 das 32 specs E2E fora do CI** (28 rodam via `e2e.yml`, ainda não-obrigatório — e enquanto for opcional um PR que o quebre entra na `main`), `format:check` fora do CI, e o comando único local (`gov:verify`) não cobre `test:db`/`test:e2e` |
+| H5 — Automação avançada | ⚠️ **parcial** | Ambiente isolado e gov-loop com maker≠checker e hash-check estão versionados, mas GitHub Actions está inativo. Permanecem `format:check` fora do gate rápido, E2E dependente de execução manual/Preview e `gov:verify` sem `test:db`/`test:e2e` |
 
 **Por que H4 e não H5:** a instrução da auditoria é explícita — não atribuir nível só
 porque os arquivos existem, avaliar se o processo está implementado. Aqui está: o gate de
@@ -47,15 +47,13 @@ isolamento multi-tenant foi desenhado para rodar em CI como check nomeado, em jo
 `baseline.sql` em modo install **e** update contra um Postgres descartável. Isso é o
 processo funcionando, não a intenção.
 
-O que separa de H5 é estreito: **16 dos 19 E2E não rodam em CI** (`e2e.yml` cobre `smoke`, `auth` e `error-pages` desde 2026-07-30) — de fora seguem
-`vps-fresh-onboarding.spec.ts`, que protege a primeira impressão que a doutrina classifica
-como o caminho mais crítico do produto. E `pnpm gov:verify`, o comando único que um agente
-naturalmente usa como critério de pronto, **não** inclui `test:db` nem `test:e2e`: o CI
-pega o que ele deixa passar, mas só depois do push.
+O que separa de H5 é a ausência de execução remota automática: GitHub Actions está desligado,
+E2E depende de ambiente manual/Preview e `pnpm gov:verify`, o comando rápido que um agente
+naturalmente usa, **não** inclui `test:db` nem `test:e2e`.
 
 **O que puxa este projeto para cima e é incomum num CRM open-source:** doutrina escrita e
-específica (`CLAUDE.md`), Definition of Done de 13 itens, **75 arquivos de invariantes de
-banco**, gate de install+update do `baseline.sql` num Postgres descartável rodando em CI,
+específica (`CLAUDE.md`), Definition of Done de 13 itens, **78 arquivos de invariantes de
+banco**, gate de install+update do `baseline.sql` num Postgres descartável quando executado,
 doutrina de QA visual com ambiente fresco estilo VPS, e uma máquina de governança de
 agentes (`loop/`) com maker≠checker e hash-check.
 
@@ -74,13 +72,13 @@ Legenda: ✅ existente e funcional · ⚠️ existente mas incompleto · ❌ nã
 | 5 | `.env.example` | ⚠️ | Existe (+ `.env.hostgator.example`), mas **6 vars de `lib/env.ts` continuam ausentes**, entre elas 3 secrets: `IMPERSONATE_COOKIE_SECRET`, `INTERNAL_CRON_SECRET`, `LGPD_SIGNING_KEY` (+ `LGPD_DPO_EMAIL`, `LGPD_EXPORT_EXPIRES_HOURS`, `NUVEMSHOP_ENABLED`) |
 | 6 | Comando de desenvolvimento | ✅ | `pnpm dev`. Nota: `docs/testing/` documenta que E2E fresco exige `build` + `start`, não `dev` |
 | 7 | Comando de build | ✅ | `pnpm build`; exercitado no workflow `perf.yml` |
-| 8 | Comando de lint | ✅ | `pnpm lint` (eslint), roda no CI |
+| 8 | Comando de lint | ✅ | `pnpm lint` (eslint), executar localmente; workflow histórico permanece versionado |
 | 9 | Comando de formatação | ✅ | `pnpm format` / `format:check` (Prettier). ⚠️ `format:check` **não está no CI** |
-| 10 | Checagem de tipos | ✅ | `pnpm typecheck` (`tsc --noEmit`, TS 6 estrito), roda no CI |
+| 10 | Checagem de tipos | ✅ | `pnpm typecheck` (`tsc --noEmit`, TS 6 estrito), executar localmente; workflow histórico permanece versionado |
 | 11 | Testes unitários | ✅ | 194 arquivos `*.test.ts(x)`; executar localmente com `pnpm test:unit` |
-| 12 | Testes de integração | ✅ | **75 arquivos** de invariantes em `tests/invariants/` + `tests/api/`. Excluídos do `test:unit` de propósito (`vitest.config.ts:12`) e executar localmente com `pnpm test:db` |
+| 12 | Testes de integração | ✅ | **78 arquivos** em `tests/invariants/` + `tests/api/`. Excluídos do `test:unit` de propósito (`vitest.config.ts:12`) e executar localmente com `pnpm test:db` |
 | 13 | Testes E2E | ⚠️ | 37 specs Playwright; GitHub Actions está inativo, portanto a execução é manual/local ou via Vercel Preview conforme o runbook |
-| 14 | Comando único de verificação | ⚠️ | `pnpm gov:verify` = `typecheck && lint && test:unit`. **Omite `test:db` e `test:e2e`** — verde localmente não significa verificado. O CI cobre `test:db`, mas só depois do push |
+| 14 | Comando único de verificação | ⚠️ | `pnpm gov:verify` = `typecheck && lint && test:unit`. **Omite `test:db` e `test:e2e`** — verde localmente não significa verificado |
 | 15 | Verificação automatizada | ⚠️ | Os workflows permanecem versionados, mas GitHub Actions está desabilitado; a prova atual é local (`typecheck`, `lint`, `test:unit`, `test:db` quando aplicável) + Preview |
 | 16 | Proteção contra secrets | ⚠️ | `.gitignore` cobre `.env*` (exceção só para os `.example`) e o Sentry tem `beforeSend` que higieniza PII. **Sem** gitleaks/trufflehog no CI, **sem** pre-commit hook |
 | 17 | Documentação arquitetural | ✅ | `ARCHITECTURE.md` (1 página) + `docs/specs/` (16 docs com schema e payloads) + `docs/architecture/agent-turn` + `graphify-out/` |
