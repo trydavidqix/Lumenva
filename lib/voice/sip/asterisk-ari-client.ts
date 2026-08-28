@@ -22,6 +22,7 @@ export interface AriEventStream {
 
 export interface AriConnection extends AriClient {
   connectEvents(appName: string): Promise<AriEventStream>;
+  getChannelVariable(channelId: string, variable: string): Promise<string | null>;
   answer(channelId: string): Promise<void>;
   hangup(channelId: string, reason?: string): Promise<void>;
 }
@@ -101,6 +102,17 @@ export function createAsteriskAriConnection(config: AsteriskAriConfig): AriConne
     async answer(channelId): Promise<void> {
       if (!channelId.trim()) throw new Error("[voice] Asterisk ARI answer requires a channel id");
       await request("POST", `/ari/channels/${encodeURIComponent(channelId)}/answer`);
+    },
+
+    async getChannelVariable(channelId, variable): Promise<string | null> {
+      if (!channelId.trim()) throw new Error("[voice] Asterisk ARI getChannelVariable requires a channel id");
+      if (!variable.trim()) throw new Error("[voice] Asterisk ARI getChannelVariable requires a variable name");
+      const response = await request(
+        "GET",
+        `/ari/channels/${encodeURIComponent(channelId)}/variable?variable=${encodeURIComponent(variable)}`,
+      );
+      const payload = (await response.json()) as { value?: unknown };
+      return typeof payload.value === "string" && payload.value.trim() ? payload.value.trim() : null;
     },
 
     async hangup(channelId, reason): Promise<void> {

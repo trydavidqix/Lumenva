@@ -34,6 +34,20 @@ export interface AsteriskAriListenerDeps {
 
 const defaultWait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
+const LIFECYCLE_EVENTS = new Set(["StasisStart", "StasisEnd", "ChannelHangupRequest"]);
+
+async function hydrateConnectionVariable(connection: AriConnection, raw: unknown): Promise<unknown> {
+  if (!raw || typeof raw !== "object") return raw;
+  const event = raw as { type?: unknown; channel?: { id?: unknown; channelvars?: Record<string, unknown> } };
+  if (!LIFECYCLE_EVENTS.has(String(event.type))) return raw;
+  const channel = event.channel;
+  if (!channel || typeof channel.id !== "string" || !channel.id.trim()) return raw;
+  if (typeof channel.channelvars?.SIP_CONNECTION_ID === "string" && channel.channelvars.SIP_CONNECTION_ID.trim()) return raw;
+  const connectionId = await connection.getChannelVariable(channel.id, "SIP_CONNECTION_ID");
+  if (!connectionId) return raw;
+  return { ...event, channel: { ...channel, channelvars: { ...channel.channelvars, SIP_CONNECTION_ID: connectionId } } };
+}
+
 export async function createAsteriskAriListener(deps: AsteriskAriListenerDeps): Promise<AsteriskAriListener> {
   const wait = deps.wait ?? defaultWait;
   const reconnectDelayMs = deps.reconnectDelayMs ?? 1_000;
@@ -67,7 +81,8 @@ export async function createAsteriskAriListener(deps: AsteriskAriListenerDeps): 
           while (!explicitlyClosed) {
             for await (const raw of stream.events()) {
               try {
-                const event = await deps.gateway.parseInboundEvent(JSON.stringify(raw));
+                const hydrated = await hydrateConnectionVariable(deps.connection, raw);
+                const event = await deps.gateway.parseInboundEvent(JSON.stringify(hydrated));
                 yield { status: "normalized", event };
               } catch (error) {
                 yield { status: "rejected", error: error instanceof Error ? error : new Error(String(error)), raw };
