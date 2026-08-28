@@ -189,7 +189,12 @@ export async function POST(req: NextRequest): Promise<Response> {
       locale: data.locale,
     }, { requestId });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "voice_context_failed";
+    // Provider/DB errors can contain credentials, SQL fragments, or personal
+    // data. Only expose the deliberately safe, user-actionable Voice errors.
+    const rawMessage = error instanceof Error ? error.message : "";
+    const message = rawMessage.startsWith("[voice]")
+      ? rawMessage
+      : "Não foi possível resolver o contexto de voz.";
     return fail("voice_context_failed", message, 409, { requestId });
   }
 }

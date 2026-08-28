@@ -149,6 +149,25 @@ describe("POST /api/internal/voice/context — SIP/BYOC path (Fase 3)", () => {
     expect(pool.query).not.toHaveBeenCalled();
   });
 
+  it("does not return database/provider error details to the worker", async () => {
+    const pool = makePoolStub({ connectionRow: { id: "conn-row-1", organization_id: ORG_ID }, numberRow: { organization_id: ORG_ID } });
+    pool.query.mockImplementationOnce(async () => {
+      throw new Error("password=super-secret database connection failed");
+    });
+    vi.mocked(getRequestPool).mockReturnValue(pool as unknown as ReturnType<typeof getRequestPool>);
+
+    const { POST } = await import("./route");
+    const res = await POST(req({
+      ...baseBody,
+      connection_id: "sip-conn-abc",
+      caller_e164: "+351911234567",
+      called_e164: "+351211234567",
+    }));
+    const body = (await res.json()) as { error: { message: string } };
+    expect(body.error.message).not.toContain("super-secret");
+    expect(body.error.message).toBe("Não foi possível resolver o contexto de voz.");
+  });
+
   it("rejects when rate limited", async () => {
     vi.mocked(checkRateLimit).mockResolvedValueOnce({ allowed: false, count: 601, limit: 600, window_sec: 60 });
     const pool = makePoolStub({});

@@ -28,7 +28,7 @@ interface PoolStub {
   query: ReturnType<typeof vi.fn>;
 }
 
-function makePoolStub(options: { bindRow: Record<string, unknown> | null; updateRow: Record<string, unknown> | null }): PoolStub {
+function makePoolStub(options: { bindRow: Record<string, unknown> | null; updateRow: Record<string, unknown> | null; eventRow?: Record<string, unknown> | null }): PoolStub {
   const query = vi.fn(async (sql: string) => {
     if (sql.includes("from voice_calls vc") && sql.includes("join voice_sip_connections") ) {
       return { rows: options.bindRow ? [options.bindRow] : [] };
@@ -38,6 +38,9 @@ function makePoolStub(options: { bindRow: Record<string, unknown> | null; update
     }
     if (sql.trim().startsWith("update voice_calls")) {
       return { rows: options.updateRow ? [options.updateRow] : [] };
+    }
+    if (sql.includes("from voice_call_events") && sql.trim().startsWith("select")) {
+      return { rows: options.eventRow ? [options.eventRow] : [] };
     }
     if (sql.trim().startsWith("insert into voice_call_events")) {
       return { rows: [] };
@@ -131,6 +134,26 @@ describe("POST /api/internal/voice/event — SIP/BYOC binding (Fase 3)", () => {
     expect(res.status).toBe(200);
     const bindCall = pool.query.mock.calls.find(([sql]) => sql.includes("voice_phone_numbers") && !sql.includes("voice_sip_connections"));
     expect(bindCall?.[1]).toEqual([VOICE_CALL_ID, "+351911234567"]);
+  });
+
+  it("does not let a duplicate provider event mutate the call lifecycle", async () => {
+    const pool = makePoolStub({ bindRow: { organization_id: ORG_ID }, updateRow: null, eventRow: { id: "event-1" } });
+    vi.mocked(getRequestPool).mockReturnValue(pool as unknown as ReturnType<typeof getRequestPool>);
+
+    const { POST } = await import("./route");
+    const res = await POST(req({
+      ...baseBody,
+      state: "failed",
+      connection_id: "sip-conn-abc",
+      phone_e164: "+351211234567",
+      provider_event_id: "evt-already-recorded",
+    }));
+
+    expect(res.status).toBe(200);
+    const updateCall = pool.query.mock.calls.find(([sql]) => sql.trim().startsWith("update voice_calls"));
+    expect(updateCall?.[0]).toContain("not exists");
+    expect(updateCall?.[0]).toContain("voice_call_events");
+    expect(updateCall?.[1]).toContain("evt-already-recorded");
   });
 
   it("rejects unauthenticated requests before touching the database", async () => {

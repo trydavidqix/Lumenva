@@ -45,6 +45,21 @@ describe("voice organization resolver — SIP/BYOC (Fase 2)", () => {
     );
   });
 
+  it("requires an asterisk-owned number whose ownership was verified", async () => {
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce({ rows: [{ id: "conn-1", organization_id: "org-1" }] })
+      .mockResolvedValueOnce({ rows: [{ organization_id: "org-1" }] });
+    const resolver = createVoiceOrganizationResolver({ query });
+
+    await expect(resolver.resolveByConnection("asterisk", "sip-conn-abc", "+351211234567")).resolves.toBe(
+      "org-1",
+    );
+    const numberSql = query.mock.calls[1]?.[0] as string;
+    expect(numberSql).toContain("provider = 'asterisk'");
+    expect(numberSql).toContain("ownership_verified_at is not null");
+  });
+
   it("rejects an unknown or unverified connection without ever querying the number", async () => {
     const query = vi.fn().mockResolvedValueOnce({ rows: [] });
     const resolver = createVoiceOrganizationResolver({ query });
