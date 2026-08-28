@@ -17,6 +17,7 @@ NODE_ENV=test pnpm vitest run \
   lib/voice/patter/telemetry.test.ts \
   lib/voice/pipecat/adapter.test.ts \
   lib/voice/sip/asterisk-adapter.test.ts \
+  lib/voice/sip/asterisk-ari-client.test.ts \
   lib/voice/stt/faster-whisper-adapter.test.ts \
   lib/voice/tts/voice-catalog.test.ts \
   lib/voice/tts/piper-adapter.test.ts \
@@ -56,5 +57,7 @@ node --check workers/voice-worker/call-context.mjs
 node --check workers/voice-worker/control-server.mjs
 node --check workers/voice-worker/pending-outbound.mjs
 node --test workers/voice-worker/pending-outbound.test.mjs
+node --check workers/voice-sip-worker/ari-listener.smoke.mjs
+npx tsx workers/voice-sip-worker/ari-listener.smoke.mjs
 pnpm lint:tenant-filter
 pnpm next build

@@ -37,6 +37,27 @@
 >   injetado), não integração viva. `whisper.cpp` (fallback sem GPU) não tem adapter ainda. A
 >   troca de fato do worker (`workers/voice-worker/main.mjs` de Patter/Telnyx pra Pipecat) segue
 >   pendente — é o mesmo bloqueio descrito na Fase 2.
+> - **Atualização 2026-08-28 (Fase 3, fatia real do "próximo fio a puxar" do HANDOFF)**:
+>   implementado `lib/voice/sip/asterisk-ari-client.ts` (`createAsteriskAriConnection`) — cliente
+>   ARI real (REST + WebSocket, protocolo público do Asterisk: `POST /ari/channels`,
+>   `POST /ari/channels/{id}/answer`, `DELETE /ari/channels/{id}`,
+>   `ws://.../ari/events?app=...&api_key=...`), implementando a interface `AriClient` já definida
+>   em `lib/voice/sip/asterisk-adapter.ts` (sem alterar aquele arquivo) e estendendo com
+>   `AriConnection`/`AriEventStream` (`connectEvents`/`answer`/`hangup`). Testado em
+>   `lib/voice/sip/asterisk-ari-client.test.ts` contra um servidor ARI falso local real (HTTP +
+>   WebSocket via `ws`, não `vi.fn()`) cobrindo originate feliz/401/500, answer, hangup (incluindo
+>   404 real de canal inexistente) e stream de eventos em ordem com `close()` real. Também um
+>   smoke test como processo Node de verdade,
+>   `workers/voice-sip-worker/ari-listener.smoke.mjs` (`npx tsx ...`), provando
+>   conectar → `StasisStart` → `answer` → `close` fora do runner de testes. Gate completo
+>   (`bash scripts/verify-voice-core.sh`, com as duas linhas novas) verde, `pnpm typecheck` limpo.
+>   **Estado: `IMPLEMENTED` + `VERIFIED PROVIDER-FREE`, nunca `VERIFIED LIVE`** — não há Asterisk
+>   real nesta sessão (sandbox sem GPU, sem rede até a VPS de produção). **Não fiz, de propósito**:
+>   nenhum `PipecatRuntime`/`FasterWhisperClient`/`PiperClient`/`KokoroClient` concreto —
+>   investigado e marcado `BLOCKED EXTERNAL` (são processos Python/ML sem contrato de servidor
+>   documentado neste repo, viabilidade de rodar num sandbox sem GPU não confirmada; ver
+>   `workers/voice-sip-worker/README.md` para o raciocínio completo). Nenhum listener de produção
+>   de longa duração foi criado — só a prova do cliente/protocolo. `main.mjs` continua idêntico.
 > - **Fase 4 — IMPLEMENTADA PARCIAL** (commit `e9dc37e2`). Versionamento imutável do
 >   perfil de voz (`lib/voice/engine/voice-profile-version.ts` — publicar sempre acrescenta,
 >   nunca reescreve uma versão antiga; `activeVersion` é um ponteiro, rollback é publicar de

@@ -157,6 +157,20 @@ Isto **não é backlog arquitetural escondido**:
 
 ## 7. Próxima ação para Claude
 
+**Atualização 2026-08-28:** o "próximo fio a puxar" citado na seção 1 (cliente ARI real) foi
+implementado nesta fatia — `lib/voice/sip/asterisk-ari-client.ts` +
+`workers/voice-sip-worker/ari-listener.smoke.mjs`, ver nota datada no plano canônico
+(`docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md`, Fase 3) e
+`workers/voice-sip-worker/README.md`. Estado: `IMPLEMENTED` + `VERIFIED PROVIDER-FREE` (protocolo
+ARI real contra servidor HTTP+WS local, não Asterisk real). O próximo fio agora é: (a) decidir
+como um listener de longa duração roda em produção sem step de build novo pros workers (`tsx` em
+produção vs. pipeline de build — ver README do novo diretório), (b) tratar mais tipos de evento
+ARI além de `StasisStart` em `asterisk-adapter.ts` (`StasisEnd`, `ChannelHangupRequest`), (c)
+ligar isso a um Asterisk real quando houver um alcançável pela sessão. Pipecat/faster-whisper/
+Piper/Kokoro seguem `BLOCKED EXTERNAL` — não tentar implementar cliente concreto pra eles sem
+primeiro confirmar, numa sessão dedicada, que dá pra rodar o processo real (Python/modelo) no
+ambiente disponível.
+
 1. Faça auditoria read-only do HEAD contra este handoff.
 2. Rode `bash scripts/verify-voice-core.sh` em ambiente capaz.
 3. Se houver vermelho **real de código**, corrija na mesma branch e atualize os documentos canônicos.
@@ -186,6 +200,10 @@ Isto **não é backlog arquitetural escondido**:
 - `lib/voice/transfer/**`
 - `lib/voice/human-browser/**`
 - `lib/voice/telnyx/**`
+- `lib/voice/sip/asterisk-adapter.ts`
+- `lib/voice/sip/asterisk-ari-client.ts`
+- `workers/voice-sip-worker/ari-listener.smoke.mjs`
+- `workers/voice-sip-worker/README.md`
 - `supabase/migrations/20260827013000_0128_voice_phone_numbers.sql`
 - `supabase/migrations/20260827014500_0129_voice_worker_endpoints.sql`
 - `supabase/migrations/20260827020000_0130_voice_worker_endpoint_privileges.sql`

@@ -57,7 +57,11 @@ LiveKit não participa do caminho normal de IA; permanece opcional para takeover
 - métricas/custos provider-neutral;
 - painel base `Agente de Ligação`;
 - simulador provider-free + safety evals;
-- healthcheck, non-root e graceful shutdown do worker.
+- healthcheck, non-root e graceful shutdown do worker;
+- cliente ARI real do Asterisk (REST + WebSocket), `lib/voice/sip/asterisk-ari-client.ts`
+  (`createAsteriskAriConnection`), implementando `AriClient` e estendendo com `AriConnection` —
+  ver nota 2026-08-28 no plano canônico e `workers/voice-sip-worker/README.md`. Testado contra
+  servidor ARI falso local real (não mock de função); sem Asterisk real conectado nesta sessão.
 
 ## Verificação
 
@@ -73,6 +77,13 @@ Gate rodado localmente em `ad8e027d` (2026-08-27): typecheck limpo, 35 arquivos/
 (vitest) verdes, worker 3/3 verde, `lint:tenant-filter` ok, `next build` limpo. O runner Vercel
 segue bloqueado externamente por `build-rate-limit`/team-invite — irrelevante enquanto a
 verificação local continuar sendo a prova primária (`docs/current-state.md` §10).
+
+Gate rerodado localmente em 2026-08-28 (após o cliente ARI): typecheck limpo, gate completo
+(`bash scripts/verify-voice-core.sh`) verde incluindo o teste novo
+(`lib/voice/sip/asterisk-ari-client.test.ts`, 8 testes contra servidor HTTP+WS local real) e o
+smoke test do listener (`npx tsx workers/voice-sip-worker/ari-listener.smoke.mjs`), sem tocar
+`main.mjs`. Estado: `IMPLEMENTED` + `VERIFIED PROVIDER-FREE` para essa fatia — nunca
+`VERIFIED LIVE`, não há Asterisk real alcançável desta sessão.
 
 ## Ativação externa pendente
 
