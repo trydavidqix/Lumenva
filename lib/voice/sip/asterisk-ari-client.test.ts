@@ -72,6 +72,19 @@ describe("Asterisk ARI concrete client (Fase 3, real wire protocol)", () => {
     expect(fakeAri.lastRequest?.url).toBe("/ari/channels/channel-abc/answer");
   });
 
+  it("reads a channel variable through the real ARI REST endpoint", async () => {
+    fakeAri = await startFakeAriServer();
+    const client = createAsteriskAriConnection({
+      baseUrl: fakeAri.baseUrl,
+      username: fakeAri.username,
+      password: fakeAri.password,
+    });
+
+    await expect(client.getChannelVariable("channel-abc", "SIP_CONNECTION_ID")).resolves.toBe("sip-conn-abc");
+    expect(fakeAri.lastRequest?.method).toBe("GET");
+    expect(fakeAri.lastRequest?.url).toContain("/ari/channels/channel-abc/variable?variable=SIP_CONNECTION_ID");
+  });
+
   it("hangs up a channel and surfaces a real 404 for an unknown channel", async () => {
     fakeAri = await startFakeAriServer();
     const client = createAsteriskAriConnection({

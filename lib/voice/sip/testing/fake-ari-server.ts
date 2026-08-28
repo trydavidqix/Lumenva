@@ -69,6 +69,12 @@ export function startFakeAriServer(options?: { username?: string; password?: str
         return;
       }
 
+      if (req.method === "GET" && /^\/ari\/channels\/[^/]+\/variable$/.test(url.pathname)) {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ value: "sip-conn-abc" }));
+        return;
+      }
+
       if (req.method === "DELETE" && /^\/ari\/channels\/[^/]+$/.test(url.pathname)) {
         if (url.pathname.includes("missing-channel")) {
           res.writeHead(404, { "content-type": "application/json" });
