@@ -136,6 +136,26 @@
 >   (`workers/voice-worker/README.md`: "The worker has no database credentials") — quando o
 >   listener SIP virar processo de produção, a resolução de tenant também precisa ser uma chamada
 >   HTTP pro CRM, não uma conexão direta a Postgres a partir do worker.
+> - **Atualização 2026-08-28 (sexta fatia, mesma data): decisão do dono do repositório, mesma
+>   linha da anterior — estender `app/api/internal/voice/context` em vez de criar uma rota
+>   nova.** Essa é a peça que faltava: agora existe um caminho SIP/BYOC que cria a row
+>   `voice_calls` para uma chamada nova, então um `voice_call_id` real passa a existir pro
+>   `/event` (fatia anterior) ter o que encontrar. `bodySchema` ganhou `connection_id` opcional;
+>   quando presente, `resolveSipContext()` (função nova no próprio `route.ts`, não uma mudança em
+>   `lib/voice/runtime/context-service.ts`, que é Telnyx-tipado e continua servindo o caminho
+>   antigo via `resolveTelnyxContext()`) resolve organização por
+>   `resolveByConnection('asterisk', connectionId, technicalE164)` — mesma regra de direção do
+>   `/event` (número técnico é o `called` no inbound, o `caller` no outbound) — resolve o
+>   contato com o mesmo `createVoiceCallerResolver` de sempre (provider-agnóstico, não precisou
+>   mudar), e insere em `voice_calls` com `provider='asterisk'`. `loadVoiceTenantConfig()`
+>   extraído como helper compartilhado entre os dois caminhos (locale nunca foi específico de
+>   provider). 6 testes novos (`app/api/internal/voice/context/route.test.ts`, mesmo padrão de
+>   pool falso do `/event`). `pnpm typecheck`, `pnpm lint`, `pnpm lint:tenant-filter` e gate
+>   completo verdes. **Ainda não fiz, de propósito**: não liguei o listener
+>   (`asterisk-listener.ts`) pra chamar `/context` nem `/event` de verdade — isso continua sendo
+>   trabalho de "processo de produção real" (decisão de build/deploy, item pendente separado);
+>   esta fatia só prova que o contrato HTTP das duas rotas agora é coerente ponta a ponta pro
+>   mundo SIP, não que existe um consumidor real ligado a elas.
 > - **Fase 4 — IMPLEMENTADA PARCIAL** (commit `e9dc37e2`). Versionamento imutável do
 >   perfil de voz (`lib/voice/engine/voice-profile-version.ts` — publicar sempre acrescenta,
 >   nunca reescreve uma versão antiga; `activeVersion` é um ponteiro, rollback é publicar de

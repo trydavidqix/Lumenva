@@ -1,6 +1,6 @@
 # Estado atual — Voice Core
 
-**Data:** 2026-08-28 (atualizado após 5 fatias da Fase 3, mesmo dia)  
+**Data:** 2026-08-28 (atualizado após 6 fatias da Fase 3, mesmo dia)  
 **Repo:** `trydavidqix/CRM`  
 **Branch:** `implementacao-tokens-voice-core`  
 **Escopo:** somente Núcleo de Ligação / Lumenva Voice Engine.
@@ -75,7 +75,12 @@ LiveKit não participa do caminho normal de IA; permanece opcional para takeover
 - `app/api/internal/voice/event` aceita `connection_id` + `phone_e164` como caminho alternativo a
   `technical_phone_e164` (Telnyx) — `.superRefine()` garante exatamente um dos dois,
   `organization_id` nunca vem do corpo, só do join (`voice_sip_connections` →
-  `voice_phone_numbers`), mesma lógica de direção do caminho Telnyx.
+  `voice_phone_numbers`), mesma lógica de direção do caminho Telnyx;
+- `app/api/internal/voice/context` aceita `connection_id` opcional — cria a row `voice_calls`
+  (`provider='asterisk'`) pra uma chamada SIP nova, via `resolveSipContext()` (função nova em
+  `route.ts`; `lib/voice/runtime/context-service.ts` continua Telnyx-tipado, intocado, servindo
+  só o caminho antigo). Com isso, `/context` + `/event` juntos formam um contrato HTTP coerente
+  ponta a ponta pro mundo SIP — mas nenhum processo ainda os chama de verdade.
 
 ## Verificação
 
@@ -92,12 +97,12 @@ Gate rodado localmente em `ad8e027d` (2026-08-27): typecheck limpo, 35 arquivos/
 segue bloqueado externamente por `build-rate-limit`/team-invite — irrelevante enquanto a
 verificação local continuar sendo a prova primária (`docs/current-state.md` §10).
 
-Gate rerodado localmente 5 vezes em 2026-08-28, uma por fatia (cliente ARI → reconhecimento de
-mais eventos ARI → listener ligado ao resolver real → reconexão automática → extensão da rota
-`/event`) — verde em todas, sempre incluindo os testes novos da fatia e sem regressão nos
-anteriores. Estado final desta sessão: `IMPLEMENTED` + `VERIFIED PROVIDER-FREE` em cada peça —
-**nunca `VERIFIED LIVE`**, não há Asterisk real nem processo Pipecat/faster-whisper/Piper/Kokoro
-alcançável desta sessão (sandbox sem GPU, sem rede até a VPS de produção).
+Gate rerodado localmente 6 vezes em 2026-08-28, uma por fatia (cliente ARI → reconhecimento de
+mais eventos ARI → listener ligado ao resolver real → reconexão automática → extensão de
+`/event` → extensão de `/context`) — verde em todas, sempre incluindo os testes novos da fatia e
+sem regressão nos anteriores. Estado final desta sessão: `IMPLEMENTED` + `VERIFIED PROVIDER-FREE`
+em cada peça — **nunca `VERIFIED LIVE`**, não há Asterisk real nem processo Pipecat/faster-whisper/
+Piper/Kokoro alcançável desta sessão (sandbox sem GPU, sem rede até a VPS de produção).
 
 Detalhe por fatia (commits em `implementacao-tokens-voice-core`, todos com nota datada
 correspondente em `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md`):
@@ -109,6 +114,9 @@ correspondente em `docs/superpowers/plans/2026-08-27-voice-open-source-europe-pl
 4. `c71748fd` — reconexão automática com backoff exponencial, testada com queda forçada real.
 5. `2eb7a8d4` — `app/api/internal/voice/event` aceita `connection_id`+`phone_e164` (decisão do
    dono do repositório: estender a rota existente em vez de criar uma nova).
+6. (próximo commit) — `app/api/internal/voice/context` aceita `connection_id` (mesma decisão:
+   estender em vez de criar rota nova); contrato HTTP `/context`+`/event` fica coerente ponta a
+   ponta pro mundo SIP.
 
 ## Ativação externa pendente
 
@@ -130,13 +138,14 @@ Não é dívida arquitetural de código:
 O próximo agente deve começar em `docs/handoffs/HANDOFF-voice-core.md` (seção "Próxima ação",
 atualizada 2026-08-28). Resumo do que bloqueia progresso de código agora, em ordem:
 
-1. **Decisão de produto/arquitetura pendente**: criar o equivalente SIP/BYOC de
-   `app/api/internal/voice/context` (a rota que cria a linha `voice_calls` pra uma chamada
-   Telnyx nova). Sem isso, uma chamada SIP nova nunca tem `voice_call_id`, e o listener
-   (`asterisk-listener.ts`) não tem o que chamar em `/event` — a extensão dessa rota (item 5
-   acima) fica sem consumidor real até essa peça existir.
+1. **Nenhuma decisão de produto pendente pro contrato HTTP** — `/context` e `/event` já aceitam
+   o caminho SIP/BYOC (`connection_id`), decisão do dono do repositório tomada e implementada
+   nas fatias 5 e 6. O que falta agora é só código: escrever o cliente HTTP que faz o
+   `asterisk-listener.ts` chamar essas duas rotas de verdade (hoje ele só produz
+   `NormalizedSipCallEvent` em memória) — isso é parte natural da decisão de build/deploy do
+   item 2, não uma decisão de produto nova.
 2. Decisão de build/deploy do processo de produção (`tsx` direto vs. pipeline de build novo pros
-   workers) — ver `workers/voice-sip-worker/README.md`.
+   workers) — ver `workers/voice-sip-worker/README.md` — e, dentro dela, o cliente HTTP do item 1.
 3. Ligar tudo isso a um Asterisk real quando houver um alcançável pela sessão.
 4. Pipecat/faster-whisper/Piper/Kokoro/OpenVoice seguem `BLOCKED EXTERNAL` — não implementar
    cliente concreto pra eles sem primeiro confirmar, numa sessão dedicada com GPU/host adequado,

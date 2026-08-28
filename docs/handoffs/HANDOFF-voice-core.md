@@ -4,7 +4,7 @@
 **Repo:** `trydavidqix/CRM`  
 **Branch obrigatória para continuar:** `implementacao-tokens-voice-core`  
 **Checkpoint de código do fechamento da Fase 6 (histórico):** `fce93bd9` (gate 47 arquivos/198 testes verde)  
-**Último checkpoint de código nesta branch:** `2eb7a8d4` (2026-08-28 — cliente ARI real, reconhecimento de mais eventos ARI, listener ligado ao resolver de tenant real, reconexão automática, extensão de `app/api/internal/voice/event` pro SIP/BYOC; ver as 5 notas datadas 2026-08-28 na seção "Progresso" de `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md`)  
+**Último checkpoint de código nesta branch:** 2026-08-28 — cliente ARI real, reconhecimento de mais eventos ARI, listener ligado ao resolver de tenant real, reconexão automática, `/context` e `/event` aceitando o caminho SIP/BYOC (`connection_id`); ver as 6 notas datadas 2026-08-28 na seção "Progresso" de `docs/superpowers/plans/2026-08-27-voice-open-source-europe-plan.md`  
 **Não alterar/mergear `main` sem autorização explícita.**
 
 ## 1. Comece aqui
@@ -202,15 +202,29 @@ Confirmado também: quando o listener virar processo de produção, a resoluçã
 ser uma chamada HTTP pro CRM (não conexão direta a Postgres do worker), por causa da fronteira já
 documentada em `workers/voice-worker/README.md` ("the worker has no database credentials").
 
-O próximo fio agora é: (b2) criar o equivalente SIP/BYOC de `/context` (nova decisão de
-produto/arquitetura, mesma natureza da anterior); (c) decidir como o processo roda em produção
-sem pipeline de build novo (`tsx` direto é a opção mais leve, ver README); (d) ligar isso a um
-Asterisk real quando houver um alcançável pela sessão; (e) o que existe hoje reconecta contra o
-mesmo endpoint configurado na criação — não há descoberta de um Asterisk diferente nem
-alerta/observabilidade se ficar reconectando repetidamente, isso pertence ao processo de produção
-real que ainda não existe. Pipecat/faster-whisper/Piper/Kokoro seguem `BLOCKED EXTERNAL` — não
-tentar implementar cliente concreto pra eles sem primeiro confirmar, numa sessão dedicada, que dá
-pra rodar o processo real (Python/modelo) no ambiente disponível.
+**Atualização 2026-08-28 (sexta fatia, mesma data):** item (b2) — **decisão tomada pelo dono do
+repositório, mesma linha da anterior: estender `/context`.** Agora aceita `connection_id`
+opcional; quando presente, `resolveSipContext()` (função nova em `route.ts`, não uma mudança em
+`lib/voice/runtime/context-service.ts`, que continua Telnyx-tipado e serve só o caminho antigo
+via `resolveTelnyxContext()`) resolve organização por `resolveByConnection`, resolve contato com
+o mesmo `createVoiceCallerResolver` de sempre (provider-agnóstico, não mudou), e insere em
+`voice_calls` com `provider='asterisk'`. `loadVoiceTenantConfig()` virou helper compartilhado
+entre os dois caminhos. 6 testes novos (`app/api/internal/voice/context/route.test.ts`). **O
+contrato HTTP das duas rotas (`/context` + `/event`) agora é coerente ponta a ponta pro mundo
+SIP** — mas ninguém ainda os chama de verdade; `asterisk-listener.ts` continua só produzindo
+`NormalizedSipCallEvent` em memória. Ligar o listener a essas rotas é trabalho do processo de
+produção real (item c abaixo), não uma lacuna de contrato.
+
+O próximo fio agora é: (c) decidir como o processo de produção roda sem pipeline de build novo
+(`tsx` direto é a opção mais leve, ver README) — **e, dentro dele, escrever o cliente HTTP que
+chama `/context` e `/event`** a partir do listener, o único pedaço que falta pra fechar o
+encaminhamento ponta a ponta em código; (d) ligar isso a um Asterisk real quando houver um
+alcançável pela sessão; (e) o que existe hoje reconecta contra o mesmo endpoint configurado na
+criação — não há descoberta de um Asterisk diferente nem alerta/observabilidade se ficar
+reconectando repetidamente, isso pertence ao processo de produção real que ainda não existe.
+Pipecat/faster-whisper/Piper/Kokoro seguem `BLOCKED EXTERNAL` — não tentar implementar cliente
+concreto pra eles sem primeiro confirmar, numa sessão dedicada, que dá pra rodar o processo real
+(Python/modelo) no ambiente disponível.
 
 1. Faça auditoria read-only do HEAD contra este handoff.
 2. Rode `bash scripts/verify-voice-core.sh` em ambiente capaz.
