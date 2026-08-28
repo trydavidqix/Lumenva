@@ -124,7 +124,7 @@ correspondente em `docs/superpowers/plans/2026-08-27-voice-open-source-europe-pl
 6. `84f395b5` — `app/api/internal/voice/context` aceita `connection_id` (mesma decisão: estender
    em vez de criar rota nova); contrato HTTP `/context`+`/event` fica coerente ponta a ponta pro
    mundo SIP.
-7. (próximo commit) — `brain-client.ts` + `event-forwarder.ts` ligam o listener às duas rotas de
+7. `00c44c48` — `brain-client.ts` + `event-forwarder.ts` ligam o listener às duas rotas de
    verdade; pipeline completo provado como processo real no smoke test.
 
 ## Ativação externa pendente
