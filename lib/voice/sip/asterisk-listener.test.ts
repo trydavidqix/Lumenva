@@ -161,4 +161,52 @@ describe("Asterisk ARI listener (Fase 3, tenant-resolved real events)", () => {
     const result = await iterator.next();
     expect(result.done).toBe(true);
   });
+
+  it("reconnects automatically after an unexpected drop and keeps normalizing events", async () => {
+    fakeAri = await startFakeAriServer();
+    const connection = createAsteriskAriConnection({ baseUrl: fakeAri.baseUrl, username: fakeAri.username, password: fakeAri.password });
+    const listener = await createAsteriskAriListener({
+      connection,
+      gateway: buildGateway(),
+      appName: "voicecore-test",
+      wait: async () => {}, // no real delay in tests
+    });
+
+    const iterator = listener.events()[Symbol.asyncIterator]();
+
+    const beforeDrop = iterator.next();
+    await new Promise((r) => setTimeout(r, 20));
+    fakeAri.wsSend(stasisStart({ channelId: "channel-before-drop" }));
+    expect((await beforeDrop).value).toMatchObject({ status: "normalized", event: { providerEventId: "channel-before-drop" } });
+
+    const afterReconnect = iterator.next();
+    fakeAri.dropConnection();
+    // Give the client's socket-close event and the listener's reconnect loop
+    // time to re-establish a fresh WS connection to the same fake server.
+    await new Promise((r) => setTimeout(r, 100));
+    fakeAri.wsSend(stasisStart({ channelId: "channel-after-reconnect" }));
+
+    const result = await afterReconnect;
+    expect(result.value).toMatchObject({ status: "normalized", event: { providerEventId: "channel-after-reconnect" } });
+
+    await listener.close();
+  });
+
+  it("does not reconnect after close() was called explicitly", async () => {
+    fakeAri = await startFakeAriServer();
+    const connection = createAsteriskAriConnection({ baseUrl: fakeAri.baseUrl, username: fakeAri.username, password: fakeAri.password });
+    const listener = await createAsteriskAriListener({
+      connection,
+      gateway: buildGateway(),
+      appName: "voicecore-test",
+      wait: async () => {},
+    });
+
+    const iterator = listener.events()[Symbol.asyncIterator]();
+    const pending = iterator.next();
+    await listener.close();
+
+    const result = await pending;
+    expect(result.done).toBe(true);
+  });
 });

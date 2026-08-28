@@ -180,16 +180,24 @@ teste). Smoke test estendido provando o fluxo completo como processo real, inclu
 um evento não suportado no meio. 4 testes novos, suíte `lib/voice/sip/` 23/23 verde, gate
 completo verde.
 
-O próximo fio agora é: (a) reconexão automática do WebSocket se a conexão com o Asterisk cair —
-`asterisk-listener.ts` não reconecta sozinho hoje; (b) **decisão de produto/arquitetura, não só
-técnica**: como um evento normalizado (`connectionId`-based) deveria chegar ao CRM, já que
-`app/api/internal/voice/event` foi desenhado pro mundo Telnyx (`technical_phone_e164`) — criar
-esse mapeamento sem spec seria inventar regra de negócio, então isso precisa de decisão explícita
-antes de codar; (c) decidir como o processo roda em produção sem pipeline de build novo (`tsx`
-direto é a opção mais leve, ver README); (d) ligar isso a um Asterisk real quando houver um
-alcançável pela sessão. Pipecat/faster-whisper/Piper/Kokoro seguem `BLOCKED EXTERNAL` — não
-tentar implementar cliente concreto pra eles sem primeiro confirmar, numa sessão dedicada, que dá
-pra rodar o processo real (Python/modelo) no ambiente disponível.
+**Atualização 2026-08-28 (quarta fatia, mesma data):** item (a) abaixo foi feito —
+`createAsteriskAriListener` agora reconecta sozinho (backoff exponencial, sem teto de tentativas)
+quando o WebSocket cai sem `close()` explícito ter sido chamado, testado com queda de conexão
+forçada de verdade (`dropConnection()` novo no helper de teste), não só fechamento limpo
+simulado. 2 testes novos + smoke test estendido, ambos verdes 5x seguidas pra descartar
+flakiness de timing.
+
+O próximo fio agora é: (b) **decisão de produto/arquitetura, não só técnica**: como um evento
+normalizado (`connectionId`-based) deveria chegar ao CRM, já que `app/api/internal/voice/event`
+foi desenhado pro mundo Telnyx (`technical_phone_e164`) — criar esse mapeamento sem spec seria
+inventar regra de negócio, então isso precisa de decisão explícita antes de codar; (c) decidir
+como o processo roda em produção sem pipeline de build novo (`tsx` direto é a opção mais leve,
+ver README); (d) ligar isso a um Asterisk real quando houver um alcançável pela sessão; (e) o que
+existe hoje reconecta contra o mesmo endpoint configurado na criação — não há descoberta de um
+Asterisk diferente nem alerta/observabilidade se ficar reconectando repetidamente, isso pertence
+ao processo de produção real que ainda não existe. Pipecat/faster-whisper/Piper/Kokoro seguem
+`BLOCKED EXTERNAL` — não tentar implementar cliente concreto pra eles sem primeiro confirmar,
+numa sessão dedicada, que dá pra rodar o processo real (Python/modelo) no ambiente disponível.
 
 1. Faça auditoria read-only do HEAD contra este handoff.
 2. Rode `bash scripts/verify-voice-core.sh` em ambiente capaz.
