@@ -62,4 +62,23 @@ describe("Piper TTS adapter (Fase 3)", () => {
       /requires a defaultVoiceId/,
     );
   });
+
+  it("rejects an invalid locale before touching the provider", async () => {
+    const client: PiperClient = { synthesizeStream: vi.fn() };
+    const port = createPiperTtsPort({ client, defaultVoiceId: "pt-pt-ines" });
+    await expect(port.synthesize("oi", { locale: "not a locale", signal: new AbortController().signal })).rejects.toThrow(/invalid locale/i);
+    expect(client.synthesizeStream).not.toHaveBeenCalled();
+  });
+
+  it("cancels a stalled first audio frame after the configured timeout", async () => {
+    let providerSignal: AbortSignal | undefined;
+    const port = createPiperTtsPort({
+      defaultVoiceId: "pt-pt-ines",
+      timeoutMs: 10,
+      client: { synthesizeStream: vi.fn((input) => { providerSignal = input.signal; return (async function* () { await new Promise(() => {}); })(); }) },
+    });
+    const playback = await port.synthesize("oi", { locale: "pt-PT", signal: new AbortController().signal });
+    await expect(playback.audio[Symbol.asyncIterator]().next()).rejects.toThrow(/timed out/i);
+    expect(providerSignal?.aborted).toBe(true);
+  });
 });

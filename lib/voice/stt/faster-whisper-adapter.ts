@@ -1,4 +1,5 @@
 import type { StreamingSttPort, StreamingSttOptions, VoiceAudioFrame, VoiceSttEvent } from "../runtime/stt-port";
+import { assertLocale, DEFAULT_STT_TIMEOUT_MS, nextOrAbort, timedController } from "../runtime/adapter-boundary";
 
 export interface FasterWhisperChunk {
   text: string;
@@ -29,6 +30,7 @@ export interface FasterWhisperClient {
 export function createFasterWhisperSttPort(deps: {
   client: FasterWhisperClient;
   supportedLocales: readonly string[];
+  timeoutMs?: number;
 }): StreamingSttPort {
   if (deps.supportedLocales.length === 0) {
     throw new Error("[voice] faster-whisper adapter needs at least one supported locale");
@@ -39,20 +41,33 @@ export function createFasterWhisperSttPort(deps: {
       frames: AsyncIterable<VoiceAudioFrame>,
       options: StreamingSttOptions,
     ): AsyncIterable<VoiceSttEvent> {
-      if (!deps.supportedLocales.includes(options.locale)) {
+      const locale = assertLocale(options.locale, "faster-whisper");
+      if (!deps.supportedLocales.includes(locale)) {
         throw new Error(`[voice] faster-whisper does not support locale "${options.locale}"`);
       }
-
-      for await (const chunk of deps.client.streamTranscribe({
+      const boundary = timedController(options.signal, deps.timeoutMs ?? DEFAULT_STT_TIMEOUT_MS, "faster-whisper");
+      const iterator = deps.client.streamTranscribe({
         frames,
-        locale: options.locale,
-        signal: options.signal,
-      })) {
-        const text = chunk.text.trim();
-        // Never invent a turn: an empty transcript (partial or final) is
-        // silence/noise, not something the Agent OS should react to.
-        if (!text) continue;
-        yield { type: chunk.isFinal ? "final" : "partial", text, confidence: chunk.confidence };
+        locale,
+        signal: boundary.signal,
+      })[Symbol.asyncIterator]();
+      try {
+        while (true) {
+          let result: IteratorResult<FasterWhisperChunk>;
+          try { result = await nextOrAbort(iterator, boundary.signal, "faster-whisper"); }
+          catch (error) {
+            if (boundary.timedOut()) throw new Error("[voice] faster-whisper timed out");
+            throw error;
+          }
+          if (result.done) return;
+          const text = result.value.text.trim();
+          if (text) yield { type: result.value.isFinal ? "final" : "partial", text, confidence: result.value.confidence };
+        }
+      } finally {
+        boundary.cleanup();
+        // Do not await return(): a crashed child/process may never resolve its
+        // pending read. The AbortSignal is the hard cancellation boundary.
+        iterator.return?.();
       }
     },
   };

@@ -61,4 +61,11 @@ describe("Kokoro TTS adapter (Fase 3)", () => {
       /requires a defaultVoiceId/,
     );
   });
+
+  it("rejects an invalid locale before touching the provider", async () => {
+    const client: KokoroClient = { synthesizeStream: vi.fn() };
+    const port = createKokoroTtsPort({ client, defaultVoiceId: "pt-pt-beatriz" });
+    await expect(port.synthesize("oi", { locale: "not a locale", signal: new AbortController().signal })).rejects.toThrow(/invalid locale/i);
+    expect(client.synthesizeStream).not.toHaveBeenCalled();
+  });
 });

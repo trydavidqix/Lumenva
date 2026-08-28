@@ -63,4 +63,31 @@ describe("faster-whisper STT adapter (Fase 3)", () => {
       /at least one supported locale/,
     );
   });
+
+  it("aborts a stalled provider after the configured timeout", async () => {
+    let providerSignal: AbortSignal | undefined;
+    const client: FasterWhisperClient = {
+      streamTranscribe: vi.fn((input) => {
+        providerSignal = input.signal;
+        return (async function* () {
+          await new Promise(() => {});
+        })();
+      }),
+    };
+    const port = createFasterWhisperSttPort({ client, supportedLocales: ["pt-PT"], timeoutMs: 10 });
+
+    await expect(async () => {
+      for await (const _ of port.transcribe(noFrames(), { locale: "pt-PT", signal: new AbortController().signal })) {}
+    }).rejects.toThrow(/timed out/i);
+    expect(providerSignal?.aborted).toBe(true);
+  });
+
+  it("rejects malformed locales before touching the provider", async () => {
+    const client: FasterWhisperClient = { streamTranscribe: vi.fn() };
+    const port = createFasterWhisperSttPort({ client, supportedLocales: ["pt-PT"] });
+    await expect(async () => {
+      for await (const _ of port.transcribe(noFrames(), { locale: "not a locale", signal: new AbortController().signal })) {}
+    }).rejects.toThrow(/invalid locale/i);
+    expect(client.streamTranscribe).not.toHaveBeenCalled();
+  });
 });
