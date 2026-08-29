@@ -664,6 +664,20 @@ dois testes localmente (onde `.git` existe): **39/39 passam**. Nenhuma regressã
 produção na mesma VPS confirmado saudável antes/depois (`crm.lumenva.pt` respondendo `307`, todos
 os containers `healthy`).
 
+**Atualização 2026-08-29 (mesma sessão) — `pnpm gov:verify` 100% verde, achado e corrigido um
+segundo bug real de infraestrutura de teste.** Rodando os 7 gates completos numa VPS isolada
+(`rsync` pra `/opt/test-run/`, produção intocada), `typecheck` e `gov:verify` deram OOM (heap
+insuficiente na VPS de 3.7GB — mesma limitação já documentada, não é regressão). Rodando os
+mesmos dois no Mac local (que tem RAM de sobra), `pnpm lint` sozinho reportou **46929 erros**,
+completamente destoante do `0 erros` confirmado na VPS minutos antes. Causa raiz: `eslint.config.mjs`
+tinha `globalIgnores` cobrindo `.claude/worktrees/` mas **não** `.worktrees/` — a outra pasta de
+worktrees paralelas (branches candidatas de voz e outras), presente no Mac do dono mas ausente na
+VPS/CI. Mesma classe exata de bug já corrigida em `vitest.config.ts` nesta mesma sessão. Corrigido
+adicionando `.worktrees/` ao `globalIgnores`; confirmado depois: `lint` bate exatamente com a VPS
+(0 erros, 266 warnings), e `pnpm gov:verify` completo passa limpo (harness:check, typecheck, lint,
+lint:channels, lint:tenant-filter, test:unit — 432 arquivos/4153 testes passaram, 4 pulados, 0
+falhas).
+
 **Achado à parte, sobre o próprio harness de agentes (não sobre o produto):** nesta sessão ficou
 confirmado que tanto `Agent{isolation:"remote"}` quanto o Codex CLI local rodam no MESMO Mac do
 dono, não em hardware separado — ambos competiram entre si e com o Mac local, chegando a

@@ -7,11 +7,15 @@ import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
 export default defineConfig([
-  // `.claude/worktrees/` são checkouts locais de outros agentes (com `.next/` e
-  // `node_modules/` próprios) — nunca fonte deste repo; lintá-los explode o eslint
-  // com dezenas de milhares de falsos positivos em JS gerado. (Na CI, checkout
-  // limpo, o diretório nem existe.)
-  globalIgnores([".next/", "node_modules/", "dist/", "supabase/", "next-env.d.ts", ".claude/worktrees/", "website/"]),
+  // `.worktrees/` e `.claude/worktrees/` são checkouts locais completos (de branches
+  // candidatas e de outros agentes), cada um com seu próprio `.next/`/`node_modules/`
+  // — nunca fonte deste repo; lintá-los explode o eslint com dezenas de milhares de
+  // falsos positivos em JS gerado. Faltava `.worktrees/` aqui (só `.claude/worktrees/`
+  // estava coberto) — achado em 2026-08-29 rodando `pnpm gov:verify` com 10 worktrees
+  // de voz presentes: 46929 erros que sumiram ao adicionar este padrão. Mesma classe
+  // de bug já corrigida em `vitest.config.ts` (exclude sem essas duas pastas). (Na CI,
+  // checkout limpo, nenhum dos dois diretórios existe.)
+  globalIgnores([".next/", "node_modules/", "dist/", "supabase/", "next-env.d.ts", ".worktrees/", ".claude/worktrees/", "website/"]),
   nextPlugin.configs["core-web-vitals"],
   reactHooks.configs.flat.recommended,
   ...tseslint.configs.recommended,

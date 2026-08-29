@@ -40,7 +40,15 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
   descartável via Docker): 75 arquivos/507 testes passaram, 1 pulado, "test:db verde" — confirma
   `baseline.sql` com as migrations de voz instalando/atualizando limpo e RLS/multi-tenancy
   corretos. CRM de produção na mesma VPS confirmado saudável antes/depois de ambas as corridas.
-  Nada disto foi enviado a `origin`.
+  Rodando os 7 gates (`typecheck`, `lint`, `lint:channels`, `lint:tenant-filter`, `test:unit`,
+  `test:db`, `gov:verify`) numa corrida completa na VPS, `typecheck`/`gov:verify` deram OOM (heap
+  insuficiente na VPS de 3.7GB, limitação já conhecida, não regressão) — rodados no Mac local em
+  vez disso, onde `pnpm lint` sozinho **achou um segundo bug real**: `eslint.config.mjs` tinha
+  `globalIgnores` cobrindo `.claude/worktrees/` mas não `.worktrees/` (a outra pasta de worktrees
+  paralelas), mesma classe de bug do `vitest.config.ts` corrigido acima — 46929 erros falsos no
+  Mac (que tem as 10 worktrees) contra 0 na VPS. Corrigido; `pnpm gov:verify` completo agora passa
+  limpo no Mac local (harness:check, typecheck, lint 0 erros, lint:channels, lint:tenant-filter,
+  test:unit 432 arquivos/4153 passaram/4 pulados/0 falhas). Nada disto foi enviado a `origin`.
 
 - **Voz:** documentação sincronizada com a decisão de SIP/BYOC para o número do próprio cliente e
   com o estado real da branch Voice Core `d3c97cbd`. Confirmado por leitura de código: a camada
