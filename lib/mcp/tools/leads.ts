@@ -143,7 +143,6 @@ export const crmGetLead: McpToolDefinition<typeof getInputShape> = {
       input.lead_id,
     );
     if ((lead as { organization_id?: string }).organization_id !== ctx.organizationId) {
-      // Defesa em profundidade — service-role bypassa RLS.
       throw new Error("not_found");
     }
     const [enriched] = await enrichLeads(ctx, [lead]);
@@ -164,12 +163,8 @@ const createInputShape = {
   value_cents: z.number().int().nonnegative().optional(),
   currency: z.string().length(3).optional(),
   owner_user_id: z.string().uuid().optional(),
-  /** 0070: o agente pode nascer dono do negócio que ele mesmo abriu. */
   owner_agent_id: z.string().uuid().optional(),
-  expected_close_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  expected_close_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   tags: z.array(z.string()).optional(),
   source: z.string().optional(),
 };
@@ -211,8 +206,7 @@ export const crmCreateLead: McpToolDefinition<typeof createInputShape> = {
 };
 
 // ---------------------------------------------------------------------------
-// add lead note (nota do NEGÓCIO, roteada por contato — não confundir com
-// crm_add_case_note, que grava num caso de escalação humana já aberto)
+// add lead note
 // ---------------------------------------------------------------------------
 
 const addLeadNoteInputShape = {
@@ -220,13 +214,6 @@ const addLeadNoteInputShape = {
   note: z.string().trim().min(1).max(4000),
 };
 
-/**
- * Mesma decisão de roteamento contato→negócio de `emitAgentActivityForContact`
- * (lib/leads/agent-activity.ts), portada pro contexto MCP: aquela função usa
- * pg.Pool (motor do agente, fora do request), e aqui só existe `ctx.supabase`
- * (server core do MCP). A lógica de decisão (`resolveActiveLeadForContact`,
- * `buildLeadActivityRow`) é a MESMA função importada, só o I/O muda.
- */
 export const crmAddLeadNote: McpToolDefinition<typeof addLeadNoteInputShape> = {
   name: "crm_add_lead_note",
   description:
@@ -235,7 +222,7 @@ export const crmAddLeadNote: McpToolDefinition<typeof addLeadNoteInputShape> = {
     "(ambíguo); nesse caso, use crm_create_lead primeiro.",
   inputSchema: addLeadNoteInputShape,
   category: "write",
-  requiresRole: "agent",
+  requiresRole: "ai_operator",
   requiresScope: "mcp:write",
   handler: async (input, ctx) => {
     const { data: candidatos, error: errCand } = await ctx.supabase
@@ -301,12 +288,8 @@ const updateInputShape = {
   value_cents: z.number().int().nonnegative().optional(),
   currency: z.string().length(3).optional(),
   owner_user_id: z.string().uuid().optional(),
-  /** 0070: transferir o negócio para (ou de) um agente — passa pelo mesmo helper. */
   owner_agent_id: z.string().uuid().optional(),
-  expected_close_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  expected_close_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   tags: z.array(z.string()).optional(),
 };
 

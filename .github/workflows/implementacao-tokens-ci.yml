@@ -1,0 +1,41 @@
+name: implementacao-tokens-ci
+
+on:
+  push:
+    branches: [implementacao-tokens]
+  workflow_dispatch:
+
+concurrency:
+  group: implementacao-tokens-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Channel provider leak
+        run: pnpm lint:channels
+
+      - name: Tenant filter lint
+        run: pnpm lint:tenant-filter
+
+      - name: Unit tests
+        run: pnpm test:unit
+
+      - name: Production build
+        run: pnpm build

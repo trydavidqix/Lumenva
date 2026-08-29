@@ -61,7 +61,7 @@ export const crmUploadLeadAttachment: McpToolDefinition<typeof inputShape> = {
     "negócio aberto único.",
   inputSchema: inputShape,
   category: "write",
-  requiresRole: "agent",
+  requiresRole: "ai_operator",
   requiresScope: "mcp:write",
   handler: async (input, ctx: McpContext) => {
     const apiKey = process.env.COMPOSIO_API_KEY ?? "";
@@ -118,8 +118,6 @@ export const crmUploadLeadAttachment: McpToolDefinition<typeof inputShape> = {
     const userId = ctx.organizationId;
     const mime = (msg.media_mime as string | null) ?? "application/octet-stream";
     const ext = mime.split("/")[1]?.split(";")[0] ?? "bin";
-    // Nome do arquivo carrega data/hora + o que o cliente disse que é —
-    // legível na pasta do Drive sem abrir cada arquivo pra saber o que é.
     const carimbo = (msg.created_at as string).slice(0, 16).replace("T", " ");
     const descricaoSegura = input.description
       .normalize("NFKD")
@@ -178,21 +176,11 @@ export const crmUploadLeadAttachment: McpToolDefinition<typeof inputShape> = {
       },
     });
     const { error: errInsert } = await ctx.supabase.from("crm_lead_activities").insert({
-      organization_id: row.organization_id,
-      lead_id: row.lead_id,
-      contact_id: row.contact_id,
-      type: row.type,
-      source_module: row.source_module,
-      source_id: row.source_id,
-      actor_kind: row.actor_kind,
-      actor_agent_id: row.actor_agent_id,
-      performed_by_user_id: row.performed_by_user_id,
-      reason: row.reason,
-      evidence: row.evidence,
-      payload: row.payload,
+      ...row,
+      payload: { ...row.payload, drive_web_view_link: viewLink },
     });
-    if (errInsert) throw new Error(`erro ao gravar nota do anexo: ${errInsert.message}`);
+    if (errInsert) throw new Error(`erro ao registrar anexo no lead: ${errInsert.message}`);
 
-    return { lead_id: alvo.leadId, drive_view_link: viewLink };
+    return { ok: true, lead_id: alvo.leadId, drive_file_id: file.id, drive_url: viewLink };
   },
 };
