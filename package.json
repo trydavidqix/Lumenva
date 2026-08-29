@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:webpack": "next dev",
-    "build": "next build",
+    "build": "pnpm typecheck && pnpm test:unit && pnpm lint:tenant-filter && pnpm lint:channels && next build",
     "build:webpack": "next build",
     "start": "next start",
     "lint": "eslint .",
@@ -27,6 +27,7 @@
     "test:shell": "bash tests/shell/update-guard.test.sh",
     "test:invariants": "bash scripts/test-db.sh",
     "test:harness": "node --test scripts/check-harness-consistency.test.mjs",
+    "test:voice:qa": "bash scripts/verify-voice-qa.sh provider-free",
     "lint:channels": "tsx scripts/lint-channels.ts",
     "lint:tenant-filter": "tsx scripts/lint-tenant-filter.ts",
     "knowledge:obsidian:export": "tsx scripts/obsidian-export.ts",
@@ -116,6 +117,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
+    "@types/ws": "^8.18.1",
     "@vercel/config": "^0.5.6",
     "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^9.12.0",
@@ -129,7 +131,8 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.66.0",
     "vite": "^8.2.0",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "ws": "^8.18.0"
   },
   "packageManager": "pnpm@9.15.9",
   "pnpm": {

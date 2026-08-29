@@ -125,6 +125,7 @@ acessibilidade).
 |---|---|
 | [`testing/user-journey-map.md`](testing/user-journey-map.md) | **Mapa de jornadas vivo** — casos, prioridade `[P0]`, achados. Atualizar sempre |
 | [`testing/HANDOFF-vps-qa.md`](testing/HANDOFF-vps-qa.md) | Receita do ambiente fresco estilo VPS |
+| [`runbooks/voice-qa.md`](runbooks/voice-qa.md) | Gate provider-free, smoke SIP, health/métricas e rollback; não substitui prova live |
 | [`harness-audit.md`](harness-audit.md) | **Auditoria do harness** — 20 itens + nível de maturidade |
 | [`../tests/e2e/README.md`](../tests/e2e/README.md) | Como rodar os E2E |
 
