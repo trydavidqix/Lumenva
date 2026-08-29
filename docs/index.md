@@ -10,7 +10,7 @@ audited_against: codex/crm-consolidated @ 54e86839 (sincronização documental d
 
 # Índice da documentação — DeskcommCRM
 
-Mapa da documentação versionada de `docs/` — a árvore auditada contém 211 `.md`/`.mdx`.
+Mapa da documentação versionada de `docs/` — a árvore auditada contém 214 `.md`/`.mdx`.
 Confirme a contagem com `rg --files docs -g '*.md' -g '*.mdx' | wc -l`. Existe porque a documentação cresceu sem ponto
 de entrada: sem este índice, humano e agente não acham o que já foi decidido e
 reescrevem por cima.
@@ -43,6 +43,8 @@ de menor precedência e registre.
 | [`handoffs/HANDOFF-voice-sip-2026-08-28.md`](handoffs/HANDOFF-voice-sip-2026-08-28.md) | Estado sincronizado, alterações, provas, bloqueios e próximos passos do Voice Core |
 | [`handoffs/HANDOFF-voice-vps-config-2026-08-28.md`](handoffs/HANDOFF-voice-vps-config-2026-08-28.md) | Resultado da leitura da VPS e estado do benchmark cloud de áudio |
 | [`evidence/voice-vps-config-2026-08-28/README.md`](evidence/voice-vps-config-2026-08-28/README.md) | Índice da evidência de configuração da VPS; sem credenciais e sem prova de chamada completa |
+| [`evidence/voice-vps-real-call-bridge-2026-08-28.md`](evidence/voice-vps-real-call-bridge-2026-08-28.md) | **Primeira chamada real de ponta a ponta** (script ad-hoc, prova de conceito) — 6 bugs de RTP corrigidos, pendências reais e achado de segurança do Asterisk exposto |
+| [`../ops/voice-asterisk/README.md`](../ops/voice-asterisk/README.md) | Config real do Asterisk extraída e versionada (segredos redigidos) |
 
 ## 2. Produto e intenção
 

@@ -1,0 +1,34 @@
+# Extracted from the real DeskcommCRM production VPS (lumenva-crm), 2026-08-28.
+# Install at /etc/systemd/system/voice-sip-worker.service on the telephony host.
+# Reads ARI credentials from /etc/asterisk/ari.conf at start (avoids duplicating the
+# secret in two places); everything else is a fixed test-context config.
+#
+# This is TEST-only wiring (User=root, no hardening) — see
+# docs/handoffs/HANDOFF-voice-sip-2026-08-28.md for what's still missing before production.
+
+[Unit]
+Description=DeskcommCRM Voice SIP Worker (test)
+After=network-online.target asterisk.service
+Wants=network-online.target
+Requires=asterisk.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/voice-sip-test
+EnvironmentFile=-/root/deskcommcrm/.env
+Environment=ARI_BASE_URL=http://127.0.0.1:8088
+Environment=ARI_APP_NAME=voicecore-test
+Environment=SIP_OUTBOUND_CONTEXT=voicecore-test
+Environment=VOICE_CONTROL_PLANE_URL=https://crm.lumenva.pt
+Environment=PORT=8091
+ExecStart=/bin/bash -lc 'set -a; user=$(sed -n "s/^\\[\\([^]]*\\)\\]$/\\1/p" /etc/asterisk/ari.conf | grep -v general | head -1); pass=$(sed -n "s/^password[[:space:]]*=[[:space:]]*//p" /etc/asterisk/ari.conf | head -1); export ARI_USERNAME="$user" ARI_PASSWORD="$pass"; exec /usr/bin/pnpm exec tsx workers/voice-sip-worker/main.mjs'
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=20
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
