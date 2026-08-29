@@ -5,9 +5,24 @@ independentes, pode fazer em qualquer ordem.
 
 **Atualização 2026-08-28:** Tarefa 1 foi executada em leitura remota. A configuração redigida está
 em [`docs/evidence/voice-vps-config-2026-08-28/README.md`](../evidence/voice-vps-config-2026-08-28/README.md).
-Tarefa 2 foi tentada no Codex Cloud (`codex cloud`), mas o cliente respondeu `Error: Device not configured (os error 6)`;
-nenhum benchmark foi inventado ou executado na VPS de produção. A leitura remota da Tarefa 1 foi
-repetida após autorização em 2026-08-28 e confirmou o conteúdo redigido no diretório de evidência.
+Tarefa 2 foi concluída em sandbox hospedado do Google Colab, sem acesso à VPS. O benchmark corrigido
+usou áudio de aproximadamente 10 segundos, Python 3.12.13 e CPU-only; os números estão em
+[`docs/evidence/voice-colab-cpu-benchmark-2026-08-28.md`](../evidence/voice-colab-cpu-benchmark-2026-08-28.md).
+Não houve uso de credenciais de produção, alteração no Asterisk ou integração com chamada real.
+
+**Atualização 2026-08-28 (sessão posterior, Claude direto na VPS de produção):** o dono pediu e
+autorizou explicitamente reteste real na VPS `lumenva-crm` (não sandbox), depois de perceber que
+o Colab tinha ~3x mais RAM que a VPS de verdade. Containers de produção parados
+(`docker compose -f docker-compose.prod.yml stop` + `docker stop` em mem0/graphiti/neo4j),
+`faster-whisper` e Piper instalados num venv em `/opt/voice-vps-bench/` e medidos: RTF ≈
+`0.07–0.08` pros dois — bem mais rápido que no Colab, apesar da VPS ter menos RAM. Containers
+religados e verificados saudáveis (`https://crm.lumenva.pt/` → `307`) logo depois; nenhum dado de
+produção foi tocado. **Kokoro também foi testado**, numa segunda passagem no mesmo dia (o dono
+pediu explicitamente): `kokoro==0.9.4` exige Python `<3.13` e a VPS só tem `3.14` via apt, então
+rodou dentro de um container Docker descartável `python:3.12-slim` (`docker run --rm`, nada ficou
+instalado no sistema) — RTF `0.497–0.717`, reverte o `FAIL` do Colab (RTF ~2.0). Números completos
+e o que esse teste **não** prova (carga concorrente, streaming, CRM+Asterisk rodando junto) em
+[`docs/evidence/voice-vps-cpu-benchmark-2026-08-28.md`](../evidence/voice-vps-cpu-benchmark-2026-08-28.md).
 
 ## Contexto
 
@@ -66,13 +81,31 @@ efêmero (ex.: Codex Cloud), não na VPS de produção, não precisa de IP públ
 5. Reportar os números crus (tempo medido, hardware do sandbox) — não arredondar pra "rápido" ou
    "lento" sem o número.
 
-## O que reportar de volta
+### Resultado executado
 
-Um resumo curto com:
+- Runtime: Google Colab hosted, runtime `2026.07`, Python `3.12.13`, CPU-only, aproximadamente
+  `12.67 GiB` de RAM e `113.94 GiB` de disco; nenhuma GPU foi usada.
+- Piper `pt_BR-cadu-medium`, áudio `11.06–11.31 s`: `4.718331 s`, `3.827799 s`, `4.014973 s`.
+- `faster-whisper tiny`, CPU `int8`, áudio `11.308125 s`: `1.644854 s`, `1.624598 s`,
+  `1.585650 s`.
+- Kokoro `pf_dora`, áudio `10.5 s`: carregamento `6.503924 s`; execuções `21.571024 s`,
+  `21.044665 s`, `21.127316 s`.
+- Todos os três motores instalaram e processaram áudio. `faster-whisper` ficou abaixo do tempo
+  real; Piper ficou abaixo do tempo real, mas com latência absoluta de aproximadamente 4 segundos;
+  Kokoro ficou aproximadamente duas vezes mais lento que o tempo real.
+- Veredito de infraestrutura: não provisionar outra VPS pequena esperando voz interativa. Para
+  conversação em tempo real ainda falta testar streaming/paralelismo em host mais forte ou GPU.
+- Evidência detalhada: [`docs/evidence/voice-colab-cpu-benchmark-2026-08-28.md`](../evidence/voice-colab-cpu-benchmark-2026-08-28.md).
+
+## Estado após execução
 
 - Tarefa 1: ficheiros extraídos (ou motivo de não ter conseguido), estado do endpoint SIP.
-- Tarefa 2: números reais de latência STT/TTS sem GPU, se rodou ou travou.
-- Qualquer coisa que **não** foi possível medir — dizer explicitamente, não inferir sucesso.
+- Tarefa 2: números reais de latência STT/TTS sem GPU estão registrados na evidência; o benchmark
+  corrigido de aproximadamente 10 segundos rodou para Piper, faster-whisper e Kokoro.
+- Ainda não foi medido: chamada SIP/PSTN real com áudio, streaming, execução paralela, custo de
+  host fixo, comportamento sob reinício, integração Pipecat/Asterisk e latência ponta a ponta.
+- Não declarar `VERIFIED LIVE`, produção de voz ativa ou `final-green`.
+
 
 ## Referências
 

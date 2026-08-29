@@ -13,11 +13,50 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 - **Voz:** documentação sincronizada com a decisão de SIP/BYOC para o número do próprio cliente e
   com o estado real da branch Voice Core `d3c97cbd`. Confirmado por leitura de código: a camada
   de sinalização (ARI, listener, reconexão, rotas CRM, forwarder, worker) está implementada e
-  testada de ponta a ponta, não é mais scaffold; testada parcialmente também na VPS. Áudio
-  Pipecat/STT/TTS e chamada telefónica completa continuam bloqueados por infraestrutura (host
-  com mais recursos, decisão de custo pendente do dono) e o deploy do Asterisk ainda não está
-  versionado no Git. O código ainda não foi integrado nesta branch. O schema Voice foi aplicado
-  no banco usado pela VPS após autorização explícita; não há ativação de `VOICE_LIVE_ENABLED=true`.
+  testada de ponta a ponta, não é mais scaffold; testada parcialmente também na VPS.
+  `faster-whisper`, Piper e Kokoro medidos como viáveis em CPU na própria VPS de produção
+  (isolado e sob carga concorrente com o CRM ligado). Deploy do Asterisk extraído e versionado em
+  `ops/voice-asterisk/` (segredos redigidos). **Com autorização explícita do dono, um script
+  ad-hoc fora do repo provou a primeira chamada telefónica real de ponta a ponta** (softphone →
+  Asterisk → STT → resposta → TTS → volta ao telefone) — prova de viabilidade técnica, não é
+  ainda a integração real nos contratos `lib/voice/**` nem tem Agent OS. Achado de segurança
+  separado, não corrigido: Asterisk exposto a brute-force na porta 5060/UDP pública. O código
+  ainda não foi integrado no CRM consolidado. O schema Voice foi aplicado no banco usado pela VPS
+  após autorização explícita; não há ativação de `VOICE_LIVE_ENABLED=true`.
+
+- **Voz (sessão seguinte):** dois bugs reais achados e corrigidos na ponte de teste ad-hoc da
+  VPS (fora do repo). (1) NAT do PJSIP mandava RTP de saída pro IP privado/Wi-Fi local do
+  celular do dono em vez do IP público — corrigido com `rtp_symmetric=yes`,
+  `rewrite_contact=yes`, `force_rport=yes` em `/etc/asterisk/pjsip.conf`; confirmado corrigido
+  via log real de uma chamada, sentido servidor→celular. **Sentido celular→servidor confirmado
+  resolvido na mesma sessão** (ciclo completo fala→STT→resposta funcionando, transcrição
+  correta). (2) Áudio de teste do OpenAI TTS (`gpt-4o-mini-tts`) tocava lento por suposição
+  errada de sample rate na conversão pra µ-law; corrigido revertendo pra conversão sem resample
+  depois de diagnóstico por transcrição em múltiplas taxas candidatas. Pesquisa de alternativas
+  de TTS pago documentada (ElevenLabs, XTTS-v2/F5-TTS sem licença comercial, Chatterbox/StyleTTS2,
+  Inworld AI, OpenAI TTS). Voz `nova` (OpenAI) escolhida inicialmente pra saudação, **depois
+  substituída na mesma sessão por Inworld AI** (toolkit Composio conectado; API gera direto em
+  µ-law 8kHz, sem o pipeline de resample que causou bug com a OpenAI) — **decisão final: Inworld
+  AI, voz `Leonor` (português europeu), `speaking_rate=0.85`, modelo `inworld-tts-2`**. Detalhe:
+  `docs/evidence/voice-vps-real-call-bridge-2026-08-28.md`.
+
+- **Ferramentas de agente (fora do repositório):** duas skills globais instaladas em
+  `~/.claude/skills/` — `inworld` (SDK/referência da API Inworld TTS, pronta pra uso) e
+  `9router-tts` (proxy multi-provider de TTS OpenAI-compatible; **em observação**, exige
+  hospedar um serviço `9Router` próprio ainda inexistente — pendência pra quando houver decisão
+  de montar um roteador de modelos gratuitos).
+
+- **Voz (sessão seguinte, mesmo dia) — migração pra Pipecat pausada:** tentativa de recompor a
+  ponte com Asterisk 22.11.0 (compilado do fonte, isolado em `/opt/asterisk-v2/`, porta 5061,
+  sem tocar produção) + `chan_websocket` + `pipecat-asterisk` + `OpenAIRealtimeLLMService`, pra
+  resolver a latência arquitetural (5-9s) de um teste full-stack OpenAI anterior. Conexão com a
+  OpenAI confirmada funcionando; **áudio do celular nunca chega no Asterisk-v2** (bloqueador não
+  resolvido, mais de 3 correções tentadas sem sucesso — ICE, faixa de porta RTP, dialplan).
+  Pausado por decisão do dono seguindo a skill `systematic-debugging`, não abandonado. Instância
+  antiga (porta 5060) continua intocada e é o único caminho comprovado funcionando hoje. Regra
+  nova adicionada em `~/.claude/CLAUDE.md` (fora do repo, config pessoal do agente): antes de
+  assumir que algo exige construir do zero, procurar implementação de referência real via
+  `gh search repos`. Detalhe: `docs/handoffs/HANDOFF-voice-sip-2026-08-28.md`.
 
 - **Privacidade:** a superfície administrativa e as rotas públicas de compliance usam
   `/app/privacy` e `/api/v1/privacy`; nomes `lgpd` que permanecem em migrations, jobs e

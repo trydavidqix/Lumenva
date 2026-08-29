@@ -627,14 +627,34 @@ o worker rodou isoladamente como serviço de teste, `/healthz` respondeu, ARI re
 
 **O que falta não é mais "religar o worker"; são duas lacunas de infraestrutura:**
 
-- **Áudio de IA (Pipecat/faster-whisper/Piper/Kokoro/OpenVoice): `BLOCKED EXTERNAL`.** São
-  processos Python/ML sem contrato de servidor documentado no repo. A VPS de produção atual
-  (2 CPU/3.7GB) já foi validada como insuficiente. Precisa de host com mais recursos —
-  **custo recorrente, exige autorização explícita do dono antes de provisionar** (regra de
-  segurança do repo). Decisão tomada em 2026-08-28: antes de comprometer um host fixo, testar
-  viabilidade (roda sem GPU? latência aceitável?) num sandbox cloud efêmero e barato/gratuito
-  (ex.: Codex Cloud) — não serve como host de produção (sem IP público fixo), só para
-  responder "isso é viável" antes de gastar.
+- **Áudio de IA: benchmark CPU concluído em dois hosts — Colab e a própria VPS de produção.**
+  Colab (`2026.07`, Python `3.12.13`, CPU-only, ~12.67 GiB RAM, ~113.94 GiB disco), áudio de
+  ~10s: `faster-whisper tiny` `1.585650–1.644854 s`/`11.308125 s`; Piper
+  `3.827799–4.718331 s`/`11.064–11.308 s`; Kokoro `21.044665–21.571024 s`/`10.5 s` (carregamento
+  `6.503924 s`). Ver
+  [`docs/evidence/voice-colab-cpu-benchmark-2026-08-28.md`](evidence/voice-colab-cpu-benchmark-2026-08-28.md).
+  **Reteste na VPS real (`lumenva-crm`, AMD EPYC-Genoa, 2 vCPU, 3.7GB total) em 2026-08-28, com
+  autorização explícita do dono, containers de produção parados durante o teste e religados
+  depois (saúde confirmada: 11/11 `healthy`, `https://crm.lumenva.pt/` respondeu `307`):**
+  `faster-whisper` `1.009–1.055 s`/`13.86 s` (RTF ≈ `0.07–0.08`); Piper `0.958–1.027 s`/`13.86–14.09 s`
+  (RTF ≈ `0.07`) — **bem mais rápido que no Colab**, apesar de a VPS ter ~1/4 da RAM. **Kokoro
+  também foi testado na VPS**, numa segunda passagem, usando um container Docker descartável
+  `python:3.12-slim` (`docker run --rm`, sem instalar nada permanente no sistema) já que
+  `kokoro==0.9.4` exige Python `<3.13` e a VPS só tem `3.14` via apt: RTF `0.497–0.717` — **reverte
+  o `FAIL` do Colab (RTF ~2.0)**, carregamento do modelo `20.28s` (inclui overhead de container +
+  download, não isolado). Ver
+  [`docs/evidence/voice-vps-cpu-benchmark-2026-08-28.md`](evidence/voice-vps-cpu-benchmark-2026-08-28.md).
+  **Teste de carga concorrente (2026-08-28, mesma sessão, a pedido do dono):** os três motores
+  rodaram **ao mesmo tempo** (não sequencial), **com o CRM inteiro ligado e saudável** (não
+  parado desta vez). RTF sob carga: Piper `0.127–0.207`; faster-whisper `0.144–0.242`; Kokoro
+  `0.590–0.860` — todos continuam abaixo de `1.0` (tempo real), 2-3x mais lento que isolado mas
+  sem reprovar. `crm.lumenva.pt` respondeu `307` o tempo todo (`0.63s` antes, `1.70s` no pico de
+  carga, `0.39s` depois) — ficou mais lento, não caiu; nenhum dos 11 containers reiniciou/morreu.
+  Swap chegou a `2.3GB` de `4GB` configurados — a caixa se apoiou pesado em swap, não só RAM.
+  **O que esse teste ainda NÃO prova:** o Asterisk/Pipecat de verdade não estava rodando junto
+  (só simula pressão CPU/RAM, não o pipeline de voz real), não é streaming/chunks, não é múltiplas
+  chamadas simultâneas, e o teste durou segundos, não uma ligação de minutos sob a mesma pressão.
+  Antes de decidir host de produção definitivo, ainda falta testar essas condições.
 - **Deploy do Asterisk não está versionado.** A instância na VPS foi configurada manualmente,
   fora do Git — não existe `pjsip.conf`/`extensions.conf`/unidade systemd capturados no repo.
   Escrever essa receita "de memória" arrisca divergir do que já roda na VPS; a via seleccionada
@@ -642,14 +662,98 @@ o worker rodou isoladamente como serviço de teste, `/healthz` respondeu, ARI re
 
 O gate completo (`bash scripts/verify-voice-core.sh`) ficou `NOT_PROVEN` no último snapshot
 porque `pnpm typecheck` esgotou o heap do runner — não é reprovação do código, é limite do
-runner. Ainda não há prova de áudio de IA, chamada PSTN/SIP completa, transferência, latência,
-custo ou voz clonada em produção. O schema Voice foi aplicado no banco usado pela VPS após
+runner. Há prova isolada de áudio de IA em CPU no sandbox Colab, mas ainda não há prova de
+chamada PSTN/SIP completa, integração Asterisk↔Pipecat, streaming, transferência, latência
+ponta a ponta, custo ou voz clonada em produção. O schema Voice foi aplicado no banco usado pela VPS após
 autorização explícita; isso não significa que a branch consolidada recebeu o código nem que
 produção está ativada.
 
+**Atualização 2026-08-28 (noite, mesma sessão) — primeira chamada real de ponta a ponta,
+prova de conceito fora do repo.** Com autorização explícita do dono, um script ad-hoc (não
+commitado, vive só em `/opt/voice-vps-bench/` na VPS) provou pela primeira vez o caminho
+completo numa ligação real: softphone registrado no Asterisk real → ponte de áudio RTP → STT
+(`faster-whisper`) → resposta → TTS (Piper) → volta ao telefone. **O dono ouviu a resposta
+sintetizada, ao vivo, numa chamada real.** 6 bugs reais foram encontrados e corrigidos no
+caminho (loop de canais fantasma, RTP simétrico não aprendendo o destino, ordem de bytes,
+formato `slin` sem negociação causando ruído puro — corrigido trocando pra `ulaw` padrão,
+buffer de jitter quebrado por pacotes descontínuos, cabeçalho HTTP corrompendo acento). Latência
+final ~5-8s por turno (modelos carregados uma vez, não por chamada). Pendências reais que
+sobraram: voz sintetizada soa "robótica" (provável teto de qualidade de 8kHz + voz medium do
+Piper), sem integração com Agent OS (é só eco/confirmação), sem detecção real de fim de fala.
+Todos os processos de teste foram parados ao fim da sessão; CRM confirmado saudável, intocado por
+esta parte. Detalhe completo, bug a bug:
+[`docs/evidence/voice-vps-real-call-bridge-2026-08-28.md`](evidence/voice-vps-real-call-bridge-2026-08-28.md).
+
+**Atualização 2026-08-29 (mesma sessão seguinte) — alucinação/repetição da transcrição
+corrigida.** Filtro de pós-processamento (`is_repetition_garbage()`) descarta texto quando uma
+palavra domina ≥40% ou a proporção de palavras únicas cai abaixo de 60% — validado contra os 4
+casos reais de alucinação vistos, 0 falsos positivos em 8 casos de teste. Confirmado ao vivo:
+nova chamada retornou frase coerente, sem repetição.
+
+**Atualização 2026-08-29 (mesma sessão seguinte) — qualidade da voz melhorada substancialmente
+(8,5/10, avaliação ao vivo do dono).** Achado real, não cosmético: a voz usada era **português
+do Brasil** (`pt_BR-*`), mas a Lumenva é operação **portuguesa**. Trocado para
+`pt_PT-tugão-medium`, a única voz europeia disponível no Piper (masculina — não existe pt-PT
+feminino ainda; saudação ajustada de "Karol" pra "Tó"). Velocidade ajustada via `length_scale`
+até `1.4` (testado 1.0→1.03→1.25→1.4, cada um avaliado ao vivo). Kokoro foi testado como TTS
+principal nesta ponte (não só benchmark isolado) — mesma avaliação de "robótica" que o Piper e
+mais lento, então não substituiu. **Nova feature, fora do escopo original: saudação proativa** —
+ao atender, a ponte fala primeiro ("Bom dia, meu nome é Tó...") antes de esperar o interlocutor,
+via novo endpoint `/speak`. Detalhe completo na mesma evidência.
+
+**Atualização 2026-08-29 (sessão seguinte) — exposição do Asterisk mitigada.** O log de
+mensagens tinha crescido de 5,3GB pra 15,6GB durante a noite (bots continuaram varrendo);
+rotacionado e arquivo antigo apagado, `logrotate` configurado pra nunca mais crescer sem
+controle. `fail2ban` instalado com filtro próprio pro formato `res_pjsip` do Asterisk 22 (o
+filtro padrão do fail2ban é pra `chan_sip`, formato antigo, não batia) — testado contra 126 mil
+linhas reais do log antes de ativar. Ativo, confirmado banindo IPs atacantes automaticamente
+(5 IPs banidos nos primeiros minutos), sem afetar o endpoint de teste nem o CRM. Não foi usada
+allowlist fixa de IP porque o celular do dono usa rede móvel com IP dinâmico. Detalhe na mesma
+evidência acima.
+
+**Atualização 2026-08-29 (sessão seguinte) — dois bugs reais de áudio achados/corrigidos;
+sentido celular→servidor continua quebrado.** Pesquisa de alternativas de TTS pago (ElevenLabs
+10/10 mas reverte decisão open-source; XTTS-v2/F5-TTS tecnicamente melhores mas sem licença
+comercial disponível; Chatterbox/StyleTTS2 sem bom português; Inworld AI promissor mas não
+testado; OpenAI `gpt-4o-mini-tts` testado com conta já existente do dono). Durante o teste do
+OpenAI TTS numa chamada real, o celular ficou "mudo" — investigação com `rtp set debug`/
+`pjsip set logger` ativos numa chamada real (não visível no self-test local) achou o Asterisk
+mandando RTP pro **IP privado (Wi-Fi local) do celular**, não pro IP público real. Corrigido com
+`rtp_symmetric=yes`/`rewrite_contact=yes`/`force_rport=yes` em `/etc/asterisk/pjsip.conf`;
+confirmado corrigido no sentido servidor→celular via dados móveis. **Sentido celular→servidor
+continua sem funcionar** (`Got RTP` = 0 em toda chamada testada depois do fix) — bloqueador
+aberto, não investigado a fundo ainda. Segundo bug: o áudio de teste do OpenAI tocou "lento"
+porque a conversão pra µ-law presumiu 24kHz sem verificar (documentação da OpenAI diz 24kHz é o
+padrão, mas o arquivo local já estava a 8kHz); diagnosticado sem custo de API rodando o mesmo PCM
+pelo faster-whisper em 5 taxas candidatas e comparando qual transcrição fazia sentido —
+corrigido revertendo pra conversão direta sem resample, confirmado ao vivo. Processos da ponte
+deixados rodando na VPS ao fim desta sessão (decisão consciente, pra não perder estado antes de
+investigar o bug de entrada de áudio). Detalhe completo:
+[`docs/evidence/voice-vps-real-call-bridge-2026-08-28.md`](evidence/voice-vps-real-call-bridge-2026-08-28.md).
+
+**Atualização 2026-08-29 (sessão seguinte) — tentativa de migração pra Pipecat +
+`pipecat-asterisk` pausada, não concluída.** Motivada pela latência arquitetural (5-9s) do teste
+full-stack OpenAI acima. Compilado Asterisk 22.11.0 oficial (fonte — Ubuntu só tem 22.5.2, sem o
+módulo `chan_websocket`) numa instalação isolada em `/opt/asterisk-v2/` (porta 5061), sem tocar
+na instância de produção (porta 5060). Regra de firewall nova no Hetzner Cloud Firewall (UDP
+5061 — firewall de nuvem separado do `iptables` do SO). Pipeline Pipecat + `OpenAIRealtimeLLMService`
+montada; conexão com a OpenAI confirmada funcionando (session.created chega). **Bloqueador real
+não resolvido**: o áudio do celular nunca chega no Asterisk-v2, mesmo com sinalização/registro
+ok e mesmo celular/rede que funcionam sem problema na instância antiga — confirmado por
+instrumentação direta no código da biblioteca e por teste de isolamento com `Record()` puro
+(sem Pipecat). Mais de 3 correções tentadas (ICE, rtp.conf, faixa de porta, dialplan) sem
+resolver — seguindo a skill `systematic-debugging`, pausado por decisão do dono em vez de
+insistir mais. Processos parados, instalação preservada pra retomar depois. A instância antiga
+(porta 5060) **continua intocada e é o único caminho comprovado funcionando**. Detalhe completo:
+[`docs/handoffs/HANDOFF-voice-sip-2026-08-28.md`](handoffs/HANDOFF-voice-sip-2026-08-28.md).
+
 **Veredito:** `SINALIZAÇÃO SIP/BYOC IMPLEMENTADA E TESTADA (PROVIDER-FREE) NO REF CANDIDATO /
-ÁUDIO DE IA BLOQUEADO POR INFRAESTRUTURA (DECISÃO DE HOST PENDENTE) / DEPLOY DO ASTERISK NÃO
-VERSIONADO / NÃO INTEGRADO NO CONSOLIDADO`.
+FASTER-WHISPER, PIPER E KOKORO VIÁVEIS EM CPU NA VPS REAL, ISOLADO E SOB CARGA CONCORRENTE COM O
+CRM LIGADO / PRIMEIRA CHAMADA REAL DE PONTA A PONTA PROVADA COM SCRIPT AD-HOC FORA DO REPO
+(NÃO É O VOICE CORE DO REPOSITÓRIO, NÃO É PRODUÇÃO) / DEPLOY DO ASTERISK VERSIONADO EM
+`ops/voice-asterisk/` / EXPOSIÇÃO DO ASTERISK A BRUTE-FORCE MITIGADA (FAIL2BAN + LOGROTATE) /
+MIGRAÇÃO PRA PIPECAT+CHAN_WEBSOCKET TENTADA E PAUSADA (ÁUDIO CELULAR→ASTERISK-V2 NÃO FLUI,
+CAUSA RAIZ NÃO ISOLADA) / NÃO INTEGRADO NO CONSOLIDADO`.
 
 Próxima ação e detalhe de execução: [`docs/handoffs/HANDOFF-voice-vps-config-2026-08-28.md`](handoffs/HANDOFF-voice-vps-config-2026-08-28.md).
 Referência resumida: [`docs/voice/open-source-europe.md`](voice/open-source-europe.md).
