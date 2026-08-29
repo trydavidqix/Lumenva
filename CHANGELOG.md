@@ -48,7 +48,10 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
   paralelas), mesma classe de bug do `vitest.config.ts` corrigido acima — 46929 erros falsos no
   Mac (que tem as 10 worktrees) contra 0 na VPS. Corrigido; `pnpm gov:verify` completo agora passa
   limpo no Mac local (harness:check, typecheck, lint 0 erros, lint:channels, lint:tenant-filter,
-  test:unit 432 arquivos/4153 passaram/4 pulados/0 falhas). Nada disto foi enviado a `origin`.
+  test:unit 432 arquivos/4153 passaram/4 pulados/0 falhas). **Enviado a `origin` com autorização
+  explícita do dono** (`git push origin codex/crm-consolidated`, fast-forward, `d8fbc575..a552a512`).
+  Vercel Preview disparado automaticamente pela integração GitHub, `READY` sem erro
+  (`crm-git-codex-crm-consolidated-lumenva.vercel.app`, commit `a552a512`).
 
 - **Voz:** documentação sincronizada com a decisão de SIP/BYOC para o número do próprio cliente e
   com o estado real da branch Voice Core `d3c97cbd`. Confirmado por leitura de código: a camada
