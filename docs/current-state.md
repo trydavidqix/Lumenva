@@ -685,8 +685,11 @@ dono, não em hardware separado — ambos competiram entre si e com o Mac local,
 pra um diretório isolado (sem tocar nos containers de produção) foi o que efetivamente proveu
 hardware separado nesta sessão.
 
-**Nada disto foi enviado a `origin`** — a branch local está 278 commits à frente de
-`origin/codex/crm-consolidated`, só localmente. Push exige autorização explícita separada.
+**Atualização 2026-08-29 (fim de sessão) — enviado a `origin`, Preview verde.** Com autorização
+explícita do dono ("aprovado e autorizado"), `git push origin codex/crm-consolidated` (fast-forward,
+sem divergência): `d8fbc575..a552a512`. A integração GitHub↔Vercel disparou automaticamente um
+Preview (`dpl_AHs4qWgkGU2cUN22qGw6j6pepd61`, commit `a552a512`), que terminou `READY` — build
+limpo, sem erro. URL: `crm-git-codex-crm-consolidated-lumenva.vercel.app`.
 
 ---
 
@@ -859,12 +862,14 @@ CRM LIGADO / PRIMEIRA CHAMADA REAL DE PONTA A PONTA PROVADA COM SCRIPT AD-HOC FO
 (NÃO É O VOICE CORE DO REPOSITÓRIO, NÃO É PRODUÇÃO) / DEPLOY DO ASTERISK VERSIONADO EM
 `ops/voice-asterisk/` / EXPOSIÇÃO DO ASTERISK A BRUTE-FORCE MITIGADA (FAIL2BAN + LOGROTATE) /
 MIGRAÇÃO PRA PIPECAT+CHAN_WEBSOCKET TENTADA E PAUSADA (ÁUDIO CELULAR→ASTERISK-V2 NÃO FLUI,
-CAUSA RAIZ NÃO ISOLADA) / **AGORA INTEGRADO EM `codex/crm-consolidated` VIA MERGE LOCAL (`6f6232a2`,
-2026-08-29, NÃO ENVIADO A ORIGIN) / TYPECHECK E LINT ESCOPADO LIMPOS PÓS-MERGE / `pnpm test:unit` COMPLETO, RODADO EM HARDWARE SEPARADO (VPS): 4119 PASSARAM / 2 FALHAS
-AMBIENTAIS (SEM `.git` NO RSYNC, CONFIRMADAS FALSO-NEGATIVO) / 0 REGRESSÃO REAL — OS 4 GAPS
-ACHADOS PELA CORRIDA ANTERIOR (BASELINE/MANIFEST SEM 7 MIGRATIONS DE VOZ, NÚMERO `0124` DUPLICADO,
-TELA `/app/settings/tenant/voice` SEM NAVEGAÇÃO, DOIS TESTES `node:test` QUEBRANDO O VITEST) FORAM
-TODOS CORRIGIDOS`.
+CAUSA RAIZ NÃO ISOLADA) / **INTEGRADO EM `codex/crm-consolidated` VIA MERGE LOCAL (`6f6232a2`,
+2026-08-29) / OS 4 GAPS ACHADOS POR `pnpm test:unit` (BASELINE/MANIFEST SEM 7 MIGRATIONS DE VOZ,
+NÚMERO `0124` DUPLICADO, TELA `/app/settings/tenant/voice` SEM NAVEGAÇÃO, DOIS TESTES `node:test`
+QUEBRANDO O VITEST) MAIS UM BUG DE INFRA ACHADO DEPOIS (`eslint.config.mjs` SEM `.worktrees/` NO
+`globalIgnores`) FORAM TODOS CORRIGIDOS / `pnpm gov:verify` COMPLETO VERDE (harness:check,
+typecheck, lint 0 erros, lint:channels, lint:tenant-filter, test:unit 432 arquivos/4153
+testes/0 falhas) / `pnpm test:db` VERDE (507 testes/75 arquivos) / ENVIADO A `origin`
+(`d8fbc575..a552a512`, autorização explícita do dono) / VERCEL PREVIEW `READY`**.
 
 Próxima ação e detalhe de execução: [`docs/handoffs/HANDOFF-voice-vps-config-2026-08-28.md`](handoffs/HANDOFF-voice-vps-config-2026-08-28.md).
 Referência resumida: [`docs/voice/open-source-europe.md`](voice/open-source-europe.md).
