@@ -62,6 +62,8 @@ node --check workers/voice-worker/call-context.mjs
 node --check workers/voice-worker/control-server.mjs
 node --check workers/voice-worker/pending-outbound.mjs
 node --test workers/voice-worker/pending-outbound.test.mjs
+node --check workers/voice-pipecat-runtime/main.mjs
+node --test workers/voice-pipecat-runtime/main.test.mjs
 node --check workers/voice-sip-worker/ari-listener.smoke.mjs
 npx tsx workers/voice-sip-worker/ari-listener.smoke.mjs
 node --check workers/voice-sip-worker/main.mjs

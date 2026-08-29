@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const migrationPath = resolve(
   process.cwd(),
-  "supabase/migrations/20260824132000_0124_customer_memory.sql",
+  "supabase/migrations/20260824132000_0132_customer_memory.sql",
 );
 
 function sql(): string {

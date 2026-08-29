@@ -1,5 +1,5 @@
 import http, { type IncomingMessage, type ServerResponse } from "node:http";
-import { WebSocketServer } from "ws";
+import { WebSocketServer, type WebSocket } from "ws";
 
 /**
  * A real local HTTP + WebSocket server speaking the same wire shape as
@@ -99,7 +99,7 @@ export function startFakeAriServer(options?: { username?: string; password?: str
         callback(apiKey === `${username}:${password}`, 401, "unauthorized");
       },
     });
-    let activeSocket: import("ws").WebSocket | null = null;
+    let activeSocket: WebSocket | null = null;
     wss.on("connection", (socket) => {
       activeSocket = socket;
     });

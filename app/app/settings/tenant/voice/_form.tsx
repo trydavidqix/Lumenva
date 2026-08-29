@@ -99,9 +99,8 @@ export function VoiceSettingsForm({
             <option value="after_hours">IA fora do horário</option>
             <option value="overflow">IA em overflow / ocupado</option>
           </select>
-              </label>
-          )}
-          <label className="space-y-1 text-sm">
+        </label>
+        <label className="space-y-1 text-sm">
           <span className="font-medium">Idioma</span>
           <input className="w-full rounded-md border bg-background px-3 py-2" value={value.locale} onChange={(e) => setValue((c) => ({ ...c, locale: e.target.value }))} />
         </label>

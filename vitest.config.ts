@@ -32,6 +32,12 @@ export default defineConfig({
       "tests/invariants/**",
       "tests/journeys/**",
       "website/**",
+      // Worktrees vivem dentro da própria árvore (.worktrees/, .claude/worktrees/) e cada um
+      // é um checkout completo com sua própria tests/e2e/** (Playwright). Sem o prefixo `**/`,
+      // os padrões acima só casam a partir da raiz e não alcançam esses checkouts aninhados —
+      // o vitest acabava coletando specs Playwright de até 10 worktrees, travando a suíte.
+      "**/.worktrees/**",
+      "**/.claude/worktrees/**",
     ],
   },
   resolve: { alias: { "@": path.resolve(__dirname, ".") } },

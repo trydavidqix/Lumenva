@@ -2,10 +2,10 @@
 type: current-state
 project: DeskcommCRM
 status: maintained
-last_updated: 2026-08-28
+last_updated: 2026-08-29
 generated_by: auditoria documental sincronizada — CRM consolidado, branch Voice Core e teste controlado na VPS
 confidence: média-alta (métricas de código são CONFIRMADO; estado de épico vem dos HANDOFFs, que são auto-relatados)
-audited_against: codex/crm-consolidated @ 54e86839; origin/implementacao-tokens-voice-core @ d3c97cbd (2026-08-28)
+audited_against: codex/crm-consolidated @ 6f6232a2 (merge local de codex/voice-media-integration, 2026-08-29, ainda não enviado a origin)
 ---
 
 # Estado atual — DeskcommCRM
@@ -582,15 +582,107 @@ Actions em vez de consertar o billing.
 
 ---
 
-## 11. Voz open-source para linhas europeias — estado em 2026-08-28
+## 11. Voz open-source para linhas europeias — estado em 2026-08-29
 
-O checkout atual é `codex/crm-consolidated` em `54e86839486849ad5b14a19851eb1f3696d93605`.
-Neste snapshot não existem ficheiros rastreados em `lib/voice/**`, `workers/voice-worker/**` ou
-`workers/voice-runtime/**`. Logo, a voz SIP/BYOC ainda não está integrada nesta branch.
+**Atualização 2026-08-29 — Voice Core integrado em `codex/crm-consolidated` (merge local, não
+enviado a origin).** A branch candidata `codex/voice-media-integration` (276 commits, 234
+arquivos — superset confirmado por `git patch-id` das outras 7 branches candidatas do mesmo dia/
+autor: `voice-architecture-audit`, `voice-crm-config`, `voice-media-bridge`,
+`voice-pipecat-runtime`, `voice-qa-ops`, `voice-security-tests`, `voice-stt-tts`) foi trazida com
+`git merge --no-ff` para `codex/crm-consolidated` em `6f6232a2`, sem conflitos. `lib/voice/**` e o
+código de sinalização SIP/BYOC descritos abaixo agora existem de fato nesta branch — o parágrafo
+seguinte, que descrevia a ausência desses arquivos, está desatualizado pela merge e mantido só como
+histórico do estado pré-merge.
 
-Existe uma implementação candidata em `origin/implementacao-tokens-voice-core` em
-`d3c97cbd8d3ca8ca5616e05f23411e52520a5a3a`. Ela deve ser tratada como trabalho separado até ser
-comparada, integrada seletivamente e validada no mesmo snapshot do CRM.
+Três correções pós-merge aplicadas (não é código novo de feature, é reparo do que a merge expôs):
+- `app/app/settings/tenant/voice/_form.tsx`: erro de sintaxe TS real (um `)}` órfão) que quebrava
+  `pnpm typecheck`.
+- `lib/voice/sip/testing/fake-ari-server.ts`: 1 warning de eslint (`consistent-type-imports`).
+- `vitest.config.ts`: bug real de infraestrutura de teste, independente da feature de voz — os
+  padrões de `exclude` (`tests/e2e/**` etc.) não tinham prefixo `**/`, então só casavam a partir da
+  raiz do repo e não alcançavam as 10 worktrees git aninhadas (`.worktrees/*`, `.claude/worktrees/*`)
+  que também são checkouts completos do repo. O vitest coletava e tentava rodar specs Playwright de
+  até 10 worktrees, multiplicando o tempo de coleta/execução em ~10x e travando `pnpm test:unit`.
+  Corrigido adicionando `"**/.worktrees/**"` e `"**/.claude/worktrees/**"` ao `exclude`.
+
+**Gap real ainda aberto, não corrigido — viola a "regra da tripla" de `CLAUDE.md`:**
+`supabase/baseline.sql` não tem o apêndice idempotente para as migrations de voz trazidas pela
+merge (`voice_calls`, `voice_phone_numbers`, `voice_sip_connections`); confirmado por
+`tests/unit/manifest-x-migrations.test.ts` falhando ("toda migration tem linha no MANIFEST",
+"nenhum número de migration é usado duas vezes") numa execução parcial. Um self-hoster que aplicar
+`baseline.sql` do zero não vai ter essas tabelas. Também apareceu 1 falha em
+`tests/unit/navegacao-completude.test.ts` ("toda tela tem porta"), sugerindo uma tela nova de voice
+sem entrada em `lib/navigation/registry.ts`. **Nenhum dos dois foi corrigido ainda.**
+
+**`pnpm test:unit` completo pós-merge: resultado confirmado, rodado no ambiente cloud do Codex**
+(tentativas locais no Mac do dono, direto e via `Agent{isolation:"remote"}`, esbarraram em
+contenção de máquina — carga do sistema chegou a `load average 320+`, e um worktree de agente teve
+`node_modules` corrompido por acesso `pnpm` concorrente; a suíte completa foi então rodada num
+ambiente genuinamente separado). Resultado: **4150 passaram, 3 testes falharam (em 4 arquivos), 4
+pulados**, `exit code 1`, 842,64s.
+
+Falhas confirmadas:
+
+1. `tests/unit/manifest-x-migrations.test.ts` → "toda migration tem linha no MANIFEST": 7
+   migrations sem registro no MANIFEST — `0124_customer_memory`, `0126_voice_calls`,
+   `0127_voice_hardening`, `0128_voice_phone_numbers`, `0129_voice_worker_endpoints`,
+   `0130_voice_worker_endpoint_privileges`, `0131_voice_sip_connections`. Confirma o gap de
+   `supabase/baseline.sql`/MANIFEST já suspeitado.
+2. Mesmo arquivo → "nenhum número de migration é usado duas vezes": **bug novo, não suspeitado
+   antes** — o número `0124` está duplicado entre duas migrations distintas:
+   `0124_ai_chunks_embedding_2048` (já existente antes da merge) e `0124_customer_memory` (trazida
+   pela merge de voz). Uma das duas precisa ser renumerada.
+3. `tests/unit/navegacao-completude.test.ts` → "toda tela tem porta": confirmado — a tela
+   `/app/settings/tenant/voice` não está no registro (`lib/navigation/registry.ts`) nem em
+   allowlist justificada.
+4. `workers/voice-pipecat-runtime/main.test.mjs` e `workers/voice-worker/pending-outbound.test.mjs`
+   → **bug novo, não suspeitado antes**: ambos falham ao carregar com `Cannot bundle Node.js
+   built-in "node:test"`. Esses arquivos usam o test runner nativo do Node (`node:test`), não o
+   vitest, e a suíte `test:unit` está tentando coletá-los/empacotá-los mesmo assim.
+
+**Atualização 2026-08-29 (mesma sessão) — as 4 falhas corrigidas, confirmado em hardware
+separado (VPS `lumenva-crm` de produção, via `/opt/test-run/` isolado, node_modules próprio,
+apagado ao fim).** Correções: migration `0124_customer_memory` renumerada pra `0132` (mesmo
+timestamp, precedente já documentado em `tests/unit/manifest-x-migrations.test.ts` pro caso
+`0121`); as 7 migrations de voz + a renumerada registradas em `supabase/baseline.sql` (apêndice
+idempotente) e `supabase/migrations/MANIFEST.md`; `/app/settings/tenant/voice` registrada em
+`lib/navigation/registry.ts` (grupo "canais", ícone `Phone`); os dois arquivos `node:test`
+(`workers/voice-pipecat-runtime/main.test.mjs`, `workers/voice-worker/pending-outbound.test.mjs`)
+excluídos do `pnpm test:unit` e movidos pro lugar certo (`node --test` dentro de
+`scripts/verify-voice-core.sh`, mesmo padrão já usado pelo irmão deles).
+
+`pnpm test:db` também rodado na VPS (Postgres descartável via Docker, isolado da produção,
+apagado ao fim): **75 arquivos, 507 testes passaram, 1 pulado, "test:db verde"** — confirma que o
+`baseline.sql` com o apêndice das migrations de voz instala/atualiza limpo e as invariantes de
+RLS/multi-tenancy continuam corretas.
+
+Resultado da corrida completa de `pnpm test:unit` na VPS: 4119 passaram, 2 falharam, 585s. As 2 falhas
+(`tests/unit/evidencia-citada.test.ts`, `tests/unit/openrouter-alcance.test.ts`) são falso-negativo
+ambiental — o `rsync` que levou o código pra VPS excluiu `.git/` de propósito (transferência leve),
+e esses dois testes chamam `git ls-files`/`git grep` internamente. Confirmado rodando os mesmos
+dois testes localmente (onde `.git` existe): **39/39 passam**. Nenhuma regressão real. CRM de
+produção na mesma VPS confirmado saudável antes/depois (`crm.lumenva.pt` respondendo `307`, todos
+os containers `healthy`).
+
+**Achado à parte, sobre o próprio harness de agentes (não sobre o produto):** nesta sessão ficou
+confirmado que tanto `Agent{isolation:"remote"}` quanto o Codex CLI local rodam no MESMO Mac do
+dono, não em hardware separado — ambos competiram entre si e com o Mac local, chegando a
+`load average` de 300+ antes de a suíte ser movida pra VPS de verdade. Rodar em VPS via `rsync`
+pra um diretório isolado (sem tocar nos containers de produção) foi o que efetivamente proveu
+hardware separado nesta sessão.
+
+**Nada disto foi enviado a `origin`** — a branch local está 278 commits à frente de
+`origin/codex/crm-consolidated`, só localmente. Push exige autorização explícita separada.
+
+---
+
+Contexto histórico (pré-merge, 2026-08-28) do que segue: nesse snapshot, o checkout `codex/crm-
+consolidated` estava em `54e86839486849ad5b14a19851eb1f3696d93605` e não existiam ficheiros
+rastreados em `lib/voice/**`, `workers/voice-worker/**` ou `workers/voice-runtime/**` — a voz
+SIP/BYOC ainda não estava integrada nesta branch. Existia uma implementação candidata em
+`origin/implementacao-tokens-voice-core` em `d3c97cbd8d3ca8ca5616e05f23411e52520a5a3a`, tratada
+como trabalho separado até ser comparada, integrada seletivamente e validada no mesmo snapshot do
+CRM. (Essa comparação/integração seletiva é exatamente o que a merge acima concluiu.)
 
 ### Duas arquiteturas na mesma branch — não são opções concorrentes
 
@@ -753,7 +845,12 @@ CRM LIGADO / PRIMEIRA CHAMADA REAL DE PONTA A PONTA PROVADA COM SCRIPT AD-HOC FO
 (NÃO É O VOICE CORE DO REPOSITÓRIO, NÃO É PRODUÇÃO) / DEPLOY DO ASTERISK VERSIONADO EM
 `ops/voice-asterisk/` / EXPOSIÇÃO DO ASTERISK A BRUTE-FORCE MITIGADA (FAIL2BAN + LOGROTATE) /
 MIGRAÇÃO PRA PIPECAT+CHAN_WEBSOCKET TENTADA E PAUSADA (ÁUDIO CELULAR→ASTERISK-V2 NÃO FLUI,
-CAUSA RAIZ NÃO ISOLADA) / NÃO INTEGRADO NO CONSOLIDADO`.
+CAUSA RAIZ NÃO ISOLADA) / **AGORA INTEGRADO EM `codex/crm-consolidated` VIA MERGE LOCAL (`6f6232a2`,
+2026-08-29, NÃO ENVIADO A ORIGIN) / TYPECHECK E LINT ESCOPADO LIMPOS PÓS-MERGE / `pnpm test:unit` COMPLETO, RODADO EM HARDWARE SEPARADO (VPS): 4119 PASSARAM / 2 FALHAS
+AMBIENTAIS (SEM `.git` NO RSYNC, CONFIRMADAS FALSO-NEGATIVO) / 0 REGRESSÃO REAL — OS 4 GAPS
+ACHADOS PELA CORRIDA ANTERIOR (BASELINE/MANIFEST SEM 7 MIGRATIONS DE VOZ, NÚMERO `0124` DUPLICADO,
+TELA `/app/settings/tenant/voice` SEM NAVEGAÇÃO, DOIS TESTES `node:test` QUEBRANDO O VITEST) FORAM
+TODOS CORRIGIDOS`.
 
 Próxima ação e detalhe de execução: [`docs/handoffs/HANDOFF-voice-vps-config-2026-08-28.md`](handoffs/HANDOFF-voice-vps-config-2026-08-28.md).
 Referência resumida: [`docs/voice/open-source-europe.md`](voice/open-source-europe.md).

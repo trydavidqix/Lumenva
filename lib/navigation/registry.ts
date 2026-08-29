@@ -21,6 +21,7 @@ import {
   Key,
   Lightbulb,
   Lock,
+  Phone,
   PlugsConnected,
   PuzzlePiece,
   Receipt,
@@ -337,6 +338,18 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     icon: WebhooksLogo,
     group: "canais",
     minRole: "manager",
+    sidebar: true,
+  },
+  {
+    // Ficou sem porta no merge de codex/voice-media-integration (2026-08-29):
+    // a tela existia (app/app/settings/tenant/voice/page.tsx) mas nunca tinha
+    // sido declarada aqui — só se chegava digitando a URL.
+    href: "/app/settings/tenant/voice",
+    label: "Voz",
+    description: "Idioma, voz, velocidade e tom do agente nas chamadas por telefone.",
+    icon: Phone,
+    group: "canais",
+    minRole: "admin",
     sidebar: true,
   },
 

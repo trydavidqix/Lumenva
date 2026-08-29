@@ -1,4 +1,8 @@
--- 0124_customer_memory
+-- 0132_customer_memory
+-- Renumerado de 0124 para 0132 em 2026-08-29 (forward-fix pós-merge de voz):
+-- a merge de codex/voice-media-integration trouxe este arquivo com o mesmo
+-- número de 0124_ai_chunks_embedding_2048 (pré-existente). Timestamp mantido
+-- — é a identidade que o Supabase CLI usa para ordem/PK — só o NNNN mudou.
 -- Structured quick memory for token-efficient agent turns.
 -- CRM/order state remains authoritative; this table stores a bounded projection.
 
