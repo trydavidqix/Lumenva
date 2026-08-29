@@ -10,6 +10,38 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ### Alterado
 
+- **Voz (sessão 2026-08-29, integração):** `codex/voice-media-integration` (276 commits, 234
+  arquivos) trazida via `git merge --no-ff` para `codex/crm-consolidated` (`6f6232a2`), sem
+  conflitos — `lib/voice/**` e o código de sinalização SIP/BYOC agora existem de fato nesta
+  branch. Corrigidos 3 problemas expostos pela merge: erro de sintaxe TS em
+  `app/app/settings/tenant/voice/_form.tsx` (`)}` órfão), 1 warning eslint em
+  `lib/voice/sip/testing/fake-ari-server.ts` (`consistent-type-imports`), e um bug real de
+  infraestrutura de teste em `vitest.config.ts` — os padrões de `exclude` sem prefixo `**/` não
+  alcançavam `tests/e2e/**` dentro de worktrees git aninhadas (`.worktrees/*`,
+  `.claude/worktrees/*`), fazendo o vitest coletar specs Playwright de até 10 worktrees e travar
+  `pnpm test:unit`. **Gap ainda aberto, não corrigido:** `supabase/baseline.sql` não tem o
+  apêndice idempotente das migrations de voz (`voice_calls`, `voice_phone_numbers`,
+  `voice_sip_connections`) — viola a regra da tripla; confirmado por
+  `tests/unit/manifest-x-migrations.test.ts` falhando. Também 1 falha em
+  `tests/unit/navegacao-completude.test.ts` sugerindo tela de voice sem entrada em
+  `lib/navigation/registry.ts`. **`pnpm test:unit` completo rodado em ambiente cloud (Codex) por
+  contenção de recursos no Mac local: 4150 passaram, 3 falharam (4 arquivos), 4 pulados.** Além
+  dos dois gaps já suspeitados, apareceram 2 problemas novos: o número de migration `0124` está
+  duplicado entre `0124_ai_chunks_embedding_2048` (pré-existente) e `0124_customer_memory` (trazida
+  pela merge); e `workers/voice-pipecat-runtime/main.test.mjs` +
+  `workers/voice-worker/pending-outbound.test.mjs` falham ao carregar no vitest com `Cannot bundle
+  Node.js built-in "node:test"` (usam o test runner nativo do Node, não vitest). **As 4 falhas
+  foram corrigidas** (migration renumerada `0124`→`0132`, 7 migrations de voz registradas em
+  baseline+MANIFEST, `/app/settings/tenant/voice` na navegação, os dois `node:test` excluídos do
+  `test:unit` e movidos pro `node --test` dentro de `scripts/verify-voice-core.sh`) e confirmadas
+  numa corrida completa em hardware separado (VPS de produção, diretório isolado via `rsync`,
+  apagado ao fim): 4119 passaram, 2 falhas ambientais (rsync sem `.git`, confirmadas falso-negativo
+  rodando os mesmos 2 testes localmente: 39/39). `pnpm test:db` também rodado na VPS (Postgres
+  descartável via Docker): 75 arquivos/507 testes passaram, 1 pulado, "test:db verde" — confirma
+  `baseline.sql` com as migrations de voz instalando/atualizando limpo e RLS/multi-tenancy
+  corretos. CRM de produção na mesma VPS confirmado saudável antes/depois de ambas as corridas.
+  Nada disto foi enviado a `origin`.
+
 - **Voz:** documentação sincronizada com a decisão de SIP/BYOC para o número do próprio cliente e
   com o estado real da branch Voice Core `d3c97cbd`. Confirmado por leitura de código: a camada
   de sinalização (ARI, listener, reconexão, rotas CRM, forwarder, worker) está implementada e

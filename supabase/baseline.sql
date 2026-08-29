@@ -9587,3 +9587,321 @@ alter table ai_agent_versions
   add column if not exists composio_apps text[] not null default '{}';
 
 notify pgrst, 'reload schema';
+
+-- ---- 0126: voice_calls / voice_call_events (voice core) ----
+-- Estado de transporte de chamada PSTN/realtime por tenant; CRM/conversation
+-- continuam a fonte de verdade de negócio. Detalhe:
+-- 20260826111500_0126_voice_calls.sql.
+create unique index if not exists contacts_org_id_unique_for_voice_fk
+  on public.contacts (organization_id, id);
+
+create table if not exists public.voice_calls (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  contact_id uuid null,
+  agent_id uuid null,
+  conversation_id uuid null,
+  direction text not null check (direction in ('inbound', 'outbound')),
+  caller_number text not null,
+  called_number text not null,
+  state text not null check (state in ('queued','ringing','connecting','active','held','transferring','completed','failed','canceled')),
+  provider text not null,
+  provider_call_id text null,
+  livekit_room_name text null,
+  started_at timestamptz null,
+  answered_at timestamptz null,
+  ended_at timestamptz null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint voice_calls_org_contact_fk
+    foreign key (organization_id, contact_id)
+    references public.contacts(organization_id, id)
+    on delete set null
+);
+
+create unique index if not exists voice_calls_provider_call_unique
+  on public.voice_calls (organization_id, provider, provider_call_id)
+  where provider_call_id is not null;
+
+create index if not exists voice_calls_org_created_idx
+  on public.voice_calls (organization_id, created_at desc);
+
+create index if not exists voice_calls_org_contact_idx
+  on public.voice_calls (organization_id, contact_id, created_at desc)
+  where contact_id is not null;
+
+create table if not exists public.voice_call_events (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  voice_call_id uuid not null references public.voice_calls(id) on delete cascade,
+  provider text not null,
+  provider_event_id text not null,
+  event_type text not null,
+  payload jsonb not null default '{}'::jsonb,
+  occurred_at timestamptz not null,
+  created_at timestamptz not null default now(),
+  unique (organization_id, provider, provider_event_id)
+);
+
+create index if not exists voice_call_events_call_time_idx
+  on public.voice_call_events (organization_id, voice_call_id, occurred_at);
+
+alter table public.voice_calls enable row level security;
+alter table public.voice_call_events enable row level security;
+
+drop policy if exists voice_calls_select_org on public.voice_calls;
+create policy voice_calls_select_org
+  on public.voice_calls
+  for select
+  to authenticated
+  using (organization_id in (select public.fn_user_org_ids()));
+
+drop policy if exists voice_call_events_select_org on public.voice_call_events;
+create policy voice_call_events_select_org
+  on public.voice_call_events
+  for select
+  to authenticated
+  using (organization_id in (select public.fn_user_org_ids()));
+
+comment on table public.voice_calls is
+  'Tenant-scoped PSTN/realtime voice call state; source of business truth remains CRM/order domains.';
+comment on table public.voice_call_events is
+  'Append-only provider event ledger for voice calls; provider event ids are idempotent per organization.';
+
+notify pgrst, 'reload schema';
+
+-- ---- 0127: voice hardening (vocabulário fechado + attributes normalizado) ----
+-- Detalhe: 20260826125500_0127_voice_hardening.sql.
+alter table public.voice_calls
+  drop constraint if exists voice_calls_provider_check;
+alter table public.voice_calls
+  add constraint voice_calls_provider_check
+  check (provider in ('telnyx'));
+
+alter table public.voice_call_events
+  drop constraint if exists voice_call_events_provider_check;
+alter table public.voice_call_events
+  add constraint voice_call_events_provider_check
+  check (provider in ('telnyx'));
+
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'voice_call_events' and column_name = 'payload'
+  ) then
+    alter table public.voice_call_events rename column payload to attributes;
+  end if;
+end $$;
+
+alter table public.voice_call_events
+  drop constraint if exists voice_call_events_attributes_object_check;
+alter table public.voice_call_events
+  add constraint voice_call_events_attributes_object_check
+  check (jsonb_typeof(attributes) = 'object');
+
+comment on column public.voice_call_events.attributes is
+  'Normalized scalar provider event attributes only; never raw webhook payloads, audio, transcripts or secrets.';
+
+notify pgrst, 'reload schema';
+
+-- ---- 0128: voice_phone_numbers ----
+-- Número técnico comprado da operadora, vinculado a uma organização. Detalhe:
+-- 20260827013000_0128_voice_phone_numbers.sql.
+create table if not exists public.voice_phone_numbers (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  provider text not null check (provider in ('telnyx')),
+  phone_e164 text not null check (phone_e164 ~ '^\+[1-9][0-9]{6,14}$'),
+  enabled boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (provider, phone_e164)
+);
+
+create index if not exists voice_phone_numbers_org_idx
+  on public.voice_phone_numbers (organization_id, enabled);
+
+alter table public.voice_phone_numbers enable row level security;
+
+drop policy if exists voice_phone_numbers_select_org on public.voice_phone_numbers;
+create policy voice_phone_numbers_select_org on public.voice_phone_numbers
+for select to authenticated
+using (organization_id in (select public.fn_user_org_ids()));
+
+drop policy if exists voice_phone_numbers_insert_org on public.voice_phone_numbers;
+create policy voice_phone_numbers_insert_org on public.voice_phone_numbers
+for insert to authenticated
+with check (organization_id in (select public.fn_user_org_ids()));
+
+drop policy if exists voice_phone_numbers_update_org on public.voice_phone_numbers;
+create policy voice_phone_numbers_update_org on public.voice_phone_numbers
+for update to authenticated
+using (organization_id in (select public.fn_user_org_ids()))
+with check (organization_id in (select public.fn_user_org_ids()));
+
+drop policy if exists voice_phone_numbers_delete_org on public.voice_phone_numbers;
+create policy voice_phone_numbers_delete_org on public.voice_phone_numbers
+for delete to authenticated
+using (organization_id in (select public.fn_user_org_ids()));
+
+notify pgrst, 'reload schema';
+
+-- ---- 0129: voice_worker_endpoints ----
+-- Roteamento service-only de número técnico pro control endpoint privado do
+-- voice-worker. Detalhe: 20260827014500_0129_voice_worker_endpoints.sql.
+create table if not exists public.voice_worker_endpoints (
+  id uuid primary key default gen_random_uuid(),
+  voice_phone_number_id uuid not null unique references public.voice_phone_numbers(id) on delete cascade,
+  control_url text not null check (control_url ~ '^https://[^[:space:]]+$'),
+  enabled boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.voice_worker_endpoints enable row level security;
+
+comment on table public.voice_worker_endpoints is
+  'Service-only routing from a technical Telnyx number to its private Lumenva voice-worker control endpoint. No authenticated tenant policies by design.';
+
+notify pgrst, 'reload schema';
+
+-- ---- 0130: voice_worker_endpoints privileges (defense in depth) ----
+-- Detalhe: 20260827020000_0130_voice_worker_endpoint_privileges.sql.
+revoke all on table public.voice_worker_endpoints from anon;
+revoke all on table public.voice_worker_endpoints from authenticated;
+
+comment on table public.voice_worker_endpoints is
+  'Service-only routing from a technical Telnyx number to its private Lumenva voice-worker control endpoint. Explicitly unavailable to anon/authenticated roles.';
+
+-- ---- 0131: voice_sip_connections (fase 2, SIP/BYOC) ----
+-- O cliente mantém o próprio número/operadora em vez de um número técnico
+-- comprado pela plataforma. Aditivo e reversível — caminho Telnyx antigo
+-- continua funcionando. Detalhe: 20260827160000_0131_voice_sip_connections.sql.
+create table if not exists public.voice_sip_connections (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  gateway text not null check (gateway in ('asterisk', 'telnyx')),
+  external_connection_id text not null,
+  verified boolean not null default false,
+  enabled boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (gateway, external_connection_id)
+);
+
+create index if not exists voice_sip_connections_org_idx
+  on public.voice_sip_connections (organization_id, enabled);
+
+alter table public.voice_sip_connections enable row level security;
+
+drop policy if exists voice_sip_connections_select_org on public.voice_sip_connections;
+create policy voice_sip_connections_select_org on public.voice_sip_connections
+for select to authenticated
+using (organization_id in (select public.fn_user_org_ids()));
+
+drop policy if exists voice_sip_connections_insert_org on public.voice_sip_connections;
+create policy voice_sip_connections_insert_org on public.voice_sip_connections
+for insert to authenticated
+with check (organization_id in (select public.fn_user_org_ids()));
+
+drop policy if exists voice_sip_connections_update_org on public.voice_sip_connections;
+create policy voice_sip_connections_update_org on public.voice_sip_connections
+for update to authenticated
+using (organization_id in (select public.fn_user_org_ids()))
+with check (organization_id in (select public.fn_user_org_ids()));
+
+drop policy if exists voice_sip_connections_delete_org on public.voice_sip_connections;
+create policy voice_sip_connections_delete_org on public.voice_sip_connections
+for delete to authenticated
+using (organization_id in (select public.fn_user_org_ids()));
+
+comment on table public.voice_sip_connections is
+  'SIP/BYOC connections the customer authorizes. A number in voice_phone_numbers only resolves an organization once its connection here is verified and enabled — an unknown or unverified connection never leaks tenant identity.';
+
+alter table public.voice_phone_numbers
+  add column if not exists connection_id uuid references public.voice_sip_connections(id) on delete cascade,
+  add column if not exists ownership_verified_at timestamptz;
+
+alter table public.voice_phone_numbers
+  drop constraint if exists voice_phone_numbers_provider_check;
+alter table public.voice_phone_numbers
+  add constraint voice_phone_numbers_provider_check check (provider in ('telnyx', 'asterisk'));
+
+create index if not exists voice_phone_numbers_connection_idx
+  on public.voice_phone_numbers (connection_id);
+
+alter table public.voice_worker_endpoints
+  alter column voice_phone_number_id drop not null;
+
+alter table public.voice_worker_endpoints
+  add column if not exists connection_id uuid references public.voice_sip_connections(id) on delete cascade;
+
+alter table public.voice_worker_endpoints
+  drop constraint if exists voice_worker_endpoints_voice_phone_number_id_key;
+
+create unique index if not exists voice_worker_endpoints_phone_number_key
+  on public.voice_worker_endpoints (voice_phone_number_id)
+  where voice_phone_number_id is not null;
+
+create unique index if not exists voice_worker_endpoints_connection_key
+  on public.voice_worker_endpoints (connection_id)
+  where connection_id is not null;
+
+alter table public.voice_worker_endpoints
+  drop constraint if exists voice_worker_endpoints_binding_check;
+alter table public.voice_worker_endpoints
+  add constraint voice_worker_endpoints_binding_check
+    check (voice_phone_number_id is not null or connection_id is not null);
+
+comment on table public.voice_worker_endpoints is
+  'Service-only routing to a private Lumenva voice-worker control endpoint. No authenticated tenant policies by design. voice_phone_number_id is the legacy Telnyx-purchased-number path kept for rollback; connection_id is the SIP/BYOC path — a worker binds to at most one of each, never zero.';
+
+notify pgrst, 'reload schema';
+
+-- ---- 0132: customer_memory (renumerado de 0124, ver MANIFEST) ----
+-- Memória estruturada e limitada por contato, pra reduzir tokens de contexto
+-- do agente. CRM/pedido continuam a fonte de verdade. Detalhe:
+-- 20260824132000_0132_customer_memory.sql.
+create unique index if not exists contacts_organization_id_id_uidx
+  on public.contacts (organization_id, id);
+
+create table if not exists public.customer_memory (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  contact_id uuid not null,
+  memory jsonb not null default '{}'::jsonb,
+  version bigint not null default 1 check (version > 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+
+  constraint customer_memory_org_contact_unique unique (organization_id, contact_id),
+  constraint customer_memory_contact_same_org_fk
+    foreign key (organization_id, contact_id)
+    references contacts (organization_id, id)
+    on delete cascade
+);
+
+comment on table public.customer_memory is
+  'Bounded structured customer-memory projection used to reduce agent context tokens. CRM/order tables remain authoritative.';
+
+create index if not exists customer_memory_contact_idx
+  on public.customer_memory (contact_id);
+
+alter table public.customer_memory enable row level security;
+
+drop policy if exists tenant_isolation_customer_memory on public.customer_memory;
+create policy tenant_isolation_customer_memory on public.customer_memory
+  for all
+  using (organization_id in (select fn_user_org_ids()))
+  with check (organization_id in (select fn_user_org_ids()));
+
+revoke all on public.customer_memory from anon;
+grant select, insert, update, delete on public.customer_memory to authenticated;
+
+drop trigger if exists trg_customer_memory_audit on public.customer_memory;
+create trigger trg_customer_memory_audit
+  after insert or update or delete on public.customer_memory
+  for each row execute function public.fn_audit_log_row();
+
+notify pgrst, 'reload schema';
