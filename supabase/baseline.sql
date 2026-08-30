@@ -9904,4 +9904,21 @@ create trigger trg_customer_memory_audit
   after insert or update or delete on public.customer_memory
   for each row execute function public.fn_audit_log_row();
 
+-- ---- 0133: voice_calls/voice_call_events provider amplia pra incluir asterisk ----
+-- Detalhe: 20260830190000_0133_voice_calls_provider_asterisk.sql. Forward-fix:
+-- 0131 ampliou voice_phone_numbers_provider_check mas não estes dois, fechados
+-- em 0127 só com 'telnyx' — achado ao vivo quando /api/internal/voice/context
+-- rejeitava insert com provider='asterisk'.
+alter table public.voice_calls
+  drop constraint if exists voice_calls_provider_check;
+alter table public.voice_calls
+  add constraint voice_calls_provider_check
+  check (provider in ('telnyx', 'asterisk'));
+
+alter table public.voice_call_events
+  drop constraint if exists voice_call_events_provider_check;
+alter table public.voice_call_events
+  add constraint voice_call_events_provider_check
+  check (provider in ('telnyx', 'asterisk'));
+
 notify pgrst, 'reload schema';
