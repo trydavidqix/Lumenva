@@ -1076,10 +1076,22 @@ worker: ~25s de chamada, zero eventos de erro (`voice_sip_event_forward_failed`,
 (`rtp set debug`, `pjsip set logger`, canal `full.log` temporário em `logger.conf`) desligado e
 revertido logo depois (`logger.conf` original restaurado, backup timestamped deixado ao lado).
 
-**Processos deixados rodando na VPS ao fim desta sessão (decisão consciente):** worker SIP
-(`/opt/voice-prod-run/repo`, `tsx workers/voice-sip-worker/main.mjs`, porta `8091`,
-`VOICE_MEDIA_EXTERNAL_HOST=2.29.8.225`) e sidecar STT/TTS (`voice_worker_server_v12.py`, porta
-`8500`). Nenhum dos dois é serviço systemd — processo solto via `setsid nohup`, sobrevive ao fim da
+**Ajuste de latência (mesma sessão, depois da 1ª ligação com sucesso).** `VOICE_MEDIA_LISTEN_MS`
+(janela FIXA de espera antes de processar o áudio bufferizado — não é detecção de silêncio/VAD)
+estava no default de `4000`ms. Primeira ligação: agente começou a falar em ~10s. Reduzido pra
+`1500`ms → ~7s. Reduzido de novo pra `800`ms (valor atual, worker rodando com ele) → esperado
+~6s, ainda não confirmado numa ligação depois desse último ajuste. A janela contribui quase 1:1 pro
+atraso total; o resto (~5.5-6s) é STT + turno do Agent OS + TTS em série — não muda ajustando essa
+var. **~5.5-6s é o piso realista da arquitetura atual (sem streaming/VAD real)**; baixar a janela
+mais perto de zero arrisca cortar o áudio antes do interlocutor terminar de falar. Reduzir esse piso
+de verdade é trabalho de arquitetura (streaming incremental), não config — fica pra sessão futura,
+não é bug.
+
+**Processos deixados rodando na VPS ao fim desta sessão (decisão consciente, inclusive pra
+continuar o teste de latência amanhã):** worker SIP (`/opt/voice-prod-run/repo`, `tsx
+workers/voice-sip-worker/main.mjs`, porta `8091`, `VOICE_MEDIA_EXTERNAL_HOST=2.29.8.225`,
+`VOICE_MEDIA_LISTEN_MS=800`) e sidecar STT/TTS (`voice_worker_server_v12.py`, porta `8500`).
+Nenhum dos dois é serviço systemd — processo solto via `setsid nohup`, sobrevive ao fim da
 sessão SSH mas não a um reboot da VPS. `dialplan voicecore-test` em `/etc/asterisk/extensions.conf`
 (não versionado) segue configurado pra rotear a extensão de teste pro app Stasis. Regra de firewall
 UDP 10000-20000 é permanente (fica mesmo depois do reboot/fim da sessão). CRM de produção
@@ -1091,12 +1103,17 @@ derrubou o site.
 `VOICE_ARI_PASSWORD`, `VPS_HOST`, `VOICE_MEDIA_EXTERNAL_HOST`), pra não precisar re-extrair via SSH
 numa próxima sessão.
 
-**Ainda não fechado formalmente (pendências reais, não bloqueadores):** dialplan/worker/sidecar do
-Task 8 continuam como processos manuais fora do Git — falta decidir se viram serviço systemd
-versionado ou se são desligados; `docs/evidence/voice-agent-os-real-call-2026-08-30.md` (evidência
-formal da Task 8) ainda não escrito; qualidade/latência do turno real não medida ainda (só
-confirmado "funcionou", não "quão bem"); regra de firewall foi adicionada só nesta faixa exata —
-não auditado se outras portas UDP do rtp.conf de outras instâncias precisam da mesma regra.
+**Ainda não fechado formalmente (pendências reais, não bloqueadores) — retomar amanhã:**
+- Testar ligação com `VOICE_MEDIA_LISTEN_MS=800` (worker já rodando com esse valor, não testado
+  ainda depois do ajuste).
+- Decidir se latência ~5.5-6s é aceitável ou se vale investir em streaming/VAD real (mudança de
+  arquitetura, não config).
+- dialplan/worker/sidecar do Task 8 continuam como processos manuais fora do Git — falta decidir
+  se viram serviço systemd versionado ou se são desligados.
+- `docs/evidence/voice-agent-os-real-call-2026-08-30.md` (evidência formal da Task 8) ainda não
+  escrito.
+- Regra de firewall foi adicionada só nesta faixa exata — não auditado se outras portas UDP do
+  `rtp.conf` de outras instâncias precisam da mesma regra.
 
 **Veredito desta atualização:** **CÓDIGO UNIFICADO (SIP/BYOC + RTP + Agent OS real) MERGEADO EM
 `main` E ENVIADO A `origin` / DEPLOY REAL EM PRODUÇÃO CONCLUÍDO E VERIFICADO (`307`, containers
