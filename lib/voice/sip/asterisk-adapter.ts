@@ -120,7 +120,11 @@ export function createAsteriskSipGateway(deps: {
         gateway: "asterisk",
         providerEventId: channelId,
         eventType,
-        occurredAt: event.timestamp,
+        // Asterisk ARI timestamps use "+0000" (no colon), which Zod's strict
+        // `.datetime()` rejects (only accepts "Z" or "+00:00"). Normalize at
+        // the boundary so every consumer gets the repo's canonical ISO-8601
+        // UTC contract, not Asterisk's raw offset format.
+        occurredAt: new Date(event.timestamp).toISOString(),
         direction: "inbound",
         callerE164,
         calledE164,
