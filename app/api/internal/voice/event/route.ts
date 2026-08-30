@@ -143,6 +143,9 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (!parsed.success) return fail("validation_failed", "Evento de voz inválido.", 422, { requestId });
 
   const db = getRequestPool();
+  // Same vocabulary voice_calls_provider_check / voice_call_events_provider_check enforce
+  // ('telnyx' | 'asterisk') — never a made-up literal like the platform/product name.
+  const provider = parsed.data.technical_phone_e164 ? "telnyx" : "asterisk";
   const call = parsed.data.technical_phone_e164
     ? await bindByTechnicalNumber(db, parsed.data.voice_call_id, parsed.data.technical_phone_e164)
     : await bindByVerifiedConnection(db, parsed.data.voice_call_id, parsed.data.connection_id!, parsed.data.phone_e164!);
@@ -168,7 +171,7 @@ export async function POST(req: NextRequest): Promise<Response> {
             from voice_call_events vce
            where vce.organization_id = $2
              and vce.voice_call_id = $1
-             and vce.provider = 'lumenva'
+             and vce.provider = $8
              and vce.provider_event_id = $7
         )
       returning id`,
@@ -180,6 +183,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       terminal,
       parsed.data.provider_call_id ?? null,
       parsed.data.provider_event_id,
+      provider,
     ],
   );
   if (!updated.rows[0]?.id) {
@@ -188,10 +192,10 @@ export async function POST(req: NextRequest): Promise<Response> {
          from voice_call_events
         where organization_id = $1
           and voice_call_id = $2
-          and provider = 'lumenva'
+          and provider = $4
           and provider_event_id = $3
         limit 1`,
-      [call.organization_id, parsed.data.voice_call_id, parsed.data.provider_event_id],
+      [call.organization_id, parsed.data.voice_call_id, parsed.data.provider_event_id, provider],
     );
     if (duplicate[0]?.id) return ok({ recorded: true }, { requestId });
     return fail("voice_event_conflict", "Evento de voz conflita com o estado terminal ou provider call id existente.", 409, { requestId });
@@ -199,8 +203,8 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   await db.query(
     `insert into voice_call_events
-       (organization_id, voice_call_id, provider, provider_event_id, event_type, payload, occurred_at)
-     values ($1,$2,'lumenva',$3,$4,$5::jsonb,$6::timestamptz)
+       (organization_id, voice_call_id, provider, provider_event_id, event_type, attributes, occurred_at)
+     values ($1,$2,$7,$3,$4,$5::jsonb,$6::timestamptz)
      on conflict (organization_id, provider, provider_event_id) do nothing`,
     [
       call.organization_id,
@@ -209,6 +213,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       `voice.${parsed.data.state}`,
       JSON.stringify(metrics ?? {}),
       occurredAt,
+      provider,
     ],
   );
 
