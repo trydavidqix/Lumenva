@@ -165,7 +165,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       where id = $1
         and organization_id = $2
         and (state not in ('completed','failed','canceled') or state = $3)
-        and (provider_call_id is null or $6 is null or provider_call_id = $6)
+        and (provider_call_id is null or $6::text is null or provider_call_id = $6::text)
         and not exists (
           select 1
             from voice_call_events vce
