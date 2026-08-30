@@ -3116,6 +3116,51 @@ export type Database = {
           },
         ]
       }
+      customer_memory: {
+        Row: {
+          contact_id: string
+          created_at: string
+          id: string
+          memory: Json
+          organization_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          id?: string
+          memory?: Json
+          organization_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          id?: string
+          memory?: Json
+          organization_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_memory_contact_same_org_fk"
+            columns: ["organization_id", "contact_id"]
+            isOneToOne: true
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_memory_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       disclosure_template_pointers: {
         Row: {
           organization_id: string
@@ -5770,6 +5815,269 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      voice_call_events: {
+        Row: {
+          attributes: Json
+          created_at: string
+          event_type: string
+          id: string
+          occurred_at: string
+          organization_id: string
+          provider: string
+          provider_event_id: string
+          voice_call_id: string
+        }
+        Insert: {
+          attributes?: Json
+          created_at?: string
+          event_type: string
+          id?: string
+          occurred_at: string
+          organization_id: string
+          provider: string
+          provider_event_id: string
+          voice_call_id: string
+        }
+        Update: {
+          attributes?: Json
+          created_at?: string
+          event_type?: string
+          id?: string
+          occurred_at?: string
+          organization_id?: string
+          provider?: string
+          provider_event_id?: string
+          voice_call_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_call_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voice_call_events_voice_call_id_fkey"
+            columns: ["voice_call_id"]
+            isOneToOne: false
+            referencedRelation: "voice_calls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voice_calls: {
+        Row: {
+          agent_id: string | null
+          answered_at: string | null
+          called_number: string
+          caller_number: string
+          contact_id: string | null
+          conversation_id: string | null
+          created_at: string
+          direction: string
+          ended_at: string | null
+          id: string
+          livekit_room_name: string | null
+          organization_id: string
+          provider: string
+          provider_call_id: string | null
+          started_at: string | null
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id?: string | null
+          answered_at?: string | null
+          called_number: string
+          caller_number: string
+          contact_id?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          direction: string
+          ended_at?: string | null
+          id?: string
+          livekit_room_name?: string | null
+          organization_id: string
+          provider: string
+          provider_call_id?: string | null
+          started_at?: string | null
+          state: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string | null
+          answered_at?: string | null
+          called_number?: string
+          caller_number?: string
+          contact_id?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          direction?: string
+          ended_at?: string | null
+          id?: string
+          livekit_room_name?: string | null
+          organization_id?: string
+          provider?: string
+          provider_call_id?: string | null
+          started_at?: string | null
+          state?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_calls_org_contact_fk"
+            columns: ["organization_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "voice_calls_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voice_phone_numbers: {
+        Row: {
+          connection_id: string | null
+          created_at: string
+          enabled: boolean
+          id: string
+          organization_id: string
+          ownership_verified_at: string | null
+          phone_e164: string
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          connection_id?: string | null
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          organization_id: string
+          ownership_verified_at?: string | null
+          phone_e164: string
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          connection_id?: string | null
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          organization_id?: string
+          ownership_verified_at?: string | null
+          phone_e164?: string
+          provider?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_phone_numbers_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "voice_sip_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voice_phone_numbers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voice_sip_connections: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          external_connection_id: string
+          gateway: string
+          id: string
+          organization_id: string
+          updated_at: string
+          verified: boolean
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          external_connection_id: string
+          gateway: string
+          id?: string
+          organization_id: string
+          updated_at?: string
+          verified?: boolean
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          external_connection_id?: string
+          gateway?: string
+          id?: string
+          organization_id?: string
+          updated_at?: string
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_sip_connections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voice_worker_endpoints: {
+        Row: {
+          connection_id: string | null
+          control_url: string
+          created_at: string
+          enabled: boolean
+          id: string
+          updated_at: string
+          voice_phone_number_id: string | null
+        }
+        Insert: {
+          connection_id?: string | null
+          control_url: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          updated_at?: string
+          voice_phone_number_id?: string | null
+        }
+        Update: {
+          connection_id?: string | null
+          control_url?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          updated_at?: string
+          voice_phone_number_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_worker_endpoints_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "voice_sip_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voice_worker_endpoints_voice_phone_number_id_fkey"
+            columns: ["voice_phone_number_id"]
+            isOneToOne: false
+            referencedRelation: "voice_phone_numbers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       watchdog_cursors: {
         Row: {
