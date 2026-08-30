@@ -33,4 +33,11 @@ describe("createRtpPacketBuilder", () => {
     expect(p1.readUInt32BE(8)).toBe(p2.readUInt32BE(8)); // ssrc constante
     expect(p1.subarray(12)).toEqual(payload);
   });
+
+  it("supports custom ssrc", () => {
+    const customSsrc = 0x12345678;
+    const builder = createRtpPacketBuilder(customSsrc);
+    const packet = builder.build(Buffer.alloc(160));
+    expect(packet.readUInt32BE(8)).toBe(customSsrc);
+  });
 });
