@@ -19,10 +19,11 @@ function normalizedEvent(overrides: Partial<NormalizedSipCallEvent> = {}): Norma
   };
 }
 
-function fakeBrainClient(): SipBrainClient & { resolveContext: ReturnType<typeof vi.fn>; recordEvent: ReturnType<typeof vi.fn> } {
+function fakeBrainClient(): SipBrainClient & { resolveContext: ReturnType<typeof vi.fn>; recordEvent: ReturnType<typeof vi.fn>; runTurn: ReturnType<typeof vi.fn> } {
   return {
     resolveContext: vi.fn().mockResolvedValue({ voice_call_id: "call-1", contact_id: null, caller_kind: "unknown", locale: "pt" }),
     recordEvent: vi.fn().mockResolvedValue({ recorded: true }),
+    runTurn: vi.fn().mockResolvedValue({ kind: "reply", text: "ok" }),
   };
 }
 
