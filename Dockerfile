@@ -36,6 +36,29 @@ ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
     NEXT_TELEMETRY_DISABLED=1 \
     NODE_OPTIONS=--max-old-space-size=4096
 
+# `pnpm build` roda `test:unit` ANTES de `next build`. lib/env.ts só afrouxa a
+# validação de segredos quando NEXT_PHASE=phase-production-build — flag que só
+# existe DENTRO do `next build`, não durante o `test:unit` que roda antes dele.
+# Com NODE_ENV=production já setado (acima), toda var marcada `required()` em
+# lib/env.ts é exigida com valor real nesse instante — e nenhuma delas tem
+# placeholder aqui, então build local sempre quebrava com 430+ suítes falhando
+# na importação (nunca visto antes: deploy sempre puxou imagem pronta do GHCR;
+# build local Docker é o caminho "avançado", nunca exercitado até hoje).
+# Mesmo padrão de placeholder-só-no-build dos NEXT_PUBLIC_* acima: puro ENV (sem
+# ARG — não expor esses nomes como flag de build evita a tentação de passar um
+# segredo real por --build-arg, que ficaria gravado na história da camada). O
+# valor REAL de produção sempre vence em runtime via `env_file: .env` do compose.
+ENV INTERNAL_SECRET=build-placeholder-internal-secret \
+    CPF_ENCRYPTION_KEY=build-placeholder-cpf-encryption-key \
+    WAHA_BYO_ENCRYPTION_KEY=build-placeholder-waha-byo-encryption-key \
+    AI_CRED_AES_KEY=build-placeholder-ai-cred-aes-key \
+    SUPABASE_DB_URL=postgresql://placeholder:placeholder@db.placeholder.invalid:5432/placeholder \
+    WAHA_API_BASE_URL=https://waha.placeholder.invalid \
+    WAHA_API_KEY=build-placeholder-waha-api-key \
+    WAHA_WEBHOOK_BASE_URL=https://waha-webhook.placeholder.invalid \
+    UPSTASH_REDIS_REST_URL=https://redis.placeholder.invalid \
+    UPSTASH_REDIS_REST_TOKEN=build-placeholder-upstash-token
+
 # Turbopack (`pnpm build`): ~4min vs ~34min do webpack num VPS. O bloco `webpack:`
 # do Sentry (tree-shake + upload de sourcemap em build-time) é ignorado, mas o
 # Sentry RUNTIME segue ativo (DSN hardcoded nas configs). Sourcemap upload é
