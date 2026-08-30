@@ -23,6 +23,16 @@
 //   SUPABASE_DB_URL          read-only Postgres access for local connection->org validation (see caveat below)
 //   PORT                     healthz port, default 8090
 //
+// Media env vars (OPTIONAL — media is off unless VOICE_MEDIA_EXTERNAL_HOST is set; a worker
+// without them keeps running signaling-only, exactly like before this slice):
+//   VOICE_MEDIA_EXTERNAL_HOST  IP/host Asterisk uses to send RTP back — same role as
+//                              `advertisedHost` in createAsteriskRtpMediaBridge. Presence of this
+//                              var is what turns media on.
+//   VOICE_MEDIA_SIDECAR_URL    base URL of the Python STT/TTS sidecar. Default http://127.0.0.1:8500
+//                              (same port already proven against the real sidecar).
+//   VOICE_MEDIA_LISTEN_MS     how long each capture window listens for RTP before running a
+//                              turn. Default 4000 (same value already proven).
+//
 // Deliberate deviation from workers/voice-worker/README.md's "the worker
 // has no database credentials" principle: this process DOES read
 // voice_sip_connections/voice_phone_numbers directly (via the same
@@ -44,6 +54,10 @@ import { createAsteriskAriListener } from "../../lib/voice/sip/asterisk-listener
 import { createSipVoiceBrainClient } from "../../lib/voice/sip/brain-client.ts";
 import { createSipEventForwarder } from "../../lib/voice/sip/event-forwarder.ts";
 import { createVoiceOrganizationResolver } from "../../lib/voice/identity/resolve-organization.ts";
+import { createAsteriskRtpMediaBridge } from "../../lib/voice/sip/rtp-media-bridge.ts";
+import { createSidecarSpeechAdapter } from "../../lib/voice/media/sidecar-speech-adapter.ts";
+import { createContinuousSender } from "../../lib/voice/media/continuous-sender.ts";
+import { createRtpPacketBuilder, parseRtpPacket } from "../../lib/voice/media/rtp-frame.ts";
 
 function log(msg, fields = {}) {
   console.info(JSON.stringify({ msg, at: new Date().toISOString(), ...fields }));
@@ -90,6 +104,101 @@ export async function createVoiceSipWorker(env = process.env) {
   const brainClient = createSipVoiceBrainClient({ baseUrl: controlPlaneUrl, secret: internalSecret });
   const forwarder = createSipEventForwarder({ brainClient });
 
+  // Media is OPTIONAL: a worker without VOICE_MEDIA_EXTERNAL_HOST keeps running
+  // signaling-only, exactly as before this slice.
+  const mediaEnabled = Boolean(env.VOICE_MEDIA_EXTERNAL_HOST);
+  const mediaSidecarUrl = env.VOICE_MEDIA_SIDECAR_URL ?? "http://127.0.0.1:8500";
+  const mediaListenMs = Number(env.VOICE_MEDIA_LISTEN_MS ?? "4000");
+  const speech = mediaEnabled ? createSidecarSpeechAdapter({ baseUrl: mediaSidecarUrl }) : null;
+  const rtpBridge = mediaEnabled
+    ? createAsteriskRtpMediaBridge({ ari: connection, appName: ariAppName, advertisedHost: env.VOICE_MEDIA_EXTERNAL_HOST })
+    : null;
+
+  const activeMediaSessions = new Map(); // channelId -> { rtpSession, sender, detach() }
+
+  /** Attends one call: capture -> STT -> Agent OS turn -> TTS -> speak, looping until detached. */
+  async function attachMedia(channelId, voiceCallId, technicalPhoneE164) {
+    if (!mediaEnabled || activeMediaSessions.has(channelId)) return;
+    const rtpSession = await rtpBridge.start({ callChannelId: channelId });
+    const sender = createContinuousSender({
+      send: (packet) => rtpSession.send(packet),
+      builder: createRtpPacketBuilder(),
+    });
+    let stopped = false;
+    const session = {
+      rtpSession,
+      sender,
+      async detach() {
+        stopped = true;
+        sender.stop();
+        await rtpSession.close().catch(() => undefined);
+        activeMediaSessions.delete(channelId);
+      },
+    };
+    activeMediaSessions.set(channelId, session);
+
+    (async () => {
+      while (!stopped) {
+        const captured = [];
+        const captureUntil = Date.now() + mediaListenMs;
+        const iterator = rtpSession.packets()[Symbol.asyncIterator]();
+        while (Date.now() < captureUntil && !stopped) {
+          const remaining = captureUntil - Date.now();
+          const result = await Promise.race([
+            iterator.next(),
+            new Promise((resolve) => setTimeout(() => resolve({ done: true, timedOut: true }), Math.max(remaining, 0))),
+          ]);
+          if (result.done) break;
+          const parsed = parseRtpPacket(result.value);
+          if (parsed) captured.push(parsed.payload);
+        }
+        if (stopped) break;
+        if (captured.length === 0) continue;
+        try {
+          const controller = new AbortController();
+          async function* asFrames() {
+            for (const payload of captured) {
+              yield { data: payload, encoding: "mulaw", sampleRateHz: 8000, channels: 1, timestampMs: 0 };
+            }
+          }
+          let heardText = "";
+          for await (const event of speech.stt.transcribe(asFrames(), { locale: "pt-PT", signal: controller.signal })) {
+            if (event.type === "final") heardText = event.text;
+          }
+          if (!heardText.trim()) continue;
+          const turnResult = await brainClient.runTurn({
+            voice_call_id: voiceCallId,
+            technical_phone_e164: technicalPhoneE164,
+            transcript: heardText,
+          });
+          const replyText = turnResult.kind === "reply"
+            ? turnResult.text
+            : "Desculpe, não posso ajudar com isso agora.";
+          const playback = await speech.tts.synthesize(replyText, { locale: "pt-PT", signal: controller.signal });
+          for await (const frame of playback.audio) {
+            sender.enqueue(Buffer.from(frame.data));
+          }
+        } catch (error) {
+          // Same availability philosophy as the rest of the worker: one
+          // failed turn must never take down the call nor the process.
+          //
+          // CONSCIOUS divergence from the spec: the original design expected
+          // "fall back to a recorded apology" when the sidecar is down. That
+          // would need a local, repo-versioned audio asset (not depending on
+          // the SAME sidecar that just failed to synthesize the apology) —
+          // out of scope for this task. Here, a failed STT/turn/TTS becomes
+          // SILENCE just for that turn (the call continues, the next turn
+          // tries again), not a spoken phrase. If Task 8 (a real call) shows
+          // this is too bad a UX, that's a follow-up — not a reason to
+          // reopen this task without measuring first.
+          logError("voice_media_turn_failed", error, { channelId, voiceCallId });
+        }
+      }
+    })().catch((error) => logError("voice_media_loop_crashed", error, { channelId }));
+
+    return session;
+  }
+
   let ready = false;
   let processedEvents = 0;
   let rejectedEvents = 0;
@@ -127,6 +236,26 @@ export async function createVoiceSipWorker(env = process.env) {
       try {
         await forwarder.forward(result);
         processedEvents += 1;
+        if (mediaEnabled && result.status === "normalized") {
+          const { event } = result;
+          const channelId = event.providerEventId; // asterisk-adapter.ts: providerEventId === channelId
+          if (event.eventType === "StasisStart") {
+            const technicalE164 = event.direction === "inbound" ? event.calledE164 : event.callerE164;
+            const context = await brainClient.resolveContext({
+              provider_call_id: event.providerEventId,
+              connection_id: event.connectionId,
+              caller_e164: event.callerE164,
+              called_e164: event.calledE164,
+              direction: event.direction,
+            });
+            await attachMedia(channelId, context.voice_call_id, technicalE164).catch((error) =>
+              logError("voice_media_attach_failed", error, { channelId }),
+            );
+          } else if (event.eventType === "StasisEnd" || event.eventType === "ChannelHangupRequest") {
+            const session = activeMediaSessions.get(channelId);
+            if (session) await session.detach().catch((error) => logError("voice_media_detach_failed", error, { channelId }));
+          }
+        }
       } catch (error) {
         // A failed CRM call must never take the listener down — log and
         // keep consuming events, same fail-open-for-availability
@@ -142,6 +271,7 @@ export async function createVoiceSipWorker(env = process.env) {
     stopped = true;
     log("voice_sip_worker_shutdown", { signal });
     ready = false;
+    for (const session of activeMediaSessions.values()) await session.detach().catch(() => undefined);
     if (listener) await listener.close();
     await new Promise((resolve) => healthServer.close(resolve));
     await pool.end();

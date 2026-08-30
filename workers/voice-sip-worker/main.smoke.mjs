@@ -13,7 +13,16 @@
 // Proves the whole real entrypoint as a black box: env parsing -> real ARI
 // connection -> real Postgres tenant resolution -> real HTTP forwarding to
 // a fake CRM -> /healthz -> graceful shutdown.
+//
+// A second scenario (below, "media scenario") additionally proves the
+// RTP+STT+Agent OS+TTS wiring added on top of signaling: a real UDP client
+// stands in for Asterisk's externalMedia RTP peer (real dgram sockets, same
+// as rtp-media-bridge.test.ts), and a fake HTTP sidecar stands in for the
+// real Python STT/TTS process (never the real one here — that would make
+// this smoke test depend on the VPS being up, which is the opposite of
+// hermetic/reproducible).
 
+import dgram from "node:dgram";
 import http from "node:http";
 import { WebSocketServer } from "ws";
 import { createVoiceSipWorker } from "./main.mjs";
@@ -29,11 +38,48 @@ const ARI_PASSWORD = "s3cret";
 function startFakeAriServer() {
   return new Promise((resolve) => {
     let activeSocket = null;
+    // Populated by the media scenario's POST /ari/channels/externalMedia
+    // handler below — captures the UDP port main.mjs's real
+    // createAsteriskRtpMediaBridge asked Asterisk to send RTP to, so the
+    // smoke test's fake UDP "Asterisk" peer knows where to send inbound RTP.
+    let lastExternalMediaPort = null;
     const server = http.createServer((req, res) => {
+      const url = new URL(req.url ?? "/", "http://localhost");
       const expectedAuth = `Basic ${Buffer.from(`${ARI_USERNAME}:${ARI_PASSWORD}`).toString("base64")}`;
       if (req.headers.authorization !== expectedAuth) {
         res.writeHead(401, { "content-type": "application/json" });
         res.end(JSON.stringify({ message: "authentication failed" }));
+        return;
+      }
+      // Real Asterisk ARI endpoints createAsteriskRtpMediaBridge calls
+      // (lib/voice/sip/rtp-media-bridge.ts via asterisk-ari-client.ts) —
+      // same shapes proven in rtp-media-bridge.test.ts / asterisk-ari-client.test.ts.
+      if (req.method === "POST" && url.pathname === "/ari/bridges") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ id: "bridge-media-smoke-1" }));
+        return;
+      }
+      if (req.method === "POST" && url.pathname === "/ari/channels/externalMedia") {
+        const externalHost = url.searchParams.get("external_host") ?? "";
+        const port = Number(externalHost.split(":").pop());
+        if (Number.isInteger(port) && port > 0) lastExternalMediaPort = port;
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ id: "external-media-smoke-1" }));
+        return;
+      }
+      if (req.method === "POST" && /^\/ari\/bridges\/[^/]+\/addChannel$/.test(url.pathname)) {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end("{}");
+        return;
+      }
+      if (req.method === "DELETE" && /^\/ari\/channels\/[^/]+$/.test(url.pathname)) {
+        res.writeHead(204);
+        res.end();
+        return;
+      }
+      if (req.method === "DELETE" && /^\/ari\/bridges\/[^/]+$/.test(url.pathname)) {
+        res.writeHead(204);
+        res.end();
         return;
       }
       res.writeHead(404, { "content-type": "application/json" });
@@ -53,6 +99,7 @@ function startFakeAriServer() {
       resolve({
         baseUrl: `http://127.0.0.1:${port}`,
         sendEvent: (payload) => activeSocket?.send(JSON.stringify(payload)),
+        getLastExternalMediaPort: () => lastExternalMediaPort,
         close: () => new Promise((r) => { wss.close(); server.close(() => r()); }),
       });
     });
@@ -78,8 +125,53 @@ function startFakeCrmServer() {
           res.end(JSON.stringify({ data: { recorded: true } }));
           return;
         }
+        if (req.url === "/api/internal/voice/turn") {
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify({ data: { kind: "reply", text: "Ola, como posso ajudar?" } }));
+          return;
+        }
         res.writeHead(404, { "content-type": "application/json" });
         res.end(JSON.stringify({ error: { code: "not_found" } }));
+      });
+    });
+    server.listen(0, "127.0.0.1", () => {
+      const { port } = server.address();
+      resolve({ baseUrl: `http://127.0.0.1:${port}`, requestsReceived, close: () => new Promise((r) => server.close(() => r())) });
+    });
+  });
+}
+
+/**
+ * Fake Python STT/TTS sidecar — same /stt (batch STT) and /speak (TTS) HTTP
+ * contract as voice_worker_server_v12.py that
+ * lib/voice/media/sidecar-speech-adapter.ts talks to. Never the real
+ * Python process: this smoke test must stay hermetic/reproducible without
+ * depending on the VPS sidecar being up.
+ */
+function startFakeSidecarServer() {
+  return new Promise((resolve) => {
+    const requestsReceived = [];
+    const server = http.createServer((req, res) => {
+      const chunks = [];
+      req.on("data", (chunk) => chunks.push(chunk));
+      req.on("end", () => {
+        const body = Buffer.concat(chunks);
+        requestsReceived.push({ path: req.url, bytes: body.length });
+        if (req.url === "/stt") {
+          res.writeHead(200, { "content-type": "text/plain" });
+          res.end("ola, preciso de ajuda");
+          return;
+        }
+        if (req.url === "/speak") {
+          res.writeHead(200, { "content-type": "application/octet-stream" });
+          // Distinctive byte (0xab), deliberately NOT continuous-sender.ts's own 0xff
+          // silence filler — lets the media scenario prove real synthesized audio
+          // reached the RTP peer, not just the sender's idle-silence cadence.
+          res.end(Buffer.alloc(160, 0xab));
+          return;
+        }
+        res.writeHead(404, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: "not_found" }));
       });
     });
     server.listen(0, "127.0.0.1", () => {
@@ -94,7 +186,38 @@ async function httpGetJson(url) {
   return { status: response.status, body: await response.json() };
 }
 
-async function main() {
+/**
+ * Stands in for Asterisk's externalMedia RTP peer: a real UDP socket
+ * (dgram, same as rtp-media-bridge.test.ts) that sends inbound RTP to
+ * main.mjs's real RTP bridge and records whatever RTP the worker sends
+ * back. It is NOT bound until the bridge's UDP port is known (learned from
+ * the fake ARI server's captured `external_host` — see
+ * `startFakeAriServer`), because real Asterisk would dial that same port.
+ */
+function startFakeAsteriskRtpPeer() {
+  const socket = dgram.createSocket("udp4");
+  const receivedPackets = [];
+  socket.on("message", (packet) => receivedPackets.push(packet));
+  return new Promise((resolve) => {
+    socket.bind(0, "127.0.0.1", () => {
+      resolve({
+        sendTo(port, packet) {
+          socket.send(packet, port, "127.0.0.1");
+        },
+        receivedPackets,
+        close: () => new Promise((r) => socket.close(r)),
+      });
+    });
+  });
+}
+
+function buildFakeRtpPacket(payload) {
+  const header = Buffer.alloc(12);
+  header[0] = 0x80;
+  return Buffer.concat([header, payload]);
+}
+
+async function runSignalingScenario() {
   const fakeAri = await startFakeAriServer();
   const fakeCrm = await startFakeCrmServer();
 
@@ -161,6 +284,135 @@ async function main() {
     await fakeAri.close();
     await fakeCrm.close();
   }
+}
+
+/**
+ * Proves the media wiring added on top of signaling (attachMedia/detach
+ * hooked into the real event loop): StasisStart -> real RTP bridge (fake
+ * ARI, real UDP) -> capture window -> fake sidecar /stt -> fake CRM /turn
+ * -> fake sidecar /speak -> RTP sent back to the "Asterisk" peer ->
+ * StasisEnd -> detach (bridge torn down).
+ */
+async function runMediaScenario() {
+  const fakeAri = await startFakeAriServer();
+  const fakeCrm = await startFakeCrmServer();
+  const fakeSidecar = await startFakeSidecarServer();
+  const rtpPeer = await startFakeAsteriskRtpPeer();
+
+  const worker = await createVoiceSipWorker({
+    ARI_BASE_URL: fakeAri.baseUrl,
+    ARI_USERNAME,
+    ARI_PASSWORD,
+    ARI_APP_NAME: "voicecore-test",
+    SIP_OUTBOUND_CONTEXT: "lumenva-voice",
+    VOICE_CONTROL_PLANE_URL: fakeCrm.baseUrl,
+    INTERNAL_SECRET: "s3cret-smoke",
+    SUPABASE_DB_URL: process.env.SUPABASE_DB_URL,
+    PORT: "0",
+    VOICE_MEDIA_EXTERNAL_HOST: "127.0.0.1",
+    VOICE_MEDIA_SIDECAR_URL: fakeSidecar.baseUrl,
+    VOICE_MEDIA_LISTEN_MS: "300", // short capture window so the smoke test doesn't wait the real 4000ms default
+  });
+
+  console.log("[smoke] starting a second real entrypoint instance with media enabled...");
+  const runPromise = worker.run();
+
+  try {
+    await new Promise((r) => setTimeout(r, 300));
+
+    fakeAri.sendEvent({
+      type: "StasisStart",
+      timestamp: new Date().toISOString(),
+      channel: {
+        id: "channel-media-smoke-1",
+        caller: { number: "+351911234567" },
+        connected: { number: "+351211234567" },
+        channelvars: { SIP_CONNECTION_ID: "sip-conn-abc" }, // same seeded connection as the signaling scenario
+      },
+    });
+
+    // Wait for attachMedia() to run rtpBridge.start() (createBridge ->
+    // createExternalMedia -> addChannels against the fake ARI server) and
+    // learn the UDP port it asked Asterisk to send RTP to.
+    let bridgePort = null;
+    for (let attempt = 0; attempt < 20 && !bridgePort; attempt += 1) {
+      await new Promise((r) => setTimeout(r, 50));
+      bridgePort = fakeAri.getLastExternalMediaPort();
+    }
+    if (!bridgePort) throw new Error("[smoke] expected the media bridge to call POST /ari/channels/externalMedia by now");
+    console.log("[smoke] real RTP bridge is listening on port", bridgePort);
+
+    // Stand in for Asterisk: send inbound RTP with a µ-law payload during the
+    // worker's capture window. Sent twice, spaced apart, purely to survive
+    // the capture loop's own documented Promise.race timing (see main.mjs's
+    // comment on attachMedia) without this smoke test depending on exact
+    // scheduling — one landing inside a live capture window is enough.
+    rtpPeer.sendTo(bridgePort, buildFakeRtpPacket(Buffer.alloc(160, 0x02)));
+    await new Promise((r) => setTimeout(r, 150));
+    rtpPeer.sendTo(bridgePort, buildFakeRtpPacket(Buffer.alloc(160, 0x02)));
+
+    // Give the worker's capture window (300ms) + turn (STT -> /turn -> TTS)
+    // time to run, plus a margin for the continuous sender's 20ms cadence
+    // to actually push a packet back.
+    await new Promise((r) => setTimeout(r, 1500));
+
+    const sttCalls = fakeSidecar.requestsReceived.filter((r) => r.path === "/stt");
+    const speakCalls = fakeSidecar.requestsReceived.filter((r) => r.path === "/speak");
+    const turnCalls = fakeCrm.requestsReceived.filter((r) => r.path === "/api/internal/voice/turn");
+    if (sttCalls.length < 1 || speakCalls.length < 1 || turnCalls.length < 1) {
+      throw new Error(
+        `[smoke] expected the media loop to call /stt, /api/internal/voice/turn and /speak — got stt=${sttCalls.length} turn=${turnCalls.length} speak=${speakCalls.length}`,
+      );
+    }
+    if (turnCalls[0].body.transcript !== "ola, preciso de ajuda") {
+      throw new Error(`[smoke] unexpected transcript forwarded to /turn: ${JSON.stringify(turnCalls[0].body)}`);
+    }
+    // continuous-sender.ts sends 20ms silence (0xff) frames on its own cadence
+    // the instant the RTP peer becomes known — so "received >=1 packet" alone
+    // would pass even without the turn ever running. Require a packet whose
+    // payload is the fake TTS's distinctive 0xab byte, proving the
+    // synthesized reply itself reached the RTP peer, not just idle silence.
+    const ttsPacketsReceived = rtpPeer.receivedPackets.filter((packet) => {
+      const payload = packet.subarray(12);
+      return payload.length > 0 && payload.every((byte) => byte === 0xab);
+    });
+    if (ttsPacketsReceived.length < 1) {
+      throw new Error(
+        `[smoke] expected at least one RTP packet carrying the synthesized (0xab) TTS payload — got ${rtpPeer.receivedPackets.length} packet(s) total, none matching`,
+      );
+    }
+    console.log(
+      "[smoke] media loop ran end to end: RTP captured -> /stt -> /turn -> /speak -> synthesized RTP sent back",
+      { sttCalls: sttCalls.length, turnCalls: turnCalls.length, speakCalls: speakCalls.length, ttsPacketsReceived: ttsPacketsReceived.length, totalPacketsReceived: rtpPeer.receivedPackets.length },
+    );
+
+    fakeAri.sendEvent({
+      type: "StasisEnd",
+      timestamp: new Date().toISOString(),
+      channel: {
+        id: "channel-media-smoke-1",
+        caller: { number: "+351911234567" },
+        connected: { number: "+351211234567" },
+        channelvars: { SIP_CONNECTION_ID: "sip-conn-abc" },
+      },
+    });
+    await new Promise((r) => setTimeout(r, 300));
+
+    console.log("[smoke] PASS — media scenario: RTP+STT+Agent OS+TTS wired end to end, detach on StasisEnd.");
+  } finally {
+    console.log("[smoke] stopping the media-enabled worker (graceful shutdown)...");
+    await worker.stop("SIGTERM-smoke-media");
+    await runPromise;
+    await fakeAri.close();
+    await fakeCrm.close();
+    await fakeSidecar.close();
+    await rtpPeer.close();
+  }
+}
+
+async function main() {
+  await runSignalingScenario();
+  await runMediaScenario();
 }
 
 main()
