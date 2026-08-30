@@ -981,6 +981,15 @@ git commit -m "feat(voice): liga RTP+STT+Agent OS+TTS dentro do main.mjs real"
 
 ### Task 8: Prova de aceite — ligação telefônica real (manual, na VPS)
 
+**Status em 2026-08-30: EM ANDAMENTO, não fechada.** Deploy real em produção feito e verificado;
+worker real (`main.mjs`) subido apontado pra `https://crm.lumenva.pt` real. 4 bugs achados e
+corrigidos um a um em ligações reais sucessivas (config `ARI_BASE_URL`, `voice_calls_provider_check`
+sem `asterisk`, timestamp do Asterisk quebrando Zod `.datetime()` estrito). Um 4º bug ficou aberto
+— `http_500` genuíno em `/context` ou `/event`, causa raiz não lida ainda — e a sessão parou aqui a
+pedido explícito do dono ("Pare de alterar. Atualize toda a documentação."). **Nenhuma ligação até
+agora produziu áudio.** Detalhe completo: `docs/current-state.md` §11 "Atualização 2026-08-30" e
+memória `project_voice_core.md`. Retomar aqui na próxima sessão, não repetir os 4 fixes já feitos.
+
 Não automatizável neste harness — é a mesma classe de prova que já validou a versão ad-hoc
 (`docs/evidence/voice-vps-real-call-bridge-2026-08-28.md`), agora usando `main.mjs` real em vez
 do script solto.
