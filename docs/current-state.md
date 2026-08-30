@@ -691,6 +691,67 @@ sem divergência): `d8fbc575..a552a512`. A integração GitHub↔Vercel disparou
 Preview (`dpl_AHs4qWgkGU2cUN22qGw6j6pepd61`, commit `a552a512`), que terminou `READY` — build
 limpo, sem erro. URL: `crm-git-codex-crm-consolidated-lumenva.vercel.app`.
 
+**Atualização 2026-08-30 — endpoint `/stt` novo no sidecar Python da VPS de bench de voz
+(`root@2.29.8.225`, `/opt/voice-vps-bench/voice_worker_server_v12.py`, fora do repo/git).**
+Antes só existiam `/turn` (STT + resposta OpenAI + TTS, tudo junto) e `/speak` (TTS isolado). Um
+STT isolado faltava — sem ele, todo turno pagaria uma chamada OpenAI e uma síntese TTS descartadas
+só pra extrair o texto ouvido. Adicionado um branch `elif self.path == '/stt':` em `Handler.do_POST`,
+antes do `elif self.path == '/speak':` existente, reaproveitando `ulaw2linear_vec`/
+`local_transcribe` (faster-whisper) já presentes no arquivo — puramente aditivo, não reordenou nem
+alterou os branches `/turn`/`/speak`/`/play_elevenlabs_test` existentes. O branch `/stt` também
+replica o trim de silêncio de cabeça/cauda que `process_turn()` já fazia antes de chamar
+`local_transcribe` (mesmo `threshold=200`, mesmo padding de 800 amostras, mesmo fallback de 1600
+amostras) — sem isso, `/stt` ficaria mais sujeito a alucinação do STT em padding silencioso do que
+`/turn` já era, porque um seria PCM cru e o outro trimado pro mesmo modelo.
+
+Deploy manual (sidecar não é versionado):
+
+```bash
+scp -i ~/.ssh/id_ed25519 root@2.29.8.225:/opt/voice-vps-bench/voice_worker_server_v12.py /tmp/voice_worker_server_v12.py
+# editar /tmp/voice_worker_server_v12.py (branch /stt + trim de silêncio)
+python3 -m py_compile /tmp/voice_worker_server_v12.py   # exit=0
+scp -i ~/.ssh/id_ed25519 /tmp/voice_worker_server_v12.py root@2.29.8.225:/opt/voice-vps-bench/voice_worker_server_v12.py
+# restart seguro (ver achado abaixo — não usar pkill -f na mesma linha que invoca o script):
+ssh -i ~/.ssh/id_ed25519 root@2.29.8.225 "pgrep -f 'venv/bin/python3 voice_worker_server_v12.py'"
+ssh -i ~/.ssh/id_ed25519 root@2.29.8.225 "kill <pids-do-passo-anterior>"
+ssh -i ~/.ssh/id_ed25519 root@2.29.8.225 "cd /opt/voice-vps-bench && setsid nohup env OPENAI_API_KEY=<REDACTED> INWORLD_API_KEY=<REDACTED> ./venv/bin/python3 voice_worker_server_v12.py > /tmp/worker_v12.log 2>&1 < /dev/null & disown; echo started"
+```
+
+**Achado operacional durante o primeiro deploy — `pkill -f voice_worker_server_v12.py` se
+auto-matou.** O comando de restart original do plano começava com `pkill -f
+voice_worker_server_v12.py; sleep 1; ...`. Como o próprio comando remoto (`bash -c "..."` executado
+via `ssh host '<comando>'`) contém a string `voice_worker_server_v12.py` na sua linha de comando (no
+`pkill` e no `./venv/bin/python3 voice_worker_server_v12.py` mais adiante), `pkill -f` (que casa
+contra a linha de comando completa) matou o próprio processo `bash -c` da sessão SSH antes de ele
+chegar no `setsid nohup ...`. Resultado observado: SSH saiu com `exit=255` sem nenhum output, e o
+processo antigo morreu sem que um novo subisse — o serviço ficou momentaneamente fora do ar (sem
+`/turn`/`/speak`/`/stt` respondendo) até ser percebido e corrigido na mesma sessão. **Padrão de
+restart seguro adotado a partir daí** (usado com sucesso no fix do trim, sem repetir o footgun):
+`pgrep -f 'venv/bin/python3 voice_worker_server_v12.py'` numa chamada SSH isolada pra achar os PIDs
+reais, `kill <pids>` explícito numa segunda chamada, e só então o `setsid nohup ...` de start numa
+terceira chamada — nunca `pkill -f <nome-do-script>.py` na mesma linha SSH que também invoca esse
+script.
+
+Verificação pós-deploy do `/stt` original (Steps 5–6 do plano, antes do trim):
+- `/stt` com 1s de µ-law de silêncio puro: `EXIT=0`, corpo vazio (esperado — silêncio não gera
+  transcrição), sem `500`/conexão recusada.
+- `/speak` com texto curto: `HTTP=200 SIZE=3901` — sem regressão.
+- `/turn` com 2s de µ-law de silêncio: `HTTP=200`, headers `X-Heard`/`X-Reply-Text` presentes,
+  corpo de áudio `SIZE=40033` — sem regressão.
+- Processo (`pgrep`) estável depois dos três testes, sem traceback em `/tmp/worker_v12.log`.
+
+**Fix round 1 (mesmo dia) — trim de silêncio portado de `process_turn()` pro `/stt`.** Reverificado
+depois do deploy do trim, com o restart seguro descrito acima:
+- `/stt` com 1s de µ-law de silêncio puro: `EXIT=0`, corpo vazio — sem regressão.
+- `/speak` com texto curto: `HTTP=200 SIZE=3809` — sem regressão (variação de tamanho é normal do
+  TTS, não indica quebra).
+- `/turn` com 2s de µ-law de silêncio: `HTTP=200 SIZE=39579`, headers `X-Heard`/`X-Reply-Text`
+  presentes — sem regressão.
+- Processo (PID novo, `pgrep`) estável depois dos três testes, sem traceback no log.
+
+Teste com fala real (não só silêncio sintético) fica para a Task 8 do plano (ligação de verdade),
+conforme o brief original já previa.
+
 ---
 
 Contexto histórico (pré-merge, 2026-08-28) do que segue: nesse snapshot, o checkout `codex/crm-
