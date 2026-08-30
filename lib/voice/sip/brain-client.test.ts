@@ -116,4 +116,25 @@ describe("SIP voice brain client (Fase 3, real HTTP wire behavior)", () => {
     expect(() => createSipVoiceBrainClient({ baseUrl: "", secret: "s3cret" })).toThrow(/baseUrl is required/);
     expect(() => createSipVoiceBrainClient({ baseUrl: "http://x", secret: "" })).toThrow(/secret is required/);
   });
+
+  it("runTurn posts to /api/internal/voice/turn and returns the result", async () => {
+    fakeCrm = await startFakeCrmServer();
+    fakeCrm.respondWith = { status: 200, body: { data: { kind: "reply", text: "oi, tudo bem?" } } };
+    const client = createSipVoiceBrainClient({ baseUrl: fakeCrm.baseUrl, secret: "s3cret" });
+
+    const result = await client.runTurn({
+      voice_call_id: "00000000-0000-0000-0000-000000000001",
+      technical_phone_e164: "+351210000000",
+      transcript: "olá",
+    });
+
+    expect(result).toEqual({ kind: "reply", text: "oi, tudo bem?" });
+    expect(fakeCrm.lastRequest?.path).toBe("/api/internal/voice/turn");
+    expect(fakeCrm.lastRequest?.authHeader).toBe("s3cret");
+    expect(fakeCrm.lastRequest?.body).toEqual({
+      voice_call_id: "00000000-0000-0000-0000-000000000001",
+      technical_phone_e164: "+351210000000",
+      transcript: "olá",
+    });
+  });
 });
