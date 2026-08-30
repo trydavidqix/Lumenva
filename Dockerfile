@@ -49,7 +49,14 @@ ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
 # do Sentry (tree-shake + upload de sourcemap em build-time) é ignorado, mas o
 # Sentry RUNTIME segue ativo (DSN hardcoded nas configs). Sourcemap upload é
 # concern só da Vercel; aqui o ganho de tempo de build é o que importa pro leigo.
-RUN pnpm build
+#
+# `build:docker` (não `build`): 3 testes fazem introspecção do repo real
+# (env-example-sync lê .env.example, openrouter-alcance chama `git grep`,
+# voice-qa-harness-contract lê docs/runbooks/) — arquivos que .dockerignore
+# exclui de propósito do contexto de build (segredo/tamanho). Não fazem
+# sentido dentro da imagem; continuam rodando normalmente em `pnpm build`
+# local/Vercel, onde .git/.env.example/docs existem de verdade.
+RUN pnpm build:docker
 
 # ---- runner: imagem slim de produção ----
 FROM node:22-alpine AS runner
