@@ -34,7 +34,7 @@ describe("voice worker tenant binding", () => {
   it("does not reopen terminal calls or accept a different provider call id", () => {
     const route = read("app/api/internal/voice/event/route.ts");
     expect(route).toContain("state not in ('completed','failed','canceled') or state = $3");
-    expect(route).toContain("provider_call_id is null or $6 is null or provider_call_id = $6");
+    expect(route).toContain("provider_call_id is null or $6::text is null or provider_call_id = $6::text");
     expect(route).toContain("voice_event_conflict");
   });
 
