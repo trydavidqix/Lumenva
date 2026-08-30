@@ -5,7 +5,7 @@ status: maintained
 last_updated: 2026-08-30
 generated_by: auditoria documental sincronizada — CRM consolidado, branch Voice Core, deploy real em produção e primeira ligação SIP/BYOC real pós-merge
 confidence: média-alta (métricas de código são CONFIRMADO; estado de épico vem dos HANDOFFs, que são auto-relatados)
-audited_against: main @ 0484257b (deploy real em produção, 2026-08-30 — ver §11 "Unificação SIP/BYOC + Agent OS real")
+audited_against: main @ 872a4a63 (deploy real em produção + primeira ligação real com áudio confirmado, 2026-08-30 — ver §11 "Unificação SIP/BYOC + Agent OS real")
 ---
 
 # Estado atual — DeskcommCRM
@@ -1036,17 +1036,72 @@ depois de ler log/fonte real (nunca chute) — nesta ordem:**
    **Toda ligação de teste até agora terminou em silêncio total (0 áudio ouvido pelo dono)** —
    nenhum turno de Agent OS chegou a rodar de ponta a ponta ainda nesta sessão.
 
-**Processos deixados rodando na VPS ao fim desta sessão (decisão consciente, não investigado até o
-fim):** worker SIP (`/opt/voice-prod-run/repo`, `tsx workers/voice-sip-worker/main.mjs`, porta
-`8091`) e sidecar STT/TTS (`voice_worker_server_v12.py`, porta `8500`). Nenhum dos dois é serviço
-systemd — processo solto via `setsid nohup`, sobrevive ao fim da sessão SSH mas não a um reboot da
-VPS. `dialplan voicecore-test` em `/etc/asterisk/extensions.conf` (não versionado) segue
-configurado pra rotear a extensão de teste pro app Stasis. CRM de produção (container `app`)
-confirmado saudável durante todo o processo — nenhuma das mudanças de hoje derrubou o site.
+**Bugs #5 e #6 (mesma sessão, continuação) — dois erros reais empilhados em
+`app/api/internal/voice/event/route.ts`, achados reproduzindo o `http_500` direto com `curl`
+contra produção (não é mock: o mesmo payload que o worker manda).** Commit `3af01c58` +
+`872a4a63`:
+- **#5:** `INSERT INTO voice_call_events` usava a coluna `payload`, renomeada pra `attributes`
+  pela migration `0127` (2026-08-26) — `column payload does not exist`, exceção não tratada (a
+  rota não tem `try/catch` ali), 500 puro sem corpo. Junto: `provider = 'lumenva'` hardcoded em 3
+  lugares (não é provider válido, viola `voice_call_events_provider_check`) — corrigido derivando
+  o provider real (`technical_phone_e164` presente ⇒ `telnyx`, senão `asterisk`), mesma lógica que
+  o resto da rota já usa.
+- **#6:** depois de corrigir #5, nova falha: Postgres `42P08 could not determine data type of
+  parameter $6` — `$6` (`provider_call_id`) só aparecia em contextos sem tipo explícito o bastante
+  (`coalesce(...)`/`IS NULL`). Reproduzido e confirmado com `PREPARE` direto no Postgres real antes
+  do fix; corrigido com cast `$6::text` nos dois usos ambíguos. Um teste de contrato
+  (`voice-worker-tenant-binding-contract.test.ts`) batia string literal no SQL da rota e precisou
+  ser atualizado pro texto novo — achado pelo próprio gate no build Docker seguinte.
+
+**Bug #7 (real, mas fora do CRM) — worker subido sem `VOICE_MEDIA_EXTERNAL_HOST`.** Sem essa var
+`mediaEnabled=false` e `attachMedia()` retorna sem fazer nada — a ponte de áudio inteira nunca
+rodou o dia inteiro, mesmo com todos os bugs #1-#6 corrigidos. Corrigido subindo o worker com
+`VOICE_MEDIA_EXTERNAL_HOST=2.29.8.225`.
+
+**Bug #8 (real, camada de rede, fora do código do produto) — firewall de nuvem da Hetzner sem
+regra pra faixa RTP.** Com a mídia habilitada, a próxima ligação criou a ponte RTP real
+(`UnicastRTP` via ARI `externalMedia`) mas `rxcount=0` nos dois lados — zero pacotes RTP recebidos
+pelo Asterisk, confirmado com `tcpdump` direto na placa de rede (não só no Asterisk) em dois testes
+de rede diferentes (dados móveis e Wi-Fi), 60s cada, 0 pacotes capturados em toda a faixa
+`10000-20000`. Isolou o problema pra ANTES do próprio SO da VPS. No painel da Hetzner
+(`console.hetzner.com`, projeto Lumenva, firewall `lumenva-crm-firewall`), as 7 regras existentes
+cobriam TCP 22/80/443, ICMP, UDP 5060/5061/8000-8100 — nenhuma cobria a faixa RTP real
+(`rtp.conf`: `rtpstart=10000`/`rtpend=20000`). Adicionada regra INBOUND UDP 10000-20000 (Any
+IPv4/IPv6) com autorização explícita do dono antes de salvar (ação feita via `claude-in-chrome` na
+sessão de browser já logada do dono, sem o agente ver/inserir credencial).
+
+**Ligação real funcionou — áudio confirmado pelo dono ao vivo, 2026-08-30 ~21:47 UTC.** Log do
+worker: ~25s de chamada, zero eventos de erro (`voice_sip_event_forward_failed`,
+`voice_media_attach_failed`, `voice_media_turn_failed` — nenhum apareceu). Debug do Asterisk
+(`rtp set debug`, `pjsip set logger`, canal `full.log` temporário em `logger.conf`) desligado e
+revertido logo depois (`logger.conf` original restaurado, backup timestamped deixado ao lado).
+
+**Processos deixados rodando na VPS ao fim desta sessão (decisão consciente):** worker SIP
+(`/opt/voice-prod-run/repo`, `tsx workers/voice-sip-worker/main.mjs`, porta `8091`,
+`VOICE_MEDIA_EXTERNAL_HOST=2.29.8.225`) e sidecar STT/TTS (`voice_worker_server_v12.py`, porta
+`8500`). Nenhum dos dois é serviço systemd — processo solto via `setsid nohup`, sobrevive ao fim da
+sessão SSH mas não a um reboot da VPS. `dialplan voicecore-test` em `/etc/asterisk/extensions.conf`
+(não versionado) segue configurado pra rotear a extensão de teste pro app Stasis. Regra de firewall
+UDP 10000-20000 é permanente (fica mesmo depois do reboot/fim da sessão). CRM de produção
+(container `app`) confirmado saudável durante todo o processo — nenhuma das mudanças de hoje
+derrubou o site.
+
+**Credenciais usadas nesta sessão de voz gravadas no Infisical** (env `prod`, projeto já existente
+— `INTERNAL_SECRET`/`SUPABASE_DB_URL` já estavam lá; adicionados `VOICE_ARI_USERNAME`,
+`VOICE_ARI_PASSWORD`, `VPS_HOST`, `VOICE_MEDIA_EXTERNAL_HOST`), pra não precisar re-extrair via SSH
+numa próxima sessão.
+
+**Ainda não fechado formalmente (pendências reais, não bloqueadores):** dialplan/worker/sidecar do
+Task 8 continuam como processos manuais fora do Git — falta decidir se viram serviço systemd
+versionado ou se são desligados; `docs/evidence/voice-agent-os-real-call-2026-08-30.md` (evidência
+formal da Task 8) ainda não escrito; qualidade/latência do turno real não medida ainda (só
+confirmado "funcionou", não "quão bem"); regra de firewall foi adicionada só nesta faixa exata —
+não auditado se outras portas UDP do rtp.conf de outras instâncias precisam da mesma regra.
 
 **Veredito desta atualização:** **CÓDIGO UNIFICADO (SIP/BYOC + RTP + Agent OS real) MERGEADO EM
 `main` E ENVIADO A `origin` / DEPLOY REAL EM PRODUÇÃO CONCLUÍDO E VERIFICADO (`307`, containers
 saudáveis, rotas de voz deixaram de ser `404`) / TRÊS BUGS DE INFRA PRÉ-EXISTENTES DO PIPELINE DE
-BUILD DOCKER ACHADOS E CORRIGIDOS NA RAIZ (NÃO SINTOMA) / QUATRO BUGS REAIS DA INTEGRAÇÃO SIP/BYOC
-ACHADOS E CORRIGIDOS UM A UM NUMA LIGAÇÃO REAL / **AINDA SEM ÁUDIO CONFIRMADO — HTTP 500 ABERTO,
-CAUSA RAIZ NÃO INVESTIGADA, PRÓXIMA SESSÃO CONTINUA DAQUI**.
+BUILD DOCKER ACHADOS E CORRIGIDOS NA RAIZ / SEIS BUGS REAIS DA INTEGRAÇÃO SIP/BYOC ACHADOS E
+CORRIGIDOS UM A UM NUMA LIGAÇÃO REAL (2 SQL, 1 CONFIG DE SESSÃO, 1 FIREWALL DE NUVEM) / **PRIMEIRA
+LIGAÇÃO REAL COM ÁUDIO DE PONTA A PONTA CONFIRMADA PELO DONO AO VIVO EM PRODUÇÃO, 2026-08-30** —
+Task 8 do plano tecnicamente provada; falta só o registro formal de evidência.
