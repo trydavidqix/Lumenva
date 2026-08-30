@@ -44,6 +44,14 @@ export interface SipEventRequest {
   occurred_at?: string;
 }
 
+export interface SipTurnRequest {
+  voice_call_id: string;
+  technical_phone_e164: string;
+  transcript: string;
+}
+
+export type SipTurnResponse = { kind: "reply"; text: string } | { kind: "blocked"; reason: string };
+
 export interface SipBrainRequestError extends Error {
   status: number;
   payload: unknown;
@@ -52,6 +60,7 @@ export interface SipBrainRequestError extends Error {
 export interface SipBrainClient {
   resolveContext(input: SipContextRequest): Promise<SipContextResponse>;
   recordEvent(input: SipEventRequest): Promise<{ recorded: true }>;
+  runTurn(input: SipTurnRequest): Promise<SipTurnResponse>;
 }
 
 function required(value: string, name: string): string {
@@ -97,6 +106,9 @@ export function createSipVoiceBrainClient(config: SipBrainClientConfig): SipBrai
     },
     recordEvent(input) {
       return postJson<{ recorded: true }>(fetchImpl, `${baseUrl}/api/internal/voice/event`, secret, input, timeoutMs);
+    },
+    runTurn(input) {
+      return postJson<SipTurnResponse>(fetchImpl, `${baseUrl}/api/internal/voice/turn`, secret, input, timeoutMs);
     },
   };
 }
