@@ -22,6 +22,7 @@ vi.mock("@/lib/voice/runtime/turn-service", () => ({
 
 const ORG_ID = "22222222-2222-4222-8222-222222222222";
 const VOICE_CALL_ID = "33333333-3333-4333-8333-333333333333";
+const SIP_CONN_ID = "44444444-4444-4444-8444-444444444444";
 
 function req(body: Record<string, unknown>, secret = "test-secret") {
   return new NextRequest("http://localhost/api/internal/voice/turn", {
@@ -37,10 +38,14 @@ interface PoolStub {
 
 function makePoolStub(options: {
   callRow?: Record<string, unknown> | null;
+  sipConnectionRow?: Record<string, unknown> | null;
 }): PoolStub {
   const query = vi.fn(async (sql: string) => {
     if (sql.includes("from voice_calls vc")) {
       return { rows: options.callRow ? [options.callRow] : [] };
+    }
+    if (sql.includes("from voice_sip_connections")) {
+      return { rows: options.sipConnectionRow ? [options.sipConnectionRow] : [] };
     }
     throw new Error(`unexpected query: ${sql}`);
   });
@@ -54,9 +59,10 @@ const baseBody = {
 };
 
 describe("POST /api/internal/voice/turn", () => {
-  it("accepts an active call with provider=asterisk (SIP/BYOC)", async () => {
+  it("accepts an active call with provider=asterisk and verified enabled connection", async () => {
     const pool = makePoolStub({
       callRow: { organization_id: ORG_ID, contact_id: null },
+      sipConnectionRow: { id: SIP_CONN_ID, verified: true, enabled: true },
     });
     vi.mocked(getRequestPool).mockReturnValue(pool as unknown as ReturnType<typeof getRequestPool>);
 
@@ -65,13 +71,45 @@ describe("POST /api/internal/voice/turn", () => {
 
     expect(res.status).toBe(200);
 
-    // Verify the query accepts asterisk provider, not just telnyx
-    const [sql, params] = pool.query.mock.calls[0]!;
-    expect(sql).toMatch(/provider = any\(\$3\)|provider in \('telnyx', ?'asterisk'\)/i);
-    expect(params[2]).toEqual(["telnyx", "asterisk"]);
+    // Verify the query checks for verified and enabled connection
+    const [sql] = pool.query.mock.calls[0]!;
+    expect(sql).toMatch(/vpn\.provider = 'telnyx'/);
+    expect(sql).toMatch(/vpn\.provider = 'asterisk'/);
+    expect(sql).toMatch(/vsc\.verified = true/);
+    expect(sql).toMatch(/vsc\.enabled = true/);
   });
 
-  it("still accepts an active call with provider=telnyx (Telnyx path)", async () => {
+  it("rejects asterisk call when SIP connection is not verified", async () => {
+    const pool = makePoolStub({
+      callRow: null, // The query should return no rows because verified=false
+      sipConnectionRow: { id: SIP_CONN_ID, verified: false, enabled: true },
+    });
+    vi.mocked(getRequestPool).mockReturnValue(pool as unknown as ReturnType<typeof getRequestPool>);
+
+    const { POST } = await import("./route");
+    const res = await POST(req(baseBody));
+
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("voice_call_not_active");
+  });
+
+  it("rejects asterisk call when SIP connection is disabled", async () => {
+    const pool = makePoolStub({
+      callRow: null, // The query should return no rows because enabled=false
+      sipConnectionRow: { id: SIP_CONN_ID, verified: true, enabled: false },
+    });
+    vi.mocked(getRequestPool).mockReturnValue(pool as unknown as ReturnType<typeof getRequestPool>);
+
+    const { POST } = await import("./route");
+    const res = await POST(req(baseBody));
+
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("voice_call_not_active");
+  });
+
+  it("accepts telnyx call without checking SIP connection", async () => {
     const pool = makePoolStub({
       callRow: { organization_id: ORG_ID, contact_id: null },
     });
@@ -81,10 +119,9 @@ describe("POST /api/internal/voice/turn", () => {
     const res = await POST(req(baseBody));
 
     expect(res.status).toBe(200);
-
-    // Verify both providers are included in the query
-    const [sql, params] = pool.query.mock.calls[0]!;
-    expect(params[2]).toEqual(["telnyx", "asterisk"]);
+    // Verify telnyx path is checked
+    const [sql] = pool.query.mock.calls[0]!;
+    expect(sql).toMatch(/vpn\.provider = 'telnyx'/);
   });
 
   it("rejects unauthenticated requests before touching the database", async () => {
