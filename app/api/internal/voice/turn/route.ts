@@ -50,7 +50,7 @@ export async function POST(req: NextRequest): Promise<Response> {
          from voice_calls vc
          join voice_phone_numbers vpn
            on vpn.organization_id = vc.organization_id
-          and vpn.provider = 'telnyx'
+          and vpn.provider = any($3)
           and vpn.phone_e164 = $2
           and vpn.enabled = true
         where vc.id = $1
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest): Promise<Response> {
             (vc.direction = 'outbound' and vc.caller_number = $2)
           )
         limit 1`,
-      [parsed.data.voice_call_id, parsed.data.technical_phone_e164],
+      [parsed.data.voice_call_id, parsed.data.technical_phone_e164, ["telnyx", "asterisk"]],
     );
     const call = rows[0];
     if (!call) return fail("voice_call_not_active", "Chamada não encontrada, encerrada ou fora do worker autorizado.", 409, { requestId });
