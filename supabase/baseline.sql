@@ -9671,18 +9671,22 @@ comment on table public.voice_call_events is
 notify pgrst, 'reload schema';
 
 -- ---- 0127: voice hardening (vocabulário fechado + attributes normalizado) ----
--- Detalhe: 20260826125500_0127_voice_hardening.sql.
+-- Detalhe: 20260826125500_0127_voice_hardening.sql. Vocabulário final ('telnyx','asterisk')
+-- já embutido aqui pela 0133 (20260830190000) — um único bloco por constraint, mesmo
+-- precedente de voice_phone_numbers_provider_check (0128, ampliada in-place pela 0131):
+-- dois blocos pra mesma constraint quebra update.sh num self-host que já rodou a 0133,
+-- porque o bloco antigo (só 'telnyx') falharia ao re-aplicar contra dado com 'asterisk'.
 alter table public.voice_calls
   drop constraint if exists voice_calls_provider_check;
 alter table public.voice_calls
   add constraint voice_calls_provider_check
-  check (provider in ('telnyx'));
+  check (provider in ('telnyx', 'asterisk'));
 
 alter table public.voice_call_events
   drop constraint if exists voice_call_events_provider_check;
 alter table public.voice_call_events
   add constraint voice_call_events_provider_check
-  check (provider in ('telnyx'));
+  check (provider in ('telnyx', 'asterisk'));
 
 do $$
 begin
@@ -9908,17 +9912,9 @@ create trigger trg_customer_memory_audit
 -- Detalhe: 20260830190000_0133_voice_calls_provider_asterisk.sql. Forward-fix:
 -- 0131 ampliou voice_phone_numbers_provider_check mas não estes dois, fechados
 -- em 0127 só com 'telnyx' — achado ao vivo quando /api/internal/voice/context
--- rejeitava insert com provider='asterisk'.
-alter table public.voice_calls
-  drop constraint if exists voice_calls_provider_check;
-alter table public.voice_calls
-  add constraint voice_calls_provider_check
-  check (provider in ('telnyx', 'asterisk'));
-
-alter table public.voice_call_events
-  drop constraint if exists voice_call_events_provider_check;
-alter table public.voice_call_events
-  add constraint voice_call_events_provider_check
-  check (provider in ('telnyx', 'asterisk'));
+-- rejeitava insert com provider='asterisk'. O vocabulário final já está embutido
+-- direto no bloco da 0127 acima (mesmo precedente da 0128/0131) — nada a fazer
+-- aqui além de registrar a proveniência; um segundo bloco reconstruindo a mesma
+-- constraint quebraria update.sh (ver tests/unit/baseline-constraint-reconstruida.test.ts).
 
 notify pgrst, 'reload schema';
