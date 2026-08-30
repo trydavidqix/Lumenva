@@ -2,10 +2,10 @@
 type: current-state
 project: DeskcommCRM
 status: maintained
-last_updated: 2026-08-29
-generated_by: auditoria documental sincronizada — CRM consolidado, branch Voice Core e teste controlado na VPS
+last_updated: 2026-08-30
+generated_by: auditoria documental sincronizada — CRM consolidado, branch Voice Core, deploy real em produção e primeira ligação SIP/BYOC real pós-merge
 confidence: média-alta (métricas de código são CONFIRMADO; estado de épico vem dos HANDOFFs, que são auto-relatados)
-audited_against: codex/crm-consolidated @ 6f6232a2 (merge local de codex/voice-media-integration, 2026-08-29, ainda não enviado a origin)
+audited_against: main @ 0484257b (deploy real em produção, 2026-08-30 — ver §11 "Unificação SIP/BYOC + Agent OS real")
 ---
 
 # Estado atual — DeskcommCRM
@@ -934,3 +934,119 @@ testes/0 falhas) / `pnpm test:db` VERDE (507 testes/75 arquivos) / ENVIADO A `or
 
 Próxima ação e detalhe de execução: [`docs/handoffs/HANDOFF-voice-vps-config-2026-08-28.md`](handoffs/HANDOFF-voice-vps-config-2026-08-28.md).
 Referência resumida: [`docs/voice/open-source-europe.md`](voice/open-source-europe.md).
+
+### Atualização 2026-08-30 — unificação SIP/BYOC + Agent OS real, deploy em produção, primeira ligação real pós-merge (EM ANDAMENTO, sem áudio ainda)
+
+**Contexto.** Spec/plano dedicados escritos e executados via `subagent-driven-development` nesta
+sessão: [`docs/superpowers/specs/2026-08-29-voice-unify-sip-worker-media-design.md`](superpowers/specs/2026-08-29-voice-unify-sip-worker-media-design.md)
+e [`docs/superpowers/plans/2026-08-29-voice-unify-sip-worker-media.md`](superpowers/plans/2026-08-29-voice-unify-sip-worker-media.md).
+Objetivo: unificar dois pedaços até então desconectados — (1) o worker de sinalização SIP/BYOC +
+ponte RTP + turn-service do Agent OS real do repo, testados só isoladamente, nunca ligados entre
+si; (2) o script ad-hoc Python que tinha provado uma ligação real em 2026-08-28 (§ acima) mas sem
+nenhum código do produto real (sem tenant, sem Agent OS).
+
+**Tasks 1–7 do plano: CONCLUÍDAS, revisadas (task-reviewer + fix loop) e commitadas.** Adapter
+STT/TTS em modo batch reaproveitando o sidecar existente (`lib/voice/media/sidecar-speech-adapter.ts`),
+parser/builder RTP (`lib/voice/media/rtp-frame.ts`), sender contínuo com preenchimento de silêncio
+(`lib/voice/media/continuous-sender.ts`), `SipBrainClient.runTurn()` chamando o turn-service real
+via `/api/internal/voice/turn`, e fiação completa dentro de `workers/voice-sip-worker/main.mjs`
+(`attachMedia()`). Dois bugs reais achados pelo review e corrigidos antes do merge: gap de
+segurança na SQL de `/api/internal/voice/turn` (não verificava `verified`/`enabled` da conexão SIP
+asterisk) e um bug de perda de pacote RTP (`Promise.race` numa iterator compartilhado abandonava o
+resolver perdedor no FIFO interno da sessão, roubando o pacote real do turno seguinte) — trocado por
+um único consumidor `for await` contínuo pra a chamada inteira. Detalhe task a task no ledger SDD
+(`.superpowers/sdd/2026-08-29-voice-unify-sip-worker-media/progress.md`, git-ignorado).
+
+**Merge pra `main` e deploy real em produção — autorizado explicitamente pelo dono.** Todo o
+trabalho acima (mais os commits já citados neste documento) foi mergeado
+`codex/voice-unify-media-2026-08-29` → `codex/crm-consolidated` → `main`, enviado a `origin`, e a
+VPS de produção (`crm.lumenva.pt`) atualizada e reconstruída. Isso exigiu resolver, em cadeia, três
+bugs de infraestrutura pré-existentes e não relacionados a voz, nunca antes achados porque **o
+build Docker local nunca tinha sido exercitado de verdade** (deploy sempre puxou imagem pronta do
+GHCR via GitHub Actions; Actions está desabilitado desde 2026-08-20 — ver §10 — então o build
+ad-hoc documentado no runbook virou, pela primeira vez, o único caminho real):
+
+1. **`pnpm build` rodando `test:unit` sob `NODE_ENV=production`** (commit `5dc1b23c`). O Dockerfile
+   seta `NODE_ENV=production` antes de `RUN pnpm build`; `test:unit` roda antes de `next build`
+   dentro desse mesmo script, então nunca ganha a folga que `lib/env.ts` só dá quando
+   `NEXT_PHASE=phase-production-build` (flag que só existe dentro do `next build`). Com
+   `NODE_ENV=production` já valendo, toda var `required()` em `lib/env.ts` exigia valor real — e
+   também o Vitest muda resolução de módulo builtin sob production e quebrava com `Error: No such
+   built-in module: node:`. Reproduzido e confirmado localmente
+   (`NODE_ENV=production npx vitest run lib/utils.test.ts`) antes do fix. Corrigido fazendo
+   `pnpm build` rodar `test:unit` explicitamente sob `NODE_ENV=test`. Um patch anterior (`aaa9e17a`,
+   revertido) tinha tentado só adicionar placeholders pras vars — sintoma, não raiz; descartado.
+2. **7 testes de introspecção do próprio repo incompatíveis com o contexto de build Docker**
+   (commits `db14ee57`, `6f8cfcf2`): `env-example-sync`, `openrouter-alcance` (2 testes),
+   `voice-qa-harness-contract`, `e2e-workflow-honra-o-env`, `evidencia-citada`,
+   `n8n-inbound-contract`, `n8n-reference-workflow` — todos leem `.env.example`/`docs/`/`.git`/
+   `playwright.config.ts`, que `.dockerignore` corta de propósito do contexto de build (segredo/
+   tamanho). Novo script `test:unit:docker-build` (exclui só esses 7) e `build:docker`, usados só
+   pelo Dockerfile; `pnpm build`/`pnpm test:unit` locais e no Vercel continuam intactos, os 7 testes
+   seguem valendo lá onde `.git`/`docs`/`.env.example` existem de verdade.
+3. **`voice_calls_provider_check`/`voice_call_events_provider_check` nunca ampliados pra
+   `asterisk`** (migration `20260830190000_0133_voice_calls_provider_asterisk.sql`, commit
+   `777adb35`, aplicada em produção). `0131_voice_sip_connections` tinha ampliado só
+   `voice_phone_numbers_provider_check` — as outras duas, fechadas em `0127_voice_hardening` só com
+   `'telnyx'`, ficaram esquecidas. `/api/internal/voice/context` rejeitava o insert com erro cru de
+   Postgres, sanitizado pela rota pra mensagem genérica (`voice_context_failed` sem detalhe) — só
+   achado ao vivo, na primeira ligação real, lendo o erro real via `psql \d voice_calls`. A linha da
+   `0127` no `MANIFEST.md` estava incorreta (dizia que a `0131` já tinha ampliado essas duas) e foi
+   corrigida junto.
+
+Build Docker local confirmado verde depois dos 3 fixes: `429/429` arquivos de teste, `4077
+passed | 4 skipped`, lint limpo, `next build` compilado. Imagem `deskcomm-app:local` reconstruída
+e subida (`docker compose ... up -d app` com `APP_PULL_POLICY=never`, runbook padrão). Pós-deploy
+confirmado: `https://crm.lumenva.pt/` responde `307`, container `deskcommcrm-app-1` `healthy`,
+`/api/internal/voice/context`/`/api/internal/voice/turn` deixaram de dar `404` (passaram a `405`
+em GET, ou seja: as rotas existem agora, só rejeitam o verbo errado).
+
+**Worker SIP real subido apontado pra produção real (`https://crm.lumenva.pt`), fora do repo
+versionado** (`/opt/voice-prod-run/repo`, clone local a partir de `/root/deskcommcrm`, `main`
+atual; roda via `tsx workers/voice-sip-worker/main.mjs`, porta `8091`). Sidecar STT/TTS
+(`voice_worker_server_v12.py`, § acima) religado em `127.0.0.1:8500`. Org real usada: Lumenva
+(`2e51006a-b264-48d1-8011-a33aecbdb311`, ver [[project_lumenva_identity]] na memória), número
+`+351910293287`, `voice_sip_connections`/`voice_phone_numbers` inseridos em produção
+(`external_connection_id='lumenva-asterisk-byoc'`).
+
+**Quatro bugs reais achados e corrigidos ao vivo, ligação após ligação, um por vez, cada um só
+depois de ler log/fonte real (nunca chute) — nesta ordem:**
+
+1. `ARI_BASE_URL` configurado com `/ari` no fim (`http://127.0.0.1:8088/ari`) quando
+   `AsteriskAriConfig.baseUrl` já espera sem o sufixo — toda chamada ARI virava `/ari/ari/...`,
+   sempre `404`, não importa o canal. Erro de configuração da sessão (env var passada errada ao
+   iniciar o worker), não bug de código — corrigido restartando o worker com o valor certo.
+2. `voice_calls_provider_check`/`voice_call_events_provider_check` fechados em `'telnyx'` — item 3
+   da lista de infra acima, migration `0133`.
+3. **`asterisk-adapter.ts` passava `event.timestamp` cru do Asterisk (formato `+0000`, sem
+   dois-pontos) pro campo `occurred_at`, que `/api/internal/voice/event` valida com Zod
+   `.string().datetime()` estrito (só aceita `Z` ou `+00:00`)** — confirmado com
+   `z.string().datetime().safeParse('...+0000')` retornando `false` localmente antes do fix.
+   `recordEvent()` falhava com `validation_failed` toda ligação, matando o turno silenciosamente.
+   Corrigido normalizando na borda: `occurredAt: new Date(event.timestamp).toISOString()`
+   (commit `0484257b`). Teste unitário do arquivo (`asterisk-adapter.test.ts`, 11 testes) continua
+   verde depois do fix.
+4. **Aberto, não investigado ainda — sessão parada aqui a pedido explícito do dono ("Pare de
+   alterar. Atualize toda a documentação.").** Depois do fix #3, a chamada seguinte passou dos
+   erros anteriores e falhou com `voice_sip_event_forward_failed` / `SIP brain request failed:
+   http_500` — um erro 500 genuíno em `/api/internal/voice/context` ou `/api/internal/voice/event`
+   em produção, causa raiz ainda não lida (nem no log do worker, que só vê o código HTTP, nem no
+   log do container `deskcommcrm-app-1`, que voltou vazio pros últimos minutos testados — precisa
+   investigar onde o logger estruturado da rota realmente escreve/se o Sentry capturou algo).
+   **Toda ligação de teste até agora terminou em silêncio total (0 áudio ouvido pelo dono)** —
+   nenhum turno de Agent OS chegou a rodar de ponta a ponta ainda nesta sessão.
+
+**Processos deixados rodando na VPS ao fim desta sessão (decisão consciente, não investigado até o
+fim):** worker SIP (`/opt/voice-prod-run/repo`, `tsx workers/voice-sip-worker/main.mjs`, porta
+`8091`) e sidecar STT/TTS (`voice_worker_server_v12.py`, porta `8500`). Nenhum dos dois é serviço
+systemd — processo solto via `setsid nohup`, sobrevive ao fim da sessão SSH mas não a um reboot da
+VPS. `dialplan voicecore-test` em `/etc/asterisk/extensions.conf` (não versionado) segue
+configurado pra rotear a extensão de teste pro app Stasis. CRM de produção (container `app`)
+confirmado saudável durante todo o processo — nenhuma das mudanças de hoje derrubou o site.
+
+**Veredito desta atualização:** **CÓDIGO UNIFICADO (SIP/BYOC + RTP + Agent OS real) MERGEADO EM
+`main` E ENVIADO A `origin` / DEPLOY REAL EM PRODUÇÃO CONCLUÍDO E VERIFICADO (`307`, containers
+saudáveis, rotas de voz deixaram de ser `404`) / TRÊS BUGS DE INFRA PRÉ-EXISTENTES DO PIPELINE DE
+BUILD DOCKER ACHADOS E CORRIGIDOS NA RAIZ (NÃO SINTOMA) / QUATRO BUGS REAIS DA INTEGRAÇÃO SIP/BYOC
+ACHADOS E CORRIGIDOS UM A UM NUMA LIGAÇÃO REAL / **AINDA SEM ÁUDIO CONFIRMADO — HTTP 500 ABERTO,
+CAUSA RAIZ NÃO INVESTIGADA, PRÓXIMA SESSÃO CONTINUA DAQUI**.
