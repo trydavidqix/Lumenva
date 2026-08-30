@@ -137,22 +137,30 @@ export async function createVoiceSipWorker(env = process.env) {
     };
     activeMediaSessions.set(channelId, session);
 
+    // Exactly ONE consumer drains rtpSession.packets() for the session's
+    // whole lifetime — never a fresh iterator per turn. RtpMediaSession's
+    // internal waiters queue (lib/voice/sip/rtp-media-bridge.ts) is a plain
+    // FIFO: an abandoned `.next()` call (e.g. from racing it against a
+    // per-turn timeout with Promise.race, which never cancels the losing
+    // branch) stays registered and steals the NEXT turn's first real
+    // packet, silently dropping it. A single ongoing `for await` here means
+    // `.next()` is always eventually consumed by the same loop, so no
+    // waiter is ever abandoned. The turn boundary is a plain timer that
+    // reads-and-clears a local buffer instead of racing the iterator.
+    const inboundBuffer = [];
+    (async () => {
+      for await (const packet of rtpSession.packets()) {
+        if (stopped) break;
+        const parsed = parseRtpPacket(packet);
+        if (parsed) inboundBuffer.push(parsed.payload);
+      }
+    })().catch((error) => logError("voice_media_capture_loop_crashed", error, { channelId }));
+
     (async () => {
       while (!stopped) {
-        const captured = [];
-        const captureUntil = Date.now() + mediaListenMs;
-        const iterator = rtpSession.packets()[Symbol.asyncIterator]();
-        while (Date.now() < captureUntil && !stopped) {
-          const remaining = captureUntil - Date.now();
-          const result = await Promise.race([
-            iterator.next(),
-            new Promise((resolve) => setTimeout(() => resolve({ done: true, timedOut: true }), Math.max(remaining, 0))),
-          ]);
-          if (result.done) break;
-          const parsed = parseRtpPacket(result.value);
-          if (parsed) captured.push(parsed.payload);
-        }
+        await new Promise((resolve) => setTimeout(resolve, mediaListenMs));
         if (stopped) break;
+        const captured = inboundBuffer.splice(0, inboundBuffer.length);
         if (captured.length === 0) continue;
         try {
           const controller = new AbortController();

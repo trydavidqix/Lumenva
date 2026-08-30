@@ -151,12 +151,22 @@ function startFakeCrmServer() {
 function startFakeSidecarServer() {
   return new Promise((resolve) => {
     const requestsReceived = [];
+    // One-shot failure injection for the failure-injection scenario below —
+    // failNextRequest("/stt") makes exactly the NEXT request to that path
+    // respond 500, then clears itself so later turns succeed normally.
+    const failNext = new Set();
     const server = http.createServer((req, res) => {
       const chunks = [];
       req.on("data", (chunk) => chunks.push(chunk));
       req.on("end", () => {
         const body = Buffer.concat(chunks);
         requestsReceived.push({ path: req.url, bytes: body.length });
+        if (failNext.has(req.url)) {
+          failNext.delete(req.url);
+          res.writeHead(500, { "content-type": "application/json" });
+          res.end(JSON.stringify({ error: "injected_failure" }));
+          return;
+        }
         if (req.url === "/stt") {
           res.writeHead(200, { "content-type": "text/plain" });
           res.end("ola, preciso de ajuda");
@@ -176,9 +186,36 @@ function startFakeSidecarServer() {
     });
     server.listen(0, "127.0.0.1", () => {
       const { port } = server.address();
-      resolve({ baseUrl: `http://127.0.0.1:${port}`, requestsReceived, close: () => new Promise((r) => server.close(() => r())) });
+      resolve({
+        baseUrl: `http://127.0.0.1:${port}`,
+        requestsReceived,
+        failNextRequest: (path) => failNext.add(path),
+        close: () => new Promise((r) => server.close(() => r())),
+      });
     });
   });
+}
+
+/**
+ * Temporarily captures console.error calls whose first argument is JSON
+ * containing a given `msg` field, while still forwarding to the real
+ * console.error so smoke-test output stays visible. Used by the
+ * failure-injection scenario to prove `voice_media_turn_failed` was really
+ * logged for the injected failure, not just that the call kept running.
+ */
+function captureLoggedErrors(msg) {
+  const matches = [];
+  const original = console.error;
+  console.error = (...args) => {
+    try {
+      const parsed = typeof args[0] === "string" ? JSON.parse(args[0]) : null;
+      if (parsed && parsed.msg === msg) matches.push(parsed);
+    } catch {
+      // not JSON — not one of ours, ignore
+    }
+    original(...args);
+  };
+  return { matches, restore: () => { console.error = original; } };
 }
 
 async function httpGetJson(url) {
@@ -342,13 +379,10 @@ async function runMediaScenario() {
     if (!bridgePort) throw new Error("[smoke] expected the media bridge to call POST /ari/channels/externalMedia by now");
     console.log("[smoke] real RTP bridge is listening on port", bridgePort);
 
-    // Stand in for Asterisk: send inbound RTP with a µ-law payload during the
-    // worker's capture window. Sent twice, spaced apart, purely to survive
-    // the capture loop's own documented Promise.race timing (see main.mjs's
-    // comment on attachMedia) without this smoke test depending on exact
-    // scheduling — one landing inside a live capture window is enough.
-    rtpPeer.sendTo(bridgePort, buildFakeRtpPacket(Buffer.alloc(160, 0x02)));
-    await new Promise((r) => setTimeout(r, 150));
+    // Stand in for Asterisk: send inbound RTP with a µ-law payload. main.mjs
+    // now runs a single continuous consumer for the whole session's RTP
+    // (see attachMedia's comment), so any packet sent while the session is
+    // open lands in the next turn's capture buffer — no timing dance needed.
     rtpPeer.sendTo(bridgePort, buildFakeRtpPacket(Buffer.alloc(160, 0x02)));
 
     // Give the worker's capture window (300ms) + turn (STT -> /turn -> TTS)
@@ -410,9 +444,115 @@ async function runMediaScenario() {
   }
 }
 
+/**
+ * Proves the media loop's failure-isolation contract (attachMedia's try/catch
+ * in main.mjs): a failed turn (injected /stt 500 here) must log
+ * `voice_media_turn_failed`, must NOT tear the call down, and a subsequent
+ * turn must still process normally. Extends runMediaScenario's setup/style
+ * rather than a parallel harness.
+ */
+async function runMediaFailureScenario() {
+  const fakeAri = await startFakeAriServer();
+  const fakeCrm = await startFakeCrmServer();
+  const fakeSidecar = await startFakeSidecarServer();
+  const rtpPeer = await startFakeAsteriskRtpPeer();
+
+  const worker = await createVoiceSipWorker({
+    ARI_BASE_URL: fakeAri.baseUrl,
+    ARI_USERNAME,
+    ARI_PASSWORD,
+    ARI_APP_NAME: "voicecore-test",
+    SIP_OUTBOUND_CONTEXT: "lumenva-voice",
+    VOICE_CONTROL_PLANE_URL: fakeCrm.baseUrl,
+    INTERNAL_SECRET: "s3cret-smoke",
+    SUPABASE_DB_URL: process.env.SUPABASE_DB_URL,
+    PORT: "0",
+    VOICE_MEDIA_EXTERNAL_HOST: "127.0.0.1",
+    VOICE_MEDIA_SIDECAR_URL: fakeSidecar.baseUrl,
+    VOICE_MEDIA_LISTEN_MS: "300",
+  });
+
+  console.log("[smoke] starting a third real entrypoint instance (media failure-injection scenario)...");
+  const runPromise = worker.run();
+  const errorLogs = captureLoggedErrors("voice_media_turn_failed");
+
+  try {
+    await new Promise((r) => setTimeout(r, 300));
+
+    fakeAri.sendEvent({
+      type: "StasisStart",
+      timestamp: new Date().toISOString(),
+      channel: {
+        id: "channel-media-failure-smoke-1",
+        caller: { number: "+351911234567" },
+        connected: { number: "+351211234567" },
+        channelvars: { SIP_CONNECTION_ID: "sip-conn-abc" },
+      },
+    });
+
+    let bridgePort = null;
+    for (let attempt = 0; attempt < 20 && !bridgePort; attempt += 1) {
+      await new Promise((r) => setTimeout(r, 50));
+      bridgePort = fakeAri.getLastExternalMediaPort();
+    }
+    if (!bridgePort) throw new Error("[smoke] expected the media bridge to call POST /ari/channels/externalMedia by now");
+
+    // Turn 1: inject a /stt 500 for exactly this turn.
+    fakeSidecar.failNextRequest("/stt");
+    rtpPeer.sendTo(bridgePort, buildFakeRtpPacket(Buffer.alloc(160, 0x03)));
+    await new Promise((r) => setTimeout(r, 1000));
+
+    if (errorLogs.matches.length < 1) {
+      throw new Error("[smoke] expected voice_media_turn_failed to be logged for the injected /stt failure");
+    }
+    console.log("[smoke] injected /stt failure was logged as voice_media_turn_failed:", errorLogs.matches[0]);
+
+    // (b) call NOT torn down: healthz must still report ok, and the worker
+    // process must still be alive/consuming events (checked below via (c)).
+    const healthzPort = worker.healthzPort();
+    const health = await httpGetJson(`http://127.0.0.1:${healthzPort}/healthz`);
+    if (health.status !== 200 || health.body.status !== "ok") {
+      throw new Error(`[smoke] expected the worker to survive the injected failure and still report /healthz ok, got: ${JSON.stringify(health)}`);
+    }
+
+    // (c) a subsequent turn still processes normally — no failure injected this time.
+    rtpPeer.sendTo(bridgePort, buildFakeRtpPacket(Buffer.alloc(160, 0x03)));
+    await new Promise((r) => setTimeout(r, 1500));
+
+    const sttCalls = fakeSidecar.requestsReceived.filter((r) => r.path === "/stt");
+    const turnCalls = fakeCrm.requestsReceived.filter((r) => r.path === "/api/internal/voice/turn");
+    const ttsPacketsReceived = rtpPeer.receivedPackets.filter((packet) => {
+      const payload = packet.subarray(12);
+      return payload.length > 0 && payload.every((byte) => byte === 0xab);
+    });
+    // 2 /stt calls: the failed one + the recovered one.
+    if (sttCalls.length < 2 || turnCalls.length < 1 || ttsPacketsReceived.length < 1) {
+      throw new Error(
+        `[smoke] expected the call to recover after the injected failure — got sttCalls=${sttCalls.length} turnCalls=${turnCalls.length} ttsPacketsReceived=${ttsPacketsReceived.length}`,
+      );
+    }
+    console.log(
+      "[smoke] call survived the injected /stt failure and a later turn processed normally",
+      { sttCalls: sttCalls.length, turnCalls: turnCalls.length, ttsPacketsReceived: ttsPacketsReceived.length },
+    );
+
+    console.log("[smoke] PASS — media failure-injection scenario: one bad turn logs+continues, later turn recovers.");
+  } finally {
+    errorLogs.restore();
+    console.log("[smoke] stopping the media-failure-scenario worker (graceful shutdown)...");
+    await worker.stop("SIGTERM-smoke-media-failure");
+    await runPromise;
+    await fakeAri.close();
+    await fakeCrm.close();
+    await fakeSidecar.close();
+    await rtpPeer.close();
+  }
+}
+
 async function main() {
   await runSignalingScenario();
   await runMediaScenario();
+  await runMediaFailureScenario();
 }
 
 main()
