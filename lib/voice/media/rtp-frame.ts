@@ -13,6 +13,14 @@ export function parseRtpPacket(packet: Buffer): { payload: Buffer } | null {
 }
 
 export interface RtpPacketBuilder {
+  /**
+   * Builds an RTP packet with the given payload.
+   *
+   * **Constraint:** Payload MUST be exactly 160 bytes (PAYLOAD_STEP, 20ms @ 8kHz µ-law)
+   * for correct timestamp alignment. Timestamp increments by 160 on each call;
+   * non-standard payload sizes will cause silent drift from real-time clock.
+   * This is a faithful port of the VPS script's assumption; enforce in callers.
+   */
   build(payload: Buffer): Buffer;
 }
 
