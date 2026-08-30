@@ -981,14 +981,19 @@ git commit -m "feat(voice): liga RTP+STT+Agent OS+TTS dentro do main.mjs real"
 
 ### Task 8: Prova de aceite — ligação telefônica real (manual, na VPS)
 
-**Status em 2026-08-30: EM ANDAMENTO, não fechada.** Deploy real em produção feito e verificado;
-worker real (`main.mjs`) subido apontado pra `https://crm.lumenva.pt` real. 4 bugs achados e
-corrigidos um a um em ligações reais sucessivas (config `ARI_BASE_URL`, `voice_calls_provider_check`
-sem `asterisk`, timestamp do Asterisk quebrando Zod `.datetime()` estrito). Um 4º bug ficou aberto
-— `http_500` genuíno em `/context` ou `/event`, causa raiz não lida ainda — e a sessão parou aqui a
-pedido explícito do dono ("Pare de alterar. Atualize toda a documentação."). **Nenhuma ligação até
-agora produziu áudio.** Detalhe completo: `docs/current-state.md` §11 "Atualização 2026-08-30" e
-memória `project_voice_core.md`. Retomar aqui na próxima sessão, não repetir os 4 fixes já feitos.
+**Status em 2026-08-30: TECNICAMENTE PROVADA — áudio real confirmado ao vivo pelo dono.** Deploy
+real em produção feito e verificado; worker real (`main.mjs`) rodando apontado pra
+`https://crm.lumenva.pt` real, com mídia habilitada. 8 bugs reais achados e corrigidos um a um em
+ligações reais sucessivas: `ARI_BASE_URL` com `/ari` duplicado (config), `voice_calls_provider_check`
+sem `asterisk` (migration 0133), timestamp do Asterisk quebrando Zod `.datetime()` estrito
+(commit 0484257b), coluna `payload`→`attributes` + `provider='lumenva'` hardcoded em
+`/api/internal/voice/event` (commits 3af01c58/872a4a63), `VOICE_MEDIA_EXTERNAL_HOST` faltando na
+config do worker (mídia nunca rodava), e firewall de nuvem da Hetzner sem regra pra faixa RTP real
+(UDP 10000-20000 — adicionada via console web). Ligação de ~25s sem nenhum erro no log,
+áudio ouvido ao vivo. Detalhe completo: `docs/current-state.md` §11 "Atualização 2026-08-30" e
+memória `project_voice_core.md`. **Falta só:** escrever `docs/evidence/voice-agent-os-real-call-2026-08-30.md`
+formal, decidir destino dos processos manuais (systemd vs desligar), e medir qualidade/latência
+real do turno (hoje só confirmado "funcionou", não "quão bem").
 
 Não automatizável neste harness — é a mesma classe de prova que já validou a versão ad-hoc
 (`docs/evidence/voice-vps-real-call-bridge-2026-08-28.md`), agora usando `main.mjs` real em vez
