@@ -31,6 +31,7 @@ from pipecat.processors.aggregators.llm_response_universal import (
     LLMUserAggregatorParams,
 )
 from pipecat.services.openai.realtime.llm import OpenAIRealtimeLLMService
+from pipecat.services.openai.realtime import events
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from pipecat_asterisk import AsteriskWebsocketTransport
 from pipecat_asterisk.transport.flow_controller import FlowController
@@ -84,9 +85,19 @@ class SidecarPiperFallbackProcessor(FrameProcessor):
 
 async def run_bot(websocket: WebSocket) -> None:
     transport = AsteriskWebsocketTransport(websocket=websocket)
+    turn_detection = events.TurnDetection(
+        threshold=0.68,
+        prefix_padding_ms=300,
+        silence_duration_ms=750,
+    )
     llm = OpenAIRealtimeLLMService(
         api_key=os.environ["OPENAI_API_KEY"],
         model=os.getenv("OPENAI_REALTIME_MODEL", "gpt-realtime"),
+        session_properties=events.SessionProperties(
+            audio=events.AudioConfiguration(
+                input=events.AudioInput(turn_detection=turn_detection)
+            )
+        ),
     )
 
     # Keep an auditable, secret-free trace of the Realtime protocol while
@@ -98,6 +109,24 @@ async def run_bot(websocket: WebSocket) -> None:
         return await original_ws_send(message)
 
     llm._ws_send = traced_ws_send
+    greeting_text = "Boa tarde! Em que posso te ajudar?"
+    greeting_pending = True
+    original_send_client_event = llm.send_client_event
+
+    async def send_client_event_with_greeting(event):
+        nonlocal greeting_pending
+        if greeting_pending and isinstance(event, events.ResponseCreateEvent):
+            greeting_pending = False
+            event.response = events.ResponseProperties(
+                output_modalities=["audio"],
+                instructions=(
+                    "Diga exatamente, palavra por palavra, sem adicionar nada: "
+                    f"{greeting_text}"
+                ),
+            )
+        return await original_send_client_event(event)
+
+    llm.send_client_event = send_client_event_with_greeting
     for handler_name in (
         "_handle_evt_session_created",
         "_handle_evt_session_updated",
