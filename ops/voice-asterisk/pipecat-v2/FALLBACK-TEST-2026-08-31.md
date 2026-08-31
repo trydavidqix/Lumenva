@@ -57,3 +57,11 @@ audio_bytes 113920
 ```
 
 O áudio de saída correspondeu a uma única saudação. Os traces mostraram exatamente um ciclo `response.done`, 11 deltas de transcript (`Olá! Bem-vindo! Como posso ajudar hoje?`) e nenhum `input_audio_buffer.speech_started`/`speech_stopped`, nenhum `response.create` adicional e nenhum erro. Portanto, o modelo não iniciou uma conversa repetida sozinho em silêncio verdadeiro. Ainda não é possível descartar falso positivo de VAD causado pelo áudio RTP real; esse é o próximo teste isolado, com ruído controlado.
+
+## Hipótese 2 — ruído baixo/comfort noise
+
+Foram abertas três sessões sintéticas, sem fala, com ruído PCM uniforme limitado a amplitudes ±30, ±120 e ±300, durante 10 segundos cada. O cliente aguardou o encerramento de cada saudação antes de fechar a sessão.
+
+Em conjunto, os traces mostraram três `session.created`, três `response.done` e três `response.output_audio.done`: exatamente uma resposta por sessão, correspondente à saudação proativa. Não apareceu qualquer `input_audio_buffer.speech_started`, `input_audio_buffer.speech_stopped` ou `response.create` adicional.
+
+Conclusão: falso positivo do `server_vad` não foi reproduzido com os níveis de comfort noise testados. Não foi aplicado threshold local nem outro terceiro fix. O comportamento observado pelo dono continua sem causa confirmada e requer captura/medição do RTP real de uma chamada antes de qualquer mitigação.
