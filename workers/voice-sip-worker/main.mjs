@@ -30,8 +30,11 @@
 //                              var is what turns media on.
 //   VOICE_MEDIA_SIDECAR_URL    base URL of the Python STT/TTS sidecar. Default http://127.0.0.1:8500
 //                              (same port already proven against the real sidecar).
-//   VOICE_MEDIA_LISTEN_MS     how long each capture window listens for RTP before running a
-//                              turn. Default 4000 (same value already proven).
+//   VOICE_MEDIA_LISTEN_MS     deprecated compatibility knob; turn boundaries now use RTP
+//                              activity followed by trailing silence.
+//   VOICE_GREETING_TEXT       spoken immediately on answer, before the first listen window —
+//                              default "Boa tarde! Em que posso te ajudar?". Set empty string
+//                              to disable (silence until the caller speaks, old behavior).
 //
 // Deliberate deviation from workers/voice-worker/README.md's "the worker
 // has no database credentials" principle: this process DOES read
@@ -58,6 +61,7 @@ import { createAsteriskRtpMediaBridge } from "../../lib/voice/sip/rtp-media-brid
 import { createSidecarSpeechAdapter } from "../../lib/voice/media/sidecar-speech-adapter.ts";
 import { createContinuousSender } from "../../lib/voice/media/continuous-sender.ts";
 import { createRtpPacketBuilder, parseRtpPacket } from "../../lib/voice/media/rtp-frame.ts";
+import { createVoiceActivitySegmenter } from "./voice-activity.mjs";
 
 function log(msg, fields = {}) {
   console.info(JSON.stringify({ msg, at: new Date().toISOString(), ...fields }));
@@ -108,7 +112,7 @@ export async function createVoiceSipWorker(env = process.env) {
   // signaling-only, exactly as before this slice.
   const mediaEnabled = Boolean(env.VOICE_MEDIA_EXTERNAL_HOST);
   const mediaSidecarUrl = env.VOICE_MEDIA_SIDECAR_URL ?? "http://127.0.0.1:8500";
-  const mediaListenMs = Number(env.VOICE_MEDIA_LISTEN_MS ?? "4000");
+  const greetingText = env.VOICE_GREETING_TEXT ?? "Boa tarde! Em que posso te ajudar?";
   const speech = mediaEnabled ? createSidecarSpeechAdapter({ baseUrl: mediaSidecarUrl }) : null;
   const rtpBridge = mediaEnabled
     ? createAsteriskRtpMediaBridge({ ari: connection, appName: ariAppName, advertisedHost: env.VOICE_MEDIA_EXTERNAL_HOST })
@@ -137,6 +141,36 @@ export async function createVoiceSipWorker(env = process.env) {
     };
     activeMediaSessions.set(channelId, session);
 
+    // Saudação proativa: toca ANTES do primeiro turno normal (STT->kernel->TTS),
+    // pra não deixar o chamador em silêncio esperando a primeira janela de
+    // escuta + turno completo (que sozinho já passa de 5-8s pelos logs reais
+    // do primeiro turno). Roda em paralelo ao capture loop abaixo — não
+    // bloqueia nem consome do inboundBuffer, só usa o mesmo `sender`.
+    if (greetingText.trim()) {
+      (async () => {
+        try {
+          const startedAt = Date.now();
+          log("voice_media_greeting_started", { channelId, voiceCallId, textChars: greetingText.length });
+          const greetingController = new AbortController();
+          const playback = await speech.tts.synthesize(greetingText, { locale: "pt-PT", signal: greetingController.signal });
+          let firstFrame = true;
+          for await (const frame of playback.audio) {
+            if (stopped) break;
+            if (firstFrame) {
+              firstFrame = false;
+              log("voice_media_greeting_first_frame", { channelId, voiceCallId, elapsedMs: Date.now() - startedAt, bytes: frame.data.length });
+            }
+            sender.enqueue(Buffer.from(frame.data));
+          }
+          log("voice_media_greeting_finished", { channelId, voiceCallId, elapsedMs: Date.now() - startedAt });
+        } catch (error) {
+          // Mesma filosofia do resto do worker: falha na saudação não derruba
+          // a ligação — o fluxo normal de turno (abaixo) segue funcionando.
+          logError("voice_media_greeting_failed", error, { channelId, voiceCallId });
+        }
+      })();
+    }
+
     // Exactly ONE consumer drains rtpSession.packets() for the session's
     // whole lifetime — never a fresh iterator per turn. RtpMediaSession's
     // internal waiters queue (lib/voice/sip/rtp-media-bridge.ts) is a plain
@@ -145,24 +179,64 @@ export async function createVoiceSipWorker(env = process.env) {
     // branch) stays registered and steals the NEXT turn's first real
     // packet, silently dropping it. A single ongoing `for await` here means
     // `.next()` is always eventually consumed by the same loop, so no
-    // waiter is ever abandoned. The turn boundary is a plain timer that
-    // reads-and-clears a local buffer instead of racing the iterator.
-    const inboundBuffer = [];
+    // waiter is ever abandoned. The turn boundary is VAD-driven: it closes
+    // only after enough trailing RTP silence.
+    const segmenter = createVoiceActivitySegmenter({
+      frameMs: 20,
+      minSpeechMs: 180,
+      endSilenceMs: 420,
+      preRollMs: 160,
+    });
+    const readySegments = [];
+    const segmentWaiters = [];
+    let accepting = true;
+    function enqueueSegment(segment) {
+      const waiter = segmentWaiters.shift();
+      if (waiter) waiter(segment);
+      else readySegments.push(segment);
+      log("voice_media_segment_ready", { channelId, voiceCallId, capturedPackets: segment.length });
+    }
     (async () => {
       for await (const packet of rtpSession.packets()) {
         if (stopped) break;
         const parsed = parseRtpPacket(packet);
-        if (parsed) inboundBuffer.push(parsed.payload);
+        if (parsed) {
+          if (accepting) {
+            const segment = segmenter.push(parsed.payload);
+            if (segment) enqueueSegment(segment);
+          }
+        }
       }
+      const finalSegment = segmenter.flush();
+      if (finalSegment) enqueueSegment(finalSegment);
     })().catch((error) => logError("voice_media_capture_loop_crashed", error, { channelId }));
 
     (async () => {
       while (!stopped) {
-        await new Promise((resolve) => setTimeout(resolve, mediaListenMs));
-        if (stopped) break;
-        const captured = inboundBuffer.splice(0, inboundBuffer.length);
-        if (captured.length === 0) continue;
+        const captured = readySegments.length
+          ? readySegments.shift()
+          : await new Promise((resolve) => segmentWaiters.push(resolve));
+        if (stopped || !captured) break;
         try {
+          accepting = false;
+          segmenter.reset();
+          readySegments.length = 0;
+          const windowEndedAt = Date.now();
+          const payloadBytes = captured.reduce((total, payload) => total + payload.length, 0);
+          const variedBytes = captured.reduce(
+            (total, payload) => total + [...payload].filter((byte) => byte !== 0x7f && byte !== 0xff).length,
+            0,
+          );
+          const uniqueBytes = new Set(captured.flatMap((payload) => [...payload])).size;
+          log("voice_media_window_ready", {
+            channelId,
+            voiceCallId,
+            capturedPackets: captured.length,
+            payloadBytes,
+            variedBytes,
+            uniqueBytes,
+            segmentEndedAt: new Date(windowEndedAt).toISOString(),
+          });
           const controller = new AbortController();
           async function* asFrames() {
             for (const payload of captured) {
@@ -170,22 +244,43 @@ export async function createVoiceSipWorker(env = process.env) {
             }
           }
           let heardText = "";
+          const sttStartedAt = Date.now();
+          log("voice_media_stt_started", { channelId, voiceCallId });
           for await (const event of speech.stt.transcribe(asFrames(), { locale: "pt-PT", signal: controller.signal })) {
             if (event.type === "final") heardText = event.text;
           }
+          log("voice_media_stt_finished", { channelId, voiceCallId, elapsedMs: Date.now() - sttStartedAt, textChars: heardText.length });
           if (!heardText.trim()) continue;
+          const turnStartedAt = Date.now();
+          log("voice_media_turn_started", { channelId, voiceCallId, textChars: heardText.length });
           const turnResult = await brainClient.runTurn({
             voice_call_id: voiceCallId,
             technical_phone_e164: technicalPhoneE164,
             transcript: heardText,
           });
+          log("voice_media_turn_finished", {
+            channelId,
+            voiceCallId,
+            elapsedMs: Date.now() - turnStartedAt,
+            kind: turnResult.kind,
+            ...(typeof turnResult.agentId === "string" ? { agentId: turnResult.agentId } : {}),
+            ...(typeof turnResult.reason === "string" ? { reason: turnResult.reason } : {}),
+          });
           const replyText = turnResult.kind === "reply"
             ? turnResult.text
             : "Desculpe, não posso ajudar com isso agora.";
+          const ttsStartedAt = Date.now();
+          log("voice_media_tts_started", { channelId, voiceCallId, textChars: replyText.length });
           const playback = await speech.tts.synthesize(replyText, { locale: "pt-PT", signal: controller.signal });
+          let firstFrame = true;
           for await (const frame of playback.audio) {
+            if (firstFrame) {
+              firstFrame = false;
+              log("voice_media_tts_first_frame", { channelId, voiceCallId, elapsedMs: Date.now() - ttsStartedAt, bytes: frame.data.length });
+            }
             sender.enqueue(Buffer.from(frame.data));
           }
+          log("voice_media_tts_finished", { channelId, voiceCallId, elapsedMs: Date.now() - ttsStartedAt });
         } catch (error) {
           // Same availability philosophy as the rest of the worker: one
           // failed turn must never take down the call nor the process.
@@ -200,6 +295,9 @@ export async function createVoiceSipWorker(env = process.env) {
           // this is too bad a UX, that's a follow-up — not a reason to
           // reopen this task without measuring first.
           logError("voice_media_turn_failed", error, { channelId, voiceCallId });
+        } finally {
+          accepting = true;
+          segmenter.reset();
         }
       }
     })().catch((error) => logError("voice_media_loop_crashed", error, { channelId }));
@@ -238,6 +336,23 @@ export async function createVoiceSipWorker(env = process.env) {
       if (stopped) break;
       if (result.status === "rejected") {
         rejectedEvents += 1;
+        // Asterisk can destroy a channel before ARI REST can hydrate
+        // SIP_CONNECTION_ID. In that race the listener rejects the
+        // terminal event, but the media session still must be detached;
+        // otherwise every test call leaks an RTP socket and keeps feeding
+        // silence/STT work after hangup.
+        const raw = result.raw;
+        const rawType = raw && typeof raw === "object" && "type" in raw ? raw.type : null;
+        const rawChannelId = raw && typeof raw === "object" && "channel" in raw && raw.channel && typeof raw.channel === "object" && "id" in raw.channel
+          ? raw.channel.id
+          : null;
+        if (
+          (rawType === "StasisEnd" || rawType === "ChannelHangupRequest") &&
+          typeof rawChannelId === "string"
+        ) {
+          const session = activeMediaSessions.get(rawChannelId);
+          if (session) await session.detach().catch((error) => logError("voice_media_detach_failed", error, { channelId: rawChannelId }));
+        }
         logError("voice_sip_event_rejected", result.error, { raw: result.raw });
         continue;
       }
