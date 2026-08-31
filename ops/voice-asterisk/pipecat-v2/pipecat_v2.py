@@ -109,10 +109,11 @@ class SidecarPiperFallbackProcessor(FrameProcessor):
 
 async def run_bot(websocket: WebSocket) -> None:
     transport = AsteriskWebsocketTransport(websocket=websocket)
-    turn_detection = events.TurnDetection(
-        threshold=0.68,
-        prefix_padding_ms=300,
-        silence_duration_ms=750,
+    turn_detection = events.SemanticTurnDetection(
+        type="semantic_vad",
+        eagerness="low",
+        create_response=True,
+        interrupt_response=False,
     )
     llm = OpenAIRealtimeLLMService(
         api_key=os.environ["OPENAI_API_KEY"],
