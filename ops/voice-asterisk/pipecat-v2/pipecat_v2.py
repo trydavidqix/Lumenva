@@ -62,6 +62,9 @@ class SidecarPiperFallbackProcessor(FrameProcessor):
         return pcm16
 
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
+        # Preserve FrameProcessor lifecycle handling (especially StartFrame and
+        # interruption/cancel state) before forwarding ordinary pipeline frames.
+        await super().process_frame(frame, direction)
         logger.debug("fallback_processor_frame type={}", type(frame).__name__)
         if not isinstance(frame, TTSSpeakFrame):
             await self.push_frame(frame, direction)
