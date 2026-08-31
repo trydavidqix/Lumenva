@@ -83,6 +83,12 @@ response.create adicional: 0
 
 O eco foi totalmente impedido de iniciar um novo turno Realtime. A produção não foi alterada.
 
+## Semantic VAD — teste de eco residual 2026-08-31
+
+Context7 confirmou que o Pipecat expõe `SemanticTurnDetection` com `type="semantic_vad"` e `eagerness` válido em `low`, `medium`, `high` ou `auto`; `create_response` e `interrupt_response` controlam criação automática e interrupção. Foi escolhido `eagerness="low"`, `create_response=True` e `interrupt_response=False` para esperar fala real e não interromper o bot.
+
+Teste sintético: enquanto a saudação era reproduzida, foram enviados vários segundos de ruído residual ±300 e cada frame de saída foi reenviado como eco. Resultado: 8 frames de saída ecoados, uma única resposta/saudação, zero `input_audio_buffer.speech_started`, zero `input_audio_buffer.speech_stopped`, zero `response.create` adicional e zero erros.
+
 ## Mitigação VAD e saudação literal — teste 2026-08-31
 
 Foi configurado `server_vad` na sessão Realtime com `threshold=0.68`, `prefix_padding_ms=300` e `silence_duration_ms=750`. A saudação inicial passou a interceptar o primeiro `response.create` e incluir `response.instructions` explícito: `Diga exatamente, palavra por palavra, sem adicionar nada: Boa tarde! Em que posso te ajudar?`.
