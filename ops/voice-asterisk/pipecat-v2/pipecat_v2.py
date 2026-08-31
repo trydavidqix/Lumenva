@@ -14,7 +14,14 @@ import aiohttp
 import uvicorn
 from fastapi import FastAPI, WebSocket
 from loguru import logger
-from pipecat.frames.frames import LLMRunFrame, TTSSpeakFrame
+from pipecat.frames.frames import (
+    Frame,
+    LLMRunFrame,
+    TTSAudioRawFrame,
+    TTSSpeakFrame,
+    TTSStartedFrame,
+    TTSStoppedFrame,
+)
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
@@ -24,9 +31,9 @@ from pipecat.processors.aggregators.llm_response_universal import (
     LLMUserAggregatorParams,
 )
 from pipecat.services.openai.realtime.llm import OpenAIRealtimeLLMService
-from pipecat.services.settings import TTSSettings
-from pipecat.services.tts_service import TTSService
+from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from pipecat_asterisk import AsteriskWebsocketTransport
+from pipecat_asterisk.transport.flow_controller import FlowController
 
 
 logger.remove()
@@ -34,40 +41,42 @@ logger.add(sys.stderr, level=os.getenv("PIPECAT_LOG_LEVEL", "INFO"))
 app = FastAPI()
 
 
-class SidecarPiperTTSService(TTSService):
-    """Use the already-proven local Piper sidecar without downloading a model."""
+class SidecarPiperFallbackProcessor(FrameProcessor):
+    """Synthesize only fallback frames through the already-running Piper sidecar."""
 
     def __init__(self, base_url: str) -> None:
-        super().__init__(
-            push_start_frame=True,
-            push_stop_frames=True,
-            sample_rate=16000,
-            settings=TTSSettings(model=None, voice=None, language=None),
-        )
+        super().__init__()
         self.base_url = base_url.rstrip("/")
 
-    async def run_tts(self, text: str, context_id: str) -> AsyncGenerator:
+    async def synthesize(self, text: str) -> bytes:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.base_url}/speak",
+                data=text.encode("utf-8"),
+                timeout=aiohttp.ClientTimeout(total=15),
+            ) as response:
+                response.raise_for_status()
+                ulaw = await response.read()
+        pcm8 = audioop.ulaw2lin(ulaw, 2)
+        pcm16, _ = audioop.ratecv(pcm8, 2, 1, 8000, 16000, None)
+        return pcm16
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
+        logger.debug("fallback_processor_frame type={}", type(frame).__name__)
+        if not isinstance(frame, TTSSpeakFrame):
+            await self.push_frame(frame, direction)
+            return
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    f"{self.base_url}/speak",
-                    data=text.encode("utf-8"),
-                    timeout=aiohttp.ClientTimeout(total=15),
-                ) as response:
-                    response.raise_for_status()
-                    ulaw = await response.read()
-            pcm8 = audioop.ulaw2lin(ulaw, 2)
-
-            async def chunks() -> AsyncIterator[bytes]:
-                yield pcm8
-
-            async for frame in self._stream_audio_frames_from_iterator(
-                chunks(), in_sample_rate=8000, context_id=context_id
-            ):
-                yield frame
+            pcm16 = await self.synthesize(frame.text)
+            await self.push_frame(TTSStartedFrame(), direction)
+            await self.push_frame(
+                TTSAudioRawFrame(audio=pcm16, sample_rate=16000, num_channels=1), direction
+            )
+            await self.push_frame(TTSStoppedFrame(), direction)
+            logger.info("sidecar_piper_fallback_audio bytes={}", len(pcm16))
         except Exception as exc:
             logger.error("sidecar_piper_error type={} message={}", type(exc).__name__, str(exc))
-            raise
+            await self.push_frame(frame, direction)
 
 
 async def run_bot(websocket: WebSocket) -> None:
@@ -92,7 +101,7 @@ async def run_bot(websocket: WebSocket) -> None:
         context,
         user_params=LLMUserAggregatorParams(),
     )
-    fallback_tts = SidecarPiperTTSService(
+    fallback_tts = SidecarPiperFallbackProcessor(
         os.getenv("PIPER_SIDECAR_URL", "http://127.0.0.1:8500")
     )
     pipeline = Pipeline(
@@ -118,7 +127,35 @@ async def run_bot(websocket: WebSocket) -> None:
             return
         fallback_sent = True
         logger.warning("openai_fallback_queued reason={}", reason)
-        await task.queue_frame(TTSSpeakFrame("Desculpe, não posso ajudar com isso agora."))
+        # Let the ErrorFrame finish propagating before injecting the fallback
+        # into the task's downstream queue; this keeps normal transport ordering.
+        async def inject() -> None:
+            await asyncio.sleep(0.1)
+            # AsteriskWebsocketOutputTransport creates its flow controller only
+            # after MEDIA_START has been consumed.  Realtime failures can arrive
+            # first (for example, an invalid model error), so wait briefly for
+            # that negotiated media state before emitting audio.
+            deadline = asyncio.get_running_loop().time() + 3.0
+            while transport._output._flow_controller is None:
+                if asyncio.get_running_loop().time() >= deadline:
+                    transport._output._flow_controller = FlowController(
+                        20, 640, transport._output._client
+                    )
+                    logger.warning("sidecar_piper_fallback_output_default_media")
+                    break
+                await asyncio.sleep(0.05)
+            fallback_frame = TTSSpeakFrame(
+                text="Desculpe, não posso ajudar com isso agora."
+            )
+            pcm16 = await fallback_tts.synthesize(fallback_frame.text)
+            await transport._output.write_audio_frame(
+                TTSAudioRawFrame(
+                    audio=pcm16, sample_rate=16000, num_channels=1
+                )
+            )
+            logger.info("sidecar_piper_fallback_audio bytes={}", len(pcm16))
+
+        asyncio.create_task(inject())
 
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client) -> None:
@@ -151,12 +188,9 @@ async def run_bot(websocket: WebSocket) -> None:
     # OpenAI errors are surfaced by the Realtime receive task.  Queue the same
     # short recovery utterance used by the legacy worker; a TTS service can
     # consume TTSSpeakFrame without coupling fallback logic to the transport.
-    original_error = llm._handle_evt_error
-
     async def handle_openai_error(event) -> None:
         logger.error("openai_realtime_error code={} message={}", event.error.code, event.error.message)
         await queue_fallback("realtime_error")
-        await original_error(event)
 
     llm._handle_evt_error = handle_openai_error
 
