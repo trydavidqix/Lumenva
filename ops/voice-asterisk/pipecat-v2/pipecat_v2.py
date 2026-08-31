@@ -5,9 +5,12 @@ the production voice worker; hardening and failure fallback are tracked in Phase
 """
 
 import asyncio
+import audioop
 import os
 import sys
+from collections.abc import AsyncGenerator, AsyncIterator
 
+import aiohttp
 import uvicorn
 from fastapi import FastAPI, WebSocket
 from loguru import logger
@@ -21,12 +24,50 @@ from pipecat.processors.aggregators.llm_response_universal import (
     LLMUserAggregatorParams,
 )
 from pipecat.services.openai.realtime.llm import OpenAIRealtimeLLMService
+from pipecat.services.settings import TTSSettings
+from pipecat.services.tts_service import TTSService
 from pipecat_asterisk import AsteriskWebsocketTransport
 
 
 logger.remove()
 logger.add(sys.stderr, level=os.getenv("PIPECAT_LOG_LEVEL", "INFO"))
 app = FastAPI()
+
+
+class SidecarPiperTTSService(TTSService):
+    """Use the already-proven local Piper sidecar without downloading a model."""
+
+    def __init__(self, base_url: str) -> None:
+        super().__init__(
+            push_start_frame=True,
+            push_stop_frames=True,
+            sample_rate=16000,
+            settings=TTSSettings(model=None, voice=None, language=None),
+        )
+        self.base_url = base_url.rstrip("/")
+
+    async def run_tts(self, text: str, context_id: str) -> AsyncGenerator:
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{self.base_url}/speak",
+                    data=text.encode("utf-8"),
+                    timeout=aiohttp.ClientTimeout(total=15),
+                ) as response:
+                    response.raise_for_status()
+                    ulaw = await response.read()
+            pcm8 = audioop.ulaw2lin(ulaw, 2)
+
+            async def chunks() -> AsyncIterator[bytes]:
+                yield pcm8
+
+            async for frame in self._stream_audio_frames_from_iterator(
+                chunks(), in_sample_rate=8000, context_id=context_id
+            ):
+                yield frame
+        except Exception as exc:
+            logger.error("sidecar_piper_error type={} message={}", type(exc).__name__, str(exc))
+            raise
 
 
 async def run_bot(websocket: WebSocket) -> None:
@@ -51,8 +92,18 @@ async def run_bot(websocket: WebSocket) -> None:
         context,
         user_params=LLMUserAggregatorParams(),
     )
+    fallback_tts = SidecarPiperTTSService(
+        os.getenv("PIPER_SIDECAR_URL", "http://127.0.0.1:8500")
+    )
     pipeline = Pipeline(
-        [transport.input(), user_aggregator, llm, transport.output(), assistant_aggregator]
+        [
+            transport.input(),
+            user_aggregator,
+            llm,
+            fallback_tts,
+            transport.output(),
+            assistant_aggregator,
+        ]
     )
     task = PipelineTask(
         pipeline,
