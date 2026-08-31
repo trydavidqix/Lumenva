@@ -83,6 +83,12 @@ response.create adicional: 0
 
 O eco foi totalmente impedido de iniciar um novo turno Realtime. A produção não foi alterada.
 
+## Cooldown de 3 segundos — reprodução do atraso real
+
+O `EchoSuppressor` foi aumentado de 800 ms para 3000 ms, cobrindo os atrasos de 1,52 s e 2,24 s medidos na captura SIP. No teste sintético, cada frame da saudação foi reenviado como eco exatamente 2 segundos depois de ser recebido, enquanto ruído residual baixo continuava no input.
+
+Resultado: 7 frames de eco agendados, uma única resposta (saudação), zero `input_audio_buffer.speech_started`, zero `input_audio_buffer.speech_stopped`, zero `response.create` adicional e zero erros. O eco dentro da janela de 3 segundos não abriu novo turno.
+
 ## Semantic VAD — teste de eco residual 2026-08-31
 
 Context7 confirmou que o Pipecat expõe `SemanticTurnDetection` com `type="semantic_vad"` e `eagerness` válido em `low`, `medium`, `high` ou `auto`; `create_response` e `interrupt_response` controlam criação automática e interrupção. Foi escolhido `eagerness="low"`, `create_response=True` e `interrupt_response=False` para esperar fala real e não interromper o bot.
