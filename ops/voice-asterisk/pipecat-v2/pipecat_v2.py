@@ -16,6 +16,7 @@ from fastapi import FastAPI, WebSocket
 from loguru import logger
 from pipecat.frames.frames import (
     Frame,
+    InputAudioRawFrame,
     LLMRunFrame,
     TTSAudioRawFrame,
     TTSSpeakFrame,
@@ -25,6 +26,7 @@ from pipecat.frames.frames import (
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
+from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.aggregators.llm_response_universal import (
     LLMContextAggregatorPair,
@@ -32,7 +34,7 @@ from pipecat.processors.aggregators.llm_response_universal import (
 )
 from pipecat.services.openai.realtime.llm import OpenAIRealtimeLLMService
 from pipecat.services.openai.realtime import events
-from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
+from pipecat.turns.user_mute import AlwaysUserMuteStrategy
 from pipecat_asterisk import AsteriskWebsocketTransport
 from pipecat_asterisk.transport.flow_controller import FlowController
 
@@ -40,6 +42,28 @@ from pipecat_asterisk.transport.flow_controller import FlowController
 logger.remove()
 logger.add(sys.stderr, level=os.getenv("PIPECAT_LOG_LEVEL", "INFO"))
 app = FastAPI()
+
+
+class EchoSuppressor(FrameProcessor):
+    """Drop microphone frames while response audio can still echo back."""
+
+    def __init__(self, grace_ms: int = 800) -> None:
+        super().__init__()
+        self._mute_until = 0.0
+        self._grace_seconds = grace_ms / 1000
+
+    def bot_audio_started(self) -> None:
+        self._mute_until = float("inf")
+
+    def bot_audio_finished(self) -> None:
+        self._mute_until = asyncio.get_running_loop().time() + self._grace_seconds
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
+        await super().process_frame(frame, direction)
+        if isinstance(frame, InputAudioRawFrame) and asyncio.get_running_loop().time() < self._mute_until:
+            logger.debug("echo_suppressor_drop_audio bytes={}", len(frame.audio))
+            return
+        await self.push_frame(frame, direction)
 
 
 class SidecarPiperFallbackProcessor(FrameProcessor):
@@ -99,6 +123,7 @@ async def run_bot(websocket: WebSocket) -> None:
             )
         ),
     )
+    echo_suppressor = EchoSuppressor(grace_ms=800)
 
     # Keep an auditable, secret-free trace of the Realtime protocol while
     # diagnosing turn-taking.  Payload bodies/audio are intentionally omitted.
@@ -145,6 +170,10 @@ async def run_bot(websocket: WebSocket) -> None:
         original_handler = getattr(llm, handler_name)
 
         async def traced_handler(event, _handler=original_handler, _name=handler_name):
+            if event.type == "response.output_audio.delta":
+                echo_suppressor.bot_audio_started()
+            elif event.type == "response.output_audio.done":
+                echo_suppressor.bot_audio_finished()
             detail = ""
             if event.type in {
                 "response.output_text.delta",
@@ -170,7 +199,9 @@ async def run_bot(websocket: WebSocket) -> None:
     )
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
         context,
-        user_params=LLMUserAggregatorParams(),
+        user_params=LLMUserAggregatorParams(
+            user_mute_strategies=[AlwaysUserMuteStrategy()]
+        ),
     )
     fallback_tts = SidecarPiperFallbackProcessor(
         os.getenv("PIPER_SIDECAR_URL", "http://127.0.0.1:8500")
@@ -178,6 +209,7 @@ async def run_bot(websocket: WebSocket) -> None:
     pipeline = Pipeline(
         [
             transport.input(),
+            echo_suppressor,
             user_aggregator,
             llm,
             fallback_tts,

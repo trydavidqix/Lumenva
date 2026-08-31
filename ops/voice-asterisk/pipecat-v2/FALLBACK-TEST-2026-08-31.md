@@ -66,6 +66,23 @@ Em conjunto, os traces mostraram três `session.created`, três `response.done` 
 
 Conclusão: falso positivo do `server_vad` não foi reproduzido com os níveis de comfort noise testados. Não foi aplicado threshold local nem outro terceiro fix. O comportamento observado pelo dono continua sem causa confirmada e requer captura/medição do RTP real de uma chamada antes de qualquer mitigação.
 
+## Supressão de eco durante fala do bot — teste 2026-08-31
+
+O Context7/documentação oficial do Pipecat recomenda `AlwaysUserMuteStrategy` em `LLMUserAggregatorParams` para suprimir entrada do utilizador enquanto o bot fala. Como o teste anterior ainda permitiu um `speech_started` no eco tardio, foi acrescentado também um `EchoSuppressor` local: descarta `InputAudioRawFrame` durante deltas de áudio do bot e por 800 ms após `response.output_audio.done`.
+
+Teste sintético: a saudação foi reproduzida e cada frame de áudio de saída foi imediatamente reenviado como entrada (eco), sem qualquer fala do utilizador.
+
+```text
+greeting_echo_output_frames 8
+echoed 8
+response.done: 1
+input_audio_buffer.speech_started: 0
+input_audio_buffer.speech_stopped: 0
+response.create adicional: 0
+```
+
+O eco foi totalmente impedido de iniciar um novo turno Realtime. A produção não foi alterada.
+
 ## Mitigação VAD e saudação literal — teste 2026-08-31
 
 Foi configurado `server_vad` na sessão Realtime com `threshold=0.68`, `prefix_padding_ms=300` e `silence_duration_ms=750`. A saudação inicial passou a interceptar o primeiro `response.create` e incluir `response.instructions` explícito: `Diga exatamente, palavra por palavra, sem adicionar nada: Boa tarde! Em que posso te ajudar?`.
