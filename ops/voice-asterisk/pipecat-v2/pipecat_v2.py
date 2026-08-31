@@ -120,7 +120,16 @@ async def run_bot(websocket: WebSocket) -> None:
         model=os.getenv("OPENAI_REALTIME_MODEL", "gpt-realtime"),
         session_properties=events.SessionProperties(
             audio=events.AudioConfiguration(
-                input=events.AudioInput(turn_detection=turn_detection)
+                input=events.AudioInput(
+                    transcription=events.InputAudioTranscription(
+                        language="pt",
+                        prompt=(
+                            "Conversa em português do Brasil, atendimento ao cliente. "
+                            "Termos comuns: suporte, atendimento, problema, conta, pedido."
+                        ),
+                    ),
+                    turn_detection=turn_detection,
+                )
             )
         ),
     )
