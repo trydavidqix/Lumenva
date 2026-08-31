@@ -43,3 +43,17 @@ nonzero 274379
 O log confirmou `pipeline_client_connected`, `MEDIA_START` válido (`slin16`, 20 ms, 640 bytes) e `pipeline_client_disconnected`, sem erros nem mensagens `Trying to process ... StartFrame not received`. O payload de saída inclui a saudação proativa e as respostas geradas pela OpenAI Realtime; a medição demonstra que áudio real continuou a sair pelo transporte depois da introdução do fallback Piper.
 
 Memória no fim: `MemAvailable=1.2GiB`. O processo de teste e a chave temporária foram removidos.
+
+## Investigação de fala espontânea — 2026-08-31 18:09
+
+O log das chamadas reais de 18:05 continha apenas conexão e `MEDIA_START`; não continha `OPENAI_SEND`, eventos Realtime brutos nem traces de início de fala. A versão atualmente em execução também não tinha esses pontos de instrumentação no código. Eles foram reintroduzidos sem registrar corpos de áudio, texto completo ou segredos: apenas tipo do evento e, para diagnóstico, no máximo 120 caracteres de `delta`/`transcript`.
+
+Teste sintético com 8 segundos de silêncio PCM (sem ruído):
+
+```text
+true_silence_seconds 8
+audio_frames 12
+audio_bytes 113920
+```
+
+O áudio de saída correspondeu a uma única saudação. Os traces mostraram exatamente um ciclo `response.done`, 11 deltas de transcript (`Olá! Bem-vindo! Como posso ajudar hoje?`) e nenhum `input_audio_buffer.speech_started`/`speech_stopped`, nenhum `response.create` adicional e nenhum erro. Portanto, o modelo não iniciou uma conversa repetida sozinho em silêncio verdadeiro. Ainda não é possível descartar falso positivo de VAD causado pelo áudio RTP real; esse é o próximo teste isolado, com ruído controlado.
