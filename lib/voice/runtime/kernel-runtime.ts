@@ -111,7 +111,13 @@ export function createVoiceProductionKernel(db: pg.Pool): AgentKernel {
           {
             tenantId: execution.organizationId,
             ...(isUuid(sourceId) ? { leadId: sourceId } : {}),
-            jobId: execution.runId,
+            // execution.runId é um UUID sintético do kernel de voz, não uma
+            // linha real de job_queue — passá-lo como jobId derrubava o
+            // INSERT em llm_calls por violação de llm_calls_job_id_fkey
+            // (achado real: catch genérico do kernel engolia isso como
+            // "runtime_error"/voice_agent_unresolved, ver diagnóstico
+            // 2026-08-31 em agent-kernel.ts). jobId é opcional; sem job real
+            // pra referenciar, fica ausente (NULL na coluna).
             purpose: "voice_agent_turn",
             system: [
               `Agent: ${execution.agentId} v${execution.agentVersion}.`,
