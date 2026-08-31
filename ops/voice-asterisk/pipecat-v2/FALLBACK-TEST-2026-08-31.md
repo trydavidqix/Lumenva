@@ -83,6 +83,18 @@ response.create adicional: 0
 
 O eco foi totalmente impedido de iniciar um novo turno Realtime. A produção não foi alterada.
 
+## Transcrição PT e verificação do gate
+
+Foi adicionada à sessão Realtime a configuração oficial de transcrição:
+
+```text
+model=gpt-4o-transcribe
+language=pt
+prompt=Conversa em português do Brasil, atendimento ao cliente. Termos comuns: suporte, atendimento, problema, conta, pedido.
+```
+
+A serialização Pydantic da versão instalada confirmou os campos dentro de `audio.input.transcription`. Os logs históricos disponíveis não continham eventos `conversation.item.input_audio_transcription.completed` nem os frames de áudio descartados, portanto não permitem provar corte sistemático do primeiro fonema. O `EchoSuppressor` só descarta frames durante a fala do bot e até 3 segundos após `response.output_audio.done`; depois desse instante encaminha a entrada normalmente. A próxima ligação deve validar a palavra inicial com o tracing de transcrição ativo.
+
 ## Cooldown de 3 segundos — reprodução do atraso real
 
 O `EchoSuppressor` foi aumentado de 800 ms para 3000 ms, cobrindo os atrasos de 1,52 s e 2,24 s medidos na captura SIP. No teste sintético, cada frame da saudação foi reenviado como eco exatamente 2 segundos depois de ser recebido, enquanto ruído residual baixo continuava no input.
