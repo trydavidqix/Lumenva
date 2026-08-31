@@ -383,7 +383,14 @@ async function runMediaScenario() {
     // now runs a single continuous consumer for the whole session's RTP
     // (see attachMedia's comment), so any packet sent while the session is
     // open lands in the next turn's capture buffer — no timing dance needed.
-    rtpPeer.sendTo(bridgePort, buildFakeRtpPacket(Buffer.alloc(160, 0x02)));
+    for (let i = 0; i < 12; i += 1) {
+      rtpPeer.sendTo(bridgePort, buildFakeRtpPacket(Buffer.alloc(160, 0x02)));
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    for (let i = 0; i < 25; i += 1) {
+      rtpPeer.sendTo(bridgePort, buildFakeRtpPacket(Buffer.alloc(160, 0xff)));
+      await new Promise((r) => setTimeout(r, 20));
+    }
 
     // Give the worker's capture window (300ms) + turn (STT -> /turn -> TTS)
     // time to run, plus a margin for the continuous sender's 20ms cadence
@@ -499,7 +506,14 @@ async function runMediaFailureScenario() {
 
     // Turn 1: inject a /stt 500 for exactly this turn.
     fakeSidecar.failNextRequest("/stt");
-    rtpPeer.sendTo(bridgePort, buildFakeRtpPacket(Buffer.alloc(160, 0x03)));
+    for (let i = 0; i < 12; i += 1) {
+      rtpPeer.sendTo(bridgePort, buildFakeRtpPacket(Buffer.alloc(160, 0x03)));
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    for (let i = 0; i < 25; i += 1) {
+      rtpPeer.sendTo(bridgePort, buildFakeRtpPacket(Buffer.alloc(160, 0xff)));
+      await new Promise((r) => setTimeout(r, 20));
+    }
     await new Promise((r) => setTimeout(r, 1000));
 
     if (errorLogs.matches.length < 1) {
@@ -516,7 +530,14 @@ async function runMediaFailureScenario() {
     }
 
     // (c) a subsequent turn still processes normally — no failure injected this time.
-    rtpPeer.sendTo(bridgePort, buildFakeRtpPacket(Buffer.alloc(160, 0x03)));
+    for (let i = 0; i < 12; i += 1) {
+      rtpPeer.sendTo(bridgePort, buildFakeRtpPacket(Buffer.alloc(160, 0x03)));
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    for (let i = 0; i < 25; i += 1) {
+      rtpPeer.sendTo(bridgePort, buildFakeRtpPacket(Buffer.alloc(160, 0xff)));
+      await new Promise((r) => setTimeout(r, 20));
+    }
     await new Promise((r) => setTimeout(r, 1500));
 
     const sttCalls = fakeSidecar.requestsReceived.filter((r) => r.path === "/stt");
