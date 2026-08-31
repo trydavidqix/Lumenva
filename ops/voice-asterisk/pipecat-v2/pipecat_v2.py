@@ -64,6 +64,11 @@ async def run_bot(websocket: WebSocket) -> None:
     @transport.event_handler("on_client_disconnected")
     async def on_client_disconnected(transport, client) -> None:
         logger.info("pipeline_client_disconnected")
+        # Stop the output sender before cancelling the pipeline.  Cancellation
+        # is asynchronous, so already queued audio frames can otherwise still
+        # reach AsteriskWebsocketOutputTransport.write_audio_frame(), which
+        # logs one warning for every frame after the client has disconnected.
+        transport._output._params.audio_out_enabled = False
         await task.cancel()
 
     await PipelineRunner().run(task)
