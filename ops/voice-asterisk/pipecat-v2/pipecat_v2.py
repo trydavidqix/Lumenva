@@ -124,7 +124,8 @@ async def run_bot(websocket: WebSocket) -> None:
             )
         ),
     )
-    echo_suppressor = EchoSuppressor(grace_ms=800)
+    # Cover the 1.52–2.24 s delayed echo measured on the real SIP call.
+    echo_suppressor = EchoSuppressor(grace_ms=3000)
 
     # Keep an auditable, secret-free trace of the Realtime protocol while
     # diagnosing turn-taking.  Payload bodies/audio are intentionally omitted.
