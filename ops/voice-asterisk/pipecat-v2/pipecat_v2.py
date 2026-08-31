@@ -11,7 +11,7 @@ import sys
 import uvicorn
 from fastapi import FastAPI, WebSocket
 from loguru import logger
-from pipecat.frames.frames import LLMRunFrame
+from pipecat.frames.frames import LLMRunFrame, TTSSpeakFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
@@ -39,9 +39,12 @@ async def run_bot(websocket: WebSocket) -> None:
         [
             {
                 "role": "system",
-                "content": "Responda de forma breve em português europeu.",
+                "content": (
+                    "Responda de forma breve em português europeu. "
+                    "Ao iniciar uma nova ligação, cumprimente o utilizador primeiro."
+                ),
             },
-            {"role": "user", "content": "Diga apenas: teste concluído."},
+            {"role": "user", "content": "A ligação está a começar."},
         ]
     )
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
@@ -55,21 +58,56 @@ async def run_bot(websocket: WebSocket) -> None:
         pipeline,
         params=PipelineParams(audio_in_sample_rate=16000, audio_out_sample_rate=16000),
     )
+    fallback_sent = False
+    monitor_task: asyncio.Task | None = None
+
+    async def queue_fallback(reason: str) -> None:
+        nonlocal fallback_sent
+        if fallback_sent:
+            return
+        fallback_sent = True
+        logger.warning("openai_fallback_queued reason={}", reason)
+        await task.queue_frame(TTSSpeakFrame("Desculpe, não posso ajudar com isso agora."))
 
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client) -> None:
+        nonlocal monitor_task
         logger.info("pipeline_client_connected")
         await task.queue_frames([LLMRunFrame()])
+        async def monitor_openai() -> None:
+            while True:
+                await asyncio.sleep(0.25)
+                receive_task = llm._receive_task
+                if receive_task is not None and receive_task.done():
+                    await queue_fallback("realtime_disconnected")
+                    return
+        monitor_task = asyncio.create_task(monitor_openai())
 
     @transport.event_handler("on_client_disconnected")
     async def on_client_disconnected(transport, client) -> None:
+        nonlocal monitor_task
         logger.info("pipeline_client_disconnected")
         # Stop the output sender before cancelling the pipeline.  Cancellation
         # is asynchronous, so already queued audio frames can otherwise still
         # reach AsteriskWebsocketOutputTransport.write_audio_frame(), which
         # logs one warning for every frame after the client has disconnected.
         transport._output._params.audio_out_enabled = False
+        if monitor_task is not None:
+            monitor_task.cancel()
+            monitor_task = None
         await task.cancel()
+
+    # OpenAI errors are surfaced by the Realtime receive task.  Queue the same
+    # short recovery utterance used by the legacy worker; a TTS service can
+    # consume TTSSpeakFrame without coupling fallback logic to the transport.
+    original_error = llm._handle_evt_error
+
+    async def handle_openai_error(event) -> None:
+        logger.error("openai_realtime_error code={} message={}", event.error.code, event.error.message)
+        await queue_fallback("realtime_error")
+        await original_error(event)
+
+    llm._handle_evt_error = handle_openai_error
 
     await PipelineRunner().run(task)
 
