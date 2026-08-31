@@ -88,6 +88,45 @@ async def run_bot(websocket: WebSocket) -> None:
         api_key=os.environ["OPENAI_API_KEY"],
         model=os.getenv("OPENAI_REALTIME_MODEL", "gpt-realtime"),
     )
+
+    # Keep an auditable, secret-free trace of the Realtime protocol while
+    # diagnosing turn-taking.  Payload bodies/audio are intentionally omitted.
+    original_ws_send = llm._ws_send
+
+    async def traced_ws_send(message):
+        logger.info("OPENAI_SEND type={}", message.get("type"))
+        return await original_ws_send(message)
+
+    llm._ws_send = traced_ws_send
+    for handler_name in (
+        "_handle_evt_session_created",
+        "_handle_evt_session_updated",
+        "_handle_evt_audio_delta",
+        "_handle_evt_audio_done",
+        "_handle_evt_conversation_item_added",
+        "_handle_evt_conversation_item_done",
+        "_handle_evt_input_audio_transcription_delta",
+        "_handle_evt_response_done",
+        "_handle_evt_speech_started",
+        "_handle_evt_speech_stopped",
+        "_handle_evt_text_delta",
+        "_handle_evt_audio_transcript_delta",
+        "_handle_evt_error",
+    ):
+        original_handler = getattr(llm, handler_name)
+
+        async def traced_handler(event, _handler=original_handler, _name=handler_name):
+            detail = ""
+            if event.type in {
+                "response.output_text.delta",
+                "response.output_audio_transcript.delta",
+                "conversation.item.input_audio_transcription.completed",
+            }:
+                detail = str(getattr(event, "delta", None) or getattr(event, "transcript", None))[:120]
+            logger.info("OPENAI_RECV type={} handler={} detail={}", event.type, _name, detail)
+            return await _handler(event)
+
+        setattr(llm, handler_name, traced_handler)
     context = LLMContext(
         [
             {
@@ -192,6 +231,7 @@ async def run_bot(websocket: WebSocket) -> None:
     # short recovery utterance used by the legacy worker; a TTS service can
     # consume TTSSpeakFrame without coupling fallback logic to the transport.
     async def handle_openai_error(event) -> None:
+        logger.info("OPENAI_RECV type=error handler=handle_openai_error")
         logger.error("openai_realtime_error code={} message={}", event.error.code, event.error.message)
         await queue_fallback("realtime_error")
 
