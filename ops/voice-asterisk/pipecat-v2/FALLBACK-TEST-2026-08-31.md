@@ -65,3 +65,9 @@ Foram abertas três sessões sintéticas, sem fala, com ruído PCM uniforme limi
 Em conjunto, os traces mostraram três `session.created`, três `response.done` e três `response.output_audio.done`: exatamente uma resposta por sessão, correspondente à saudação proativa. Não apareceu qualquer `input_audio_buffer.speech_started`, `input_audio_buffer.speech_stopped` ou `response.create` adicional.
 
 Conclusão: falso positivo do `server_vad` não foi reproduzido com os níveis de comfort noise testados. Não foi aplicado threshold local nem outro terceiro fix. O comportamento observado pelo dono continua sem causa confirmada e requer captura/medição do RTP real de uma chamada antes de qualquer mitigação.
+
+## Mitigação VAD e saudação literal — teste 2026-08-31
+
+Foi configurado `server_vad` na sessão Realtime com `threshold=0.68`, `prefix_padding_ms=300` e `silence_duration_ms=750`. A saudação inicial passou a interceptar o primeiro `response.create` e incluir `response.instructions` explícito: `Diga exatamente, palavra por palavra, sem adicionar nada: Boa tarde! Em que posso te ajudar?`.
+
+Com 10 segundos de ruído PCM sem fala, amplitude ±300, os traces mostraram 500 `input_audio_buffer.append`, uma única saudação e zero eventos `input_audio_buffer.speech_started`/`speech_stopped` ou `response.create` adicional. A transcript recebida foi exatamente `Boa tarde! Em que posso te ajudar?`, distribuída pelos deltas `Boa`, `tarde`, `!`, `Em`, `que`, `posso`, `te`, `ajudar`, `?`. Não houve erros.
