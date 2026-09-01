@@ -85,6 +85,7 @@
     "fflate": "^0.8.3",
     "gpt-tokenizer": "^3.4.0",
     "import-in-the-middle": "^3.3.3",
+    "inngest": "^4.15.0",
     "langsmith": "^0.8.9",
     "llamaindex": "^0.12.1",
     "lucide-react": "^1.31.0",
@@ -103,6 +104,7 @@
     "resend": "^6.18.1",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.6.0",
+    "workflow": "^4.8.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
