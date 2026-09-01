@@ -32,9 +32,9 @@ describe('CRM Operator product role', () => {
   });
 
   it('does not expose direct database execution entrypoints', async () => {
-    const module = await import('@/lib/agent-engine/product-agents/crm-operator');
-    expect('executeMutation' in module).toBe(false);
-    expect('getSupabaseAdmin' in module).toBe(false);
-    expect('serviceRole' in module).toBe(false);
+    const importedModule = await import('@/lib/agent-engine/product-agents/crm-operator');
+    expect('executeMutation' in importedModule).toBe(false);
+    expect('getSupabaseAdmin' in importedModule).toBe(false);
+    expect('serviceRole' in importedModule).toBe(false);
   });
 });
