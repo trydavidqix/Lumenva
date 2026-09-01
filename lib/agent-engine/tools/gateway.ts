@@ -31,6 +31,7 @@ export interface ExecuteThroughToolGatewayInput {
   agentPolicy?: ToolPolicyOverrides;
   promotionDecision?: PromotionDecision;
   runtimeAutonomyResolver?: RuntimeAutonomyResolver;
+  runtimeAutonomyStore?: { load: (key: { organizationId: string; agentId: string; capabilityId: string }) => Promise<{ globalEnabled?: boolean; tenantEnabled?: boolean; agentEnabled?: boolean; capabilityEnabled?: boolean } | null> };
   autonomyEvidenceRecorder?: AutonomyEvidenceRecorder;
   tool: AgentToolDefinition;
   args: unknown;
@@ -59,6 +60,20 @@ export async function executeThroughToolGateway(
   const traceId = input.traceId ?? runId;
   const correlationId = input.correlationId ?? traceId;
   let effectiveLevel = input.autonomyLevel;
+  if (input.runtimeAutonomyStore && !input.runtimeAutonomyResolver) {
+    input.runtimeAutonomyResolver = {
+      async resolve(key) {
+        const state = await input.runtimeAutonomyStore!.load(key);
+        return {
+          level: input.autonomyLevel,
+          globalEnabled: state?.globalEnabled ?? true,
+          tenantEnabled: state?.tenantEnabled ?? true,
+          agentEnabled: state?.agentEnabled ?? true,
+          capabilityEnabled: state?.capabilityEnabled ?? true,
+        };
+      },
+    };
+  }
 
   const emit = async (details: {
     policyOutcome: string;
@@ -166,6 +181,40 @@ export type ExecutableTool = {
   [key: string]: unknown;
 };
 export type ToolSetLike = Record<string, ExecutableTool>;
+
+/** Adapter for the kernel port used by the canonical Agent Kernel composition. */
+export function createKernelToolGatewayPort(input: {
+  registry: { get(toolId: string): AgentToolDefinition | null | undefined };
+  approvalStore: ApprovalStore | null;
+  executeTool: (tool: AgentToolDefinition, args: unknown) => Promise<unknown> | unknown;
+}) {
+  return {
+    async execute(request: {
+      execution: { organizationId: string; agentId: string; runId: string };
+      tool: { id: string; risk: AgentToolDefinition['risk']; hasSideEffect: boolean; idempotencyRequired: boolean };
+      args: unknown;
+      idempotencyKey: string;
+    }) {
+      const definition = input.registry.get(request.tool.id);
+      if (!definition) return { kind: 'denied' as const, reason: 'tool_not_registered' };
+      const result = await executeThroughToolGateway({
+        organizationId: request.execution.organizationId,
+        agentId: request.execution.agentId,
+        runId: request.execution.runId,
+        autonomyLevel: 'assisted',
+        tool: definition,
+        args: request.args,
+        idempotencyKey: request.idempotencyKey,
+        execute: () => input.executeTool(definition, request.args),
+        approvalStore: input.approvalStore,
+      });
+      if (result.kind === 'pending_approval') {
+        return { kind: 'approval_required' as const, reason: 'approval_required', approvalId: result.approvalId };
+      }
+      return result;
+    },
+  };
+}
 
 export interface WrapToolSetWithGatewayOptions {
   organizationId: string;
