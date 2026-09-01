@@ -31,4 +31,29 @@ describe("voice turn service", () => {
       .resolves.toMatchObject({ kind: "reply", text: "Olá!", agentId: "atendimento" });
     expect(kernel.run).toHaveBeenCalledTimes(2);
   });
+
+  it.each([
+    ["atendimento", { kind: "draft_response", draft: "Resposta de atendimento", rationale: "support", needsHumanReview: false }],
+    ["sales", { kind: "sales_recommendation", qualification: "warm", nextAction: "contactar", rationale: "sales", draftMessage: "Resposta de sales" }],
+    ["retention", { kind: "retention_recommendation", risk: "low", action: "acompanhar", rationale: "retention" }],
+  ] as const)("preserves the supervisor-selected role exactly for %s", async (targetAgent, output) => {
+    const kernel: AgentKernel = {
+      run: vi.fn()
+        .mockResolvedValueOnce({
+          status: "completed", stopReason: "completed", runId: "supervisor-run", traceId: "t1", correlationId: "call-1",
+          output: { targetAgent, reason: "explicit test route", confidence: 1, requiresHumanEscalation: false },
+        })
+        .mockResolvedValueOnce({
+          status: "completed", stopReason: "completed", runId: "agent-run", traceId: "t2", correlationId: "call-1", output,
+        }),
+    };
+    const service = createVoiceTurnService({
+      kernel,
+      authorizeDelivery: async ({ agentId, channel }) => channel === "voice" && ["atendimento", "sales", "retention"].includes(agentId),
+    });
+
+    await service.run({ organizationId: "org-1", contactId: "contact-1", voiceCallId: "call-1", transcript: "teste" });
+
+    expect(kernel.run).toHaveBeenNthCalledWith(2, expect.objectContaining({ agentId: targetAgent }));
+  });
 });

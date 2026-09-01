@@ -1122,3 +1122,258 @@ BUILD DOCKER ACHADOS E CORRIGIDOS NA RAIZ / SEIS BUGS REAIS DA INTEGRAÇÃO SIP/
 CORRIGIDOS UM A UM NUMA LIGAÇÃO REAL (2 SQL, 1 CONFIG DE SESSÃO, 1 FIREWALL DE NUVEM) / **PRIMEIRA
 LIGAÇÃO REAL COM ÁUDIO DE PONTA A PONTA CONFIRMADA PELO DONO AO VIVO EM PRODUÇÃO, 2026-08-30** —
 Task 8 do plano tecnicamente provada; falta só o registro formal de evidência.
+
+### Atualização 2026-08-31 — medição final de latência e encerramento operacional da prova
+
+O worker foi inspecionado antes do teste e confirmou `VOICE_MEDIA_LISTEN_MS=800` no processo
+vivo, além de sidecar em `127.0.0.1:8500` e health `ok`. Foram instrumentados timestamps
+estruturados sem registrar áudio, transcript ou segredos. Em três ligações reais, o tempo do
+fim da janela com fala até ao primeiro frame TTS foi `2.872s`, `2.611s` e `1.240s`; o tempo
+total desde `StasisStart` foi `9.274s`, `13.348s` e `3.137s`. O STT local variou
+`0.988–2.539s`, o `/turn` `54–233ms` e o `/speak` até ao primeiro frame `171–265ms`.
+
+Decisão: aceitar a janela de 800ms e a latência observada como limitação temporária desta
+prova; streaming/VAD incremental e STT mais rápido ficam como item futuro de arquitetura. Não
+foi implementado streaming. O componente variável dominante observado foi STT local, não Agent
+OS nem TTS.
+
+Após a prova, foram desligados o worker SIP/BYOC, o sidecar STT/TTS e o bridge legado
+`audio_bridge_v15.mjs`. A unidade systemd existente não foi promovida: é unidade antiga de teste
+apontando para `/opt/voice-sip-test`, não runtime de produção versionado. As portas `8091` e
+`8500` ficaram sem listener e não restaram canais Asterisk de teste.
+
+Auditoria de firewall/RTP: há uma única instância Asterisk ativa, com `rtpstart=10000` e
+`rtpend=20000`; não foi encontrada outra faixa RTP ou outra instância que exigisse regra
+adicional. A regra Hetzner UDP `10000-20000` cobre a configuração efetiva. A evidência formal
+está em `docs/evidence/voice-agent-os-real-call-2026-08-30.md`.
+
+Task 8 permanece parcialmente provada: áudio e latência estão comprovados, mas as chamadas
+continuam `voice_calls.state=active` porque os eventos terminais perdem `SIP_CONNECTION_ID`
+quando o canal já foi destruído. O detach de mídia funciona nessa corrida; a transição
+`active` → `completed` ainda precisa de correção/validação antes do fechamento global.
+
+### Atualização 2026-08-31 — reteste Pipecat bloqueado no preflight de memória
+
+Foi confirmado no histórico que a única variável nova desde a tentativa Pipecat pausada de
+2026-08-29 é a regra permanente do Hetzner Cloud Firewall para UDP `10000–20000`, adicionada em
+2026-08-30. A tentativa anterior já tinha usado Asterisk 22.11.0, `chan_websocket`, porta SIP
+`5061`, `rtp.conf` com `rtpstart=10000`/`rtpend=20000`, dialplan simplificado, `ice_support=no`,
+endpoint com `rtp_symmetric`/`rewrite_contact`/`force_rport`, Pipecat 1.1.0/1.8.1,
+`pipecat-asterisk` 0.1.3 e `OpenAIRealtimeLLMService`.
+
+Antes de reinstalar, a VPS foi auditada sem alterar nada: `/opt/asterisk-v2/` e
+`/opt/voice-vps-bench-v2/` continuam ausentes; Asterisk de produção segue isolado na porta
+`5060`; worker SIP e sidecar de produção continuam ativos. `free -h` mostrou `129 MiB` livres,
+`516 MiB` disponíveis e swap em `1,8 GiB/4 GiB`. Pela restrição de memória, a reinstalação e o
+reteste foram interrompidos antes de qualquer download, compilação, criação de venv ou processo
+novo. Nenhuma ligação, alteração de firewall ou redeploy foi feito.
+
+Estado: **BLOCKED — memória insuficiente para reinstalar com segurança**. Retomar exige primeiro
+liberar memória ou obter autorização explícita para uma janela operacional que pare componentes
+não produtivos; a produção na porta `5060` não deve ser parada como parte deste reteste.
+
+### Atualização 2026-08-31 — Asterisk-v2 recompilado e teste RTP sintético isolado
+
+Com os containers de memória não essenciais parados pelo dono, o preflight mostrou cerca de
+`1,0 GiB` disponíveis. A instância isolada foi reconstruída em `/opt/asterisk-v2/` a partir do
+Asterisk oficial `22.11.0`, com `make -j2` protegido por guarda de `MemAvailable`; configure,
+compilação e instalação terminaram sem cruzar o limite de `300 MiB` (o menor valor observado foi
+cerca de `1,0 GiB` disponíveis). Produção em `/etc/asterisk`, porta `5060`, worker e sidecar não
+foram tocados.
+
+O v2 está rodando na porta SIP `5061`, com `chan_websocket.so` e `res_http_websocket.so` carregados,
+HTTP/WebSocket em `8089`, e `rtp show settings` confirma `10000–20000`, ICE desativado. O ambiente
+isolado `/opt/voice-vps-bench-v2` instalou `pipecat-ai==1.1.0` e `pipecat-asterisk==0.1.3`; os
+imports e assinaturas do transporte/serializer passaram.
+
+Foi executado um INVITE SIP sintético local para `700` usando um endpoint de teste e o dialplan
+`Record()`. A sinalização completou (`Successful call=1`, canal `PJSIP/test/.../Record`), e o
+RTP alocado pelo v2 foi observado na faixa configurada (ex.: `m=audio 14504`/`16414` nas respostas
+SDP). O arquivo de gravação criado foi
+`/opt/asterisk-v2/var/lib/asterisk/sounds/v2-test.wav`, `44 bytes` (apenas cabeçalho): o gerador
+SIPp não enviou áudio ao porto negociado, portanto **RTP recebido pelo Asterisk ainda não está
+provado**. Não foi feita ligação real, não foi iniciado pipeline Pipecat/OpenAI e nenhum firewall
+foi alterado.
+
+Estado: **BLOCKED — falta prova interna de RTP com payload** antes de testar Pipecat. O próximo
+passo seguro é corrigir o gerador RTP sintético (origem/porto negociado) ou usar uma captura de
+áudio já existente; só depois de um WAV com bytes de áudio, e não apenas o cabeçalho, deve-se
+subir o pipeline completo. O v2 permanece isolado e pode ser encerrado sem impacto na produção.
+
+### Atualização 2026-08-31 — RTP sintético corrigido: áudio real confirmado
+
+O gerador foi corrigido para aguardar e extrair o `m=audio <porto>` da resposta SDP do Asterisk-v2
+(em vez de assumir uma porta fixa). O endpoint SIP sintético usa `rtp_symmetric=yes`, e o script
+envia pacotes RTP PCMU válidos para o porto negociado, mantendo a produção intocada.
+
+Novo teste: SIPp → `127.0.0.1:5061` → extensão `700` → `Record()`. O SDP anunciou, por exemplo,
+`m=audio 11616 RTP/AVP 0`. O WAV produzido em
+`/opt/asterisk-v2/var/lib/asterisk/sounds/v2-test.wav` tem `71.724 bytes`, `35.840 frames`,
+`4,48 s`, pico PCM `32124`, RMS `32124` e `35.840/35.840` amostras não nulas. Isto confirma
+payload de áudio real chegando ao Asterisk-v2 e sendo gravado; o resultado anterior de `44 bytes`
+era apenas o cabeçalho porque o gerador apontava para o porto errado/sem payload audível.
+
+Memória após o teste: aproximadamente `539 MiB` livres e `1,3 GiB` disponíveis; o limite de
+segurança de `300 MiB` de memória disponível não foi atingido. Não houve ligação real, alteração
+de firewall ou início do pipeline Pipecat/OpenAI.
+
+Estado: **PASS para a hipótese de transporte RTP/firewall no v2**. A regra UDP Hetzner
+`10000–20000` é compatível com a faixa configurada e o Asterisk recebeu/grava áudio quando o
+porto SDP foi usado corretamente. O pipeline Pipecat/OpenAI permanece deliberadamente parado;
+aguarda decisão do dono para o próximo passo.
+
+### Atualização 2026-08-31 — primeira subida isolada do pipeline Pipecat/OpenAI
+
+Antes de instalar a única dependência ausente (`uvicorn`), `free -h` mostrou aproximadamente
+`1,2 GiB` de `MemAvailable`, acima do requisito de `800 MiB`. A instalação terminou sem cruzar o
+limite crítico de `300 MiB`; após o teste, `MemAvailable` permaneceu em aproximadamente `1,2 GiB`.
+O `OPENAI_API_KEY` foi obtido do Infisical sem imprimir o valor e removido do arquivo temporário
+após o uso.
+
+Foi criada uma aplicação isolada em `/opt/voice-vps-bench-v2/pipecat_v2.py`, usando
+`AsteriskWebsocketTransport`, `Pipeline`, `PipelineTask`, `OpenAIRealtimeLLMService` e o venv já
+existente (`pipecat-ai==1.1.0`, `pipecat-asterisk==0.1.3`). A primeira tentativa usou o nome
+histórico `gpt-4o-realtime-preview` e a API respondeu `invalid_request_error.model_not_found`.
+O catálogo atual da chave foi consultado sem expor segredo; o modelo válido selecionado foi
+`gpt-realtime`. O servidor Pipecat subiu e aceitou WebSocket sintético, processando
+`MEDIA_START` `slin16` e frames binários de áudio; o log confirmou `PIPELINE_WS_ACCEPTED`,
+`PIPELINE_CLIENT_CONNECTED`, `Received MEDIA_START` e `START_MEDIA_BUFFERING`.
+
+O teste sintético com áudio gerado localmente não produziu resposta de áudio observável do
+OpenAI/Pipecat: não houve log de resposta nem frames binários de saída. A causa ainda não foi
+isolada entre o fluxo de disparo do `PipelineTask`/agregador em Pipecat 1.1.0 e o protocolo de
+áudio do teste; não é correto declarar ponta a ponta concluído. O processo Pipecat foi parado
+para não manter pressão de memória. Asterisk-v2 continua isolado na porta `5061`; produção na
+porta `5060` permaneceu intocada. Nenhuma ligação real foi feita.
+
+Estado: **BLOCKED — pipeline Pipecat/OpenAI ainda sem evidência de resposta de áudio**. O próximo
+passo deve instrumentar o serviço Realtime e validar o fluxo com o protocolo `chan_websocket`
+real (ou um teste Pipecat mínimo que force explicitamente `LLMRunFrame`/commit de áudio) antes de
+qualquer ligação real.
+
+### Atualização 2026-08-31 — raiz do falso bloqueio Pipecat isolada e teste interno PASS
+
+Foi instrumentado temporariamente o envio de eventos do `OpenAIRealtimeLLMService` sem expor a
+chave. A primeira reprodução enviava apenas um tom contínuo; o serviço encaminhava muitos
+`input_audio_buffer.append`, mas não havia silêncio/fim de fala para o `server_vad` disparar um
+turn. A hipótese foi testada adicionando áudio de fala gerado localmente (`slin16`, 16 kHz) mais
+`1 s` de silêncio real no fim.
+
+Resultado do teste WebSocket sintético contra `/opt/voice-vps-bench-v2/pipecat_v2.py`:
+
+- evento `MEDIA_START` com `format=slin16` aceito;
+- frames binários de áudio enviados para o transporte;
+- evento de saída `{"command":"START_MEDIA_BUFFERING"}`;
+- evento de interrupção `{"command":"FLUSH_MEDIA"}`;
+- `audio_frames=18`, `audio_bytes=175360` recebidos pelo cliente de teste como resposta do
+  pipeline/OpenAI Realtime.
+
+O teste de saudação inicial, executado separadamente, também recebeu `audio_frames=5` e
+`audio_bytes=49920`. A conexão direta à API confirmou `session.created`, `session.updated`,
+`response.created` e `response.output_audio.delta`. O modelo válido atual é `gpt-realtime`; o
+nome histórico `gpt-4o-realtime-preview` foi rejeitado como inexistente.
+
+Conclusão: o ciclo áudio → Pipecat → OpenAI Realtime → áudio de resposta fecha internamente. O
+falso bloqueio era o fixture sintético sem silêncio suficiente para o `server_vad`, não falha de
+autenticação, formato ou rede. O processo foi parado após a prova para manter margem de memória;
+produção na porta `5060` permaneceu intocada e nenhuma ligação real foi feita nesta investigação.
+
+### Atualização 2026-08-31 — instância Pipecat preparada para chamada real controlada
+
+Preflight antes de iniciar o processo: `MemAvailable` aproximadamente `1,38 GiB` (acima do
+requisito de `800 MiB`). O processo isolado `/opt/voice-vps-bench-v2/pipecat_v2.py` foi iniciado
+com a chave OpenAI obtida do Infisical sem exposição do valor e está a escutar apenas em
+`127.0.0.1:7860`. Asterisk-v2 permanece separado na porta SIP `5061`.
+
+Foi adicionada a extensão isolada `701`, sem alterar a extensão `700` de `Record()`:
+
+```ini
+exten => 701,1,NoOp(Isolated Pipecat WebSocket test)
+ same => n,Dial(WebSocket/pipecat-v2/c(slin16)f(json),60)
+ same => n,Hangup()
+```
+
+`websocket_client.conf` aponta `pipecat-v2` para `ws://127.0.0.1:7860/ws`, usando conexão por
+chamada e protocolo JSON. A rota foi validada com `dialplan show 701@voicecore-test`; o módulo
+`res_websocket_client.so` está carregado. Nenhuma chamada foi feita pelo agente nesta etapa.
+
+O dono pode usar a conta SIP `1000` já existente no Zoiper, servidor `2.29.8.225`, porta UDP
+`5061`, e discar `701`. A conta/rota de produção na porta `5060` permanece intocada.
+
+### Atualização 2026-08-31 — Fase 2: testes de robustez internos
+
+Preflight: `MemAvailable` variou entre aproximadamente `875 MiB` e `1,2 GiB` durante os testes;
+nenhum cenário cruzou o limite crítico de `300 MiB`. A produção na porta `5060` não foi usada nem
+alterada.
+
+Resultados do harness sintético contra `127.0.0.1:7860/ws`:
+
+- **Silêncio prolongado (5 s): PASS** — conexão terminou normalmente; `8` frames de áudio de
+  saudação, `61440` bytes, sem erro.
+- **Fala longa (áudio + silêncio final): PASS parcial** — `7` frames, `74240` bytes, e
+  `FLUSH_MEDIA`; processamento terminou normalmente.
+- **Queda a meio da chamada: PASS de recuperação do processo** — cliente fechou durante o áudio;
+  o Pipecat cancelou a tarefa e o processo continuou vivo. O log registra avisos de frames que
+  chegaram depois do fechamento (`Cannot write audio frame because the WebSocket client is
+  closing or already closed`), que precisam de tratamento mais limpo antes de produção.
+- **Reconexão WebSocket: PASS básico** — duas conexões sequenciais foram aceites e encerradas sem
+  crash (`pipeline_ws_accepted`/`pipeline_client_connected` em ambas).
+- **Queda da OpenAI: FAIL de requisito de fallback** — servidor separado com modelo inválido
+  recebeu e expôs `invalid_model` (“Model ... is not supported in realtime mode”), mas o fluxo
+  não enviou áudio de fallback equivalente ao “Desculpe, não posso ajudar agora” do worker atual.
+
+O erro de modelo histórico também foi confirmado como detectável; o modelo válido permanece
+`gpt-realtime`. Os testes comprovam tolerância básica a silêncio, duração, queda e reconexão, mas
+não fecham a Fase 2: falta implementar/documentar fallback de voz e reduzir os avisos de corrida
+no fechamento do WebSocket. Nenhuma ligação real adicional ou cutover foi feito.
+
+### Atualização 2026-08-31 — Fase 2: saudação, fallback e regressão após fix de corrida
+
+O estado atual de `ops/voice-asterisk/pipecat-v2/pipecat_v2.py` foi puxado antes da alteração;
+o fix do Vetor (`transport._output._params.audio_out_enabled = False` antes de cancelar a tarefa)
+foi preservado. A aplicação agora inclui instrução no contexto inicial para o modelo cumprimentar
+o utilizador primeiro, disparada por `LLMRunFrame` em `on_client_connected`, sem `TTSSpeakFrame` de
+saudação e sem alteração do transporte.
+
+Fallback adicionado para erros/queda do Realtime: `openai_realtime_error` enfileira uma única
+`TTSSpeakFrame("Desculpe, não posso ajudar com isso agora.")`; um monitor do receive task também
+enfileira a mesma frase se a conexão Realtime terminar inesperadamente durante uma ligação ativa.
+O log confirma `openai_fallback_queued reason=realtime_error` quando um modelo inválido é forçado.
+O frame é o contrato de saída para o TTS; o protótipo atual não inclui um motor TTS separado, logo
+o áudio audível do fallback ainda precisa ser ligado a um serviço TTS/local antes do cutover.
+
+Regressão sintética após a alteração:
+
+- silêncio prolongado: `8` frames / `104960` bytes de áudio de saudação, encerramento normal;
+- fala longa: `14` frames / `111360` bytes, `FLUSH_MEDIA`, encerramento normal;
+- queda no meio: cancelamento sem crash, com `audio_out_enabled` desativado antes do cancelamento;
+- reconexão: duas conexões sequenciais aceites e encerradas sem crash;
+- erro OpenAI: `invalid_model` detectado e fallback enfileirado exatamente uma vez.
+
+Memória permaneceu acima de `300 MiB` disponíveis em todos os cenários; o menor valor observado
+foi aproximadamente `875 MiB`. O processo Pipecat foi parado após os testes e a chave temporária
+removida. Nenhuma ligação real adicional, alteração de firewall ou mudança na produção foi feita.
+
+Fase 2 continua **parcialmente bloqueada** até haver um consumidor TTS real para o
+`TTSSpeakFrame` de fallback e teste que comprove bytes de áudio desse fallback, não apenas o
+enfileiramento do frame.
+
+### Atualização 2026-08-31 — fallback ligado ao Piper local e comprovado em áudio
+
+Foi reutilizado o sidecar Piper já existente em produção (`127.0.0.1:8500`, endpoint `/speak`),
+sem baixar modelo novo nem instalar motor pesado. A aplicação Pipecat agora inclui
+`SidecarPiperTTSService`, que envia o texto do `TTSSpeakFrame` ao sidecar, decodifica µ-law 8 kHz
+para PCM e entrega frames PCM 16 kHz ao `AsteriskWebsocketTransport`. O sidecar foi exercitado
+diretamente antes do teste e retornou `21270` bytes µ-law.
+
+Com o erro Realtime forçado (`invalid-realtime-model`), o log confirmou `openai_fallback_queued`
+e o cliente WebSocket recebeu `audio_frames=2`, `audio_bytes=80640`. O áudio do sidecar,
+convertido para PCM, mediu `peak=32124`, `RMS=7334.04` e `20890` amostras não nulas: áudio real,
+não silêncio nem apenas enfileiramento de frame.
+
+Memória antes do teste: aproximadamente `1,3 GiB` disponíveis; depois, aproximadamente `1,1 GiB`.
+O processo de teste foi encerrado e a chave temporária removida. Produção na porta `5060` não foi
+tocada.
+
+O fallback agora tem caminho de áudio audível; ainda requer regressão completa de chamadas normais
+antes do cutover.

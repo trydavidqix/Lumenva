@@ -24,7 +24,7 @@ export function createVoiceTurnService(deps: {
       transcript: string;
     }) {
       const deliveryChecks = await Promise.all(
-        CONVERSATIONAL_AGENT_IDS.map((agentId) => deps.authorizeDelivery({ organizationId: input.organizationId, agentId })),
+          CONVERSATIONAL_AGENT_IDS.map((agentId) => deps.authorizeDelivery({ organizationId: input.organizationId, agentId, channel: "voice" })),
       );
       if (!deliveryChecks.some(Boolean)) {
         return { kind: "blocked", reason: "voice_delivery_not_authorized" } as const;

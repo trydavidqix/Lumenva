@@ -171,6 +171,19 @@ const schema = z.object({
   LANGSMITH_PROJECT: z.string().optional().default(""),
   LANGSMITH_WORKSPACE_ID: z.string().optional().default(""),
 
+  // Content OS intelligence providers — optional until the private engines are
+  // deployed. Their credentials remain server-side and never enter public URLs.
+  CONTENT_OS_RSSHUB_BASE_URL: z
+    .union([z.string().url(), z.literal("")])
+    .optional()
+    .default(""),
+  CONTENT_OS_RSSHUB_ACCESS_KEY: z.string().optional().default(""),
+  CONTENT_OS_CHANGEDETECTION_BASE_URL: z
+    .union([z.string().url(), z.literal("")])
+    .optional()
+    .default(""),
+  CONTENT_OS_CHANGEDETECTION_API_KEY: z.string().optional().default(""),
+
   // Fusão (Fase 4): DONO ÚNICO dos eventos ai_agent.dispatch_requested.
   // 'engine' (default) = o worker agent-engine é o único consumidor (o cron
   // agent-dispatcher vira no-op mecânico); 'native' = o dispatcher EPIC-13

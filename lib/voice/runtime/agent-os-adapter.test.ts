@@ -107,7 +107,7 @@ describe("Voice Agent Bridge", () => {
       runId: "run-shadow",
       traceId: "trace-shadow",
     });
-    expect(authorizeDelivery).toHaveBeenCalledWith({ organizationId: "org-a", agentId: "atendimento" });
+    expect(authorizeDelivery).toHaveBeenCalledWith({ organizationId: "org-a", agentId: "atendimento", channel: "voice" });
   });
 
   it("fails closed when the agent resolver cannot choose an agent", async () => {
