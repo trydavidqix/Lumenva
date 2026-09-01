@@ -1,0 +1,28 @@
+; TEMPLATE ONLY — NOT ACTIVE. Do not copy to /etc/asterisk until the owner supplies
+; the real Twilio trunk parameters and explicitly authorizes the change.
+; Keep endpoint 1000 and transport-udp unchanged.
+
+; Use the existing production transport only if the contracted trunk is UDP.
+; For Twilio Secure Trunking, create a separate TLS transport after confirming
+; the exact Twilio edge/FQDN, certificates and SRTP policy.
+
+[twilio-inbound]
+type=endpoint
+context=voice-inbound-twilio
+disallow=all
+allow=ulaw
+allow=alaw
+direct_media=no
+; aors/identify/auth values are deliberately completed only from the real trunk
+
+; IP allowlisting is the primary inbound identity check. Replace every placeholder
+; with the exact Twilio signaling CIDR or hostname-derived address approved by Twilio.
+[twilio-inbound-identify]
+type=identify
+endpoint=twilio-inbound
+match=<TWILIO_SIGNALING_CIDR_1>
+; match=<TWILIO_SIGNALING_CIDR_2>
+
+; If Twilio requires credential authentication for this direction, add an auth
+; object only after the owner supplies a generated secret through the secret store.
+; Never commit the credential or put it in this template.
