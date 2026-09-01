@@ -1,27 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { createProductAgentVoiceDeliveryAuthorizer, isVoiceDeliveryAutonomyAllowed } from "./delivery-policy";
+import { createProductAgentVoiceDeliveryAuthorizer } from "./delivery-policy";
 
 describe("voice delivery policy", () => {
-  it("blocks off, shadow and draft from customer speech", () => {
-    expect(isVoiceDeliveryAutonomyAllowed("off")).toBe(false);
-    expect(isVoiceDeliveryAutonomyAllowed("shadow")).toBe(false);
-    expect(isVoiceDeliveryAutonomyAllowed("draft")).toBe(false);
-  });
-
-  it("allows only governed delivery-capable autonomy levels", () => {
-    expect(isVoiceDeliveryAutonomyAllowed("assisted")).toBe(true);
-    expect(isVoiceDeliveryAutonomyAllowed("autopilot_low_risk")).toBe(true);
-    expect(isVoiceDeliveryAutonomyAllowed("autopilot_expanded")).toBe(true);
-  });
-
-  it("currently blocks canonical product agents that remain in shadow", async () => {
+  it("allows only the explicit conversational voice allowlist without changing global autonomy", async () => {
     const authorize = createProductAgentVoiceDeliveryAuthorizer();
-    await expect(authorize({ organizationId: "org-1", agentId: "atendimento" })).resolves.toBe(false);
-    await expect(authorize({ organizationId: "org-1", agentId: "sales" })).resolves.toBe(false);
-  });
 
-  it("fails closed for unknown agent ids", async () => {
-    const authorize = createProductAgentVoiceDeliveryAuthorizer();
-    await expect(authorize({ organizationId: "org-1", agentId: "unknown" })).resolves.toBe(false);
+    await expect(authorize({ organizationId: "org-1", agentId: "atendimento", channel: "voice" })).resolves.toBe(true);
+    await expect(authorize({ organizationId: "org-1", agentId: "sales", channel: "voice" })).resolves.toBe(true);
+    await expect(authorize({ organizationId: "org-1", agentId: "retention", channel: "voice" })).resolves.toBe(true);
+    await expect(authorize({ organizationId: "org-1", agentId: "atendimento", channel: "default" })).resolves.toBe(false);
+    await expect(authorize({ organizationId: "org-1", agentId: "supervisor", channel: "voice" })).resolves.toBe(false);
   });
 });

@@ -8,7 +8,8 @@ export interface VoiceAgentResolutionInput {
 }
 
 export type VoiceAgentResolver = (input: VoiceAgentResolutionInput) => Promise<string | null>;
-export type VoiceDeliveryAuthorizer = (input: { organizationId: string; agentId: string }) => Promise<boolean>;
+export type VoiceDeliveryChannel = "voice" | "default";
+export type VoiceDeliveryAuthorizer = (input: { organizationId: string; agentId: string; channel?: VoiceDeliveryChannel }) => Promise<boolean>;
 
 export type VoiceAgentTurnResult =
   | { kind: "reply"; text: string; agentId: string; runId: string; traceId: string }
@@ -53,7 +54,7 @@ export function createVoiceAgentOsAdapter(deps: {
         };
       }
 
-      if (!(await deps.authorizeDelivery({ organizationId: input.organizationId, agentId }))) {
+      if (!(await deps.authorizeDelivery({ organizationId: input.organizationId, agentId, channel: "voice" }))) {
         return { kind: "blocked", reason: "voice_delivery_not_authorized", agentId, runId: result.runId, traceId: result.traceId };
       }
 

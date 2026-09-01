@@ -981,19 +981,20 @@ git commit -m "feat(voice): liga RTP+STT+Agent OS+TTS dentro do main.mjs real"
 
 ### Task 8: Prova de aceite — ligação telefônica real (manual, na VPS)
 
-**Status em 2026-08-30: TECNICAMENTE PROVADA — áudio real confirmado ao vivo pelo dono.** Deploy
+**Status em 2026-08-31: PARCIALMENTE PROVADA — áudio bidirecional e latência medidos ao vivo, mas o
+lifecycle final ainda não fecha `active` → `completed`.** Deploy
 real em produção feito e verificado; worker real (`main.mjs`) rodando apontado pra
 `https://crm.lumenva.pt` real, com mídia habilitada. 8 bugs reais achados e corrigidos um a um em
-ligações reais sucessivas: `ARI_BASE_URL` com `/ari` duplicado (config), `voice_calls_provider_check`
+ ligações reais sucessivas: `ARI_BASE_URL` com `/ari` duplicado (config), `voice_calls_provider_check`
 sem `asterisk` (migration 0133), timestamp do Asterisk quebrando Zod `.datetime()` estrito
 (commit 0484257b), coluna `payload`→`attributes` + `provider='lumenva'` hardcoded em
 `/api/internal/voice/event` (commits 3af01c58/872a4a63), `VOICE_MEDIA_EXTERNAL_HOST` faltando na
 config do worker (mídia nunca rodava), e firewall de nuvem da Hetzner sem regra pra faixa RTP real
 (UDP 10000-20000 — adicionada via console web). Ligação de ~25s sem nenhum erro no log,
 áudio ouvido ao vivo. Detalhe completo: `docs/current-state.md` §11 "Atualização 2026-08-30" e
-memória `project_voice_core.md`. **Falta só:** escrever `docs/evidence/voice-agent-os-real-call-2026-08-30.md`
-formal, decidir destino dos processos manuais (systemd vs desligar), e medir qualidade/latência
-real do turno (hoje só confirmado "funcionou", não "quão bem").
+ memória `project_voice_core.md`. Evidência formal, medição de latência e destino dos processos
+ estão registrados em `docs/evidence/voice-agent-os-real-call-2026-08-30.md`; permanece pendente
+ apenas a correção/validação do lifecycle final `active` → `completed`.
 
 Não automatizável neste harness — é a mesma classe de prova que já validou a versão ad-hoc
 (`docs/evidence/voice-vps-real-call-bridge-2026-08-28.md`), agora usando `main.mjs` real em vez
@@ -1001,25 +1002,25 @@ do script solto.
 
 **Files:** nenhum (execução manual/registro de evidência).
 
-- [ ] **Step 1:** Configurar `.env` do worker na VPS com `VOICE_MEDIA_EXTERNAL_HOST` (IP público
-  da VPS), `VOICE_MEDIA_SIDECAR_URL=http://127.0.0.1:8500`, e as env vars já documentadas em
-  `workers/voice-sip-worker/README.md`.
+- [x] **Step 1:** Configurar `.env` do worker na VPS com `VOICE_MEDIA_EXTERNAL_HOST` (IP público
+da VPS), `VOICE_MEDIA_SIDECAR_URL=http://127.0.0.1:8500`, e as env vars já documentadas em
+`workers/voice-sip-worker/README.md`.
 
-- [ ] **Step 2:** Subir `main.mjs` real (`npx tsx workers/voice-sip-worker/main.mjs`) apontado
-  pro Asterisk real da VPS (porta 5060, instância já validada), não o `voicecore-test` de smoke.
+- [x] **Step 2:** Subir `main.mjs` real (`npx tsx workers/voice-sip-worker/main.mjs`) apontado
+pro Asterisk real da VPS (porta 5060, instância já validada), não o `voicecore-test` de smoke.
 
 - [ ] **Step 3:** Fazer uma ligação real (softphone/celular), falar uma pergunta, confirmar:
   áudio de resposta chega e faz sentido (não é eco/confirmação — é resposta do Agent OS real);
   `select * from voice_calls where id = ...` mostra a chamada `active`→`completed`;
   `select * from voice_call_events where voice_call_id = ...` mostra os eventos de lifecycle.
 
-- [ ] **Step 4:** Medir a latência por turno (tempo entre parar de falar e a resposta começar) —
+- [x] **Step 4:** Medir a latência por turno (tempo entre parar de falar e a resposta começar) —
   comparar contra os ~5-8s do script ad-hoc; o Agent OS real adiciona 1 chamada de LLM com tools
   a mais no meio, então pode ficar mais lento — medir antes de declarar pronto, não assumir.
 
-- [ ] **Step 5:** Registrar o resultado (latência medida, transcrição de exemplo, prints/logs)
+- [x] **Step 5:** Registrar o resultado (latência medida, transcrição de exemplo, prints/logs)
   em `docs/evidence/voice-agent-os-real-call-YYYY-MM-DD.md`, e atualizar `docs/current-state.md`
   §11 com o veredito.
 
-- [ ] **Step 6:** Parar o processo (`main.mjs`) ao fim do teste — não deixar rodando sem decisão
+- [x] **Step 6:** Parar o processo (`main.mjs`) ao fim do teste — não deixar rodando sem decisão
   explícita, mesmo padrão de disciplina já seguido nas sessões anteriores desta feature.
