@@ -2,7 +2,7 @@
 
 **Data:** 2026-09-01  
 **Checkout auditado:** `/Users/david/Desktop/CRM/DeskcommCRM`  
-**Base:** `main` em `5336a6a8f7ebda373938fdb7148206b624a2de61`  
+**Base auditado:** `main` em `60ed322f19c6bff962029bbe360f16f82913f7ae` (também `origin/main`)
 **Fontes consolidadas:**
 
 - `docs/audits/branch-consolidation-plan-2026-09-01.md`
@@ -11,7 +11,17 @@
 - `docs/audits/phase4-gateway-dependabot-audit-2026-09-01.md`
 - achado reportado por Terra sobre Agent OS/Fase 7
 
-**Limite:** esta é uma decisão de consolidação e um plano de execução. Nenhum merge, rebase, cherry-pick, push, fetch, checkout, remoção de ref ou alteração de branch real foi executado.
+**Nota histórica:** as decisões abaixo foram escritas antes da execução e preservadas como contexto. O status executado e vinculante deste fechamento está na seção seguinte.
+
+## Status final executado em 2026-09-01
+
+O `git log` de hoje confirma que a consolidação foi executada em `main`: Content OS + C-1/C-2/C-3, gateway seletivo, Agenda/Nuvemshop e a correção de idempotência do Vercel Workflow foram incorporados. O Agent OS está parcialmente integrado: Fases 2 (Kernel), 4 (SHADOW/evals) e 5 (autonomia assistida) estão alcançáveis em `main`; Fases 3 (agentes de produto), 6 (flywheel) e 7 (benchmark durável) continuam fora de `main` para continuação controlada.
+
+O commit `cacf6185` corrigiu uma falha de segurança real: `content_os_enforce_tenant_fk()` é `SECURITY DEFINER` e podia ser invocada pelos papéis públicos. A migration `0134` e o apêndice de `baseline.sql` revogam `EXECUTE` de `public`, `anon` e `authenticated`, concedendo-o apenas a `service_role`.
+
+O fix de Fase 7 (`5bb29957`/`f638ce8f`) está em `main`, mas a Fase 7 não está concluída: o rerun Vercel completo ainda é obrigatório. A Fase 6 mantém risco de colisão com flywheel/constraints existentes; a Fase 3 e os handlers da Fase 7 exigem revisão de rotas e contratos. A limpeza de branches/worktrees foi parcial: a fotografia final ainda mostra worktrees ativos, portanto não há autorização documental para declarar todos os órfãos removidos.
+
+Para o handoff operacional de amanhã, consulte [`HANDOFF-2026-09-01-consolidacao-agent-os.md`](../handoffs/HANDOFF-2026-09-01-consolidacao-agent-os.md).
 
 ## Decisão final
 

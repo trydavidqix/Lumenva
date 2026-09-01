@@ -136,6 +136,8 @@ Documentação de *processo*. Alta rotatividade; trate como estado, não como co
 **Convenção observada:** épico **vivo** mantém o HANDOFF na **raiz** do repo; épico
 **encerrado** é arquivado em [`handoffs/`](handoffs/). Use isso para saber o que está em voo.
 
+- [`handoffs/HANDOFF-2026-09-01-consolidacao-agent-os.md`](handoffs/HANDOFF-2026-09-01-consolidacao-agent-os.md) — fechamento da consolidação de branches e continuidade das Fases 3/6/7 do Agent OS
+
 - **Raiz (em voo):** `HANDOFF.md` (follow-up), `HANDOFF-harness-evolution.md`, `HANDOFF-operacao-visivel.md`
 - [`handoffs/`](handoffs/) — arquivados: casos humanos, inbox multimodal, CRM vivo, LGPD, wave1-devvivo, contrato wave5, briefing CRM vivo
 - [`stories/`](stories/) — épicos e stories (`epics/MASTER.md` = plano por epic/wave)

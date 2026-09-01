@@ -2,10 +2,10 @@
 type: current-state
 project: DeskcommCRM
 status: maintained
-last_updated: 2026-08-30
-generated_by: auditoria documental sincronizada — CRM consolidado, branch Voice Core, deploy real em produção e primeira ligação SIP/BYOC real pós-merge
+last_updated: 2026-09-01
+generated_by: fechamento documental da consolidação de branches e integração faseada do Agent OS
 confidence: média-alta (métricas de código são CONFIRMADO; estado de épico vem dos HANDOFFs, que são auto-relatados)
-audited_against: main @ 872a4a63 (deploy real em produção + primeira ligação real com áudio confirmado, 2026-08-30 — ver §11 "Unificação SIP/BYOC + Agent OS real")
+audited_against: main @ 60ed322f (consolidação de branches + Agent OS Fases 2, 4 e 5, 2026-09-01)
 ---
 
 # Estado atual — DeskcommCRM
@@ -14,6 +14,12 @@ Este documento existe porque "o que está pronto" estava espalhado em 5 `HANDOFF
 na raiz, `plan/progress.md`, `loop/checkpoints/`, `tasks/todo.md` e o roadmap do README —
 sem lugar único. Um agente novo (ou o dono, depois de uma semana) não conseguia responder
 "posso subir isso?" sem ler ~1500 linhas.
+
+**Fechamento do dia (2026-09-01, `main` @ `60ed322f19c6bff962029bbe360f16f82913f7ae`; `origin/main` no mesmo SHA):** a fotografia abaixo foi reconciliada com `git log --since='2026-09-01 00:00' --until='2026-09-02 00:00'`. Hoje foram incorporados o lote Content OS e as correções C-1 (vocabulário `event_log`), C-2 (anti-SSRF) e C-3 (integridade cross-tenant), o gateway de canais por cherry-pick seletivo, os dois commits documentais de Agenda/Nuvemshop e a correção de idempotência do Vercel Workflow da Fase 7. Também entraram as integrações do Agent OS Fase 2 (Kernel), Fase 4 (SHADOW/evals) e Fase 5 (autonomia assistida). A Fase 3 (agentes de produto), a Fase 6 (flywheel) e a Fase 7 (benchmark durável) permanecem fora de `main` como linhas de continuação; não foram promovidas por risco de conflito/duplicação e, na Fase 7, ainda falta rerun completo do Vercel pós-fix.
+
+O hardening de segurança `cacf6185` adicionou a migration `0134`: `content_os_enforce_tenant_fk()` é função `SECURITY DEFINER` usada por triggers internos, sem `EXECUTE` para `public`, `anon` ou `authenticated`, mantendo execução apenas para `service_role`. O histórico confirma limpeza parcial de refs, mas **não** uma limpeza total: ainda existem worktrees ativos de Content OS, gateway e Fases 2/4/5; portanto não arquivar nem declarar todas as órfãs removidas sem nova fotografia.
+
+As contagens desta revisão são: 1.524 arquivos TS/TSX em `app`/`lib`/`components`/`workers`, 203 route handlers, 130 migrations SQL, 239 testes unitários, 78 testes de invariantes, 37 specs E2E e 298 documentos `.md`/`.mdx` em `docs/`. Estes números são snapshot do SHA acima.
 
 **Reauditoria de sincronização (2026-08-25, `main` @ `3cd5c48a`; histórico):** esta revisão cruzou
 o histórico desde `v1.2.0` com o código, migrations, testes, runbooks, specs e índice.
@@ -79,13 +85,13 @@ de fato executado/verificado nesta sessão, registrado em detalhe no §4.10:
 
 | Métrica | Valor |
 |---|---|
-| Arquivos TS/TSX em `app`+`lib`+`components`+`workers` | 1.258 |
-| Route handlers (`app/api/**/route.ts`) | 194 |
-| Migrations em `supabase/migrations/` | 117 arquivos, até `0125_ai_agent_versions_composio_apps` |
-| Testes unitários (`tests/unit/*.test.ts(x)`) | 194 arquivos |
+| Arquivos TS/TSX em `app`+`lib`+`components`+`workers` | 1.524 |
+| Route handlers (`app/api/**/route.ts`) | 203 |
+| Migrations em `supabase/migrations/` | 130 arquivos (inclui Content OS e Agent OS) |
+| Testes unitários (`tests/unit/*.test.ts(x)`) | 239 arquivos |
 | Invariantes de banco (`tests/invariants/`) | 78 arquivos |
 | Specs E2E (`tests/e2e/*.spec.ts`) | 37 |
-| Documentos `.md`/`.mdx` em `docs/` | 211 |
+| Documentos `.md`/`.mdx` em `docs/` | 298 |
 | Import cycles | **0** (graphify, medido em árvore anterior) |
 | `console.log` fora de `lib/logger.ts` | **0** |
 | `: any` / `as any` | 7 |
@@ -96,8 +102,8 @@ quase nenhum `any`. Os god nodes do grafo (`fail` 325 arestas, `createAdminClien
 sendo aplicada, não acoplamento acidental.
 
 **Doutrina de migrations está sendo cumprida** — CONFIRMADO: o apêndice idempotente de
-`baseline.sql` foi atualizado até a migration `0125`, que é a última em
-`supabase/migrations/`. Os
+`baseline.sql` acompanha as migrations atuais, incluindo Content OS e o forward-fix de
+segurança `0134_content_os_enforce_tenant_fk_revoke`. Os
 artefatos de schema andam juntos como a doutrina exige — o kit self-host recebe as
 mudanças. Esse é o invariante mais fácil de quebrar num projeto open-source e ele está de pé.
 
