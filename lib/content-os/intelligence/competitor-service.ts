@@ -22,12 +22,14 @@ function isPrivateAddress(address: string): boolean {
   if (isIP(normalized) === 4) {
     const octets = normalized.split(".").map(Number);
     const [a, b] = octets;
+    if (a === undefined || b === undefined) return true;
     return a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) ||
       (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) ||
       (a === 100 && b >= 64 && b <= 127) || (a === 198 && (b === 18 || b === 19));
   }
   if (isIP(normalized) === 6) {
     const value = normalized.split("%")[0];
+    if (value === undefined) return true;
     return value === "::1" || value === "::" || value.startsWith("fc") ||
       value.startsWith("fd") || value.startsWith("fe8") || value.startsWith("fe9") ||
       value.startsWith("fea") || value.startsWith("feb");
