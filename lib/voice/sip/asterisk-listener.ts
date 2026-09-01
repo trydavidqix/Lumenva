@@ -36,16 +36,31 @@ const defaultWait = (ms: number): Promise<void> => new Promise((resolve) => setT
 
 const LIFECYCLE_EVENTS = new Set(["StasisStart", "StasisEnd", "ChannelHangupRequest"]);
 
-async function hydrateConnectionVariable(connection: AriConnection, raw: unknown): Promise<unknown> {
+async function hydrateConnectionVariable(connection: AriConnection, raw: unknown, cachedConnectionIds: Map<string, string>): Promise<unknown> {
   if (!raw || typeof raw !== "object") return raw;
   const event = raw as { type?: unknown; channel?: { id?: unknown; channelvars?: Record<string, unknown> } };
   if (!LIFECYCLE_EVENTS.has(String(event.type))) return raw;
   const channel = event.channel;
   if (!channel || typeof channel.id !== "string" || !channel.id.trim()) return raw;
-  if (typeof channel.channelvars?.SIP_CONNECTION_ID === "string" && channel.channelvars.SIP_CONNECTION_ID.trim()) return raw;
-  const connectionId = await connection.getChannelVariable(channel.id, "SIP_CONNECTION_ID");
-  if (!connectionId) return raw;
-  return { ...event, channel: { ...channel, channelvars: { ...channel.channelvars, SIP_CONNECTION_ID: connectionId } } };
+  const inlineConnectionId = channel.channelvars?.SIP_CONNECTION_ID;
+  if (typeof inlineConnectionId === "string" && inlineConnectionId.trim()) {
+    cachedConnectionIds.set(channel.id, inlineConnectionId.trim());
+    return raw;
+  }
+  try {
+    const connectionId = await connection.getChannelVariable(channel.id, "SIP_CONNECTION_ID");
+    if (connectionId) {
+      cachedConnectionIds.set(channel.id, connectionId);
+      return { ...event, channel: { ...channel, channelvars: { ...channel.channelvars, SIP_CONNECTION_ID: connectionId } } };
+    }
+  } catch (error) {
+    const cached = cachedConnectionIds.get(channel.id);
+    if (cached) {
+      return { ...event, channel: { ...channel, channelvars: { ...channel.channelvars, SIP_CONNECTION_ID: cached } } };
+    }
+    throw error;
+  }
+  return raw;
 }
 
 export async function createAsteriskAriListener(deps: AsteriskAriListenerDeps): Promise<AsteriskAriListener> {
@@ -55,6 +70,7 @@ export async function createAsteriskAriListener(deps: AsteriskAriListenerDeps): 
 
   let stream: AriEventStream = await deps.connection.connectEvents(deps.appName);
   let explicitlyClosed = false;
+  const cachedConnectionIds = new Map<string, string>();
 
   // Reconnects with exponential backoff whenever the stream ends without
   // `close()` having been called — a dropped WebSocket must not be
@@ -81,8 +97,11 @@ export async function createAsteriskAriListener(deps: AsteriskAriListenerDeps): 
           while (!explicitlyClosed) {
             for await (const raw of stream.events()) {
               try {
-                const hydrated = await hydrateConnectionVariable(deps.connection, raw);
+                const hydrated = await hydrateConnectionVariable(deps.connection, raw, cachedConnectionIds);
                 const event = await deps.gateway.parseInboundEvent(JSON.stringify(hydrated));
+                if (event.eventType === "StasisEnd" || event.eventType === "ChannelHangupRequest") {
+                  cachedConnectionIds.delete(event.providerEventId);
+                }
                 yield { status: "normalized", event };
               } catch (error) {
                 yield { status: "rejected", error: error instanceof Error ? error : new Error(String(error)), raw };

@@ -1,0 +1,10 @@
+; TEMPLATE ONLY — NOT ACTIVE. Include this context in the production dialplan only
+; after the Twilio trunk and DID have been validated in a controlled window.
+
+[voice-inbound-twilio]
+; Accept only the DID selected by the owner. Do not use a catch-all Dial() target.
+exten => <TWILIO_DID_E164_OR_NORMALIZED>,1,NoOp(Twilio inbound ${CALLERID(num)})
+ same => n,Set(SIP_CONNECTION_ID=<VOICE_PHONE_CONNECTION_ID>)
+ same => n,Answer()
+ same => n,Stasis(voicecore-test)
+ same => n,Hangup()
