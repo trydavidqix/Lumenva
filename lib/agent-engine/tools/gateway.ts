@@ -1,26 +1,38 @@
-import type { ResolvedKernelExecution } from "../kernel/contracts";
-import type { KernelToolGatewayPort } from "../kernel/ports";
-import type { ApprovalStore } from "../policies/approval";
-import { createApprovalRequest } from "../policies/approval";
-import { evaluateToolPolicy, type AgentAutonomyLevel, type ToolPolicyOverrides } from "../policies/engine";
-import { loadRuntimeAutonomyControls, type RuntimeAutonomyStore } from "../policies/runtime-controls";
-import type { AgentToolDefinition } from "./registry";
+import type { PromotionDecision } from '../autonomy/promotion';
+import { mostRestrictiveAutonomyLevel, type RuntimeAutonomyResolver } from '../autonomy/decision';
+import {
+  buildAutonomyDecisionEvidence,
+  recordAutonomyDecision,
+  type AutonomyEvidenceRecorder,
+} from '../autonomy/evidence';
+import type { ApprovalStore } from '../policies/approval';
+import { createApprovalRequest } from '../policies/approval';
+import {
+  evaluateToolPolicy,
+  type AgentAutonomyLevel,
+  type ToolPolicyOverrides,
+} from '../policies/engine';
+import type { AgentToolDefinition } from './registry';
 
 export type ToolGatewayResult =
-  | { kind: "executed"; result: unknown }
-  | { kind: "denied"; reason: string }
-  | { kind: "draft"; proposal: { toolId: string; args: unknown; idempotencyKey: string } }
-  | { kind: "pending_approval"; approvalId: string; reason: string };
+  | { kind: 'executed'; result: unknown }
+  | { kind: 'denied'; reason: string }
+  | { kind: 'draft'; proposal: { toolId: string; args: unknown; idempotencyKey: string } }
+  | { kind: 'pending_approval'; approvalId: string };
 
 export interface ExecuteThroughToolGatewayInput {
   organizationId: string;
   agentId: string;
-  runId: string;
+  runId?: string;
+  traceId?: string;
+  correlationId?: string;
   autonomyLevel: AgentAutonomyLevel;
   tenantPolicy?: ToolPolicyOverrides;
   agentPolicy?: ToolPolicyOverrides;
-  promotionEvidencePassed?: boolean;
-  runtimeAutonomyStore?: RuntimeAutonomyStore;
+  promotionDecision?: PromotionDecision;
+  runtimeAutonomyResolver?: RuntimeAutonomyResolver;
+  runtimeAutonomyStore?: { load: (key: { organizationId: string; agentId: string; capabilityId: string }) => Promise<{ globalEnabled?: boolean; tenantEnabled?: boolean; agentEnabled?: boolean; capabilityEnabled?: boolean } | null> };
+  autonomyEvidenceRecorder?: AutonomyEvidenceRecorder;
   tool: AgentToolDefinition;
   args: unknown;
   idempotencyKey: string;
@@ -28,55 +40,140 @@ export interface ExecuteThroughToolGatewayInput {
   approvalStore: ApprovalStore | null;
 }
 
-export async function executeThroughToolGateway(input: ExecuteThroughToolGatewayInput): Promise<ToolGatewayResult> {
-  if (input.tool.idempotencyRequired && input.idempotencyKey.trim().length === 0) {
-    return { kind: "denied", reason: "idempotency_key_required" };
+function disabledReason(input: {
+  globalEnabled: boolean;
+  tenantEnabled: boolean;
+  agentEnabled: boolean;
+  capabilityEnabled: boolean;
+}): string | null {
+  if (!input.globalEnabled) return 'global_kill_switch';
+  if (!input.tenantEnabled) return 'tenant_kill_switch';
+  if (!input.agentEnabled) return 'agent_kill_switch';
+  if (!input.capabilityEnabled) return 'capability_kill_switch';
+  return null;
+}
+
+export async function executeThroughToolGateway(
+  input: ExecuteThroughToolGatewayInput,
+): Promise<ToolGatewayResult> {
+  const runId = input.runId ?? `gateway:${input.idempotencyKey}`;
+  const traceId = input.traceId ?? runId;
+  const correlationId = input.correlationId ?? traceId;
+  let effectiveLevel = input.autonomyLevel;
+  if (input.runtimeAutonomyStore && !input.runtimeAutonomyResolver) {
+    input.runtimeAutonomyResolver = {
+      async resolve(key) {
+        const state = await input.runtimeAutonomyStore!.load(key);
+        return {
+          level: input.autonomyLevel,
+          globalEnabled: state?.globalEnabled ?? true,
+          tenantEnabled: state?.tenantEnabled ?? true,
+          agentEnabled: state?.agentEnabled ?? true,
+          capabilityEnabled: state?.capabilityEnabled ?? true,
+        };
+      },
+    };
   }
 
-  if (input.tool.hasSideEffect && input.runtimeAutonomyStore !== undefined) {
-    const runtime = await loadRuntimeAutonomyControls(input.runtimeAutonomyStore, {
+  const emit = async (details: {
+    policyOutcome: string;
+    approvalId?: string | null;
+    approvalStatus?: string | null;
+    executionOutcome: string;
+  }) => {
+    await recordAutonomyDecision(
+      input.autonomyEvidenceRecorder,
+      buildAutonomyDecisionEvidence({
+        organizationId: input.organizationId,
+        agentId: input.agentId,
+        runId,
+        capabilityId: input.tool.id,
+        autonomyLevel: effectiveLevel,
+        riskTier: input.tool.risk,
+        promotionEvidenceRef:
+          input.promotionDecision?.kind === 'allow'
+            ? input.promotionDecision.evidenceRef
+            : null,
+        policyOutcome: details.policyOutcome,
+        approvalId: details.approvalId ?? null,
+        approvalStatus: details.approvalStatus ?? null,
+        executionOutcome: details.executionOutcome,
+        traceId,
+        correlationId,
+      }),
+    );
+  };
+
+  if (input.tool.idempotencyRequired && input.idempotencyKey.trim().length === 0) {
+    await emit({ policyOutcome: 'deny', executionOutcome: 'idempotency_key_required' });
+    return { kind: 'denied', reason: 'idempotency_key_required' };
+  }
+
+  if (input.tool.hasSideEffect && input.runtimeAutonomyResolver) {
+    const runtime = await input.runtimeAutonomyResolver.resolve({
       organizationId: input.organizationId,
       agentId: input.agentId,
       capabilityId: input.tool.id,
-      autonomyLevel: input.autonomyLevel,
-      toolHasSideEffect: input.tool.hasSideEffect,
     });
-    if (runtime.kind === "disabled") return { kind: "denied", reason: runtime.reason };
-    if (!runtime.canExecuteSideEffects) return { kind: "denied", reason: "runtime_side_effects_disabled" };
+    const reason = disabledReason(runtime);
+    if (reason) {
+      effectiveLevel = 'off';
+      await emit({ policyOutcome: 'deny', executionOutcome: reason });
+      return { kind: 'denied', reason };
+    }
+    effectiveLevel = mostRestrictiveAutonomyLevel(input.autonomyLevel, runtime.level);
   }
 
   const policy = evaluateToolPolicy({
     organizationId: input.organizationId,
     agentId: input.agentId,
-    autonomyLevel: input.autonomyLevel,
+    autonomyLevel: effectiveLevel,
     tool: input.tool,
     tenantPolicy: input.tenantPolicy,
     agentPolicy: input.agentPolicy,
-    promotionEvidencePassed: input.promotionEvidencePassed,
+    promotionDecision: input.promotionDecision,
   });
 
-  if (policy.kind === "deny") return { kind: "denied", reason: policy.reason };
-  if (policy.kind === "draft") {
+  if (policy.kind === 'deny') {
+    await emit({ policyOutcome: policy.kind, executionOutcome: policy.reason });
+    return { kind: 'denied', reason: policy.reason };
+  }
+
+  if (policy.kind === 'draft') {
+    await emit({ policyOutcome: policy.kind, executionOutcome: 'draft_proposed' });
     return {
-      kind: "draft",
+      kind: 'draft',
       proposal: { toolId: input.tool.id, args: input.args, idempotencyKey: input.idempotencyKey },
     };
   }
-  if (policy.kind === "require_approval") {
-    if (input.approvalStore === null) return { kind: "denied", reason: "approval_store_unavailable" };
+
+  if (policy.kind === 'require_approval') {
+    if (!input.approvalStore) {
+      await emit({ policyOutcome: policy.kind, executionOutcome: 'approval_store_unavailable' });
+      return { kind: 'denied', reason: 'approval_store_unavailable' };
+    }
+
     const request = await createApprovalRequest(input.approvalStore, {
       organizationId: input.organizationId,
-      runId: input.runId,
+      runId,
       agentId: input.agentId,
       toolId: input.tool.id,
       approvalType: policy.approvalType,
       idempotencyKey: input.idempotencyKey,
       reason: policy.reason,
     });
-    return { kind: "pending_approval", approvalId: request.id, reason: policy.reason };
+    await emit({
+      policyOutcome: policy.kind,
+      approvalId: request.id,
+      approvalStatus: request.status,
+      executionOutcome: 'pending_approval',
+    });
+    return { kind: 'pending_approval', approvalId: request.id };
   }
 
-  return { kind: "executed", result: await input.execute() };
+  const result = await input.execute();
+  await emit({ policyOutcome: policy.kind, executionOutcome: 'executed' });
+  return { kind: 'executed', result };
 }
 
 export type ExecutableTool = {
@@ -85,25 +182,61 @@ export type ExecutableTool = {
 };
 export type ToolSetLike = Record<string, ExecutableTool>;
 
+/** Adapter for the kernel port used by the canonical Agent Kernel composition. */
+export function createKernelToolGatewayPort(input: {
+  registry: { get(toolId: string): AgentToolDefinition | null | undefined };
+  approvalStore: ApprovalStore | null;
+  executeTool: (tool: AgentToolDefinition, args: unknown) => Promise<unknown> | unknown;
+}) {
+  return {
+    async execute(request: {
+      execution: { organizationId: string; agentId: string; runId: string };
+      tool: { id: string; risk: AgentToolDefinition['risk']; hasSideEffect: boolean; idempotencyRequired: boolean };
+      args: unknown;
+      idempotencyKey: string;
+    }) {
+      const definition = input.registry.get(request.tool.id);
+      if (!definition) return { kind: 'denied' as const, reason: 'tool_not_registered' };
+      const result = await executeThroughToolGateway({
+        organizationId: request.execution.organizationId,
+        agentId: request.execution.agentId,
+        runId: request.execution.runId,
+        autonomyLevel: 'assisted',
+        tool: definition,
+        args: request.args,
+        idempotencyKey: request.idempotencyKey,
+        execute: () => input.executeTool(definition, request.args),
+        approvalStore: input.approvalStore,
+      });
+      if (result.kind === 'pending_approval') {
+        return { kind: 'approval_required' as const, reason: 'approval_required', approvalId: result.approvalId };
+      }
+      return result;
+    },
+  };
+}
+
 export interface WrapToolSetWithGatewayOptions {
   organizationId: string;
   agentId: string;
-  runId: string;
+  runId?: string;
+  traceId?: string;
+  correlationId?: string;
   autonomyLevel: AgentAutonomyLevel;
   tenantPolicy?: ToolPolicyOverrides;
   agentPolicy?: ToolPolicyOverrides;
-  promotionEvidencePassed?: boolean;
-  runtimeAutonomyStore?: RuntimeAutonomyStore;
+  promotionDecision?: PromotionDecision;
+  runtimeAutonomyResolver?: RuntimeAutonomyResolver;
+  autonomyEvidenceRecorder?: AutonomyEvidenceRecorder;
   definitions: ReadonlyMap<string, AgentToolDefinition>;
   approvalStore: ApprovalStore | null;
   idempotencyKeyFor: (toolId: string, args: unknown) => string;
 }
 
-/** Wraps existing CRM/MCP tools; it never replaces their implementation. */
 export function wrapToolSetWithGateway(tools: ToolSetLike, options: WrapToolSetWithGatewayOptions): ToolSetLike {
   const wrapped: ToolSetLike = {};
   for (const [toolId, definition] of Object.entries(tools)) {
-    if (typeof definition.execute !== "function") {
+    if (typeof definition.execute !== 'function') {
       wrapped[toolId] = definition;
       continue;
     }
@@ -112,16 +245,19 @@ export function wrapToolSetWithGateway(tools: ToolSetLike, options: WrapToolSetW
     wrapped[toolId] = {
       ...definition,
       execute: async (args: unknown, executeOptions?: unknown): Promise<ToolGatewayResult> => {
-        if (metadata === undefined) return { kind: "denied", reason: "tool_not_registered" };
+        if (!metadata) return { kind: 'denied', reason: 'tool_not_registered' };
         return executeThroughToolGateway({
           organizationId: options.organizationId,
           agentId: options.agentId,
           runId: options.runId,
+          traceId: options.traceId,
+          correlationId: options.correlationId,
           autonomyLevel: options.autonomyLevel,
           tenantPolicy: options.tenantPolicy,
           agentPolicy: options.agentPolicy,
-          promotionEvidencePassed: options.promotionEvidencePassed,
-          runtimeAutonomyStore: options.runtimeAutonomyStore,
+          promotionDecision: options.promotionDecision,
+          runtimeAutonomyResolver: options.runtimeAutonomyResolver,
+          autonomyEvidenceRecorder: options.autonomyEvidenceRecorder,
           tool: metadata,
           args,
           idempotencyKey: options.idempotencyKeyFor(toolId, args),
@@ -132,41 +268,4 @@ export function wrapToolSetWithGateway(tools: ToolSetLike, options: WrapToolSetW
     };
   }
   return wrapped;
-}
-
-export interface KernelToolGatewayAdapterOptions {
-  registry: ReadonlyMap<string, AgentToolDefinition>;
-  approvalStore: ApprovalStore | null;
-  runtimeAutonomyStore?: RuntimeAutonomyStore;
-  promotionEvidencePassed?: (execution: ResolvedKernelExecution, toolId: string) => boolean;
-  executeTool: (input: { execution: ResolvedKernelExecution; toolId: string; args: unknown }) => Promise<unknown>;
-}
-
-export function createKernelToolGatewayPort(options: KernelToolGatewayAdapterOptions): KernelToolGatewayPort {
-  return {
-    async execute({ execution, tool, args, idempotencyKey }) {
-      const metadata = options.registry.get(tool.id);
-      if (metadata === undefined) return { kind: "denied", reason: "tool_not_registered" };
-      const result = await executeThroughToolGateway({
-        organizationId: execution.organizationId,
-        agentId: execution.agentId,
-        runId: execution.runId,
-        autonomyLevel: execution.definition.autonomyLevel,
-        promotionEvidencePassed: options.promotionEvidencePassed?.(execution, tool.id),
-        runtimeAutonomyStore: options.runtimeAutonomyStore,
-        tool: metadata,
-        args,
-        idempotencyKey,
-        approvalStore: options.approvalStore,
-        execute: () => options.executeTool({ execution, toolId: tool.id, args }),
-      });
-
-      if (result.kind === "executed") return result;
-      if (result.kind === "pending_approval") {
-        return { kind: "approval_required", reason: result.reason, approvalId: result.approvalId };
-      }
-      if (result.kind === "draft") return { kind: "denied", reason: "draft_side_effects_disabled" };
-      return result;
-    },
-  };
 }
