@@ -9144,6 +9144,13 @@ create trigger content_approvals_item_tenant before insert or update on public.c
 create trigger creator_profiles_creator_tenant before insert or update on public.content_creator_profiles for each row execute function public.content_os_enforce_tenant_fk('content_creators', 'creator_id');
 create trigger creator_assignments_creator_tenant before insert or update on public.content_creator_assignments for each row execute function public.content_os_enforce_tenant_fk('content_creators', 'creator_id');
 create trigger creator_assignments_item_tenant before insert or update on public.content_creator_assignments for each row execute function public.content_os_enforce_tenant_fk('content_items', 'content_item_id');
+
+-- ---- Content OS tenant trigger ACL hardening (migration 0134) ----
+-- Trigger-only SECURITY DEFINER function: no browser role may invoke it as RPC.
+revoke execute on function public.content_os_enforce_tenant_fk() from public;
+revoke execute on function public.content_os_enforce_tenant_fk() from anon;
+revoke execute on function public.content_os_enforce_tenant_fk() from authenticated;
+grant execute on function public.content_os_enforce_tenant_fk() to service_role;
 create index if not exists content_opportunities_status_idx on public.content_opportunities (organization_id, status, priority desc);
 create index if not exists content_ideas_campaign_idx on public.content_ideas (organization_id, campaign_id, created_at desc);
 create index if not exists content_items_status_idx on public.content_items (organization_id, status, scheduled_for);
