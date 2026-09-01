@@ -174,6 +174,9 @@ export class ChangeDetectionClient {
           ...(this.apiKey ? { "x-api-key": this.apiKey } : {}),
         },
         body: options.body ? JSON.stringify(options.body) : undefined,
+        // Never follow redirects from the provider endpoint; redirect chains can
+        // otherwise turn a validated public target into an internal request.
+        redirect: "error",
         signal: AbortSignal.timeout(this.timeoutMs),
       });
 
