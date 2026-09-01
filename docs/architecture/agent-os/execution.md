@@ -71,6 +71,23 @@ The exact storage/lookup mechanism may differ by capability, but duplicate deliv
 
 Long waits (for example human approval) are persisted as state. No HTTP request or model call remains open waiting for a human. Resume continues from the last verified checkpoint with the same run, trace and correlation identity.
 
+## Phase 5 assisted execution
+
+Phase 5 adds governed execution semantics without changing the ownership boundaries above:
+
+- SHADOW stays observational/read-only for the covered path and records autonomy-decision evidence;
+- DRAFT suppresses side effects and returns a proposal rather than executing the requested mutation;
+- ASSISTED R1 execution requires valid promotion evidence at the Tool Gateway;
+- R2/R3 pause behind durable approval rather than keeping a request open;
+- an approved resume uses the original persisted idempotency identity and must not replay a completed side effect;
+- kill-switch state is resolved again before a side effect so a mid-run disable takes effect without deployment;
+- R4 remains denied/non-autonomous;
+- model-driven promotion is not an execution authority.
+
+Synthetic low-risk autopilot mechanics are not equivalent to activation. Phase 5 does not authorize promotion of customer capabilities beyond ASSISTED.
+
+The Phase 5 implementation currently remains `IMPLEMENTATION COMPLETE / VERIFICATION PENDING`; see `phase-5-verification.md`. Fresh executable evidence from an approved runner is required before declaring GO.
+
 ## Runtime and provider boundary
 
 `KernelRuntimePort` is provider-agnostic. Vercel AI SDK 7 remains behind the existing LLM seam/adapter and is translated into internal kernel step results before control returns to `AgentKernel.run()`. Certified capability filtering happens before runtime invocation; provider fallback preserves the same run/trace/correlation identity and emits explicit fallback events.
