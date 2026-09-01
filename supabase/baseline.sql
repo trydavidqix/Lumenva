@@ -8769,6 +8769,25 @@ comment on column public.automation_rules.last_change_actor_kind is
 
 notify pgrst, 'reload schema';
 
+-- ---- Agent OS Phase 2 forward-fixes (2026-08-17) --------------------------
+-- Keep the baseline equivalent to the three additive migrations. Every
+-- operation is idempotent so fresh installs and updates converge identically.
+alter function public.fn_agent_versions_immutable()
+  set search_path = pg_catalog, public;
+alter function public.fn_ai_agent_version_content_immutable()
+  set search_path = pg_catalog, public;
+
+alter function public.fn_agent_versions_immutable()
+  set search_path = '';
+alter function public.fn_ai_agent_version_content_immutable()
+  set search_path = '';
+
+alter table public.lead_notes
+  add column if not exists idempotency_key text;
+create unique index if not exists uniq_lead_notes_idempotency
+  on public.lead_notes (organization_id, contact_id, idempotency_key)
+  where idempotency_key is not null;
+
 -- Content OS Foundation — local source of truth for intelligence, creation,
 -- media, distribution, and learning. External providers are references only.
 
