@@ -342,6 +342,55 @@ create index if not exists content_sources_active_idx on public.content_sources 
 create index if not exists content_signals_observed_idx on public.content_signals (organization_id, observed_at desc);
 create index if not exists competitor_monitors_active_idx on public.competitor_monitors (organization_id, provider) where status = 'active';
 create index if not exists competitor_events_observed_idx on public.competitor_events (organization_id, observed_at desc);
+
+-- Enforce tenant ownership at the relational boundary, including direct SQL/service-role writes.
+create or replace function public.content_os_enforce_tenant_fk()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare parent_org uuid;
+begin
+  if to_jsonb(NEW)->>TG_ARGV[1] is null then return NEW; end if;
+  execute format('select organization_id from public.%I where id = $1', TG_ARGV[0])
+    into parent_org using (to_jsonb(NEW)->>TG_ARGV[1])::uuid;
+  if parent_org is null or parent_org <> NEW.organization_id then
+    raise exception 'content_os tenant mismatch: %.%', TG_TABLE_NAME, TG_ARGV[1]
+      using errcode = '23514';
+  end if;
+  return NEW;
+end $$;
+
+drop trigger if exists content_signals_source_tenant on public.content_signals;
+create trigger content_signals_source_tenant
+  before insert or update on public.content_signals for each row execute function public.content_os_enforce_tenant_fk('content_sources', 'source_id');
+drop trigger if exists competitor_monitors_competitor_tenant on public.competitor_monitors;
+create trigger competitor_monitors_competitor_tenant
+  before insert or update on public.competitor_monitors for each row execute function public.content_os_enforce_tenant_fk('competitors', 'competitor_id');
+drop trigger if exists competitor_events_competitor_tenant on public.competitor_events;
+create trigger competitor_events_competitor_tenant
+  before insert or update on public.competitor_events for each row execute function public.content_os_enforce_tenant_fk('competitors', 'competitor_id');
+drop trigger if exists competitor_events_monitor_tenant on public.competitor_events;
+create trigger competitor_events_monitor_tenant
+  before insert or update on public.competitor_events for each row execute function public.content_os_enforce_tenant_fk('competitor_monitors', 'monitor_id');
+drop trigger if exists content_opportunities_signal_tenant on public.content_opportunities;
+create trigger content_opportunities_signal_tenant
+  before insert or update on public.content_opportunities for each row execute function public.content_os_enforce_tenant_fk('content_signals', 'signal_id');
+drop trigger if exists content_opportunities_event_tenant on public.content_opportunities;
+create trigger content_opportunities_event_tenant
+  before insert or update on public.content_opportunities for each row execute function public.content_os_enforce_tenant_fk('competitor_events', 'competitor_event_id');
+drop trigger if exists content_ideas_campaign_tenant on public.content_ideas;
+create trigger content_ideas_campaign_tenant
+  before insert or update on public.content_ideas for each row execute function public.content_os_enforce_tenant_fk('content_campaigns', 'campaign_id');
+drop trigger if exists content_ideas_opportunity_tenant on public.content_ideas;
+create trigger content_ideas_opportunity_tenant
+  before insert or update on public.content_ideas for each row execute function public.content_os_enforce_tenant_fk('content_opportunities', 'opportunity_id');
+create trigger content_scripts_idea_tenant before insert or update on public.content_scripts for each row execute function public.content_os_enforce_tenant_fk('content_ideas', 'idea_id');
+create trigger content_scripts_hook_tenant before insert or update on public.content_scripts for each row execute function public.content_os_enforce_tenant_fk('content_hooks', 'hook_id');
+create trigger content_items_campaign_tenant before insert or update on public.content_items for each row execute function public.content_os_enforce_tenant_fk('content_campaigns', 'campaign_id');
+create trigger content_items_idea_tenant before insert or update on public.content_items for each row execute function public.content_os_enforce_tenant_fk('content_ideas', 'idea_id');
+create trigger content_items_script_tenant before insert or update on public.content_items for each row execute function public.content_os_enforce_tenant_fk('content_scripts', 'script_id');
+create trigger content_approvals_item_tenant before insert or update on public.content_approvals for each row execute function public.content_os_enforce_tenant_fk('content_items', 'content_item_id');
+create trigger creator_profiles_creator_tenant before insert or update on public.content_creator_profiles for each row execute function public.content_os_enforce_tenant_fk('content_creators', 'creator_id');
+create trigger creator_assignments_creator_tenant before insert or update on public.content_creator_assignments for each row execute function public.content_os_enforce_tenant_fk('content_creators', 'creator_id');
+create trigger creator_assignments_item_tenant before insert or update on public.content_creator_assignments for each row execute function public.content_os_enforce_tenant_fk('content_items', 'content_item_id');
 create index if not exists content_opportunities_status_idx on public.content_opportunities (organization_id, status, priority desc);
 create index if not exists content_ideas_campaign_idx on public.content_ideas (organization_id, campaign_id, created_at desc);
 create index if not exists content_items_status_idx on public.content_items (organization_id, status, scheduled_for);
