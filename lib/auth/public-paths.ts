@@ -15,6 +15,13 @@ export const PUBLIC_PATHS: RegExp[] = [
   /^\/api\/v1\/health$/,
   /^\/api\/v1\/webhooks\//,
   /^\/api\/v1\/cron\//,
+  // Inngest serve endpoint performs its own protocol/signature checks and must
+  // be reachable without a Deskcomm browser session for local/cloud sync.
+  /^\/api\/inngest$/,
+  // Phase 7 Vercel Workflow benchmark endpoints are public only at middleware
+  // level; each route is hard-disabled outside local development and accepts
+  // synthetic benchmark organizations only.
+  /^\/api\/phase7\/vercel-workflow(\/.*)?$/,
   // Heartbeat do agente do host (bearer INTERNAL_SECRET/INTERNAL_CRON_SECRET,
   // checado dentro da própria rota) — sem cookie de sessão, igual /cron/.
   /^\/api\/v1\/system\/agent$/,
