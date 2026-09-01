@@ -212,7 +212,7 @@ describe('DeskcommExecutionAdapter', () => {
     const adapter = new DeskcommExecutionAdapter(memory.persistence);
     const started = await adapter.start({ jobId: 'job-1', workerId: 'worker-1', identity });
 
-    const stopped = await (adapter as any).stop(
+    const stopped = await adapter.stop(
       started,
       'budget_exhausted',
       'max_steps_exhausted',
