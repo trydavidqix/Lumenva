@@ -55,7 +55,7 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
   const rawBody = await req.text();
   // ─── Este cast segue aqui de propósito — leia antes de "completar" a classe ─
   //
-  // Os webhooks de CANAL (WAHA, Meta, canal intermediado) trocaram o cast por
+  // Os webhooks de CANAL trocaram o cast por
   // um schema Zod: lá o tipo errado virava exceção engolida com 200 no fio, ou
   // mensagem de cliente descartada em silêncio. Aqui não: o único campo lido
   // antes do lookup é `store_id`, por `String(body.store_id)` — que não lança
