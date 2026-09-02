@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Robot, Kanban, FlowArrow } from "@phosphor-icons/react";
+import { Robot, Kanban, FlowArrow } from "@phosphor-icons/react/ssr";
 import { useEffect, useId, useRef, useState, type FocusEvent, type ComponentType, type SVGProps } from "react";
 import { solutionsMenu, type SolutionMenuItem } from "@/content/site";
 import { WhatsAppIcon } from "@/components/ui/BrandIcons";

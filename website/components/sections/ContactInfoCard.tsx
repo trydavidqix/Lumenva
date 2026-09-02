@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Envelope, MapPin, Phone } from "@phosphor-icons/react";
+import { Envelope, MapPin, Phone } from "@phosphor-icons/react/ssr";
 import { contactDetails, socialLinks } from "@/content/site";
 import { socialIconMap } from "@/components/ui/BrandIcons";
 import styles from "./ContactInfoCard.module.css";

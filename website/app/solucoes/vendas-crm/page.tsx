@@ -1,4 +1,4 @@
-import { Funnel, ClockCounterClockwise, TrendUp, Lightning } from "@phosphor-icons/react";
+import { Funnel, ClockCounterClockwise, TrendUp, Lightning } from "@phosphor-icons/react/ssr";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { VendasCrmMockup } from "@/components/sections/VendasCrmMockup";

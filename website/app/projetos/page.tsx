@@ -1,4 +1,4 @@
-import { Globe, DeviceMobile, Database } from "@phosphor-icons/react";
+import { Globe, DeviceMobile, Database } from "@phosphor-icons/react/ssr";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { JsonLd } from "@/components/ui/JsonLd";
