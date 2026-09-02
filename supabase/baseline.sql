@@ -1912,8 +1912,22 @@ CREATE TABLE IF NOT EXISTS "public"."webhook_events_log" (
 ALTER TABLE "public"."webhook_events_log" OWNER TO "postgres";
 
 
-ALTER TABLE ONLY "public"."ai_agent_runs"
-    ADD CONSTRAINT "ai_agent_runs_pkey" PRIMARY KEY ("id");
+-- Forward-fix: this baseline is also re-applied by update.sh after migrations.
+-- 0023 creates this primary key inline, so an unconditional dump-style ALTER
+-- fails with "multiple primary keys" on an existing ai_agent_runs table.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conrelid = 'public.ai_agent_runs'::regclass
+          AND conname = 'ai_agent_runs_pkey'
+    ) THEN
+        ALTER TABLE ONLY "public"."ai_agent_runs"
+            ADD CONSTRAINT "ai_agent_runs_pkey" PRIMARY KEY ("id");
+    END IF;
+END
+$$;
 
 
 
