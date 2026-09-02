@@ -1931,8 +1931,22 @@ $$;
 
 
 
-ALTER TABLE ONLY "public"."ai_agent_versions"
-    ADD CONSTRAINT "ai_agent_versions_pkey" PRIMARY KEY ("id");
+-- Forward-fix: 0023 creates this primary key inline, so an unconditional
+-- dump-style ALTER fails with "multiple primary keys" when updating an
+-- existing ai_agent_versions table.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conrelid = 'public.ai_agent_versions'::regclass
+          AND conname = 'ai_agent_versions_pkey'
+    ) THEN
+        ALTER TABLE ONLY "public"."ai_agent_versions"
+            ADD CONSTRAINT "ai_agent_versions_pkey" PRIMARY KEY ("id");
+    END IF;
+END
+$$;
 
 
 
