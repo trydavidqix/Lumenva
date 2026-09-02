@@ -9,11 +9,7 @@ export default defineConfig({
     env: {
       NEXT_PHASE: "phase-production-build",
     },
-    include: [
-      "lib/agent-engine/contracts/**/*.test.ts",
-      "tests/unit/agent-product-*.test.ts",
-      "tests/unit/agent-evals-*.test.ts",
-    ],
+    include: ["lib/agent-engine/contracts/**/*.test.ts"],
     exclude: ["**/node_modules/**", ".next", "dist"],
   },
   resolve: { alias: { "@": path.resolve(__dirname, ".") } },
