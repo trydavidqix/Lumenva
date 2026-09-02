@@ -47,6 +47,13 @@ const schema = z.object({
   INTERNAL_SECRET: required("INTERNAL_SECRET"),
   /** Optional dedicated secret for cron endpoints (S-06.07 onwards). */
   INTERNAL_CRON_SECRET: z.string().optional().default(""),
+  EMAIL_RELAY_OWNER_WHATSAPP_E164: z
+    .string()
+    .regex(/^\+\d{8,15}$/, "EMAIL_RELAY_OWNER_WHATSAPP_E164 deve estar em E.164")
+    .optional()
+    .default(""),
+  EMAIL_RELAY_ORGANIZATION_ID: z.string().uuid().optional().default(""),
+  EMAIL_RELAY_DRY_RUN: z.enum(["true", "false"]).optional().default("false").transform((v) => v === "true"),
 
   // Encryption keys (pgcrypto)
   CPF_ENCRYPTION_KEY: required("CPF_ENCRYPTION_KEY"),
