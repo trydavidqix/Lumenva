@@ -39,7 +39,9 @@
     "harness:check": "node scripts/check-harness-consistency.mjs",
     "gov:verify": "pnpm harness:check && pnpm typecheck && pnpm lint && pnpm lint:channels && pnpm lint:tenant-filter && pnpm test:unit",
     "worker": "tsx --env-file=.env --env-file=.env.local workers/agent-worker/main.ts",
-    "flywheel:judge": "tsx --env-file=.env --env-file=.env.local scripts/flywheel-judge-live.ts"
+    "flywheel:judge": "tsx --env-file=.env --env-file=.env.local scripts/flywheel-judge-live.ts",
+    "phase7:inngest": "pnpm exec vitest run tests/unit/durable-benchmark-inngest-real-runtime.test.ts tests/unit/durable-benchmark-inngest-sdk-wiring.test.ts tests/unit/durable-benchmark-inngest-route.test.ts tests/unit/durable-benchmark-inngest-public-path.test.ts tests/unit/durable-benchmark-inngest-batch-runner.test.ts tests/unit/durable-benchmark-inngest-local-dispatcher.test.ts tests/unit/durable-benchmark-inngest-local-command.test.ts && pnpm typecheck && tsx scripts/phase7-inngest-benchmark.ts",
+    "phase7:benchmark:all": "pnpm exec vitest run tests/unit/durable-benchmark-provider-report.test.ts tests/unit/durable-benchmark-current-provider.test.ts tests/unit/durable-benchmark-inngest-provider.test.ts tests/unit/durable-benchmark-vercel-workflow-provider.test.ts tests/unit/durable-benchmark-vercel-workflow-local-runtime.test.ts tests/unit/durable-benchmark-vercel-workflow-public-path.test.ts tests/unit/durable-benchmark-comparative-orchestrator.test.ts tests/unit/durable-benchmark-all-command.test.ts tests/unit/durable-benchmark-inngest-real-runtime.test.ts tests/unit/durable-benchmark-inngest-sdk-wiring.test.ts tests/unit/durable-benchmark-inngest-route.test.ts tests/unit/durable-benchmark-inngest-public-path.test.ts tests/unit/durable-benchmark-inngest-batch-runner.test.ts tests/unit/durable-benchmark-inngest-local-dispatcher.test.ts tests/unit/durable-benchmark-inngest-local-command.test.ts && pnpm typecheck && tsx scripts/phase7-benchmark-all.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.30",
