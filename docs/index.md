@@ -90,9 +90,12 @@ Detalham schema SQL e payloads exatos. **Consulte antes de modelar qualquer cois
 |---|---|
 | [`doctrine/sistema-vivo.md`](doctrine/sistema-vivo.md) | **Doutrina do Sistema Vivo** — 5 invariantes + Living System Checklist (item 13 do DoD) |
 | [`architecture/agent-turn.html`](architecture/agent-turn.html) | Diagrama do turno do agente (inbound → guardrails → outbound) |
+| [`architecture/memory-architecture.md`](architecture/memory-architecture.md) | Arquitetura de memória em quatro camadas, namespaces e plano de adoção |
 | [`research/architecture-diagrams.md`](research/architecture-diagrams.md) | Diagramas de arquitetura |
 | [`research/reference-synthesis.md`](research/reference-synthesis.md) | Arquitetura herdada da referência WAHA |
 | [`research/followup-reference-mining.md`](research/followup-reference-mining.md) | Pesquisa do motor de follow-up |
+| [`pesquisa/google-sheets-integracao-2026-09-02.md`](pesquisa/google-sheets-integracao-2026-09-02.md) | Inventário e preparação da integração Google Sheets |
+| [`guides/lead-pipeline.md`](guides/lead-pipeline.md) | Pipeline permanente de leads e exportação Google Sheets |
 | [`threat-model.md`](threat-model.md) | **Superfície de ataque real do self-host** |
 
 ## 5. Design system
@@ -166,9 +169,8 @@ anterior à v1.0.0; regenere (`/graphify .`) antes de confiar em detalhe fino.
   trabalho pendente.
 - `docs/diagrams/` não tem `.md` e não foi inventariado. `docs/evidence/` é evidência visual
   (18 PNGs), não documentação de leitura.
-- `docs/architecture/` contém só o diagrama do agent-turn; a doutrina (`CLAUDE.md`, DoD item 13)
-  pede que o "mapa vivo" da arquitetura reflita toda peça nova com ≥2 arestas — **NÃO IDENTIFICADO**
-  se isso está sendo cumprido, e é a lacuna documental mais relevante que sobrou.
+- A doutrina (`CLAUDE.md`, DoD item 13) pede que o "mapa vivo" da arquitetura reflita toda peça nova
+  com ≥2 arestas — **NÃO IDENTIFICADO** se isso está sendo cumprido em todos os artefatos.
 - `docs/growth/` (3 docs) e `docs/brand/` (1) não foram lidos em detalhe — classificados por
   nome de pasta, portanto **INFERIDO**.
 
