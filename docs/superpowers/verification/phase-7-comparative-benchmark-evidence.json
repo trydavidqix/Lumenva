@@ -1,0 +1,2134 @@
+{
+  "generatedAt": "2026-08-19T08:06:22.519Z",
+  "codeSha": "e87ae67f360e26ac479bf673134d6466168c3668",
+  "scenarioVersion": "7.0.0",
+  "engines": [
+    {
+      "engineId": "current",
+      "engineVersion": "deskcomm-execution-adapter-v1",
+      "hardGates": {
+        "passed": true,
+        "failures": []
+      },
+      "suiteCounts": {
+        "small": 8,
+        "medium": 40,
+        "stress": 160
+      },
+      "realEvidence": true
+    },
+    {
+      "engineId": "inngest",
+      "engineVersion": "inngest-v4.18.1-local-dev",
+      "hardGates": {
+        "passed": true,
+        "failures": []
+      },
+      "suiteCounts": {
+        "small": 8,
+        "medium": 40,
+        "stress": 160
+      },
+      "realEvidence": true
+    },
+    {
+      "engineId": "vercel_workflow",
+      "hardGates": {
+        "passed": false,
+        "failures": [
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:small:1:happy_path:1",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:small:1:happy_path:1",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:small:1:transient_retry:1",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:small:1:transient_retry:1",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:small:1:approval_pause_resume:1",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:small:1:approval_pause_resume:1",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:small:1:approval_pause_resume:1",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:small:1:approval_pause_resume:1",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:small:1:process_crash_recovery:1",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:small:1:process_crash_recovery:1",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:small:1:process_crash_recovery:1",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:small:1:process_crash_recovery:1",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:small:1:process_crash_recovery:1",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:small:1:duplicate_delivery_idempotency:1",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:small:1:duplicate_delivery_idempotency:1",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:small:1:approval_denied_or_expired:1",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:happy_path:1",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:happy_path:1",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:happy_path:2",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:happy_path:2",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:happy_path:3",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:happy_path:3",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:happy_path:4",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:happy_path:4",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:happy_path:5",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:happy_path:5",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:transient_retry:1",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:transient_retry:1",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:transient_retry:2",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:transient_retry:2",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:transient_retry:3",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:transient_retry:3",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:transient_retry:4",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:transient_retry:4",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:transient_retry:5",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:transient_retry:5",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:approval_pause_resume:1",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:medium:1:approval_pause_resume:1",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:medium:1:approval_pause_resume:1",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:approval_pause_resume:1",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:approval_pause_resume:2",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:medium:1:approval_pause_resume:2",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:medium:1:approval_pause_resume:2",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:approval_pause_resume:2",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:approval_pause_resume:3",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:medium:1:approval_pause_resume:3",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:medium:1:approval_pause_resume:3",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:approval_pause_resume:3",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:approval_pause_resume:4",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:medium:1:approval_pause_resume:4",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:medium:1:approval_pause_resume:4",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:approval_pause_resume:4",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:approval_pause_resume:5",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:medium:1:approval_pause_resume:5",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:medium:1:approval_pause_resume:5",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:approval_pause_resume:5",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:1",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:1",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:1",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:1",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:1",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:2",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:2",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:2",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:2",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:2",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:3",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:3",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:3",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:3",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:3",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:4",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:4",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:4",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:4",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:4",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:5",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:5",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:5",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:5",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:process_crash_recovery:5",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:duplicate_delivery_idempotency:1",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:duplicate_delivery_idempotency:1",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:duplicate_delivery_idempotency:2",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:duplicate_delivery_idempotency:2",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:duplicate_delivery_idempotency:3",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:duplicate_delivery_idempotency:3",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:duplicate_delivery_idempotency:4",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:duplicate_delivery_idempotency:4",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:medium:1:duplicate_delivery_idempotency:5",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:duplicate_delivery_idempotency:5",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:approval_denied_or_expired:1",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:approval_denied_or_expired:2",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:approval_denied_or_expired:3",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:approval_denied_or_expired:4",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:medium:1:approval_denied_or_expired:5",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:happy_path:1",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:happy_path:1",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:happy_path:2",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:happy_path:2",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:happy_path:3",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:happy_path:3",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:happy_path:4",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:happy_path:4",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:happy_path:5",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:happy_path:5",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:happy_path:6",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:happy_path:6",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:happy_path:7",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:happy_path:7",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:happy_path:8",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:happy_path:8",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:happy_path:9",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:happy_path:9",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:happy_path:10",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:happy_path:10",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:happy_path:11",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:happy_path:11",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:happy_path:12",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:happy_path:12",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:happy_path:13",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:happy_path:13",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:happy_path:14",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:happy_path:14",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:happy_path:15",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:happy_path:15",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:happy_path:16",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:happy_path:16",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:happy_path:17",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:happy_path:17",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:happy_path:18",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:happy_path:18",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:happy_path:19",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:happy_path:19",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:happy_path:20",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:happy_path:20",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:transient_retry:1",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:transient_retry:1",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:transient_retry:2",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:transient_retry:2",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:transient_retry:3",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:transient_retry:3",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:transient_retry:4",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:transient_retry:4",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:transient_retry:5",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:transient_retry:5",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:transient_retry:6",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:transient_retry:6",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:transient_retry:7",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:transient_retry:7",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:transient_retry:8",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:transient_retry:8",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:transient_retry:9",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:transient_retry:9",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:transient_retry:10",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:transient_retry:10",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:transient_retry:11",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:transient_retry:11",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:transient_retry:12",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:transient_retry:12",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:transient_retry:13",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:transient_retry:13",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:transient_retry:14",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:transient_retry:14",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:transient_retry:15",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:transient_retry:15",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:transient_retry:16",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:transient_retry:16",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:transient_retry:17",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:transient_retry:17",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:transient_retry:18",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:transient_retry:18",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:transient_retry:19",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:transient_retry:19",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:transient_retry:20",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:transient_retry:20",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:1",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:1",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:1",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:1",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:2",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:2",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:2",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:2",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:3",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:3",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:3",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:3",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:4",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:4",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:4",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:4",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:5",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:5",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:5",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:5",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:6",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:6",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:6",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:6",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:7",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:7",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:7",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:7",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:8",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:8",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:8",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:8",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:9",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:9",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:9",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:9",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:10",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:10",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:10",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:10",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:11",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:11",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:11",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:11",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:12",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:12",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:12",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:12",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:13",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:13",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:13",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:13",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:14",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:14",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:14",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:14",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:15",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:15",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:15",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:15",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:16",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:16",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:16",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:16",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:17",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:17",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:17",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:17",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:18",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:18",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:18",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:18",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:19",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:19",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:19",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:19",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:20",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:20",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:20",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_pause_resume:20",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:1",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:1",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:1",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:1",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:1",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:2",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:2",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:2",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:2",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:2",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:3",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:3",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:3",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:3",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:3",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:4",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:4",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:4",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:4",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:4",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:5",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:5",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:5",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:5",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:5",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:6",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:6",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:6",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:6",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:6",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:7",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:7",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:7",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:7",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:7",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:8",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:8",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:8",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:8",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:8",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:9",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:9",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:9",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:9",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:9",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:10",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:10",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:10",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:10",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:10",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:11",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:11",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:11",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:11",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:11",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:12",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:12",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:12",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:12",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:12",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:13",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:13",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:13",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:13",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:13",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:14",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:14",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:14",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:14",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:14",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:15",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:15",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:15",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:15",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:15",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:16",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:16",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:16",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:16",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:16",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:17",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:17",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:17",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:17",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:17",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:18",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:18",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:18",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:18",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:18",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:19",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:19",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:19",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:19",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:19",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:20",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "crash_recovery",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:20",
+            "evidence": "crash scenario did not recover"
+          },
+          {
+            "gate": "resume_position",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:20",
+            "evidence": "run did not resume from expected checkpoint"
+          },
+          {
+            "gate": "approval_required",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:20",
+            "evidence": "approval-required scenario completed without satisfied approval"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:process_crash_recovery:20",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:1",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:1",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:2",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:2",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:3",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:3",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:4",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:4",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:5",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:5",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:6",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:6",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:7",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:7",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:8",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:8",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:9",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:9",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:10",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:10",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:11",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:11",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:12",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:12",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:13",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:13",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:14",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:14",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:15",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:15",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:16",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:16",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:17",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:17",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:18",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:18",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:19",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:19",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "exactly_once_effect",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:20",
+            "evidence": "expected 1 committed effects, got 0"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:duplicate_delivery_idempotency:20",
+            "evidence": "expected completed, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_denied_or_expired:1",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_denied_or_expired:2",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_denied_or_expired:3",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_denied_or_expired:4",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_denied_or_expired:5",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_denied_or_expired:6",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_denied_or_expired:7",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_denied_or_expired:8",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_denied_or_expired:9",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_denied_or_expired:10",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_denied_or_expired:11",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_denied_or_expired:12",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_denied_or_expired:13",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_denied_or_expired:14",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_denied_or_expired:15",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_denied_or_expired:16",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_denied_or_expired:17",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_denied_or_expired:18",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_denied_or_expired:19",
+            "evidence": "expected rejected, got failed"
+          },
+          {
+            "gate": "terminal_state_truth",
+            "runId": "vercel_workflow:stress:1:approval_denied_or_expired:20",
+            "evidence": "expected rejected, got failed"
+          }
+        ]
+      },
+      "suiteCounts": {
+        "small": 8,
+        "medium": 40,
+        "stress": 160
+      },
+      "realEvidence": true
+    }
+  ],
+  "decision": "INCOMPLETE",
+  "reasons": [
+    "vercel_workflow:hard_gates_failed",
+    "Comparative evidence is missing one or more benchmark engines or scores."
+  ]
+}

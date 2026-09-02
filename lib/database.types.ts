@@ -7,36 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.15"
-  }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       agent_case_events: {
@@ -179,6 +149,122 @@ export type Database = {
           },
         ]
       }
+      agent_decisions: {
+        Row: {
+          agent_id: string
+          contact_id: string
+          created_at: string
+          decision: string
+          id: string
+          metadata: Json | null
+          organization_id: string
+          outcome: string | null
+          reason: string | null
+        }
+        Insert: {
+          agent_id: string
+          contact_id: string
+          created_at?: string
+          decision: string
+          id?: string
+          metadata?: Json | null
+          organization_id: string
+          outcome?: string | null
+          reason?: string | null
+        }
+        Update: {
+          agent_id?: string
+          contact_id?: string
+          created_at?: string
+          decision?: string
+          id?: string
+          metadata?: Json | null
+          organization_id?: string
+          outcome?: string | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_decisions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_decisions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_decisions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_errors: {
+        Row: {
+          agent_id: string
+          contact_id: string
+          created_at: string
+          error_type: string
+          id: string
+          message: string
+          organization_id: string
+          recovery_taken: string | null
+          severity: string | null
+        }
+        Insert: {
+          agent_id: string
+          contact_id: string
+          created_at?: string
+          error_type: string
+          id?: string
+          message: string
+          organization_id: string
+          recovery_taken?: string | null
+          severity?: string | null
+        }
+        Update: {
+          agent_id?: string
+          contact_id?: string
+          created_at?: string
+          error_type?: string
+          id?: string
+          message?: string
+          organization_id?: string
+          recovery_taken?: string | null
+          severity?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_errors_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_errors_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_errors_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_inbox_items: {
         Row: {
           body: string | null
@@ -219,6 +305,64 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "agent_inbox_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_memory: {
+        Row: {
+          agent_id: string
+          contact_id: string
+          content: string
+          context: Json | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          memory_type: string
+          organization_id: string
+        }
+        Insert: {
+          agent_id: string
+          contact_id: string
+          content: string
+          context?: Json | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          memory_type: string
+          organization_id: string
+        }
+        Update: {
+          agent_id?: string
+          contact_id?: string
+          content?: string
+          context?: Json | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          memory_type?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_memory_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_memory_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_memory_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -366,6 +510,7 @@ export type Database = {
           agent_id: string
           cases_enabled: boolean
           channel_session_id: string
+          composio_apps: string[]
           cost_budget_cents: number
           created_at: string
           created_by: string | null
@@ -400,6 +545,7 @@ export type Database = {
           agent_id: string
           cases_enabled?: boolean
           channel_session_id: string
+          composio_apps?: string[]
           cost_budget_cents?: number
           created_at?: string
           created_by?: string | null
@@ -434,6 +580,7 @@ export type Database = {
           agent_id?: string
           cases_enabled?: boolean
           channel_session_id?: string
+          composio_apps?: string[]
           cost_budget_cents?: number
           created_at?: string
           created_by?: string | null
@@ -1013,77 +1160,6 @@ export type Database = {
         }
         Relationships: []
       }
-      ai_platform_feature_flags: {
-        Row: {
-          config: Json
-          created_at: string
-          feature: string
-          id: string
-          mode: string
-          organization_id: string | null
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          config?: Json
-          created_at?: string
-          feature: string
-          id?: string
-          mode?: string
-          organization_id?: string | null
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          config?: Json
-          created_at?: string
-          feature?: string
-          id?: string
-          mode?: string
-          organization_id?: string | null
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ai_platform_feature_flags_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      ai_platform_feature_flags_legacy_20260821: {
-        Row: {
-          activated_at: string | null
-          deactivated_at: string | null
-          feature_name: string
-          id: string
-          organization_id: string | null
-          rolled_out_percentage: number | null
-          status: string | null
-        }
-        Insert: {
-          activated_at?: string | null
-          deactivated_at?: string | null
-          feature_name: string
-          id?: string
-          organization_id?: string | null
-          rolled_out_percentage?: number | null
-          status?: string | null
-        }
-        Update: {
-          activated_at?: string | null
-          deactivated_at?: string | null
-          feature_name?: string
-          id?: string
-          organization_id?: string | null
-          rolled_out_percentage?: number | null
-          status?: string | null
-        }
-        Relationships: []
-      }
       ai_pricing: {
         Row: {
           completion_cents_per_million_tokens: number | null
@@ -1113,74 +1189,6 @@ export type Database = {
           superseded_at?: string | null
         }
         Relationships: []
-      }
-      ai_projection_ledger: {
-        Row: {
-          applied_at: string | null
-          attempts: number
-          created_at: string
-          entity_id: string
-          entity_type: string
-          id: string
-          idempotency_key: string
-          last_error_at: string | null
-          last_error_code: string | null
-          next_attempt_at: string | null
-          organization_id: string
-          projection_type: string
-          provider: string
-          source_id: string
-          source_version: string
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          applied_at?: string | null
-          attempts?: number
-          created_at?: string
-          entity_id: string
-          entity_type: string
-          id?: string
-          idempotency_key: string
-          last_error_at?: string | null
-          last_error_code?: string | null
-          next_attempt_at?: string | null
-          organization_id: string
-          projection_type: string
-          provider: string
-          source_id: string
-          source_version: string
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          applied_at?: string | null
-          attempts?: number
-          created_at?: string
-          entity_id?: string
-          entity_type?: string
-          id?: string
-          idempotency_key?: string
-          last_error_at?: string | null
-          last_error_code?: string | null
-          next_attempt_at?: string | null
-          organization_id?: string
-          projection_type?: string
-          provider?: string
-          source_id?: string
-          source_version?: string
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ai_projection_ledger_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       ai_provider_credentials: {
         Row: {
@@ -2144,213 +2152,6 @@ export type Database = {
           },
         ]
       }
-      contacts: {
-        Row: {
-          anonymized_at: string | null
-          avatar_storage_path: string | null
-          avatar_updated_at: string | null
-          birthdate: string | null
-          blocked_at: string | null
-          blocked_reason: string | null
-          consent: Json
-          cpf_encrypted: string | null
-          cpf_hash: string | null
-          created_at: string
-          created_by_user_id: string | null
-          display_name: string | null
-          email: string | null
-          email_normalized: string | null
-          force_human: boolean
-          id: string
-          is_anonymized: boolean
-          is_blocked: boolean
-          is_merged_into: string | null
-          last_activity_at: string | null
-          locale: string | null
-          merged_at: string | null
-          name: string | null
-          organization_id: string
-          phone_number: string | null
-          source: string
-          source_metadata: Json
-          tags: string[]
-          updated_at: string
-          wa_identity: string | null
-        }
-        Insert: {
-          anonymized_at?: string | null
-          avatar_storage_path?: string | null
-          avatar_updated_at?: string | null
-          birthdate?: string | null
-          blocked_at?: string | null
-          blocked_reason?: string | null
-          consent?: Json
-          cpf_encrypted?: string | null
-          cpf_hash?: string | null
-          created_at?: string
-          created_by_user_id?: string | null
-          display_name?: string | null
-          email?: string | null
-          email_normalized?: string | null
-          force_human?: boolean
-          id?: string
-          is_anonymized?: boolean
-          is_blocked?: boolean
-          is_merged_into?: string | null
-          last_activity_at?: string | null
-          locale?: string | null
-          merged_at?: string | null
-          name?: string | null
-          organization_id: string
-          phone_number?: string | null
-          source?: string
-          source_metadata?: Json
-          tags?: string[]
-          updated_at?: string
-          wa_identity?: string | null
-        }
-        Update: {
-          anonymized_at?: string | null
-          avatar_storage_path?: string | null
-          avatar_updated_at?: string | null
-          birthdate?: string | null
-          blocked_at?: string | null
-          blocked_reason?: string | null
-          consent?: Json
-          cpf_encrypted?: string | null
-          cpf_hash?: string | null
-          created_at?: string
-          created_by_user_id?: string | null
-          display_name?: string | null
-          email?: string | null
-          email_normalized?: string | null
-          force_human?: boolean
-          id?: string
-          is_anonymized?: boolean
-          is_blocked?: boolean
-          is_merged_into?: string | null
-          last_activity_at?: string | null
-          locale?: string | null
-          merged_at?: string | null
-          name?: string | null
-          organization_id?: string
-          phone_number?: string | null
-          source?: string
-          source_metadata?: Json
-          tags?: string[]
-          updated_at?: string
-          wa_identity?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "contacts_is_merged_into_fkey"
-            columns: ["is_merged_into"]
-            isOneToOne: false
-            referencedRelation: "contacts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contacts_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      conversation_assignment_events: {
-        Row: {
-          changed_by: string | null
-          conversation_id: string
-          created_at: string
-          from_user_id: string | null
-          id: string
-          organization_id: string
-          reason: string
-          to_user_id: string | null
-        }
-        Insert: {
-          changed_by?: string | null
-          conversation_id: string
-          created_at?: string
-          from_user_id?: string | null
-          id?: string
-          organization_id: string
-          reason: string
-          to_user_id?: string | null
-        }
-        Update: {
-          changed_by?: string | null
-          conversation_id?: string
-          created_at?: string
-          from_user_id?: string | null
-          id?: string
-          organization_id?: string
-          reason?: string
-          to_user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "conversation_assignment_events_conversation_id_fkey"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "conversations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "conversation_assignment_events_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      conversation_notes: {
-        Row: {
-          body: string
-          conversation_id: string
-          created_at: string
-          created_by_name: string | null
-          created_by_user_id: string | null
-          id: string
-          organization_id: string
-        }
-        Insert: {
-          body: string
-          conversation_id: string
-          created_at?: string
-          created_by_name?: string | null
-          created_by_user_id?: string | null
-          id?: string
-          organization_id: string
-        }
-        Update: {
-          body?: string
-          conversation_id?: string
-          created_at?: string
-          created_by_name?: string | null
-          created_by_user_id?: string | null
-          id?: string
-          organization_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "conversation_notes_conversation_id_fkey"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "conversations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "conversation_notes_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       competitor_events: {
         Row: {
           competitor_id: string
@@ -2515,6 +2316,120 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "competitors_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacts: {
+        Row: {
+          anonymized_at: string | null
+          avatar_storage_path: string | null
+          avatar_updated_at: string | null
+          birthdate: string | null
+          blocked_at: string | null
+          blocked_reason: string | null
+          consent: Json
+          cpf_encrypted: string | null
+          cpf_hash: string | null
+          created_at: string
+          created_by_user_id: string | null
+          display_name: string | null
+          email: string | null
+          email_normalized: string | null
+          force_human: boolean
+          id: string
+          is_anonymized: boolean
+          is_blocked: boolean
+          is_merged_into: string | null
+          last_activity_at: string | null
+          locale: string | null
+          merged_at: string | null
+          name: string | null
+          organization_id: string
+          phone_number: string | null
+          source: string
+          source_metadata: Json
+          tags: string[]
+          updated_at: string
+          wa_identity: string | null
+        }
+        Insert: {
+          anonymized_at?: string | null
+          avatar_storage_path?: string | null
+          avatar_updated_at?: string | null
+          birthdate?: string | null
+          blocked_at?: string | null
+          blocked_reason?: string | null
+          consent?: Json
+          cpf_encrypted?: string | null
+          cpf_hash?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          display_name?: string | null
+          email?: string | null
+          email_normalized?: string | null
+          force_human?: boolean
+          id?: string
+          is_anonymized?: boolean
+          is_blocked?: boolean
+          is_merged_into?: string | null
+          last_activity_at?: string | null
+          locale?: string | null
+          merged_at?: string | null
+          name?: string | null
+          organization_id: string
+          phone_number?: string | null
+          source?: string
+          source_metadata?: Json
+          tags?: string[]
+          updated_at?: string
+          wa_identity?: string | null
+        }
+        Update: {
+          anonymized_at?: string | null
+          avatar_storage_path?: string | null
+          avatar_updated_at?: string | null
+          birthdate?: string | null
+          blocked_at?: string | null
+          blocked_reason?: string | null
+          consent?: Json
+          cpf_encrypted?: string | null
+          cpf_hash?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          display_name?: string | null
+          email?: string | null
+          email_normalized?: string | null
+          force_human?: boolean
+          id?: string
+          is_anonymized?: boolean
+          is_blocked?: boolean
+          is_merged_into?: string | null
+          last_activity_at?: string | null
+          locale?: string | null
+          merged_at?: string | null
+          name?: string | null
+          organization_id?: string
+          phone_number?: string | null
+          source?: string
+          source_metadata?: Json
+          tags?: string[]
+          updated_at?: string
+          wa_identity?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_is_merged_into_fkey"
+            columns: ["is_merged_into"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -3336,54 +3251,47 @@ export type Database = {
           },
         ]
       }
-      creative_job_assets: {
+      conversation_assignment_events: {
         Row: {
-          asset_id: string
-          asset_role: string
+          changed_by: string | null
+          conversation_id: string
           created_at: string
-          creative_job_id: string
+          from_user_id: string | null
           id: string
           organization_id: string
-          position: number
-          updated_at: string
+          reason: string
+          to_user_id: string | null
         }
         Insert: {
-          asset_id: string
-          asset_role: string
+          changed_by?: string | null
+          conversation_id: string
           created_at?: string
-          creative_job_id: string
+          from_user_id?: string | null
           id?: string
           organization_id: string
-          position?: number
-          updated_at?: string
+          reason: string
+          to_user_id?: string | null
         }
         Update: {
-          asset_id?: string
-          asset_role?: string
+          changed_by?: string | null
+          conversation_id?: string
           created_at?: string
-          creative_job_id?: string
+          from_user_id?: string | null
           id?: string
           organization_id?: string
-          position?: number
-          updated_at?: string
+          reason?: string
+          to_user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "creative_job_assets_asset_id_fkey"
-            columns: ["asset_id"]
+            foreignKeyName: "conversation_assignment_events_conversation_id_fkey"
+            columns: ["conversation_id"]
             isOneToOne: false
-            referencedRelation: "content_assets"
+            referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "creative_job_assets_creative_job_id_fkey"
-            columns: ["creative_job_id"]
-            isOneToOne: false
-            referencedRelation: "creative_jobs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "creative_job_assets_organization_id_fkey"
+            foreignKeyName: "conversation_assignment_events_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -3391,77 +3299,44 @@ export type Database = {
           },
         ]
       }
-      creative_jobs: {
+      conversation_notes: {
         Row: {
-          attempts: number
-          cancel_requested_at: string | null
-          completed_at: string | null
-          content_item_id: string | null
+          body: string
+          conversation_id: string
           created_at: string
+          created_by_name: string | null
+          created_by_user_id: string | null
           id: string
-          idempotency_key: string
-          last_error_at: string | null
-          last_error_code: string | null
-          operation: string
           organization_id: string
-          parameters: Json
-          provider: string
-          provider_job_id: string | null
-          request_hash: string
-          started_at: string | null
-          state: string
-          updated_at: string
         }
         Insert: {
-          attempts?: number
-          cancel_requested_at?: string | null
-          completed_at?: string | null
-          content_item_id?: string | null
+          body: string
+          conversation_id: string
           created_at?: string
+          created_by_name?: string | null
+          created_by_user_id?: string | null
           id?: string
-          idempotency_key: string
-          last_error_at?: string | null
-          last_error_code?: string | null
-          operation: string
           organization_id: string
-          parameters?: Json
-          provider: string
-          provider_job_id?: string | null
-          request_hash: string
-          started_at?: string | null
-          state?: string
-          updated_at?: string
         }
         Update: {
-          attempts?: number
-          cancel_requested_at?: string | null
-          completed_at?: string | null
-          content_item_id?: string | null
+          body?: string
+          conversation_id?: string
           created_at?: string
+          created_by_name?: string | null
+          created_by_user_id?: string | null
           id?: string
-          idempotency_key?: string
-          last_error_at?: string | null
-          last_error_code?: string | null
-          operation?: string
           organization_id?: string
-          parameters?: Json
-          provider?: string
-          provider_job_id?: string | null
-          request_hash?: string
-          started_at?: string | null
-          state?: string
-          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "creative_jobs_content_item_id_fkey"
-            columns: ["content_item_id"]
+            foreignKeyName: "conversation_notes_conversation_id_fkey"
+            columns: ["conversation_id"]
             isOneToOne: false
-            referencedRelation: "content_items"
+            referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "creative_jobs_organization_id_fkey"
+            foreignKeyName: "conversation_notes_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -3469,187 +3344,6 @@ export type Database = {
           },
         ]
       }
-      distribution_connections: {
-        Row: {
-          created_at: string
-          display_name: string
-          id: string
-          last_error_at: string | null
-          last_error_code: string | null
-          metadata: Json
-          organization_id: string
-          provider: string
-          provider_connection_id: string | null
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          display_name: string
-          id?: string
-          last_error_at?: string | null
-          last_error_code?: string | null
-          metadata?: Json
-          organization_id: string
-          provider: string
-          provider_connection_id?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          display_name?: string
-          id?: string
-          last_error_at?: string | null
-          last_error_code?: string | null
-          metadata?: Json
-          organization_id?: string
-          provider?: string
-          provider_connection_id?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "distribution_connections_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      publication_jobs: {
-        Row: {
-          attempts: number
-          connection_id: string
-          content_item_id: string
-          created_at: string
-          id: string
-          idempotency_key: string
-          last_error_at: string | null
-          last_error_code: string | null
-          organization_id: string
-          provider_publication_id: string | null
-          published_at: string | null
-          published_url: string | null
-          request_hash: string
-          scheduled_for: string | null
-          state: string
-          updated_at: string
-        }
-        Insert: {
-          attempts?: number
-          connection_id: string
-          content_item_id: string
-          created_at?: string
-          id?: string
-          idempotency_key: string
-          last_error_at?: string | null
-          last_error_code?: string | null
-          organization_id: string
-          provider_publication_id?: string | null
-          published_at?: string | null
-          published_url?: string | null
-          request_hash: string
-          scheduled_for?: string | null
-          state?: string
-          updated_at?: string
-        }
-        Update: {
-          attempts?: number
-          connection_id?: string
-          content_item_id?: string
-          created_at?: string
-          id?: string
-          idempotency_key?: string
-          last_error_at?: string | null
-          last_error_code?: string | null
-          organization_id?: string
-          provider_publication_id?: string | null
-          published_at?: string | null
-          published_url?: string | null
-          request_hash?: string
-          scheduled_for?: string | null
-          state?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "publication_jobs_connection_id_fkey"
-            columns: ["connection_id"]
-            isOneToOne: false
-            referencedRelation: "distribution_connections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "publication_jobs_content_item_id_fkey"
-            columns: ["content_item_id"]
-            isOneToOne: false
-            referencedRelation: "content_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "publication_jobs_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      publication_metrics: {
-        Row: {
-          captured_at: string
-          created_at: string
-          id: string
-          metrics: Json
-          organization_id: string
-          provider_ref: string | null
-          publication_job_id: string
-          source_version: string | null
-          updated_at: string
-        }
-        Insert: {
-          captured_at: string
-          created_at?: string
-          id?: string
-          metrics?: Json
-          organization_id: string
-          provider_ref?: string | null
-          publication_job_id: string
-          source_version?: string | null
-          updated_at?: string
-        }
-        Update: {
-          captured_at?: string
-          created_at?: string
-          id?: string
-          metrics?: Json
-          organization_id?: string
-          provider_ref?: string | null
-          publication_job_id?: string
-          source_version?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "publication_metrics_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "publication_metrics_publication_job_id_fkey"
-            columns: ["publication_job_id"]
-            isOneToOne: false
-            referencedRelation: "publication_jobs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-
       conversations: {
         Row: {
           active_agent_set_at: string | null
@@ -3783,6 +3477,139 @@ export type Database = {
           },
           {
             foreignKeyName: "conversations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creative_job_assets: {
+        Row: {
+          asset_id: string
+          asset_role: string
+          created_at: string
+          creative_job_id: string
+          id: string
+          organization_id: string
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          asset_id: string
+          asset_role: string
+          created_at?: string
+          creative_job_id: string
+          id?: string
+          organization_id: string
+          position?: number
+          updated_at?: string
+        }
+        Update: {
+          asset_id?: string
+          asset_role?: string
+          created_at?: string
+          creative_job_id?: string
+          id?: string
+          organization_id?: string
+          position?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creative_job_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "content_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creative_job_assets_creative_job_id_fkey"
+            columns: ["creative_job_id"]
+            isOneToOne: false
+            referencedRelation: "creative_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creative_job_assets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creative_jobs: {
+        Row: {
+          attempts: number
+          cancel_requested_at: string | null
+          completed_at: string | null
+          content_item_id: string | null
+          created_at: string
+          id: string
+          idempotency_key: string
+          last_error_at: string | null
+          last_error_code: string | null
+          operation: string
+          organization_id: string
+          parameters: Json
+          provider: string
+          provider_job_id: string | null
+          request_hash: string
+          started_at: string | null
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          cancel_requested_at?: string | null
+          completed_at?: string | null
+          content_item_id?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          last_error_at?: string | null
+          last_error_code?: string | null
+          operation: string
+          organization_id: string
+          parameters?: Json
+          provider: string
+          provider_job_id?: string | null
+          request_hash: string
+          started_at?: string | null
+          state?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          cancel_requested_at?: string | null
+          completed_at?: string | null
+          content_item_id?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          last_error_at?: string | null
+          last_error_code?: string | null
+          operation?: string
+          organization_id?: string
+          parameters?: Json
+          provider?: string
+          provider_job_id?: string | null
+          request_hash?: string
+          started_at?: string | null
+          state?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creative_jobs_content_item_id_fkey"
+            columns: ["content_item_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creative_jobs_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -4515,6 +4342,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "disclosure_template_versions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      distribution_connections: {
+        Row: {
+          created_at: string
+          display_name: string
+          id: string
+          last_error_at: string | null
+          last_error_code: string | null
+          metadata: Json
+          organization_id: string
+          provider: string
+          provider_connection_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          id?: string
+          last_error_at?: string | null
+          last_error_code?: string | null
+          metadata?: Json
+          organization_id: string
+          provider: string
+          provider_connection_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          last_error_at?: string | null
+          last_error_code?: string | null
+          metadata?: Json
+          organization_id?: string
+          provider?: string
+          provider_connection_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "distribution_connections_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -5308,6 +5185,7 @@ export type Database = {
           embedding: Json | null
           headline: string
           id: string
+          idempotency_key: string | null
           organization_id: string
           updated_at: string
         }
@@ -5318,6 +5196,7 @@ export type Database = {
           embedding?: Json | null
           headline: string
           id?: string
+          idempotency_key?: string | null
           organization_id: string
           updated_at?: string
         }
@@ -5328,6 +5207,7 @@ export type Database = {
           embedding?: Json | null
           headline?: string
           id?: string
+          idempotency_key?: string | null
           organization_id?: string
           updated_at?: string
         }
@@ -6518,6 +6398,136 @@ export type Database = {
           },
         ]
       }
+      publication_jobs: {
+        Row: {
+          attempts: number
+          connection_id: string
+          content_item_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          last_error_at: string | null
+          last_error_code: string | null
+          organization_id: string
+          provider_publication_id: string | null
+          published_at: string | null
+          published_url: string | null
+          request_hash: string
+          scheduled_for: string | null
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          connection_id: string
+          content_item_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          last_error_at?: string | null
+          last_error_code?: string | null
+          organization_id: string
+          provider_publication_id?: string | null
+          published_at?: string | null
+          published_url?: string | null
+          request_hash: string
+          scheduled_for?: string | null
+          state?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          connection_id?: string
+          content_item_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          last_error_at?: string | null
+          last_error_code?: string | null
+          organization_id?: string
+          provider_publication_id?: string | null
+          published_at?: string | null
+          published_url?: string | null
+          request_hash?: string
+          scheduled_for?: string | null
+          state?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publication_jobs_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "distribution_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publication_jobs_content_item_id_fkey"
+            columns: ["content_item_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publication_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      publication_metrics: {
+        Row: {
+          captured_at: string
+          created_at: string
+          id: string
+          metrics: Json
+          organization_id: string
+          provider_ref: string | null
+          publication_job_id: string
+          source_version: string | null
+          updated_at: string
+        }
+        Insert: {
+          captured_at: string
+          created_at?: string
+          id?: string
+          metrics?: Json
+          organization_id: string
+          provider_ref?: string | null
+          publication_job_id: string
+          source_version?: string | null
+          updated_at?: string
+        }
+        Update: {
+          captured_at?: string
+          created_at?: string
+          id?: string
+          metrics?: Json
+          organization_id?: string
+          provider_ref?: string | null
+          publication_job_id?: string
+          source_version?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publication_metrics_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publication_metrics_publication_job_id_fkey"
+            columns: ["publication_job_id"]
+            isOneToOne: false
+            referencedRelation: "publication_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reentry_knob_pointers: {
         Row: {
           organization_id: string
@@ -7557,6 +7567,38 @@ export type Database = {
       }
     }
     Views: {
+      agent_context_view: {
+        Row: {
+          agent_id: string | null
+          contact_id: string | null
+          memories: Json | null
+          memory_count: number | null
+          organization_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_memory_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_memory_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_memory_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_provider_credentials_safe: {
         Row: {
           api_key_last4: string | null
@@ -7804,6 +7846,19 @@ export type Database = {
       fn_user_org_ids: { Args: never; Returns: string[] }
       fn_user_role_in: { Args: { p_org: string }; Returns: number }
       fn_user_role_in_org: { Args: { p_org: string }; Returns: string }
+      get_followup_enrollment_stats: {
+        Args: { p_org_id: string }
+        Returns: {
+          active_enrollments: number
+          converted_enrollments: number
+          daily_outcomes: Json
+          exhausted_enrollments: number
+          replied_enrollments: number
+          silence_sweep_rate: number
+          success_rate: number
+          total_enrollments: number
+        }[]
+      }
       midpoint: { Args: { p_next: number; p_prev: number }; Returns: number }
       retrieve_top_k_chunks: {
         Args: {
@@ -7826,468 +7881,6 @@ export type Database = {
     }
     Enums: {
       [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
-  storage: {
-    Tables: {
-      buckets: {
-        Row: {
-          allowed_mime_types: string[] | null
-          avif_autodetection: boolean | null
-          created_at: string | null
-          file_size_limit: number | null
-          id: string
-          name: string
-          owner: string | null
-          owner_id: string | null
-          public: boolean | null
-          type: Database["storage"]["Enums"]["buckettype"]
-          updated_at: string | null
-          versioning_status: string
-        }
-        Insert: {
-          allowed_mime_types?: string[] | null
-          avif_autodetection?: boolean | null
-          created_at?: string | null
-          file_size_limit?: number | null
-          id: string
-          name: string
-          owner?: string | null
-          owner_id?: string | null
-          public?: boolean | null
-          type?: Database["storage"]["Enums"]["buckettype"]
-          updated_at?: string | null
-          versioning_status?: string
-        }
-        Update: {
-          allowed_mime_types?: string[] | null
-          avif_autodetection?: boolean | null
-          created_at?: string | null
-          file_size_limit?: number | null
-          id?: string
-          name?: string
-          owner?: string | null
-          owner_id?: string | null
-          public?: boolean | null
-          type?: Database["storage"]["Enums"]["buckettype"]
-          updated_at?: string | null
-          versioning_status?: string
-        }
-        Relationships: []
-      }
-      buckets_analytics: {
-        Row: {
-          created_at: string
-          deleted_at: string | null
-          format: string
-          id: string
-          name: string
-          type: Database["storage"]["Enums"]["buckettype"]
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          deleted_at?: string | null
-          format?: string
-          id?: string
-          name: string
-          type?: Database["storage"]["Enums"]["buckettype"]
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          deleted_at?: string | null
-          format?: string
-          id?: string
-          name?: string
-          type?: Database["storage"]["Enums"]["buckettype"]
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      buckets_vectors: {
-        Row: {
-          created_at: string
-          id: string
-          type: Database["storage"]["Enums"]["buckettype"]
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id: string
-          type?: Database["storage"]["Enums"]["buckettype"]
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          type?: Database["storage"]["Enums"]["buckettype"]
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      migrations: {
-        Row: {
-          executed_at: string | null
-          hash: string
-          id: number
-          name: string
-        }
-        Insert: {
-          executed_at?: string | null
-          hash: string
-          id: number
-          name: string
-        }
-        Update: {
-          executed_at?: string | null
-          hash?: string
-          id?: number
-          name?: string
-        }
-        Relationships: []
-      }
-      objects: {
-        Row: {
-          archived_at: string | null
-          bucket_id: string | null
-          created_at: string | null
-          id: string
-          is_delete_marker: boolean
-          is_versioned: boolean
-          last_accessed_at: string | null
-          metadata: Json | null
-          name: string | null
-          owner: string | null
-          owner_id: string | null
-          path_tokens: string[] | null
-          updated_at: string | null
-          user_metadata: Json | null
-          version: string | null
-        }
-        Insert: {
-          archived_at?: string | null
-          bucket_id?: string | null
-          created_at?: string | null
-          id?: string
-          is_delete_marker?: boolean
-          is_versioned?: boolean
-          last_accessed_at?: string | null
-          metadata?: Json | null
-          name?: string | null
-          owner?: string | null
-          owner_id?: string | null
-          path_tokens?: string[] | null
-          updated_at?: string | null
-          user_metadata?: Json | null
-          version?: string | null
-        }
-        Update: {
-          archived_at?: string | null
-          bucket_id?: string | null
-          created_at?: string | null
-          id?: string
-          is_delete_marker?: boolean
-          is_versioned?: boolean
-          last_accessed_at?: string | null
-          metadata?: Json | null
-          name?: string | null
-          owner?: string | null
-          owner_id?: string | null
-          path_tokens?: string[] | null
-          updated_at?: string | null
-          user_metadata?: Json | null
-          version?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "objects_bucketId_fkey"
-            columns: ["bucket_id"]
-            isOneToOne: false
-            referencedRelation: "buckets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      s3_multipart_uploads: {
-        Row: {
-          bucket_id: string
-          created_at: string
-          id: string
-          in_progress_size: number
-          key: string
-          metadata: Json | null
-          owner_id: string | null
-          upload_signature: string
-          user_metadata: Json | null
-          version: string
-        }
-        Insert: {
-          bucket_id: string
-          created_at?: string
-          id: string
-          in_progress_size?: number
-          key: string
-          metadata?: Json | null
-          owner_id?: string | null
-          upload_signature: string
-          user_metadata?: Json | null
-          version: string
-        }
-        Update: {
-          bucket_id?: string
-          created_at?: string
-          id?: string
-          in_progress_size?: number
-          key?: string
-          metadata?: Json | null
-          owner_id?: string | null
-          upload_signature?: string
-          user_metadata?: Json | null
-          version?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "s3_multipart_uploads_bucket_id_fkey"
-            columns: ["bucket_id"]
-            isOneToOne: false
-            referencedRelation: "buckets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      s3_multipart_uploads_parts: {
-        Row: {
-          bucket_id: string
-          created_at: string
-          etag: string
-          id: string
-          key: string
-          owner_id: string | null
-          part_number: number
-          size: number
-          upload_id: string
-          version: string
-        }
-        Insert: {
-          bucket_id: string
-          created_at?: string
-          etag: string
-          id?: string
-          key: string
-          owner_id?: string | null
-          part_number: number
-          size?: number
-          upload_id: string
-          version: string
-        }
-        Update: {
-          bucket_id?: string
-          created_at?: string
-          etag?: string
-          id?: string
-          key?: string
-          owner_id?: string | null
-          part_number?: number
-          size?: number
-          upload_id?: string
-          version?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "s3_multipart_uploads_parts_bucket_id_fkey"
-            columns: ["bucket_id"]
-            isOneToOne: false
-            referencedRelation: "buckets"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "s3_multipart_uploads_parts_upload_id_fkey"
-            columns: ["upload_id"]
-            isOneToOne: false
-            referencedRelation: "s3_multipart_uploads"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      vector_indexes: {
-        Row: {
-          bucket_id: string
-          created_at: string
-          data_type: string
-          dimension: number
-          distance_metric: string
-          id: string
-          metadata_configuration: Json | null
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          bucket_id: string
-          created_at?: string
-          data_type: string
-          dimension: number
-          distance_metric: string
-          id?: string
-          metadata_configuration?: Json | null
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          bucket_id?: string
-          created_at?: string
-          data_type?: string
-          dimension?: number
-          distance_metric?: string
-          id?: string
-          metadata_configuration?: Json | null
-          name?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "vector_indexes_bucket_id_fkey"
-            columns: ["bucket_id"]
-            isOneToOne: false
-            referencedRelation: "buckets_vectors"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      allow_any_operation: {
-        Args: { expected_operations: string[] }
-        Returns: boolean
-      }
-      allow_only_operation: {
-        Args: { expected_operation: string }
-        Returns: boolean
-      }
-      can_insert_object: {
-        Args: { bucketid: string; metadata: Json; name: string; owner: string }
-        Returns: undefined
-      }
-      extension: { Args: { name: string }; Returns: string }
-      filename: { Args: { name: string }; Returns: string }
-      foldername: { Args: { name: string }; Returns: string[] }
-      get_common_prefix: {
-        Args: { p_delimiter: string; p_key: string; p_prefix: string }
-        Returns: string
-      }
-      get_size_by_bucket: {
-        Args: never
-        Returns: {
-          bucket_id: string
-          size: number
-        }[]
-      }
-      list_multipart_uploads_with_delimiter: {
-        Args: {
-          bucket_id: string
-          delimiter_param: string
-          max_keys?: number
-          next_key_token?: string
-          next_upload_token?: string
-          prefix_param: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          key: string
-        }[]
-      }
-      list_objects_with_delimiter: {
-        Args: {
-          _bucket_id: string
-          delimiter_param: string
-          max_keys?: number
-          next_token?: string
-          prefix_param: string
-          sort_order?: string
-          start_after?: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
-      operation: { Args: never; Returns: string }
-      search: {
-        Args: {
-          bucketname: string
-          levels?: number
-          limits?: number
-          offsets?: number
-          prefix: string
-          search?: string
-          sortcolumn?: string
-          sortorder?: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
-      search_by_timestamp: {
-        Args: {
-          p_bucket_id: string
-          p_level: number
-          p_limit: number
-          p_prefix: string
-          p_sort_column: string
-          p_sort_column_after: string
-          p_sort_order: string
-          p_start_after: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          key: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
-      search_v2: {
-        Args: {
-          bucket_name: string
-          levels?: number
-          limits?: number
-          prefix: string
-          sort_column?: string
-          sort_column_after?: string
-          sort_order?: string
-          start_after?: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          key: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
-    }
-    Enums: {
-      buckettype: "STANDARD" | "ANALYTICS" | "VECTOR"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -8413,15 +8006,7 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
-  },
-  storage: {
-    Enums: {
-      buckettype: ["STANDARD", "ANALYTICS", "VECTOR"],
-    },
   },
 } as const
