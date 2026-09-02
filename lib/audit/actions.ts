@@ -59,8 +59,6 @@ export type AuditAction =
   | "lead.tags_changed"
   | "message.sent"
   | "message.received"
-  // Uma rodada do cron `recover-stuck-messages` que de fato marcou mensagem
-  // como falha (rodada vazia não vira linha — varredura não é mutação).
   | "message.recover_stuck_run"
   | "contact.blocked"
   | "ai.handoff_triggered"
@@ -132,16 +130,8 @@ export type AuditAction =
   | "ai_agent.run_failed"
   | "channel.connected"
   | "channel.reconnected"
-  // Duas ações distintas de propósito: `deleted` apagou a linha (canal virgem),
-  // `archived` só a escondeu porque conversas/mensagens ainda a referenciam.
-  // A auditoria precisa distinguir o que sumiu do que continua no banco.
   | "channel.deleted"
   | "channel.archived"
-  // Contraparte de `archived`: a linha escondida voltou à vida (reconexão do
-  // canal oficial, retomada do pareamento). Sem ela o histórico registra a
-  // exclusão e cala sobre o canal ter voltado a receber e enviar. Emitida por
-  // `lib/channels/reactivate.ts` — o único caminho de volta, e é o que faz a
-  // frase acima valer para os DOIS casos em vez de para o que lembraram.
   | "channel.reactivated"
   | "authz.denied"
   | "team.role_changed"
@@ -195,8 +185,6 @@ export type AuditAction =
   | "conversation.note_added"
   | "conversation.note_deleted"
   | "ai.case_replied"
-  // O agente participando do chamado — separado de `ai.case_replied` (a pessoa
-  // respondendo) porque juntar os dois apagaria justamente quem agiu.
   | "ai.case_noted_by_agent"
   | "ai.case_closed_by_agent"
   | "pipeline.agent_mapping_updated"
@@ -206,25 +194,19 @@ export type AuditAction =
   | "pipeline.created"
   | "pipeline.updated"
   | "pipeline.archived"
-  // Só existe para o funil que nunca recebeu negócio: com histórico, a operação
-  // vira `pipeline.archived` e a linha continua no banco.
   | "pipeline.deleted"
   | "system.update_requested"
   | "system.update_finished"
-  // IA 360 · wave 2 — o retorno agendado deixou de ser exclusividade do motor e
-  // virou capacidade configurável. `followup_enrollment.*` é o motor de FLUXOS;
-  // estas duas são a PROMESSA avulsa (cron_jobs), que é outra coisa e precisava
-  // de código próprio para não somar duas grandezas no mesmo relatório.
   | "followup.scheduled"
   | "followup.cancelled"
   | "lead.reactivation_proposed"
-  // Fase 7 (LangGraph) — ai_workflow_runs. `workflow.created` audita id/thread
-  // id/status inicial, nunca o corpo do draft (pode carregar PII do contato).
   | "workflow.created"
   | "workflow.approved"
   | "workflow.rejected"
-  // Phase 8 Task 1 — manager sent the draft back for a revision loop
-  // (interrupt re-pauses at a fresh draft instead of reaching a terminal state).
   | "workflow.edited"
-  // Phase 10 — Flywheel judge/distiller run completed
-  | "ai.flywheel_run";
+  | "ai.flywheel_run"
+  // Agent OS Phase 6 — governed Learning Flywheel review lifecycle.
+  | "ai.flywheel_proposal_rejected"
+  | "ai.flywheel_proposal_revision_requested"
+  | "ai.flywheel_proposal_approved"
+  | "ai.flywheel_candidate_approved";

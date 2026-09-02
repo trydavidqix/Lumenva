@@ -1,19 +1,17 @@
 /**
- * Flywheel vivo (Fase 2C/4B) — judge + distiller sobre turnos REAIS, como
- * módulo reutilizável: o script one-shot (scripts/flywheel-judge-live.ts) e o
- * loop agendado do worker chamam o MESMO runFlywheelOnce. Gate humano
- * inegociável: propostas só viram comportamento quando o dono publica na tela.
+ * Flywheel vivo (Fase 2C/4B) — judge + distiller sobre turnos REAIS.
+ * Phase 6 adds an optional, privacy-safe signal adapter before legacy proposal synthesis.
  */
 import type pg from 'pg';
 
 import { runModelCall, type LlmEdgeConfig } from '../edge/llm/run-model-call';
 import type { Logger } from '../obs/logger';
 import { aggregateFollowupOutcomes, type FlowOutcomeStat } from '../../followup/outcome-stats';
+import type { LearningScope } from './contracts';
+import type { LearningSignal } from './signals';
+import { buildPhase6MemoryHygieneSignal } from './live-phase6';
 
 const JUDGE_MODEL = 'claude-haiku-4-5';
-// O distiller PRECISA de modelo próprio: o flywheel roda org-wide sem turno/agent
-// para herdar, então sem isto ele cai no settings.llm.default_model — não setado
-// em self-host configurado pela tela — e a rodada falha "modelo LLM não definido".
 const DISTILLER_MODEL = 'claude-haiku-4-5';
 const DIMENSION = 'memory_hygiene';
 const DATASET = 'live';
@@ -28,6 +26,11 @@ interface TraceMaterial {
   transcript: string;
   notesNow: string;
   rollingSummary: string;
+}
+
+export interface FlywheelPhase6Adapter {
+  resolveScope(input: { organizationId: string; jobId: string }): Promise<LearningScope | null>;
+  emitSignal(signal: LearningSignal): Promise<void>;
 }
 
 async function collectRecentTurns(pool: pg.Pool, limit: number): Promise<TurnRow[]> {
@@ -69,7 +72,6 @@ async function buildMaterial(pool: pg.Pool, turn: TurnRow): Promise<TraceMateria
   return { transcript, notesNow, rollingSummary: cp[0]?.rolling_summary ?? '(sem checkpoint)' };
 }
 
-/** yes = higiene ok; no = fato durável perdido/mal consolidado; unknown = indecidível. */
 function judgePrompt(m: TraceMaterial, optionOrder: 'yes_first' | 'no_first'): string {
   const options =
     optionOrder === 'yes_first'
@@ -116,22 +118,18 @@ function parseJson<T>(text: string): T {
   return JSON.parse(text.slice(start, end + 1)) as T;
 }
 
-
 export interface FlywheelRunResult {
   runId: string;
   judged: number;
   proposals: number;
-  /** Task 8.2 — outcomes de follow-up (converted/replied/exhausted/opted_out/
-   *  handoff/in_flight) por pointer+version, por org tocada nesta rodada
-   *  (via os turnos coletados). Fecha o loop: o flywheel passa a enxergar
-   *  quais fluxos convertem, não só a higiene de memória do turno. */
+  phase6Signals: number;
   followupOutcomes: Array<{ organization_id: string; stats: FlowOutcomeStat[] }>;
 }
 
 export async function runFlywheelOnce(
   pool: pg.Pool,
   llmCfg: LlmEdgeConfig,
-  opts: { limit: number; log: Logger },
+  opts: { limit: number; log: Logger; phase6?: FlywheelPhase6Adapter },
 ): Promise<FlywheelRunResult> {
   const runId = crypto.randomUUID();
   const { limit, log } = opts;
@@ -139,6 +137,7 @@ export async function runFlywheelOnce(
   log.info('flywheel: turnos reais coletados', { run_id: runId, turns: turns.length });
   let judged = 0;
   let proposals = 0;
+  let phase6Signals = 0;
 
   for (const turn of turns) {
     const material = await buildMaterial(pool, turn);
@@ -181,6 +180,19 @@ export async function runFlywheelOnce(
     if (inserted) judged += 1;
     log.info('flywheel: veredito gravado', { job_id: turn.job_id, verdict: verdictValue, inserted });
 
+    if (verdictValue === 'no' && inserted && opts.phase6) {
+      const scope = await opts.phase6.resolveScope({ organizationId: turn.organization_id, jobId: turn.job_id });
+      if (scope) {
+        const signal = buildPhase6MemoryHygieneSignal({
+          jobId: turn.job_id,
+          organizationId: turn.organization_id,
+          scope,
+        });
+        await opts.phase6.emitSignal(signal);
+        phase6Signals += 1;
+      }
+    }
+
     if (verdictValue === 'no' && inserted) {
       const distilled = await runModelCall(
         pool,
@@ -215,13 +227,7 @@ export async function runFlywheelOnce(
       log.info('flywheel: proposta do distiller gravada (gate humano pendente)', { job_id: turn.job_id });
     }
   }
-  // Task 8.2 — o sinal (followup_enrollments.outcome) já existe (Ondas 4/5);
-  // aqui só agregamos por org tocada nesta rodada (via os turnos coletados
-  // acima) e logamos, pra a rodada do flywheel surfacear "flow X converte a
-  // N%" junto do resto. Sem tabela nova: nenhum destino de persistência
-  // óbvio existe pra artefatos de rodada do flywheel (ver flywheel_judge_verdicts/
-  // flywheel_distiller_proposals no baseline) — log + retorno no resultado é
-  // suficiente por instrução do brief.
+
   const orgIds = [...new Set(turns.map((t) => t.organization_id))];
   const followupOutcomes: FlywheelRunResult['followupOutcomes'] = [];
   for (const orgId of orgIds) {
@@ -231,19 +237,16 @@ export async function runFlywheelOnce(
     log.info('flywheel: outcomes de follow-up por fluxo', { run_id: runId, organization_id: orgId, stats });
   }
 
-  return { runId, judged, proposals, followupOutcomes };
+  return { runId, judged, proposals, phase6Signals, followupOutcomes };
 }
 
-/** Loop agendado do flywheel (4B) — intervalo por knob; erro nunca derruba o worker. */
 export async function runFlywheelLoop(
   pool: pg.Pool,
   llmCfg: LlmEdgeConfig,
-  opts: { intervalMs: number; limit: number; log: Logger },
+  opts: { intervalMs: number; limit: number; log: Logger; phase6?: FlywheelPhase6Adapter },
   signal: AbortSignal,
 ): Promise<void> {
   while (!signal.aborted) {
-    // dorme PRIMEIRO: no boot os turnos recentes já foram julgados pela rodada
-    // anterior (dedup pela unique), e subir o worker não deve custar LLM.
     await new Promise<void>((resolve) => {
       const timer = setTimeout(resolve, opts.intervalMs);
       signal.addEventListener('abort', () => {
@@ -253,7 +256,11 @@ export async function runFlywheelLoop(
     });
     if (signal.aborted) return;
     try {
-      const result = await runFlywheelOnce(pool, llmCfg, { limit: opts.limit, log: opts.log });
+      const result = await runFlywheelOnce(pool, llmCfg, {
+        limit: opts.limit,
+        log: opts.log,
+        phase6: opts.phase6,
+      });
       opts.log.info('flywheel: rodada agendada concluída', result as unknown as Record<string, unknown>);
     } catch (err) {
       opts.log.error('flywheel: rodada agendada falhou', {
