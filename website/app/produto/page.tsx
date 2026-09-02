@@ -1,4 +1,4 @@
-import { Bot, Database } from "lucide-react";
+import { Robot, Database } from "@phosphor-icons/react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { HeroProductMockup } from "@/components/sections/HeroProductMockup";
 import { ServiceHero } from "@/components/sections/ServiceHero";
@@ -20,7 +20,7 @@ const service = { name: "Produto Lumenva", description } as const;
 const benefits = [
   { icon: WhatsAppIcon, title: "Inbox unificado", description: "Todas as conversas num só lugar: WhatsApp, Instagram, e-mail e mais." },
   { icon: Database, title: "Pipeline inteligente", description: "Acompanhe oportunidades e feche mais negócios com previsibilidade." },
-  { icon: Bot, title: "Agentes de IA", description: "Agentes treinados para atender, nutrir e converter a qualquer hora." },
+  { icon: Robot, title: "Agentes de IA", description: "Agentes treinados para atender, nutrir e converter a qualquer hora." },
   { icon: N8nIcon, title: "Automação sem limites", description: "Crie fluxos com condições e integrações." },
 ] as const;
 
@@ -41,7 +41,7 @@ export default function ProdutoPage() {
         title="IA, automação e CRM na mesma operação."
         description={description}
         capabilities={[
-          { icon: Bot, label: "Agentes de IA para atendimento e vendas" },
+          { icon: Robot, label: "Agentes de IA para atendimento e vendas" },
           { icon: N8nIcon, label: "Automações orientadas por eventos" },
           { icon: Database, label: "CRM com contexto de conversas e pipeline" },
           { icon: WhatsAppIcon, label: "WhatsApp como canal principal" },

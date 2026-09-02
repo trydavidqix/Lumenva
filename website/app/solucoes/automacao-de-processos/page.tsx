@@ -1,4 +1,4 @@
-import { GitBranch, Puzzle, ShieldCheck, TrendingUp } from "lucide-react";
+import { GitBranch, PuzzlePiece, ShieldCheck, TrendUp } from "@phosphor-icons/react";
 import { AutomacaoMockup } from "@/components/sections/AutomacaoMockup";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
@@ -18,8 +18,8 @@ const breadcrumbs = [
 const service = { name: "Automação de Processos Lumenva", description } as const;
 
 const benefits = [
-  { icon: TrendingUp, title: "Reduza tarefas manuais", description: "Automatize etapas repetitivas e liberte a equipa para trabalho de maior valor." },
-  { icon: Puzzle, title: "Ligue toda a operação", description: "Integre CRM, WhatsApp, formulários e processos internos num só fluxo." },
+  { icon: TrendUp, title: "Reduza tarefas manuais", description: "Automatize etapas repetitivas e liberte a equipa para trabalho de maior valor." },
+  { icon: PuzzlePiece, title: "Ligue toda a operação", description: "Integre CRM, WhatsApp, formulários e processos internos num só fluxo." },
   { icon: ShieldCheck, title: "Mantenha controlo e segurança", description: "Defina condições, aprovações e handoff humano sempre que necessário." },
   { icon: GitBranch, title: "Escala com consistência", description: "Execute processos com previsibilidade, rapidez e menos falhas operacionais." },
 ] as const;
@@ -43,8 +43,8 @@ export default function AutomacaoDeProcessosPage() {
         capabilities={[
           { icon: GitBranch, label: "Fluxos visuais" },
           { icon: ShieldCheck, label: "Regras e condições" },
-          { icon: Puzzle, label: "Integrações ativas" },
-          { icon: TrendingUp, label: "Aprovação humana" },
+          { icon: PuzzlePiece, label: "Integrações ativas" },
+          { icon: TrendUp, label: "Aprovação humana" },
         ]}
         visual={<AutomacaoMockup />}
       />

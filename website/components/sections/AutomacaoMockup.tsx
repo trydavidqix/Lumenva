@@ -1,16 +1,16 @@
-import { BarChart3, Bot, GitBranch, Home, Inbox, Settings, Zap } from "lucide-react";
+import { ChartBar, Robot, GitBranch, House, Tray, Gear, Lightning } from "@phosphor-icons/react";
 import { AppWindow } from "@/components/mockup/AppWindow";
 import { SidebarNav } from "@/components/mockup/SidebarNav";
 import { StatCard } from "@/components/mockup/StatCard";
 import styles from "./AutomacaoMockup.module.css";
 
 const NAV_ITEMS = [
-  { label: "Resumo", icon: Home },
-  { label: "Inbox", icon: Inbox },
-  { label: "Agentes IA", icon: Bot },
-  { label: "Automações", icon: Zap },
-  { label: "Relatórios", icon: BarChart3 },
-  { label: "Configurações", icon: Settings },
+  { label: "Resumo", icon: House },
+  { label: "Inbox", icon: Tray },
+  { label: "Agentes IA", icon: Robot },
+  { label: "Automações", icon: Lightning },
+  { label: "Relatórios", icon: ChartBar },
+  { label: "Configurações", icon: Gear },
 ] as const;
 
 const FLOW_STEPS = ["Novo lead", "Qualificar", "Enviar WhatsApp", "Atualizar CRM"] as const;
@@ -44,7 +44,7 @@ export function AutomacaoMockup() {
       </div>
       <div className={styles.flow}>
         <p className={styles.flowTitle}>
-          <GitBranch aria-hidden="true" size={14} strokeWidth={1.8} />
+          <GitBranch aria-hidden="true" size={14} weight="duotone" color="currentColor" />
           Construtor de fluxo
         </p>
         <div className={styles.flowSteps}>

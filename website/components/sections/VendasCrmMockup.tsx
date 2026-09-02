@@ -1,16 +1,16 @@
-import { BarChart3, Bot, Home, Inbox, Kanban, Settings, Users } from "lucide-react";
+import { ChartBar, Robot, House, Tray, Kanban, Gear, UsersThree } from "@phosphor-icons/react";
 import { AppWindow } from "@/components/mockup/AppWindow";
 import { SidebarNav } from "@/components/mockup/SidebarNav";
 import { StatCard } from "@/components/mockup/StatCard";
 import styles from "./VendasCrmMockup.module.css";
 
 const NAV_ITEMS = [
-  { label: "Resumo", icon: Home },
-  { label: "Inbox", icon: Inbox },
+  { label: "Resumo", icon: House },
+  { label: "Inbox", icon: Tray },
   { label: "Pipeline", icon: Kanban },
-  { label: "Agentes IA", icon: Bot },
-  { label: "Relatórios", icon: BarChart3 },
-  { label: "Configurações", icon: Settings },
+  { label: "Agentes IA", icon: Robot },
+  { label: "Relatórios", icon: ChartBar },
+  { label: "Configurações", icon: Gear },
 ] as const;
 
 const STAGES = [
@@ -33,7 +33,7 @@ export function VendasCrmMockup() {
           <p className={styles.panelTitle}>Próximas ações</p>
           {NEXT_ACTIONS.map((action) => (
             <div className={styles.action} key={action.title}>
-              <Users aria-hidden="true" size={14} strokeWidth={1.8} />
+              <UsersThree aria-hidden="true" size={14} weight="duotone" color="currentColor" />
               <div>
                 <p className={styles.actionTitle}>{action.title}</p>
                 <p className={styles.actionMeta}>{action.meta}</p>

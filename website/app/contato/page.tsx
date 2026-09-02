@@ -1,4 +1,4 @@
-import { Bot, Database } from "lucide-react";
+import { Robot, Database } from "@phosphor-icons/react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ContactForm } from "@/components/sections/ContactForm";
 import { ContactInfoCard } from "@/components/sections/ContactInfoCard";
@@ -52,7 +52,7 @@ export default function ContactPage() {
         title="Vamos conversar sobre a sua operação."
         description={description}
         capabilities={[
-          { icon: Bot, label: "Agentes de IA" },
+          { icon: Robot, label: "Agentes de IA" },
           { icon: N8nIcon, label: "Automações" },
           { icon: Database, label: "CRM" },
           { icon: WhatsAppIcon, label: "WhatsApp" },

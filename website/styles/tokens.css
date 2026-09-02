@@ -5,15 +5,21 @@
   --color-accent-on-dark: #F5F5F7;
   --color-ink: #111111;
   --color-gray: #6E6E73;
+  /* Secondary text: #6E6E73 on #FFFFFF = 5.07:1; on #F5F5F7 = 4.66:1 (AA). */
   --color-white: #FFFFFF;
   --color-surface: #F5F5F7;
   --color-surface-subtle: #FAFAFA;
   --color-surface-alt: #E8E8ED;
   --color-black: #000000;
   --color-text-muted: var(--color-gray);
-  --color-border: #D2D2D7;
-  --color-border-subtle: #E8E8ED;
-  --color-focus-ring: color-mix(in srgb, var(--color-accent) 45%, transparent);
+  /* UI borders: #8A8A90 on #FFFFFF = 3.43:1; on #F5F5F7 = 3.15:1 (UI AA). */
+  --color-border: #8A8A90;
+  /* Subtle borders use the same AA-safe value so they remain perceivable. */
+  --color-border-subtle: #8A8A90;
+  /* Placeholder text reuses the AA-safe secondary gray. */
+  --color-placeholder: #6E6E73;
+  /* Focus ring: #55555A on #FFFFFF = 7.41:1; on #F5F5F7 = 6.81:1 (>=3:1). */
+  --color-focus-ring: #55555A;
 
   /* Typography */
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;

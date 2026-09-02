@@ -1,4 +1,4 @@
-import { Magnet } from "lucide-react";
+import { Magnet } from "@phosphor-icons/react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { JsonLd } from "@/components/ui/JsonLd";
