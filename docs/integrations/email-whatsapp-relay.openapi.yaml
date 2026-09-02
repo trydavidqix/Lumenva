@@ -1,0 +1,106 @@
+openapi: 3.1.0
+info:
+  title: DeskcommCRM Email to WhatsApp Relay
+  description: Sends an authenticated email summary to the configured CRM owner WhatsApp conversation.
+  version: 1.0.0
+servers:
+  - url: https://crm.lumenva.pt
+    description: Lumenva production CRM
+paths:
+  /api/internal/notifications/email:
+    post:
+      operationId: relayEmailNotification
+      summary: Relay an email summary to the owner WhatsApp
+      description: Idempotently delivers the supplied email summary to the configured owner destination.
+      x-openai-isConsequential: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailNotification'
+      responses:
+        '200':
+          description: Notification accepted (or equivalent duplicate already completed).
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          description: Missing or invalid Bearer authentication.
+        '403':
+          description: Configured owner destination is not authorized.
+        '409':
+          description: message_id is in progress or conflicts with a different payload.
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              schema:
+                type: string
+      
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: INTERNAL_SECRET
+  schemas:
+    EmailNotification:
+      type: object
+      additionalProperties: false
+      required:
+        - message_id
+        - thread_id
+        - from
+        - to
+        - subject
+        - summary
+        - action
+        - deadline
+        - urgency
+        - source
+      properties:
+        message_id:
+          type: string
+          minLength: 1
+          maxLength: 200
+        thread_id:
+          type: string
+          minLength: 1
+          maxLength: 200
+        from:
+          type: string
+          minLength: 1
+          maxLength: 320
+        to:
+          type: string
+          minLength: 1
+          maxLength: 320
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 500
+        summary:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        action:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        deadline:
+          type: string
+          minLength: 1
+          maxLength: 200
+        urgency:
+          type: string
+          minLength: 1
+          maxLength: 100
+        source:
+          type: string
+          minLength: 1
+          maxLength: 100
