@@ -13,6 +13,7 @@ export default defineConfig({
       "lib/agent-engine/contracts/**/*.test.ts",
       "tests/unit/agent-product-*.test.ts",
       "tests/unit/agent-evals-*.test.ts",
+      "tests/unit/durable-benchmark-*.test.ts",
     ],
     exclude: ["**/node_modules/**", ".next", "dist"],
   },
