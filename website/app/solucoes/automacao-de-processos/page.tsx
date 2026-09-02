@@ -1,4 +1,4 @@
-import { GitBranch, PuzzlePiece, ShieldCheck, TrendUp } from "@phosphor-icons/react";
+import { GitBranch, PuzzlePiece, ShieldCheck, TrendUp } from "@phosphor-icons/react/ssr";
 import { AutomacaoMockup } from "@/components/sections/AutomacaoMockup";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";

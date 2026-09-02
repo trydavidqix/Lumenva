@@ -8,7 +8,7 @@ import {
   Sparkle,
   UsersThree,
   Lightning,
-} from "@phosphor-icons/react";
+} from "@phosphor-icons/react/ssr";
 import { AppWindow } from "@/components/mockup/AppWindow";
 import { SidebarNav } from "@/components/mockup/SidebarNav";
 import { StatCard } from "@/components/mockup/StatCard";

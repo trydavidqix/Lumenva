@@ -1,4 +1,4 @@
-import { Clock, Heart, ClockCounterClockwise, Sparkle, UsersThree, Lightning } from "@phosphor-icons/react";
+import { Clock, Heart, ClockCounterClockwise, Sparkle, UsersThree, Lightning } from "@phosphor-icons/react/ssr";
 import { AtendimentoMockup } from "@/components/sections/AtendimentoMockup";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";

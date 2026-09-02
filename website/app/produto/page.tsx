@@ -1,4 +1,4 @@
-import { Robot, Database } from "@phosphor-icons/react";
+import { Robot, Database } from "@phosphor-icons/react/ssr";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { HeroProductMockup } from "@/components/sections/HeroProductMockup";
 import { ServiceHero } from "@/components/sections/ServiceHero";

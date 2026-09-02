@@ -1,4 +1,4 @@
-import { Robot, ShieldCheck, UsersThree } from "@phosphor-icons/react";
+import { Robot, ShieldCheck, UsersThree } from "@phosphor-icons/react/ssr";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { WhatsAppIcon } from "@/components/ui/BrandIcons";

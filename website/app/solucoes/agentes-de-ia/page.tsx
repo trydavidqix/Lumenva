@@ -1,4 +1,4 @@
-import { ChartBar, BookOpen, ShieldCheck, User, Lightning } from "@phosphor-icons/react";
+import { ChartBar, BookOpen, ShieldCheck, User, Lightning } from "@phosphor-icons/react/ssr";
 import { AgentesMockup } from "@/components/sections/AgentesMockup";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";

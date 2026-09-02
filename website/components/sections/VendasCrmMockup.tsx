@@ -1,4 +1,4 @@
-import { ChartBar, Robot, House, Tray, Kanban, Gear, UsersThree } from "@phosphor-icons/react";
+import { ChartBar, Robot, House, Tray, Kanban, Gear, UsersThree } from "@phosphor-icons/react/ssr";
 import { AppWindow } from "@/components/mockup/AppWindow";
 import { SidebarNav } from "@/components/mockup/SidebarNav";
 import { StatCard } from "@/components/mockup/StatCard";
