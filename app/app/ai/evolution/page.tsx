@@ -1,17 +1,12 @@
 import { redirect } from "next/navigation";
 
+import { Phase6LearningQueue } from "@/components/ai/Phase6LearningQueue";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { EvolutionClient } from "./_client";
 
 export const dynamic = "force-dynamic";
 
-/**
- * O intervalo padrão nasce AQUI, no servidor, e desce como prop. Calculá-lo no
- * cliente com `new Date()` faria o render do servidor e o da hidratação
- * discordarem na virada do dia UTC — o campo de data piscaria trocando sozinho.
- * São os mesmos 30 dias que a rota assume quando não recebe filtro.
- */
 function ultimosTrintaDiasUtc(): { from: string; to: string } {
   const agora = new Date();
   const fim = new Date(Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth(), agora.getUTCDate()));
@@ -37,6 +32,7 @@ export default async function EvolutionPage() {
           resultado — e o que ainda está travando.
         </p>
       </header>
+      <Phase6LearningQueue />
       <EvolutionClient defaultRange={ultimosTrintaDiasUtc()} />
     </div>
   );
