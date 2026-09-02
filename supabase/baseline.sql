@@ -6895,11 +6895,6 @@ create table if not exists org_memory_entries (
 create index if not exists idx_org_memory_entries_org_status
   on org_memory_entries (organization_id, status, created_at);
 
--- Flywheel: novo destino de proposta (entry de memória da org).
-alter table flywheel_distiller_proposals drop constraint if exists flywheel_distiller_proposals_type_check;
-alter table flywheel_distiller_proposals add constraint flywheel_distiller_proposals_type_check
-  check (type in ('playbook_bullet', 'golden_case', 'reentry_trigger', 'org_memory_entry'));
-
 -- Agent OS Phase 6 — Learning Flywheel proposal types. Idempotent forward-fix
 -- preserving the legacy distiller/org-memory values while allowing the closed
 -- Phase 6 proposal vocabulary in fresh installs and clone updates.

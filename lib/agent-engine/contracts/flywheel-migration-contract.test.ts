@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 const migrationPath = join(
   process.cwd(),
-  'supabase/migrations/20260818140000_0138_agent_os_phase6_flywheel_proposal_types.sql',
+  'supabase/migrations/20260818140000_0140_agent_os_phase6_flywheel_proposal_types.sql',
 );
 
 const sql = readFileSync(migrationPath, 'utf8');
