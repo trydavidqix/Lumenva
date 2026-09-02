@@ -39,7 +39,7 @@ function fakeDb(
     const rows = porTabela[tabela] ?? [];
     let head = false;
     const b: Record<string, unknown> = {};
-    for (const m of ['not', 'limit', 'in']) b[m] = () => b;
+    for (const m of ['not', 'limit', 'in', 'is']) b[m] = () => b;
     b.order = (col: string) => {
       espiao.order.push([tabela, col]);
       return b;
@@ -124,12 +124,13 @@ describe('GET /api/v1/ai/evolution', () => {
 
     expect(espiao.gte.every(([, v]) => v === '2026-07-01T00:00:00.000Z')).toBe(true);
     expect(espiao.lte.every(([, v]) => v === '2026-07-03T23:59:59.999Z')).toBe(true);
-    // Contra TODAS as consultas menos `crm_stages` (estado atual do funil, não
-    // evento do período). Comparar `gte.length` com `lte.length` NÃO serviria:
+    // Contra TODAS as consultas menos `crm_stages` (estado atual do funil) e
+    // `flywheel_distiller_proposals` da fila Phase 6 (propostas pendentes atuais,
+    // não eventos do período). Comparar `gte.length` com `lte.length` NÃO serviria:
     // some o par inteiro de uma leitura e a igualdade continua verdadeira — que é
     // justamente o defeito "leitura sem janela nenhuma".
-    expect(espiao.gte.length).toBe(espiao.tabelas.length - 1);
-    expect(espiao.lte.length).toBe(espiao.tabelas.length - 1);
+    expect(espiao.gte.length).toBe(espiao.tabelas.length - 2);
+    expect(espiao.lte.length).toBe(espiao.tabelas.length - 2);
   });
 
   it('soma as DUAS fontes de handoff — os dois runtimes registram em lugares diferentes', async () => {
