@@ -55,6 +55,12 @@ function resolveRange(qs: { from?: string; to?: string }): { from: Date; to: Dat
   return { from: startOfUtcDay(from), to: startOfUtcDay(to) };
 }
 
+function asObject(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
 export async function GET(req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
 
@@ -155,6 +161,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     handoffInbox,
     handoffEvents,
     stages,
+    phase6QueueRows,
   ] = await Promise.all([
     ler<{ created_at: string; title: string }>("org_memory_entries", "created_at, title", "created_at"),
     // `applied_at` é nulo enquanto a proposta não foi aplicada, e `NULL` não
@@ -211,9 +218,17 @@ export async function GET(req: NextRequest): Promise<Response> {
       .eq("crm_pipelines.organization_id", orgId)
       .eq("is_archived", false)
       .limit(ROW_CAP),
+    supabase
+      .from("flywheel_distiller_proposals")
+      .select("id, type, target, content, evidence, proposed_at, applied_at")
+      .eq("organization_id", orgId)
+      .is("applied_at", null)
+      .order("proposed_at", { ascending: false })
+      .limit(100),
   ]);
 
   if (stages.error) fonteFalhou("crm_stages", stages.error);
+  if (phase6QueueRows.error) fonteFalhou("flywheel_distiller_proposals.phase6_queue", phase6QueueRows.error);
 
   const porPipeline = new Map<string, Array<string | null>>();
   for (const r of (stages.data ?? []) as Array<{
@@ -246,5 +261,35 @@ export async function GET(req: NextRequest): Promise<Response> {
     pipelines: [...porPipeline.entries()].map(([name, hints]) => ({ name, hints })),
   };
 
-  return ok(aggregateEvolution(input), { requestId });
+  const phase6_queue = ((phase6QueueRows.data ?? []) as Array<Record<string, unknown>>).flatMap((row) => {
+    const phase6 = asObject(asObject(row.evidence)?.phase6);
+    const scope = asObject(phase6?.scope);
+    if (!phase6 || phase6.phase !== 6 || scope?.organizationId !== orgId) return [];
+    return [{
+      id: String(row.id),
+      type: String(row.type),
+      target: String(row.target),
+      content: String(row.content),
+      proposed_at: typeof row.proposed_at === "string" ? row.proposed_at : null,
+      scope: {
+        organization_id: String(scope.organizationId ?? ""),
+        agent_id: String(scope.agentId ?? ""),
+        capability_id: String(scope.capabilityId ?? ""),
+      },
+      status: String(phase6.status ?? "detected"),
+      proposal_type: String(phase6.proposalType ?? row.type),
+      cluster_id: String(phase6.clusterId ?? ""),
+      signal_refs: Array.isArray(phase6.signalRefs)
+        ? phase6.signalRefs.filter((v): v is string => typeof v === "string")
+        : [],
+      candidate_ref: typeof phase6.candidateRef === "string" ? phase6.candidateRef : null,
+      validation_ref: typeof phase6.validationRef === "string" ? phase6.validationRef : null,
+      validation_summary: asObject(phase6.validationSummary),
+      rollout_level: typeof phase6.rolloutLevel === "string" ? phase6.rolloutLevel : null,
+      rollback_target_ref: typeof phase6.rollbackTargetRef === "string" ? phase6.rollbackTargetRef : null,
+      rejection_reason: typeof phase6.rejectionReason === "string" ? phase6.rejectionReason : null,
+    }];
+  });
+
+  return ok({ ...aggregateEvolution(input), phase6_queue }, { requestId });
 }
