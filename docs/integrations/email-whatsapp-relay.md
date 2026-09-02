@@ -2,6 +2,28 @@
 
 O endpoint interno `POST /api/internal/notifications/email` recebe o resumo produzido pelo Gmail/ChatGPT Work e envia uma notificação somente para o número do dono, usando o mesmo `sendMessageHandler` e adaptador WAHA do CRM.
 
+## Status — CONFIRMADO em produção (2026-09-02)
+
+Testado de ponta a ponta contra `crm.lumenva.pt` real: GPT Action → endpoint → WhatsApp do
+dono, mensagem entregue. Dois pontos que não estavam documentados antes e derrubaram o
+primeiro teste:
+
+- **A conta usada é ChatGPT Plus pessoal, não um Workspace Team/Enterprise.** Não existe
+  console de admin, allowlist de domínio nem aprovação de admin separada — a seção
+  "Configuração manual no ChatGPT Workspace" abaixo só se aplica a contas Team/Enterprise.
+  Numa conta Plus, a única aprovação é o popup inline do próprio ChatGPT na primeira vez
+  que a Action tenta rodar numa conversa ("Permitir que [GPT] chame crm.lumenva.pt?").
+- **O envio falha fechado com `502 internal_error` se o contato do dono não tiver
+  `phone_number` preenchido no banco**, mesmo com as env vars corretas — sem mensagem de
+  erro detalhada na resposta da API (por design, não vaza estado interno). Confirme
+  `select phone_number from contacts where organization_id=<org> and phone_number=<owner>`
+  antes do primeiro envio; se vazio (comum quando o contato só existe via inbound antigo
+  com identificador `@lid` do WhatsApp), preencha manualmente.
+- Automação total (o GPT ler o Gmail sozinho antes de chamar a Action) não está pronta:
+  GPTs customizados não combinam conector Gmail + Actions na mesma superfície. Hoje o
+  fluxo real é colar o conteúdo do e-mail manualmente, ou construir um conector MCP
+  dedicado (não feito ainda).
+
 ## Configuração
 
 Defina no ambiente do servidor:

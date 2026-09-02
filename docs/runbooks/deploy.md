@@ -14,6 +14,26 @@ divergentes.
 Sem CI publicando imagem, todo deploy constrói na própria VPS. Requisitos: >= 4 GB
 de RAM **ou** swap (medido: ~4min num VPS de 3.8 GB com 4 GB de swap).
 
+**Correção (2026-09-02):** 4 GB de swap não é suficiente margem de segurança — um build
+real nesta mesma VPS de 3.8 GB estourou a memória durante a etapa de TypeScript check
+do `next build` (o build roda `typecheck && test:unit:docker-build && lint:tenant-filter
+&& lint:channels && next build` dentro da imagem, tudo isso além dos containers de
+produção já rodando). O OOM killer do kernel matou processos de produção no meio do
+caminho — **Caddy incluído**, o que derrubou o site por alguns segundos até o Docker
+reiniciar os containers sozinho (sem perda de dado, mas foi um incidente real, não
+hipotético). Antes de rodar o build numa VPS com essa RAM, garanta **8 GB de swap**, não
+4:
+
+```bash
+# se só existe /swapfile de 4G, adicione um segundo:
+fallocate -l 4G /swapfile2 && chmod 600 /swapfile2 && mkswap /swapfile2 && swapon /swapfile2
+# torne permanente no /etc/fstab se ainda não estiver
+swapon --show   # confirme 8G total antes de buildar
+```
+
+Limpar cache de build antigo (`docker builder prune -af`) antes de um build grande também
+ajuda — um cache de builds anteriores chegou a ocupar >20 GB de disco nesta VPS.
+
 **Confirme o path da instalação antes de rodar qualquer coisa** — não é fixo entre
 VPS diferentes. A instalação padrão do `hostgator-setup-kit` usa `/root/deskcommcrm`
 (confirmado contra a VPS real da Lumenva em 2026-08-22); se a sua instalação usa

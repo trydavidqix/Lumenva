@@ -142,6 +142,36 @@ Entregou: RBAC server-side em toda a API, atribuição e transferência auditada
 atendente, roteamento automático com fila e painel de gestão, e `docs/specs/14` —
 o contrato de governança para agentes de IA externos.
 
+### Relay e-mail → WhatsApp (GPT Action) — CONFIRMADO em produção 2026-09-02
+
+Código integrado em `main` desde `8798ae89` (ver
+[`docs/integrations/email-whatsapp-relay.md`](integrations/email-whatsapp-relay.md) e
+[`docs/handoffs/HANDOFF-2026-09-02-email-whatsapp-relay.md`](handoffs/HANDOFF-2026-09-02-email-whatsapp-relay.md)).
+Nesta sessão o caminho completo foi testado de ponta a ponta contra produção real
+(`crm.lumenva.pt`) e confirmado: chamada real via GPT Action do ChatGPT Work → `POST
+/api/internal/notifications/email` → mensagem chegou no WhatsApp do dono.
+
+Dois achados operacionais registrados durante o teste, não documentados antes:
+
+- **Deploy da VPS estava desatualizado.** `git pull` tinha trazido o commit do relay, mas
+  o container `deskcommcrm-app-1` continuava rodando a imagem Docker antiga (a rota
+  respondia 404). Rebuild + `up -d` conforme `docs/runbooks/deploy.md` resolveu. Não há
+  gate que avise quando o container roda atrás do `git log` local — é um gap operacional
+  aberto, não coberto por este handoff.
+- **O envio falha fechado (por design) se o contato do dono não tiver `phone_number`
+  preenchido**, mesmo que `EMAIL_RELAY_OWNER_WHATSAPP_E164`/`EMAIL_RELAY_ORGANIZATION_ID`
+  estejam corretos. Nesta VPS o contato do dono existia (criado via inbound antigo com
+  identificador `@lid` do WhatsApp, sem telefone associado) mas com `phone_number` vazio —
+  a chamada real retornava `502 internal_error` sem detalhe. Corrigido preenchendo o
+  telefone manualmente nesse contato. Antes do primeiro envio autorizado em qualquer
+  ambiente novo, confirme que existe contato + conversa com `phone_number` preenchido para
+  o número configurado — o handoff original já pedia essa validação, mas não descrevia
+  esse sintoma específico.
+
+Automação total (ler Gmail automaticamente antes de chamar a Action) segue pendente: GPTs
+customizados do ChatGPT não suportam conector Gmail junto com Actions na mesma superfície;
+precisaria de um conector MCP dedicado (não construído ainda).
+
 ---
 
 ## 3. O que está incompleto — por épico
