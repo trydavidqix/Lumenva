@@ -1,4 +1,4 @@
-import { Globe, Smartphone, Database } from "lucide-react";
+import { Globe, DeviceMobile, Database } from "@phosphor-icons/react";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { JsonLd } from "@/components/ui/JsonLd";
@@ -16,7 +16,7 @@ const breadcrumbs = [
 
 const projectCards = [
   { icon: Globe, title: "Criação de sites", description: "Sites institucionais e páginas de conversão construídos sob medida." },
-  { icon: Smartphone, title: "Aplicações móveis", description: "Aplicações nativas e multiplataforma para a sua operação." },
+  { icon: DeviceMobile, title: "Aplicações móveis", description: "Aplicações nativas e multiplataforma para a sua operação." },
   { icon: Database, title: "CRM", description: "Implementação e personalização do CRM para vendas e atendimento." },
 ] as const;
 
@@ -37,7 +37,7 @@ export default function ProjectsPage() {
         description={description}
         capabilities={[
           { icon: Globe, label: "Criação de sites" },
-          { icon: Smartphone, label: "Aplicações móveis" },
+          { icon: DeviceMobile, label: "Aplicações móveis" },
           { icon: Database, label: "CRM" },
         ]}
       />

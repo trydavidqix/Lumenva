@@ -1,10 +1,10 @@
-import type { LucideIcon } from "lucide-react";
+import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { LumenvaMark } from "@/components/ui/LumenvaMark";
 import styles from "./SidebarNav.module.css";
 
 export interface SidebarNavItem {
   readonly label: string;
-  readonly icon: LucideIcon;
+  readonly icon: PhosphorIcon;
 }
 
 export interface SidebarNavProps {
@@ -22,7 +22,7 @@ export function SidebarNav({ activeLabel, items }: Readonly<SidebarNavProps>) {
       <ul className={styles.list}>
         {items.map(({ icon: Icon, label }) => (
           <li className={styles.item} data-active={label === activeLabel} key={label}>
-            <Icon size={14} strokeWidth={1.8} />
+            <Icon size={14} weight="duotone" color="currentColor" />
             {label}
           </li>
         ))}

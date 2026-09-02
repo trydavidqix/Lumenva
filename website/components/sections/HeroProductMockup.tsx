@@ -1,29 +1,28 @@
 import {
-  BarChart3,
-  Contact,
-  Home,
-  Inbox,
-  MessageCircle,
-  MessageSquare,
-  Settings,
-  Sparkles,
-  Users,
-  Zap,
-} from "lucide-react";
+  ChartBar,
+  AddressBook,
+  House,
+  Tray,
+  ChatCircle,
+  Gear,
+  Sparkle,
+  UsersThree,
+  Lightning,
+} from "@phosphor-icons/react";
 import { AppWindow } from "@/components/mockup/AppWindow";
 import { SidebarNav } from "@/components/mockup/SidebarNav";
 import { StatCard } from "@/components/mockup/StatCard";
 import styles from "./HeroProductMockup.module.css";
 
 const NAV_ITEMS = [
-  { label: "Resumo", icon: Home },
-  { label: "Inbox", icon: Inbox },
-  { label: "Leads", icon: Users },
-  { label: "Contactos", icon: Contact },
-  { label: "Conversas", icon: MessageCircle },
-  { label: "Automação", icon: Zap },
-  { label: "Relatórios", icon: BarChart3 },
-  { label: "Configurações", icon: Settings },
+  { label: "Resumo", icon: House },
+  { label: "Inbox", icon: Tray },
+  { label: "Leads", icon: UsersThree },
+  { label: "Contactos", icon: AddressBook },
+  { label: "Conversas", icon: ChatCircle },
+  { label: "Automação", icon: Lightning },
+  { label: "Relatórios", icon: ChartBar },
+  { label: "Configurações", icon: Gear },
 ] as const;
 
 const PIPELINE = [
@@ -71,21 +70,21 @@ export function HeroProductMockup() {
           </div>
           <button className={styles.newAutomation} type="button">
             Nova automação
-            <Zap aria-hidden="true" size={14} strokeWidth={1.8} />
+            <Lightning aria-hidden="true" size={14} weight="duotone" color="currentColor" />
           </button>
         </div>
       </div>
       <div className={styles.activity}>
         <p className={styles.chartTitle}>Atividade recente</p>
         <div className={styles.activityItem}>
-          <MessageSquare aria-hidden="true" size={16} strokeWidth={1.8} />
+          <ChatCircle aria-hidden="true" size={16} weight="duotone" color="currentColor" />
           <div>
             <p className={styles.activityTitle}>Nova conversa com João Silva</p>
             <p className={styles.activityMeta}>via WhatsApp</p>
           </div>
         </div>
         <div className={styles.activityItem}>
-          <Sparkles aria-hidden="true" size={16} strokeWidth={1.8} />
+          <Sparkle aria-hidden="true" size={16} weight="duotone" color="currentColor" />
           <div>
             <p className={styles.activityTitle}>Resposta gerada: Proposta #482</p>
             <p className={styles.activityMeta}>por Agente de IA</p>
