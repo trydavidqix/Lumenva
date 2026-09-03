@@ -1,4 +1,4 @@
-# CLAUDE.md — DeskcommCRM
+# CLAUDE.md — Lumenva
 
 > Entrada canônica para sessões Claude neste repositório. Leia antes de planejar, executar comandos ou editar código.
 
@@ -20,7 +20,7 @@ Quando uma rule, skill, agent ou artefato gerado conflitar com este arquivo, **e
 
 ## Visão
 
-DeskcommCRM é um sistema operacional de vendas open source com agentes de IA nativos, multi-nicho, WhatsApp como canal primário via WAHA, CRM multi-tenant com RLS desde o início e LGPD by-design. A monetização é self-host em VPS, não assinatura. Uma instalação fresca que quebra é bug de produto.
+Lumenva é um sistema operacional de vendas open source com agentes de IA nativos, multi-nicho, WhatsApp como canal primário via WAHA, CRM multi-tenant com RLS desde o início e LGPD by-design. A monetização é self-host em VPS, não assinatura. Uma instalação fresca que quebra é bug de produto.
 
 Posicionamento: [`VISION.md`](VISION.md).
 
