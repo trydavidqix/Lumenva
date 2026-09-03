@@ -54,6 +54,9 @@ const schema = z.object({
     .default(""),
   EMAIL_RELAY_ORGANIZATION_ID: z.string().uuid().optional().default(""),
   EMAIL_RELAY_DRY_RUN: z.enum(["true", "false"]).optional().default("false").transform((v) => v === "true"),
+  MCP_RELAY_ENABLED: z.enum(["true", "false"]).optional().default("false").transform((v) => v === "true"),
+  MCP_RELAY_OAUTH_APPROVAL_SECRET: required("MCP_RELAY_OAUTH_APPROVAL_SECRET"),
+  MCP_RELAY_ISSUER: z.string().url().optional().default("https://crm.lumenva.pt"),
 
   // Encryption keys (pgcrypto)
   CPF_ENCRYPTION_KEY: required("CPF_ENCRYPTION_KEY"),
