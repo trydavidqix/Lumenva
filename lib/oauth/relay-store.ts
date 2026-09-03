@@ -31,7 +31,16 @@ async function put(key: string, value: unknown, ttl: number): Promise<void> {
 }
 async function get<T>(key: string): Promise<T | null> {
   const r = backend();
-  if (r) { const raw = await r.get<string>(key); return raw ? JSON.parse(raw) as T : null; }
+  if (r) {
+    // O SDK @upstash/redis já desserializa JSON automaticamente — quando o
+    // valor gravado é um objeto, r.get() devolve o objeto pronto, não a
+    // string crua. JSON.parse() incondicional aqui quebrava com
+    // "[object Object]" is not valid JSON assim que o valor já vinha
+    // parseado. Só faz JSON.parse() quando realmente ainda é string.
+    const raw = await r.get<unknown>(key);
+    if (raw === null || raw === undefined) return null;
+    return (typeof raw === "string" ? (JSON.parse(raw) as T) : (raw as T));
+  }
   const item = memory.get(key);
   if (!item || item.expiresAt <= Date.now()) { memory.delete(key); return null; }
   return item.value as T;
