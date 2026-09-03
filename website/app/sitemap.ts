@@ -9,7 +9,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     .filter((link) => !link.external)
     .map((link) => link.href);
 
-  const paths = ["/", ...publicRoutes.map((route) => route.href), ...legalPaths];
+  const paths = Array.from(
+    new Set(["/", "/servicos", ...publicRoutes.map((route) => route.href), ...legalPaths]),
+  );
 
   return paths.map((path) => ({
     url: new URL(path, siteUrl).toString(),

@@ -1,9 +1,11 @@
 import { expect, test } from "vitest";
 import { site } from "@/content/site";
+import { agencyServices } from "@/content/agency-services";
 import { createPageMetadata } from "@/lib/metadata";
 import {
   breadcrumbSchema,
   faqSchema,
+  agencyServicesSchema,
   organizationSchema,
   serviceSchema,
   websiteSchema,
@@ -45,6 +47,24 @@ test("service schema preserves the supplied visible service facts", () => {
     description: "Atendem, qualificam e movem leads no funil pelo WhatsApp.",
   });
   expect(schema).not.toHaveProperty("offers");
+});
+
+test("agency services schema publishes all seven services without commercial offer fields", () => {
+  const schema = agencyServicesSchema(agencyServices);
+
+  expect(schema["@type"]).toBe("ItemList");
+  expect(schema.itemListElement).toHaveLength(7);
+  expect(schema.itemListElement.map(({ item }) => item.name)).toEqual(agencyServices.map(({ name }) => name));
+
+  for (const entry of schema.itemListElement) {
+    expect(entry.item.provider).toEqual({ "@type": "Organization", name: "Lumenva" });
+    expect(entry.item).not.toHaveProperty("price");
+    expect(entry.item).not.toHaveProperty("priceCurrency");
+    expect(entry.item).not.toHaveProperty("offers");
+    expect(entry).not.toHaveProperty("price");
+    expect(entry).not.toHaveProperty("priceCurrency");
+    expect(entry).not.toHaveProperty("offers");
+  }
 });
 
 test("breadcrumb schema uses the supplied visible hierarchy", () => {

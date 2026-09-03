@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import styles from "@/components/sections/InnerPages.module.css";
 
 type SubmissionState = "idle" | "pending" | "success" | "error";
@@ -8,6 +8,16 @@ type SubmissionState = "idle" | "pending" | "success" | "error";
 export function ContactForm() {
   const [state, setState] = useState<SubmissionState>("idle");
   const [isValid, setIsValid] = useState(false);
+  const [isQuoteIntent, setIsQuoteIntent] = useState(false);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      setIsQuoteIntent(params.get("intent") === "quote");
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   function handleFormChange(event: FormEvent<HTMLFormElement>) {
     setIsValid(event.currentTarget.checkValidity());
@@ -26,7 +36,15 @@ export function ContactForm() {
       whatsapp: formData.get("whatsapp"),
       message: formData.get("message") || undefined,
       consent: formData.get("consent") === "on",
+      website: formData.get("website"),
     };
+
+    if (String(payload.website ?? "").trim()) {
+      form.reset();
+      setIsValid(false);
+      setState("success");
+      return;
+    }
 
     try {
       const response = await fetch("/api/contact", {
@@ -60,11 +78,14 @@ export function ContactForm() {
   return (
     <form
       className={styles.form}
-      aria-label="Solicitação de demonstração"
+      aria-label={isQuoteIntent ? "Pedido de orçamento" : "Solicitação de demonstração"}
       aria-describedby="demo-form-status"
       onChange={handleFormChange}
       onSubmit={handleSubmit}
     >
+      {isQuoteIntent ? (
+        <p className={styles.formNote}>Pedido de orçamento para serviços. Descreva brevemente o que pretende realizar.</p>
+      ) : null}
       <div className={styles.fieldGrid}>
         <label className={styles.field}>
           <span className={styles.label}>Nome</span>
@@ -121,6 +142,14 @@ export function ContactForm() {
           rows={4}
         />
       </label>
+      <input
+        name="website"
+        type="text"
+        aria-hidden="true"
+        tabIndex={-1}
+        autoComplete="off"
+        style={{ position: "absolute", left: "-9999px" }}
+      />
       <label className={styles.consent}>
         <input name="consent" type="checkbox" required />
         <span>Autorizo o contacto da equipa sobre esta solicitação.</span>

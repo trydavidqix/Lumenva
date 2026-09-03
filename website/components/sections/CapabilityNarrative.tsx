@@ -1,9 +1,6 @@
 "use client";
 
-import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Reveal } from "@/components/motion/Reveal";
 import { useReducedMotion } from "@/components/motion/ReducedMotionProvider";
 import type {
@@ -12,13 +9,7 @@ import type {
 } from "@/content/home";
 import type { Service } from "@/content/services";
 import styles from "./HomeSections.module.css";
-
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(useGSAP);
-  if (typeof window.matchMedia === "function") {
-    gsap.registerPlugin(ScrollTrigger);
-  }
-}
+import { loadGsap } from "../motion/gsap-client";
 
 export interface CapabilityOverviewProps {
   readonly items: readonly Service[];
@@ -61,38 +52,21 @@ export function AgentNarrative({ steps }: Readonly<AgentNarrativeProps>) {
   const introRef = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
 
-  useGSAP(
-    () => {
-      if (
-        reducedMotion ||
-        typeof window.matchMedia !== "function" ||
-        !rootRef.current ||
-        !introRef.current
-      ) {
-        return;
-      }
-
-      const media = gsap.matchMedia();
-      media.add("(min-width: 64rem) and (prefers-reduced-motion: no-preference)", () => {
-        const trigger = ScrollTrigger.create({
-          trigger: rootRef.current,
-          start: "top top+=96",
-          end: "bottom bottom-=96",
-          pin: introRef.current,
-          pinSpacing: false,
-        });
-
-        return () => trigger.kill();
-      });
-
-      return () => media.revert();
-    },
-    {
-      dependencies: [reducedMotion],
-      revertOnUpdate: true,
-      scope: rootRef,
-    },
-  );
+  useEffect(() => {
+    const media = typeof window !== "undefined" ? window.matchMedia : undefined;
+    if (reducedMotion || !media || !media("(min-width: 64rem) and (pointer: fine)").matches || media("(prefers-reduced-motion: reduce)").matches) return;
+    let cancelled = false;
+    let revert = () => {};
+    void loadGsap().then(({ gsap, ScrollTrigger }) => {
+      if (cancelled || !rootRef.current || !introRef.current) return;
+      gsap.registerPlugin(ScrollTrigger);
+      const context = gsap.context(() => {
+        ScrollTrigger.create({ trigger: rootRef.current, start: "top top+=96", end: "bottom bottom-=96", pin: introRef.current, pinSpacing: false });
+      }, rootRef);
+      revert = () => context.revert();
+    });
+    return () => { cancelled = true; revert(); };
+  }, [reducedMotion]);
 
   return (
     <section className={styles.sectionAlt} aria-labelledby="agents-title">

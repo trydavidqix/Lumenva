@@ -1,18 +1,14 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
-import gsap from "gsap";
-import { useGSAP } from "@gsap/react";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { demoCta, navigation, shellContent, siteName } from "@/content/site";
 import { Button } from "@/components/ui/Button";
 import { LumenvaMark } from "@/components/ui/LumenvaMark";
 import { MobileNavigation } from "./MobileNavigation";
 import { SolutionsMenu } from "./SolutionsMenu";
 import styles from "./Header.module.css";
-
-gsap.registerPlugin(useGSAP, ScrollTrigger);
+import { loadGsap } from "../motion/gsap-client";
 
 export interface HeaderProps {
   readonly children?: never;
@@ -29,50 +25,24 @@ export function Header() {
   const innerRef = useRef<HTMLDivElement>(null);
   const linksRef = useRef<HTMLDivElement>(null);
 
-  useGSAP(
-    () => {
-      const mm = gsap.matchMedia();
-
-      mm.add(
-        {
-          isDesktop: "(min-width: 64rem)",
-          reduceMotion: "(prefers-reduced-motion: reduce)",
-        },
-        (context) => {
-          const { isDesktop, reduceMotion } = context.conditions as {
-            isDesktop: boolean;
-            reduceMotion: boolean;
-          };
-          if (!isDesktop || !linksRef.current || !innerRef.current) return;
-
-          gsap.set(linksRef.current, { gap: OPEN_GAP });
-          gsap.set(innerRef.current, { minHeight: OPEN_MIN_HEIGHT });
-
-          if (reduceMotion) return;
-
-          const scrollFx = gsap.timeline({
-            scrollTrigger: {
-              trigger: document.body,
-              start: "top top",
-              end: `+=${SCROLL_RANGE}`,
-              scrub: 0.5,
-            },
-          });
-          scrollFx
-            .to(linksRef.current, { gap: COMPACT_GAP, ease: "none" }, 0)
-            .to(innerRef.current, { minHeight: COMPACT_MIN_HEIGHT, ease: "none" }, 0);
-
-          return () => {
-            scrollFx.scrollTrigger?.kill();
-            scrollFx.kill();
-          };
-        },
-      );
-
-      return () => mm.revert();
-    },
-    { scope: headerRef },
-  );
+  useEffect(() => {
+    const media = typeof window !== "undefined" ? window.matchMedia : undefined;
+    if (!media || !media("(min-width: 64rem) and (pointer: fine)").matches || media("(prefers-reduced-motion: reduce)").matches) return;
+    let cancelled = false;
+    let revert = () => {};
+    void loadGsap().then(({ gsap, ScrollTrigger }) => {
+      if (cancelled || !linksRef.current || !innerRef.current) return;
+      gsap.registerPlugin(ScrollTrigger);
+      const context = gsap.context(() => {
+        gsap.set(linksRef.current, { gap: OPEN_GAP });
+        gsap.set(innerRef.current, { minHeight: OPEN_MIN_HEIGHT });
+        const scrollFx = gsap.timeline({ scrollTrigger: { trigger: document.body, start: "top top", end: `+=${SCROLL_RANGE}`, scrub: 0.5 } });
+        scrollFx.to(linksRef.current, { gap: COMPACT_GAP, ease: "none" }, 0).to(innerRef.current, { minHeight: COMPACT_MIN_HEIGHT, ease: "none" }, 0);
+      }, headerRef);
+      revert = () => context.revert();
+    });
+    return () => { cancelled = true; revert(); };
+  }, []);
 
   return (
     <header className={styles.header} ref={headerRef}>

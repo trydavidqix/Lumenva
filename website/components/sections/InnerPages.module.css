@@ -297,6 +297,22 @@
   color: var(--color-white);
   cursor: pointer;
   font-weight: 800;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.submit:hover {
+  background: var(--color-accent-hover);
+}
+
+.submit:active {
+  transform: translateY(1px);
+}
+
+.submit:focus-visible {
+  outline: 0.1875rem solid var(--color-focus-ring);
+  outline-offset: 0.1875rem;
 }
 
 .submit:disabled {

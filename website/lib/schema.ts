@@ -1,4 +1,5 @@
 import type { FaqItem } from "@/content/faq";
+import type { AgencyService } from "@/content/agency-services";
 import type { Service } from "@/content/services";
 import { contactDetails, site, socialLinks } from "@/content/site";
 import { getSiteUrl } from "@/lib/metadata";
@@ -35,6 +36,22 @@ export type ServiceSchema = JsonLdRecord & {
   name: string;
   description: string;
   provider: { "@type": "Organization"; name: string };
+};
+
+export type AgencyServicesSchema = JsonLdRecord & {
+  "@context": "https://schema.org";
+  "@type": "ItemList";
+  name: string;
+  itemListElement: Array<{
+    "@type": "Service";
+    position: number;
+    item: {
+      "@type": "Service";
+      name: string;
+      description: string;
+      provider: { "@type": "Organization"; name: string };
+    };
+  }>;
 };
 
 export type BreadcrumbSchema = JsonLdRecord & {
@@ -95,6 +112,27 @@ export function serviceSchema(service: Service): ServiceSchema {
       "@type": "Organization",
       name: site.siteName,
     },
+  };
+}
+
+export function agencyServicesSchema(services: readonly AgencyService[]): AgencyServicesSchema {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Serviços da Lumenva",
+    itemListElement: services.map((service, index) => ({
+      "@type": "Service",
+      position: index + 1,
+      item: {
+        "@type": "Service",
+        name: service.name,
+        description: service.description,
+        provider: {
+          "@type": "Organization",
+          name: site.siteName,
+        },
+      },
+    })),
   };
 }
 

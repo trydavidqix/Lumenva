@@ -1,9 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import type { ReactNode } from "react";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { description } from "@/content/site";
+import { getSiteUrl } from "@/lib/metadata";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -13,6 +16,7 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getSiteUrl()),
   title: {
     default: "Lumenva | Atendimento e vendas com IA",
     template: "%s | Lumenva",
@@ -38,6 +42,8 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <Header />
         <main id="main-content">{children}</main>
         <Footer />
+        <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );

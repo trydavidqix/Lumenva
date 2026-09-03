@@ -7,12 +7,12 @@ const directory = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   testDir: "./tests/e2e",
   use: {
-    baseURL: "http://localhost:3100",
+    baseURL: "http://localhost:3000",
   },
   webServer: {
-    command: "pnpm dev --port 3100",
+    command: "pnpm dev --port 3000",
     cwd: directory,
-    port: 3100,
+    port: 3000,
     reuseExistingServer: !process.env.CI,
   },
 });

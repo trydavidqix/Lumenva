@@ -13,7 +13,7 @@
   --color-text-muted: var(--color-gray);
   --color-border: #D2D2D7;
   --color-border-subtle: #E8E8ED;
-  --color-focus-ring: color-mix(in srgb, var(--color-accent) 45%, transparent);
+  --color-focus-ring: var(--color-ink);
 
   /* Typography */
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;

@@ -11,6 +11,7 @@ import { Hero } from "@/components/sections/Hero";
 import { HowItWorks } from "@/components/sections/HowItWorks";
 import { IntegrationStrip } from "@/components/sections/IntegrationStrip";
 import { ProofBand } from "@/components/sections/ProofBand";
+import { ServicesTeaser } from "@/components/sections/ServicesTeaser";
 import { JsonLd } from "@/components/ui/JsonLd";
 import { faqItems } from "@/content/faq";
 import {
@@ -20,16 +21,21 @@ import {
   howItWorksSteps,
   integrationItems,
   proofPoints,
+  homeContent,
 } from "@/content/home";
 import { services } from "@/content/services";
 import { getSiteUrl } from "@/lib/metadata";
-import { organizationSchema, websiteSchema } from "@/lib/schema";
+import { faqSchema, organizationSchema, websiteSchema } from "@/lib/schema";
 
 export const metadata: Metadata = {
+  title: homeContent.title,
+  description: homeContent.description,
   alternates: {
     canonical: new URL("/", getSiteUrl()),
   },
   openGraph: {
+    title: homeContent.title,
+    description: homeContent.description,
     url: new URL("/", getSiteUrl()),
   },
 };
@@ -39,6 +45,7 @@ export default function HomePage() {
     <ReducedMotionProvider>
       <JsonLd data={organizationSchema()} />
       <JsonLd data={websiteSchema()} />
+      <JsonLd data={faqSchema(faqItems)} />
       <Hero />
       <ProofBand items={proofPoints} />
       <CapabilityOverview items={services} />
@@ -46,6 +53,7 @@ export default function HomePage() {
       <CapabilitySections sections={capabilitySections} />
       <HowItWorks steps={howItWorksSteps} />
       <IntegrationStrip items={integrationItems} />
+      <ServicesTeaser />
       <FAQ items={faqItems} />
       <FinalCTA items={finalCtaItems} />
     </ReducedMotionProvider>
