@@ -113,3 +113,4 @@ evidence/.sonda-score-residuo.json
 # sessão reusada pelas jornadas (contém tokens)
 .auth/
 .pnpm-store/
+scripts/lead-pipeline/bin/
