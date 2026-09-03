@@ -6,7 +6,7 @@ export interface LumenvaMarkProps {
   readonly priority?: boolean;
 }
 
-const NATURAL_ASPECT_RATIO = 1536 / 1024;
+const NATURAL_ASPECT_RATIO = 256 / 171;
 
 export function LumenvaMark({ className, priority = false, size = 24 }: Readonly<LumenvaMarkProps>) {
   return (
@@ -16,7 +16,7 @@ export function LumenvaMark({ className, priority = false, size = 24 }: Readonly
       className={className}
       height={size}
       priority={priority}
-      src="/brand/lumenva-mark.png"
+      src="/brand/lumenva-mark.webp"
       width={Math.round(size * NATURAL_ASPECT_RATIO)}
     />
   );

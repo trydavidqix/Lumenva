@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import { ReducedMotionProvider } from "@/components/motion/ReducedMotionProvider";
-import {
-  AgentNarrative,
-  CapabilityOverview,
-  CapabilitySections,
-} from "@/components/sections/CapabilityNarrative";
+import { AgentNarrative } from "@/components/sections/AgentNarrative";
+import { CapabilityOverview, CapabilitySections } from "@/components/sections/CapabilityNarrative";
 import { FAQ } from "@/components/sections/FAQ";
 import { FinalCTA } from "@/components/sections/FinalCTA";
 import { Hero } from "@/components/sections/Hero";

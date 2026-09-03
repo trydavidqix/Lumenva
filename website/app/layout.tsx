@@ -1,13 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import type { ReactNode } from "react";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { description } from "@/content/site";
 import { getSiteUrl } from "@/lib/metadata";
+import { DeferredTelemetry } from "@/components/layout/DeferredTelemetry";
 import "./globals.css";
+
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -42,8 +42,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <Header />
         <main id="main-content">{children}</main>
         <Footer />
-        <SpeedInsights />
-        <Analytics />
+        <DeferredTelemetry />
       </body>
     </html>
   );
