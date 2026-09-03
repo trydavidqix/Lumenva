@@ -67,6 +67,13 @@ export const publicRoutes: readonly PublicRoute[] = [
     description: "Informações sobre integrações da Lumenva.",
   },
   {
+    label: "Serviços",
+    href: "/servicos",
+    slug: "servicos",
+    heading: "Serviços",
+    description: "Serviços de construção, conteúdo e aquisição para a presença digital.",
+  },
+  {
     label: "Projetos",
     href: "/projetos",
     slug: "projetos",
@@ -127,6 +134,7 @@ export const navigation: readonly NavigationItem[] = [
   { label: "Produto", href: "/produto" },
   { label: "Soluções", href: "/solucoes" },
   { label: "Integrações", href: "/integracoes" },
+  { label: "Serviços", href: "/servicos" },
   { label: "Contacto", href: "/contato" },
 ] as const;
 

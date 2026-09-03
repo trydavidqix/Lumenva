@@ -5,6 +5,7 @@ export type PageMetadataInput = {
   title: string;
   description: string;
   path: string;
+  robots?: Metadata["robots"];
 };
 
 export function getSiteUrl(): URL {
@@ -21,12 +22,13 @@ export function getSiteUrl(): URL {
   throw new Error("NEXT_PUBLIC_SITE_URL is required outside local development.");
 }
 
-export function createPageMetadata({ title, description, path }: PageMetadataInput): Metadata {
+export function createPageMetadata({ title, description, path, robots }: PageMetadataInput): Metadata {
   const url = new URL(path, getSiteUrl());
 
   return {
     title,
     description,
+    robots: robots ?? { index: true, follow: true },
     alternates: {
       canonical: url,
     },
@@ -37,11 +39,13 @@ export function createPageMetadata({ title, description, path }: PageMetadataInp
       url,
       siteName: site.siteName,
       locale: "pt_PT",
+      images: [{ url: "/opengraph-image" }],
     },
     twitter: {
       card: "summary",
       title,
       description,
+      images: ["/twitter-image"],
     },
   };
 }

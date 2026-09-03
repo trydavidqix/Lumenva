@@ -48,7 +48,7 @@ export default function ProdutoPage() {
         ]}
         visual={<HeroProductMockup />}
       />
-      <section className={`${styles.cardsSection} ${styles.cardsSectionTopSpace}`} aria-labelledby="product-benefits">
+      <section className={`${styles.cardsSection} ${styles.cardsSectionTopSpace}`} aria-label="Benefícios do produto">
         <div className="site-shell">
           <FeatureCardGrid ariaLabel="Benefícios do produto" items={benefits} />
         </div>

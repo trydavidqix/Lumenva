@@ -49,7 +49,7 @@ export default function AtendimentoComIaPage() {
         ]}
         visual={<AtendimentoMockup />}
       />
-      <section className={styles.cardsSection} aria-labelledby="attendance-benefits">
+      <section className={styles.cardsSection} aria-label="Benefícios do atendimento com IA">
         <div className="site-shell">
           <FeatureCardGrid ariaLabel="Benefícios do atendimento com IA" items={benefits} />
         </div>

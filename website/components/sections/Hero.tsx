@@ -37,11 +37,10 @@ export function Hero() {
           </h1>
           <p className={styles.description}>{homeContent.description}</p>
           <div className={styles.actions}>
-            <Button className={styles.primaryAction} href={demoCta.href} magnetic variant="primary">
+            <Button href={demoCta.href} magnetic variant="primary">
               {demoCta.label}
             </Button>
             <Button
-              className={styles.secondaryAction}
               href={homeContent.secondaryCta.href}
               variant="secondary"
             >

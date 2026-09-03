@@ -7,6 +7,7 @@ export const contactRequestSchema = z.object({
   whatsapp: z.string().trim().min(8).max(32),
   message: z.string().trim().max(2000).optional(),
   consent: z.literal(true),
+  website: z.string().max(200).optional(),
 });
 
 export type ContactRequest = z.infer<typeof contactRequestSchema>;

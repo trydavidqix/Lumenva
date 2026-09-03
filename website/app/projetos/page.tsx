@@ -41,7 +41,7 @@ export default function ProjectsPage() {
           { icon: Database, label: "CRM" },
         ]}
       />
-      <section className={styles.cardsSectionEnd} aria-labelledby="projects-offer">
+      <section className={styles.cardsSectionEnd} aria-label="Projetos oferecidos">
         <div className="site-shell">
           <FeatureCardGrid ariaLabel="Projetos oferecidos" items={projectCards} />
         </div>

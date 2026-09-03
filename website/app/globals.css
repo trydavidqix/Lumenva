@@ -87,6 +87,59 @@ p {
   outline-offset: 0.1875rem;
 }
 
+.statePage {
+  display: grid;
+  min-height: min(60vh, 32rem);
+  align-content: center;
+  padding-block: var(--section-space);
+}
+
+.statePageInner {
+  display: grid;
+  gap: var(--space-5);
+  max-width: 42rem;
+}
+
+.stateEyebrow {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.stateTitle {
+  font-size: var(--font-size-heading-md);
+}
+
+.stateDescription {
+  color: var(--color-text-muted);
+}
+
+.stateActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.stateLink {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  font-weight: 700;
+}
+
+.stateLoading {
+  color: var(--color-text-muted);
+  font-weight: 700;
+}
+
+body:has(.stateLoading) > footer {
+  display: none;
+}
+
 .skip-link {
   background: var(--color-white);
   color: var(--color-ink);

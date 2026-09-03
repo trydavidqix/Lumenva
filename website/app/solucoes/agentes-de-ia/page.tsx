@@ -48,7 +48,7 @@ export default function AgentesDeIaPage() {
         ]}
         visual={<AgentesMockup />}
       />
-      <section className={styles.cardsSection} aria-labelledby="agents-benefits">
+      <section className={styles.cardsSection} aria-label="Benefícios dos agentes de IA">
         <div className="site-shell">
           <FeatureCardGrid ariaLabel="Benefícios dos agentes de IA" items={benefits} />
         </div>

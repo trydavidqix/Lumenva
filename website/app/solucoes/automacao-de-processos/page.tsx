@@ -48,7 +48,7 @@ export default function AutomacaoDeProcessosPage() {
         ]}
         visual={<AutomacaoMockup />}
       />
-      <section className={styles.cardsSection} aria-labelledby="automation-benefits">
+      <section className={styles.cardsSection} aria-label="Benefícios da automação de processos">
         <div className="site-shell">
           <FeatureCardGrid ariaLabel="Benefícios da automação de processos" items={benefits} />
         </div>

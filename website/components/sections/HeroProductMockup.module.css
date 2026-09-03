@@ -75,13 +75,32 @@
   display: none;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
+  min-height: 2.75rem;
+  padding-inline: var(--space-5);
   border: 0;
   border-radius: var(--radius-pill);
   background: var(--color-ink);
   color: var(--color-white);
-  font-size: 0.75rem;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-size-label);
   font-weight: 700;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.newAutomation:hover {
+  background: var(--color-accent-hover);
+}
+
+.newAutomation:active {
+  transform: translateY(1px);
+}
+
+.newAutomation:focus-visible {
+  outline: 0.1875rem solid var(--color-focus-ring);
+  outline-offset: 0.1875rem;
 }
 
 @media (min-width: 64rem) {
