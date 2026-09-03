@@ -27,6 +27,8 @@ export const PUBLIC_PATHS: RegExp[] = [
   /^\/api\/v1\/system\/agent$/,
   /^\/api\/internal\//,
   /^\/api\/mcp(\/.*)?$/,
+  /^\/.well-known\/oauth-authorization-server$/,
+  /^\/.well-known\/oauth-protected-resource(\/.*)?$/,
   /^\/_next\//,
   /^\/favicon\.ico$/,
   /^\/team\/accept-invite\/.+$/,
