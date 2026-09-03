@@ -1,0 +1,2 @@
+import { env } from "@/lib/env";
+export function GET(): Response { const issuer = env.MCP_RELAY_ISSUER; return Response.json({ issuer, authorization_endpoint: `${issuer}/api/oauth/authorize`, token_endpoint: `${issuer}/api/oauth/token`, registration_endpoint: `${issuer}/api/oauth/register`, revocation_endpoint: `${issuer}/api/oauth/revoke`, response_types_supported: ["code"], grant_types_supported: ["authorization_code"], code_challenge_methods_supported: ["S256"], token_endpoint_auth_methods_supported: ["none"], scopes_supported: ["email:relay"] }); }

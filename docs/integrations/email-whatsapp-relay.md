@@ -38,6 +38,8 @@ O número `to` do payload não é usado como destino. O contato e uma conversa e
 
 ## Chamada pelo ChatGPT Work
 
+Para usar o Gmail nativo e o relay na mesma conversa, use o conector MCP dedicado documentado em [`mcp-relay-connector.md`](mcp-relay-connector.md). A GPT Action abaixo continua suportada como caminho legado e aceita Bearer `INTERNAL_SECRET`; ela não é o mecanismo de autenticação do conector MCP.
+
 O ChatGPT Work não recebe, por esta rota, um webhook automático que inicie uma conversa. O fluxo suportado é uma GPT Action (ou um custom app MCP): o Work lê o Gmail, produz o resumo e chama a URL HTTPS pública do CRM com uma especificação OpenAPI e autenticação Bearer configurada no Workspace.
 
 Configure a Action para enviar:
