@@ -1,0 +1,22 @@
+voice-sip-test listening on http://localhost:8000
+realtime.call.incoming received call_id=rtc_u7_EJzWmLAeSRTqhx74CbQuS
+realtime.call.accepted call_id=rtc_u7_EJzWmLAeSRTqhx74CbQuS
+sideband event response.done 
+sideband event response.done 
+sideband event response.done 
+sideband event response.done 
+sideband event response.done 
+sideband event response.done 
+sideband event response.done 
+Realtime sideband closed 1006
+realtime.call.incoming received call_id=rtc_u0_EJzYtTTfx7bvQt7PTuBvG
+realtime.call.accepted call_id=rtc_u0_EJzYtTTfx7bvQt7PTuBvG
+sideband event response.done 
+sideband event response.done 
+sideband event response.done 
+sideband event response.done 
+sideband event response.done 
+sideband event response.done 
+sideband event response.done 
+sideband event response.done 
+Realtime sideband closed 1006
