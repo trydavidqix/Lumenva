@@ -26,6 +26,9 @@ export const PUBLIC_PATHS: RegExp[] = [
   // checado dentro da própria rota) — sem cookie de sessão, igual /cron/.
   /^\/api\/v1\/system\/agent$/,
   /^\/api\/internal\//,
+  // OAuth client registration and authorization-code handshake authenticate
+  // internally (approval secret and PKCE), without a browser session cookie.
+  /^\/api\/oauth\/(register|authorize|token)$/,
   /^\/api\/mcp(\/.*)?$/,
   /^\/.well-known\/oauth-authorization-server$/,
   /^\/.well-known\/oauth-protected-resource(\/.*)?$/,
