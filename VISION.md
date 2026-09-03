@@ -1,4 +1,4 @@
-# 🧭 Visão — DeskcommCRM
+# 🧭 Visão — Lumenva
 
 > **O sistema operacional de vendas com agentes de IA, open source, nativo no WhatsApp.**
 > Este documento é a fonte da verdade do posicionamento do projeto. Tudo que for público (README, site, docs, descrições) deriva daqui.
@@ -10,7 +10,7 @@
 **Deskcomm** vem de **Desk** (mesa) + **comm** (comércio): **o comercial de mesa**.
 A ideia que o nome carrega: toda a operação comercial de um negócio — atendimento, qualificação, funil, pós-venda — operada a partir de uma única mesa, por pessoas e por agentes de IA trabalhando juntos.
 
-O "CRM" no nome é a categoria de entrada, não o teto. O DeskcommCRM é **mais que um CRM**: é o sistema onde a venda acontece.
+O "CRM" no nome é a categoria de entrada, não o teto. O Lumenva é **mais que um CRM**: é o sistema onde a venda acontece.
 
 ## De onde viemos, pra onde vamos
 
@@ -49,7 +49,7 @@ Os pedidos de feature dessa comunidade empurraram o produto na direção que hoj
 **Categoria própria (bandeira):** **sistema operacional de vendas com agentes de IA** — *AI Sales OS*. É pra onde a âncora nos leva: os incumbentes vendem assinatura de chat com bot acoplado; nós entregamos um sistema onde o agente de IA é operador nativo e o código é seu.
 
 **Uma frase (pt-br):**
-> DeskcommCRM é o sistema operacional de vendas open source com agentes de IA nativos e WhatsApp — self-hosted, multi-tenant, para qualquer negócio que vende conversando.
+> Lumenva é o sistema operacional de vendas open source com agentes de IA nativos e WhatsApp — self-hosted, multi-tenant, para qualquer negócio que vende conversando.
 
 **One-liner (en):**
 > Open-source AI sales OS: a self-hosted CRM where AI agents natively operate sales and support over WhatsApp — an open alternative to Kommo, Octadesk and Intercom.

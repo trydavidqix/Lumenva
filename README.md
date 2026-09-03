@@ -2,7 +2,7 @@
 
 🇧🇷 Português · [🇺🇸 English](README.en.md) · [🇪🇸 Español](README.es.md)
 
-# 🛠️ DeskcommCRM — o Sistema Operacional de Vendas com IA, open source, pro WhatsApp
+# 🛠️ Lumenva — o Sistema Operacional de Vendas com IA, open source, pro WhatsApp
 
 **Agentes de IA que atendem, qualificam e vendem no WhatsApp — dentro de um CRM open source rodando no seu servidor.**
 **Sem mensalidade, sem feature travada, seus dados com você. A alternativa aberta a Kommo, Octadesk e Intercom.**
@@ -22,7 +22,7 @@
 
 > ### ☁️ Rode este CRM em produção com 1 comando
 >
-> O DeskcommCRM foi desenvolvido em **parceria com a HostGator**: o [`hostgator-setup-kit/`](hostgator-setup-kit/)
+> O Lumenva foi desenvolvido em **parceria com a HostGator**: o [`hostgator-setup-kit/`](hostgator-setup-kit/)
 > instala o CRM completo (app + WAHA + banco) numa VPS com um único comando, e o
 > [runbook de produção](docs/runbooks/waha-hostgator.md) já assume esse ambiente.
 >
