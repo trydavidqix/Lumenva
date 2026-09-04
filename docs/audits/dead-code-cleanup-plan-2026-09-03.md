@@ -14,15 +14,25 @@ Classificação abaixo é por bloco de decisão, não por linha. Um bloco só av
 quando a verificação específica confirmar que o item não é usado, não é contrato
 público e não é evidência histórica exigida.
 
+## Estado dos blocos 1/2 (atualizado em 2026-09-04)
+
+- **Bloco 1 — executado:** `skills-legacy.ts` removido em `1c5b964f`; gates verdes conforme o relatório de pendência.
+- **Bloco 2 — executado:** `@tanstack/react-virtual` removido em `a69cbee4`; `@langchain/core`, `import-in-the-middle` e `require-in-the-middle` preservados após confirmação de necessidade peer/transitiva. Gates verdes conforme o relatório de pendência.
+
+Os demais blocos deste plano continuam sujeitos à decisão humana e não foram
+executados por esta sincronização documental.
+
 ## Categorias de risco
 
 ### SEGURO
 
-**Nenhum item confirmado como SEGURO nesta auditoria (0 blocos).**
+**Blocos 1 e 2 foram executados e encerrados; os itens restantes continuam sem
+classificação SEGURO.** A classificação abaixo preserva o plano original de
+03/09; para o estado efetivo, prevalece a seção de execução acima.
 
-Mesmo o arquivo byte-a-byte duplicado `lib/agent-engine/agent/skills-legacy.ts`
-tem alta evidência de não uso, mas o relatório exige confirmação de histórico e
-intenção antes da remoção. Portanto ele começa em PRECISA VERIFICAR.
+O arquivo byte-a-byte duplicado `lib/agent-engine/agent/skills-legacy.ts` tinha
+alta evidência de não uso e começou em PRECISA VERIFICAR; a confirmação posterior
+e a remoção estão registradas acima (`1c5b964f`).
 
 ### PRECISA VERIFICAR
 
