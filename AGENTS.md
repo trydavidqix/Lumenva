@@ -1,4 +1,4 @@
-# AGENTS.md — DeskcommCRM
+# AGENTS.md — Lumenva
 
 > Contrato portátil para agentes de código (Codex, Cursor, Copilot, Amp, Claude Code e afins).
 
@@ -16,7 +16,7 @@ Se este arquivo, uma skill, agent, prompt ou artefato gerado divergir do `CLAUDE
 
 ## Objetivo do projeto
 
-DeskcommCRM é um sistema operacional de vendas open source com agentes de IA nativos, multi-nicho, WhatsApp via WAHA, multi-tenant com RLS e LGPD by-design. O produto é self-host em VPS; instalação e atualização fazem parte da experiência do usuário.
+Lumenva é um sistema operacional de vendas open source com agentes de IA nativos, multi-nicho, WhatsApp via WAHA, multi-tenant com RLS e LGPD by-design. O produto é self-host em VPS; instalação e atualização fazem parte da experiência do usuário.
 
 ## Stack
 
