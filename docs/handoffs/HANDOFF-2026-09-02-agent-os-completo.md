@@ -91,7 +91,7 @@ ou download local.
   dono pendente.
 - Twilio/Vodafone: bloqueado no dono por upgrade da conta.
 - Aproximadamente 25 branches remotas `origin/*`: revisão em andamento por
-  outro agente, registrada em `docs/audits/upstream-branches-review-2026-09-02.md`.
+  outro agente, registrada em `docs/audits/upstream-branches-review-2026-09-02-v2.md`.
 - ScrapeGraphAI: sem chave de API configurada; manter desativado até decisão
   explícita.
 
@@ -105,4 +105,3 @@ intencional desta tarefa.
 Após escrever o arquivo, executar `pnpm harness:check` e registrar o resultado
 no fechamento. Não executar migrations remotas, deploy, instalação de pacotes,
 login OAuth ou ações no navegador.
-
