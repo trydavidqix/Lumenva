@@ -2,13 +2,26 @@
 type: current-state
 project: DeskcommCRM
 status: maintained
-last_updated: 2026-09-03
+last_updated: 2026-09-04
 generated_by: fechamento documental da consolidação de branches e integração faseada do Agent OS
 confidence: média-alta (métricas de código são CONFIRMADO; estado de épico vem dos HANDOFFs, que são auto-relatados)
-audited_against: main @ 03c29e7012acd842543d295a74b04ad732c15404 (snapshot documental de 2026-09-03; commits de hoje e alterações locais conferidos)
+audited_against: main @ 197e65c860d12cf8b62ea543f78f7ff90a63f6c5 (origin/main; conferido em 2026-09-04)
 ---
 
 # Estado atual — DeskcommCRM
+
+## Reauditoria de sincronização — 2026-09-04 — CONFIRMADO
+
+`main` local está alinhada com `origin/main` em `197e65c860d12cf8b62ea543f78f7ff90a63f6c5`. O histórico confirma:
+
+- **Bloco 1 resolvido:** `lib/agent-engine/agent/skills-legacy.ts` era duplicata e foi removido em `1c5b964f`.
+- **Bloco 2 resolvido parcialmente:** `@tanstack/react-virtual` não era usado e foi removido em `a69cbee4`; `@langchain/core`, `import-in-the-middle` e `require-in-the-middle` foram preservados por dependências peer/transitivas reais.
+- **Rename confirmado na main:** Fase 1 cosmética em `1e1e216c`; Fase 2 de branding público em `197e65c8`/`175aee0b`. Fases 3–8 continuam explicitamente descopadas conforme [`docs/audits/rename-crm-to-lumenva-2026-08-31.md`](audits/rename-crm-to-lumenva-2026-08-31.md).
+- **Integração Git confirmada:** esses commits estão alcançáveis a partir de `origin/main`; não há merge ou push adicional necessário.
+- **Produção confirmada por leitura read-only do Supabase em 2026-09-04:** existem os agentes ativos `Briefing` e `Vendas`, roteados pelo router existente com `precisa_briefing` e `pronto_pra_proposta`, e a etapa `Novo (frio)` no pipeline `Leads Alfred`. É configuração de produto/dado, não schema; nenhuma migration é necessária.
+- **Importador de leads:** `scripts/lead-pipeline/import-to-crm.py` existe somente na branch `feat/lead-pipeline-import-crm-2026-09-04` (`4c477990`), ainda fora de `main`. Lê linhas `Não contatado`, grava `contacts` + `crm_leads`, é idempotente por telefone e oferece `--dry-run`. A primeira rodada real foi confirmada no banco com **40 contatos e 40 leads** de `prospector_sheets`; não envia mensagens nem atualiza leads existentes.
+
+Este bloco é estado temporal; não promove a branch de importação nem transforma configuração de produção em schema versionado.
 
 **Fechamento documental do dia (2026-09-03):** o trabalho de hoje foi reconciliado neste
 snapshot. O relay MCP de e-mail → WhatsApp foi testado de ponta a ponta e está **DONE —

@@ -95,6 +95,7 @@ Detalham schema SQL e payloads exatos. **Consulte antes de modelar qualquer cois
 | [`research/reference-synthesis.md`](research/reference-synthesis.md) | Arquitetura herdada da referência WAHA |
 | [`research/followup-reference-mining.md`](research/followup-reference-mining.md) | Pesquisa do motor de follow-up |
 | [`pesquisa/google-sheets-integracao-2026-09-02.md`](pesquisa/google-sheets-integracao-2026-09-02.md) | Inventário e preparação da integração Google Sheets |
+| [`pesquisa/lumenva-agentes-vendas-briefing-2026-09-04.md`](pesquisa/lumenva-agentes-vendas-briefing-2026-09-04.md) | Agentes Briefing/Vendas, router e importação de leads |
 | [`guides/lead-pipeline.md`](guides/lead-pipeline.md) | Pipeline permanente de leads e exportação Google Sheets |
 | [`threat-model.md`](threat-model.md) | **Superfície de ataque real do self-host** |
 

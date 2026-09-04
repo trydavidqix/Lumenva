@@ -1,4 +1,4 @@
-# Pendência Blocos 1-2 Dead Code — investigação do `pnpm test:unit`
+# Blocos 1-2 Dead Code — RESOLVIDO
 
 Data: 2026-09-03
 
@@ -57,10 +57,10 @@ arquivo usando o reporter `hanging-process` e inspeção de handles no processo
 que permanecer vivo. Só após um exit normal verificável reabrir as remoções de
 `skills-legacy.ts` e das dependências.
 
-## Estado
+## Estado anterior
 
-Blocos 1 e 2 permanecem pendentes. Nenhum fix de teste, configuração ou código
-foi aplicado nesta investigação.
+Blocos 1 e 2 permaneceram pendentes durante a investigação inicial. Nenhum fix de
+teste, configuração ou código foi aplicado nessa etapa.
 
 ## Execução autorizada na VPS
 
@@ -153,7 +153,7 @@ na VPS. Os blocos 1/2 (`skills-legacy.ts` e as quatro dependências candidatas)
 podem seguir para a limpeza autorizada, ainda exigindo os gates próprios após
 cada remoção. Nenhum fix de código foi aplicado nesta execução.
 
-## Execução autorizada dos blocos 1/2 (2026-09-04)
+## Execução autorizada dos blocos 1/2 (2026-09-04) — RESOLVIDO
 
 Branch: `chore/dead-code-cleanup-2026-09-03-v2`. Os commits abaixo são
 isolados; nenhuma alteração foi enviada ao remoto.
@@ -218,4 +218,6 @@ Gates após `pnpm install` e a remoção de `@tanstack/react-virtual`:
 
 Estado: **feito e verde para `@tanstack/react-virtual`; três dependências
 preservadas por necessidade transitiva/peer confirmada**. Nenhum fix de código
-foi aplicado além das duas remoções autorizadas.
+foi aplicado além das duas remoções autorizadas. **Pendência resolvida:** os
+commits reais são [`1c5b964f`](https://github.com/trydavidqix/CRM/commit/1c5b964f2215da34df3837f0abc9ed1578845981)
+e [`a69cbee4`](https://github.com/trydavidqix/CRM/commit/a69cbee46dc8c152c1e3fc6505bfc07ad382e1c0).
