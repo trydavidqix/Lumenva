@@ -8,7 +8,7 @@
 - `docs/audits/branch-consolidation-plan-2026-09-01.md`
 - `docs/audits/voice-phase1-deep-audit-2026-09-01.md`
 - `docs/audits/phase3-content-os-audit-2026-09-01.md`
-- `docs/audits/phase4-gateway-dependabot-audit-2026-09-01.md`
+- `docs/audits/phase-4-gateway-dependabot-audit-2026-09-01.md`
 - achado reportado por Terra sobre Agent OS/Fase 7
 
 **Nota histórica:** as decisões abaixo foram escritas antes da execução e preservadas como contexto. O status executado e vinculante deste fechamento está na seção seguinte.
