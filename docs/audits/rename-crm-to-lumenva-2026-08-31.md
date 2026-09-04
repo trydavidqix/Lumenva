@@ -6,6 +6,14 @@
 **HEAD:** `56260cea7736b9133db2fd816e5fdb8c5df3fa7f`  
 **Escopo:** somente auditoria; nenhum arquivo de código, schema, configuração, branch, banco ou infraestrutura foi alterado.
 
+> **Decisão do dono do repositório, 2026-09-04:** escopo do rename fechado em **Fase 0-2**
+> (inventário + cosmético local + branding público). Fases 3-8 (código/paths internos,
+> pacote/imagem Docker, GitHub/docs externos, env vars/domínios/integrações, schema
+> Supabase, validação final) **não serão executadas** — não trazem benefício visível ao
+> cliente e carregam risco real (especialmente Fase 7, renomear schema) sem payoff. O plano
+> abaixo permanece como referência caso a decisão mude no futuro (ex.: abrir código, vender
+> o pacote com outro nome), mas não é mais o roteiro ativo além da Fase 2.
+
 ## 1. Confirmação do repositório e estado
 
 `git rev-parse --show-toplevel` retornou:

@@ -113,3 +113,10 @@ evidence/.sonda-score-residuo.json
 # sessão reusada pelas jornadas (contém tokens)
 .auth/
 .pnpm-store/
+scripts/lead-pipeline/bin/
+
+# Maestri (config local da estação, não é doutrina compartilhada)
+.maestri/
+
+# caches locais de pesquisa (SQLite gerado, não é fonte)
+docs/pesquisa/**/*.db
