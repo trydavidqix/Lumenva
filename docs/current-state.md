@@ -2,13 +2,32 @@
 type: current-state
 project: DeskcommCRM
 status: maintained
-last_updated: 2026-09-01
+last_updated: 2026-09-03
 generated_by: fechamento documental da consolidação de branches e integração faseada do Agent OS
 confidence: média-alta (métricas de código são CONFIRMADO; estado de épico vem dos HANDOFFs, que são auto-relatados)
-audited_against: main @ 60ed322f (consolidação de branches + Agent OS Fases 2, 4 e 5, 2026-09-01)
+audited_against: main @ 03c29e7012acd842543d295a74b04ad732c15404 (snapshot documental de 2026-09-03; commits de hoje e alterações locais conferidos)
 ---
 
 # Estado atual — DeskcommCRM
+
+**Fechamento documental do dia (2026-09-03):** o trabalho de hoje foi reconciliado neste
+snapshot. O relay MCP de e-mail → WhatsApp foi testado de ponta a ponta e está **DONE —
+confirmado funcional em produção**. O bug de desserialização dupla do Redis foi corrigido em
+`lib/oauth/relay-store.ts` (`4b83a6c1`); as rotas OAuth passaram a fazer parsing manual do corpo
+`application/x-www-form-urlencoded` (`0dba06b3`); e os caminhos de descoberta/handshake OAuth
+foram liberados em `lib/auth/public-paths.ts` (`853cdcc2`, `ff0ad750`). O playbook de comportamento
+de atendimento, as regras IA-12 a IA-15 e a seção VOZ estão documentados; a especificação de
+personalização do tom de voz por tenant (`docs/specs/19-spec-tenant-voice-customization.md`) está
+**DONE como contrato documental**. O plano de ligação de saída está pesquisado, mas **BLOQUEADO**
+pela limitação de conta Twilio Trial. O catálogo de serviços/preços da Lumenva foi organizado no
+Obsidian fora deste repositório.
+
+O protótipo SIP (`scripts/voice-sip-test/`) recebeu correções de `turn_detection` e de
+sobreposição de áudio, mas a prova de conversa continua **PENDENTE**: existe um loop intermitente
+em que a IA repete apenas “a ligação de teste funcionou” em vez de conversar. O log registou um
+erro real `response_cancel_not_active`, compatível com uma corrida de timing no cancelamento,
+mas a causa raiz do loop ainda **não foi identificada nem resolvida**. Não declarar o protótipo
+de voz como concluído; a pendência exige nova investigação e reprodução controlada.
 
 Este documento existe porque "o que está pronto" estava espalhado em 5 `HANDOFF-*.md`
 na raiz, `plan/progress.md`, `loop/checkpoints/`, `tasks/todo.md` e o roadmap do README —

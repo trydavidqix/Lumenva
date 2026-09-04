@@ -12,7 +12,7 @@ owner: Rafael Melgaço
 
 ## Notação
 
-- **ID** prefixado por domínio: `T` (Tenancy), `L` (Privacidade/RGPD), `W` (WhatsApp), `P` (Pipeline), `AT` (Atendimento), `IA` (IA), `B` (Billing).
+- **ID** prefixado por domínio: `T` (Tenancy), `L` (Privacidade/RGPD), `W` (WhatsApp), `P` (Pipeline), `AT` (Atendimento), `IA` (IA), `B` (Billing), `VOZ` (canal de voz).
 - **Origem**: link pro PRD/sub-PRD que define a capacidade subjacente.
 - **Tipo de comprometimento**:
   - **Hard constraint** — violação = bug. Sistema recusa.
@@ -459,6 +459,34 @@ owner: Rafael Melgaço
 - **Enforcement**: Worker RAG (pull-loop) + Sentry alerta se lag >5min.
 - **Exceção**: Nenhuma.
 
+### IA-12 — Bot nunca oferece desconto por conta própria nem comenta/compara concorrente
+- **Origem**: `docs/pesquisa/playbook-comportamento-atendimento-2026-09-03.md` §1.5/§2 (lacuna nº2); decisão do dono do produto, 2026-09-03.
+- **Tipo**: Hard constraint (LLM-guardrail)
+- **Regra**: GIVEN resposta candidata do bot; WHEN o texto concede desconto/exceção de preço não presente na tabela de preços/promessas versionada da org (F4-01, `promiseGate`), OU menciona/compara nomeadamente um concorrente; THEN a resposta é vetada antes de alcançar o canal — desconto é decisão humana (equipe comercial), e o bot fala da própria empresa, nunca ataca ou compara concorrente nomeado.
+- **Enforcement**: LLM-guardrail — consolida sob um rótulo único o que hoje já é coberto em parte por IA-07 (comprometimento financeiro) e pelo `promiseGate`/F4-01 (`lib/agent-engine/guardrails/before-send.ts`) para desconto; a parte de concorrente é lacuna nova, sem gate dedicado ainda — a implementar.
+- **Exceção**: Nenhuma. Concessão de desconto é sempre escalada para humano (IA-05, gatilho G1/G3), nunca decidida pelo bot.
+
+### IA-13 — Bot admite ser um assistente de IA quando perguntado diretamente
+- **Origem**: `docs/pesquisa/playbook-comportamento-atendimento-2026-09-03.md` §1.4/§2 (lacuna nº3); decisão do dono do produto, 2026-09-03.
+- **Tipo**: Hard constraint
+- **Regra**: GIVEN cliente pergunta diretamente se está falando com um robô/IA/assistente automático; WHEN o bot responde; THEN ele ADMITE que é um assistente de IA (nunca nega, nunca desvia) e continua ajudando na mesma mensagem — a pergunta não é, por si só, gatilho de handoff (não soma aos 4 gatilhos de IA-05).
+- **Enforcement**: LLM-guardrail (prompt/instrução do Conversador, Spec 16). Consistente com o gate de `disclosure` (F4-05, `disclosureGate`) que já garante a apresentação como assistente virtual na 1ª mensagem — esta regra cobre a pergunta direta a qualquer momento da conversa, não só o 1º outbound.
+- **Exceção**: Nenhuma.
+
+### IA-14 — Handoff sem humano disponível sempre confirma recebimento + prazo real
+- **Origem**: `docs/pesquisa/playbook-comportamento-atendimento-2026-09-03.md` §1.1/§2 (lacuna nº4); decisão do dono do produto, 2026-09-03.
+- **Tipo**: Hard constraint
+- **Regra**: GIVEN handoff triggado (qualquer um dos 4 gatilhos de IA-05) E nenhum atendente disponível no momento (fila cheia, ninguém `online`, ver AT-03); WHEN o bot encerra o turno para o cliente; THEN a última mensagem ao cliente confirma que o pedido foi recebido E informa um prazo real de retorno (não um "já já"/"em breve" vago) — nunca silencia a conversa sem essa confirmação.
+- **Enforcement**: Worker de handoff (`lib/ai/handoff/orchestrator.ts`) — o prazo real vem de configuração/SLA de atendimento do tenant, nunca de estimativa inventada pelo bot (mesma doutrina de IA-08: nunca promete o que não pode confirmar).
+- **Exceção**: Nenhuma.
+
+### IA-15 — Tom/registro do agente é configurável por tenant; guardrails de conteúdo são permanentes
+- **Origem**: decisão do dono do produto, 2026-09-03 (proposta de design em `docs/specs/19-spec-tenant-voice-customization.md`).
+- **Tipo**: Default com override (tom) + Hard constraint (guardrails)
+- **Regra**: GIVEN uma organização configura o tom/registro do próprio agente de atendimento (ex.: mais informal, gírias regionais, mais caloroso) via `voice_profile` da versão do agente; WHEN o agente responde em qualquer canal (WhatsApp ou voz); THEN a redação segue o tom configurado pelo tenant, MAS os guardrails de negócio da lista IA-07 a IA-14 e VOZ-01 a VOZ-04 continuam se aplicando de forma idêntica, independentemente do tom escolhido — nenhuma configuração de tom pode afrouxar, contornar ou desligar um guardrail dessa lista.
+- **Enforcement**: Arquitetural — tom é composto no `system_prompt` (camada 1, o que o modelo tenta gerar); guardrails permanecem em `BEFORE_SEND_GATES` (`lib/agent-engine/guardrails/before-send.ts`), camada de pós-processamento que nunca lê `voice_profile`. As duas camadas são mecanismos fisicamente separados, então tom não tem como competir com guardrail pelo mesmo caminho de decisão.
+- **Exceção**: Nenhuma. Profissionalismo (`register: "professional"`) continua existindo como uma das opções de tom — o default — mas deixa de ser a única.
+
 ---
 
 ## 7. Billing & Uso (B)
@@ -500,6 +528,46 @@ owner: Rafael Melgaço
 
 ---
 
+---
+
+## 8. Canal de Voz (VOZ)
+
+> Regras novas — canal de voz ainda não tem sub-PRD/spec própria completa; origem é a pesquisa
+> de mercado cruzada com decisão explícita do dono do produto em 2026-09-03
+> (`docs/pesquisa/playbook-comportamento-atendimento-2026-09-03.md`). Enforcement técnico
+> (gate `before_send` específico de voz) está desenhado em `docs/specs/18-spec-humanizer-gate.md`
+> mas ainda não implementado — estas regras documentam o comportamento esperado antes do código.
+
+### VOZ-01 — Resposta falada tem no máximo 1-2 frases, sem parágrafo longo
+- **Origem**: `docs/pesquisa/playbook-comportamento-atendimento-2026-09-03.md` §1.6/§2 (lacuna nº1); decisão do dono do produto, 2026-09-03.
+- **Tipo**: Hard constraint
+- **Regra**: GIVEN o bot responde numa ligação de voz; WHEN a resposta candidata é gerada; THEN o texto tem no máximo 1-2 frases curtas — uma resposta de parágrafo longo faz o cliente achar que a ligação travou ou desligar antes do fim.
+- **Enforcement**: LLM-guardrail — gate `before_send` específico de voz (a implementar; ver `docs/specs/18-spec-humanizer-gate.md`), separado do gate de humanização de texto/WhatsApp por causa da restrição de latência/formato da voz.
+- **Exceção**: Nenhuma.
+
+### VOZ-02 — Números, datas e valores são sempre falados por extenso
+- **Origem**: `docs/pesquisa/playbook-comportamento-atendimento-2026-09-03.md` §1.6/§2 (lacuna nº1); decisão do dono do produto, 2026-09-03.
+- **Tipo**: Hard constraint
+- **Regra**: GIVEN o bot menciona um número, data ou valor monetário numa ligação de voz; WHEN a resposta é gerada; THEN o valor sai por extenso (ex.: "cinquenta euros", nunca "50€"/"R$50") — o TTS lê símbolo/dígito em voz alta de um jeito que soa artificial e pode confundir quem ouve.
+- **Enforcement**: LLM-guardrail — mesmo gate de voz da VOZ-01.
+- **Exceção**: Nenhuma.
+
+### VOZ-03 — Toda resposta falada sinaliza explicitamente fim de turno
+- **Origem**: `docs/pesquisa/playbook-comportamento-atendimento-2026-09-03.md` §1.6/§2 (lacuna nº1); decisão do dono do produto, 2026-09-03.
+- **Tipo**: Hard constraint
+- **Regra**: GIVEN o bot termina de falar numa ligação de voz; WHEN a resposta não é seguida de uma pergunta direta ou outro sinal claro de que terminou; THEN o cliente fica em silêncio sem saber se é a vez dele de falar — a resposta deve sempre deixar claro que o turno passou (geralmente com uma pergunta direta ao final).
+- **Enforcement**: LLM-guardrail — mesmo gate de voz da VOZ-01.
+- **Exceção**: Nenhuma.
+
+### VOZ-04 — IA para de falar quando o cliente interrompe (barge-in)
+- **Origem**: `docs/pesquisa/playbook-comportamento-atendimento-2026-09-03.md` §1.6/§2 (lacuna nº1); decisão do dono do produto, 2026-09-03.
+- **Tipo**: Hard constraint
+- **Regra**: GIVEN a IA está falando numa ligação de voz; WHEN o cliente começa a falar por cima (barge-in); THEN a IA para de falar imediatamente e responde ao que o cliente acabou de dizer — nunca "termina o pensamento anterior" antes de reagir à interrupção.
+- **Enforcement**: Runtime de voz (detecção de fala do interlocutor + corte de TTS em andamento) — camada de transporte de áudio, fora do escopo do gate `before_send` textual; a implementar junto da infra de voz.
+- **Exceção**: Nenhuma.
+
+---
+
 ## Anexo A — Mapa de regras por sub-PRD origem
 
 | Sub-PRD | Regras associadas |
@@ -509,8 +577,9 @@ owner: Rafael Melgaço
 | `02-prd-customer-360` | P-01, P-02, P-03, P-04, P-05, P-08; L-04, L-07, L-08 |
 | `03-prd-whatsapp-waha` | T-07; W-01 a W-12; AT-07 |
 | `04-prd-pipeline-attendance` | P-06, P-07; AT-01 a AT-08 |
-| `05-prd-ai-rag-handoff` | IA-01 a IA-11; B-02 |
+| `05-prd-ai-rag-handoff` | IA-01 a IA-14; B-02 |
 | `06-prd-nuvemshop-lgpd` | L-01, L-02, L-03, L-05, L-09; B-05 |
+| *(sem sub-PRD dedicada ainda)* | VOZ-01 a VOZ-04 — origem: `docs/pesquisa/playbook-comportamento-atendimento-2026-09-03.md`; IA-15 — origem: `docs/specs/19-spec-tenant-voice-customization.md` |
 
 ## Anexo B — Mapa de enforcement layer
 
@@ -519,9 +588,10 @@ owner: Rafael Melgaço
 | **DB** (RLS, trigger, check constraint) | T-01, T-04, T-06, T-07, T-08; L-04, L-06, L-07, L-09, L-10; W-05; P-01, P-02, P-03, P-04, P-05; AT-01, AT-02 |
 | **API** (middleware, interceptor) | T-02, T-03, T-05; L-05, L-08; W-04, W-08; P-06, P-07, P-08; AT-04, AT-06; B-04 |
 | **UI** (frontend) | P-07; AT-04, AT-06 |
-| **Worker** (cron, queue consumer, event_log) | W-01, W-02, W-03, W-06, W-07, W-09, W-10, W-12; AT-03, AT-05, AT-07, AT-08; IA-03, IA-04, IA-05, IA-06, IA-10, IA-11; B-01, B-02, B-03, B-05 |
-| **LLM-guardrail** (pós-processamento de resposta IA) | IA-01, IA-02, IA-07, IA-08, IA-09 |
+| **Worker** (cron, queue consumer, event_log) | W-01, W-02, W-03, W-06, W-07, W-09, W-10, W-12; AT-03, AT-05, AT-07, AT-08; IA-03, IA-04, IA-05, IA-06, IA-10, IA-11, IA-14; B-01, B-02, B-03, B-05 |
+| **LLM-guardrail** (pós-processamento de resposta IA) | IA-01, IA-02, IA-07, IA-08, IA-09, IA-12, IA-13; VOZ-01, VOZ-02, VOZ-03 |
 | **Cron** | W-11, W-12; B-03 |
+| *(runtime de voz, fora do gate textual — a implementar)* | VOZ-04 |
 
 ## Anexo C — Regras com override permitido
 
@@ -545,7 +615,7 @@ owner: Rafael Melgaço
 
 ## Anexo D — Estatísticas
 
-- **Total de regras**: 60
-- **Por domínio**: Tenancy (8) · LGPD (10) · WhatsApp (12) · Pipeline (8) · Atendimento (8) · IA (11) · Billing (5)
-- **Por tipo**: Hard constraint (38) · Default com override (15) · Soft policy (7)
+- **Total de regras**: 67
+- **Por domínio**: Tenancy (8) · LGPD (10) · WhatsApp (12) · Pipeline (8) · Atendimento (8) · IA (14) · Billing (5) · Voz (4)
+- **Por tipo**: Hard constraint (45) · Default com override (15) · Soft policy (7)
 - **Com override permitido**: 15
