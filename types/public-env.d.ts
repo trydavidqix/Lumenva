@@ -13,6 +13,7 @@ interface PublicEnv {
   /** Marca da instalação (white-label). Ver `lib/branding.ts`. */
   APP_NAME?: string;
   APP_LOGO_URL?: string;
+  CONVERSATION_ARCHIVE_V1?: boolean;
 }
 
 interface Window {

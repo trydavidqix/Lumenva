@@ -30,6 +30,7 @@ export interface ContactSummary {
 
 export type ConversationWithContact = Conversation & {
   contacts?: ContactSummary | null;
+  is_archived_by_me?: boolean;
 };
 
 export interface ConversationsFilters {
