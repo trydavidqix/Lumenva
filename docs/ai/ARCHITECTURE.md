@@ -1,4 +1,4 @@
-# Architecture for AI Agents — DeskcommCRM
+# Architecture for AI Agents — Lumenva
 
 > Mapa operacional para acelerar leitura de codebase. Não substitui `ARCHITECTURE.md`, specs nem rules.  
 > Snapshot inicial: 2026-09-03, base `main @ 589872303ed11108c0e74db77aa356cfca921b6f`.

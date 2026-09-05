@@ -1,4 +1,4 @@
-# AI Context — DeskcommCRM
+# AI Context — Lumenva
 
 > Camada de contexto rápido para agentes de engenharia. Não substitui a doutrina nem as specs; reduz o tempo de descoberta antes de uma auditoria, planejamento ou implementação.
 

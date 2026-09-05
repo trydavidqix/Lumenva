@@ -1,4 +1,4 @@
-# AI Project State — DeskcommCRM
+# AI Project State — Lumenva
 
 > Snapshot operacional rápido para iniciar uma sessão sem reler todo o histórico.  
 > **Data:** 2026-09-03  
@@ -132,7 +132,7 @@ Objetivo: adicionar apenas documentação de contexto para agentes, sem editar c
 
 ## 3. Identidade e visão atuais
 
-DeskcommCRM é um sistema operacional de vendas self-host com:
+Lumenva é um sistema operacional de vendas self-host com:
 
 - CRM multi-tenant;
 - atendimento WhatsApp;

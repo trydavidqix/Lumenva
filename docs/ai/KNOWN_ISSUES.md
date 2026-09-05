@@ -1,4 +1,4 @@
-# Known Issues / Risks / Pending Work — DeskcommCRM
+# Known Issues / Risks / Pending Work — Lumenva
 
 > Lista de triagem para agentes. **Não tratar item como bug reproduzido sem validar no HEAD atual.**  
 > Snapshot inicial: 2026-09-03, base `main @ 589872303ed11108c0e74db77aa356cfca921b6f`.

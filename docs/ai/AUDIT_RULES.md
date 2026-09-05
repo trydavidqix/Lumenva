@@ -1,4 +1,4 @@
-# Audit Rules — DeskcommCRM
+# Audit Rules — Lumenva
 
 > Protocolo para auditorias profundas por agentes. Objetivo: achar bugs reais, lixo, risco e oportunidades sem transformar grep em verdade nem quebrar invariantes.
 
