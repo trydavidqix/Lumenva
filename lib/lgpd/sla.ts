@@ -1,7 +1,7 @@
 /**
- * LGPD SLA business-day calculator.
+ * Legacy business-day calculator for non-RGPD operational policies.
  *
- * Rules (L-04):
+ * Rules (legacy L-04):
  *  - SLA is expressed in Brazilian business days (dias úteis).
  *  - Skip Saturdays (getDay()===6) and Sundays (getDay()===0).
  *  - Skip Brazilian national holidays from HOLIDAYS_BR_ISO.
@@ -42,7 +42,10 @@ function addOneDay(date: Date): Date {
 }
 
 /**
- * Compute the due date for an LGPD SLA.
+ * Compute the due date for a legacy operational SLA.
+ *
+ * This function must not be used for data-subject rights. Those requests use
+ * computeDueAtGdpr() below and a one-calendar-month deadline under Art. 12(3).
  *
  * @param receivedAt   Timestamp when the request was received.
  * @param businessDays Number of business days allowed (e.g. 15 for redact).
