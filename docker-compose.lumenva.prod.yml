@@ -1,0 +1,384 @@
+name: lumenva
+
+# Lumenva — stack de produção self-host (compatibilidade R3 preparada; não executada).
+# Sobe: caddy (HTTPS) → app (Next standalone) + waha + redis+srh + scheduler.
+# Só o Caddy publica portas (80/443). Todo o resto vive na rede interna.
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env up -d
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"     # rotação: evita que o log encha o disco do VPS
+    max-file: "3"
+
+services:
+  app:
+    # Imagem GENÉRICA pré-buildada: o leigo só puxa (sobe em ~2min, roda em 2GB).
+    # Os NEXT_PUBLIC_* reais vêm em RUNTIME (env_file abaixo) — o browser lê via
+    # <PublicEnvScript/> e o servidor via lib/env.ts. Não precisa buildar no VPS.
+    # Build local (avançado): docker compose -f docker-compose.prod.yml -f docker-compose.build.yml build
+    image: ${APP_IMAGE:-ghcr.io/trydavidqix/lumenva-crm:latest}
+    pull_policy: ${APP_PULL_POLICY:-always}
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      srh:
+        condition: service_started
+      waha:
+        condition: service_started
+    healthcheck:
+      # Probe TCP puro (node existe na imagem; curl/nc não). NÃO usar /api/v1/health:
+      # ele dá 503 se WAHA/Redis caem, o que deixaria o app "unhealthy" e derrubaria
+      # o Caddy junto (blackout total por uma dependência secundária).
+      test: ["CMD", "node", "-e", "require('net').connect(3000,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    logging: *default-logging
+    networks: [internal, ai-memory-internal, ai-graph-internal]
+
+
+  # Worker 24/7 do agent-engine (fusão Vendaval) — cérebro do agente SDR.
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # dentro da rede do compose, o WAHA é o serviço 'waha' na porta interna 3000
+      WAHA_API_BASE_URL: http://waha:3000
+    networks:
+      - internal
+      - ai-memory-internal
+      - ai-graph-internal
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:8787/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+  waha:
+    # Core grátis por padrão; troque para devlikeapro/waha-plus via WAHA_IMAGE se
+    # precisar de multi-número/retry/S3 (licença paga).
+    image: ${WAHA_IMAGE:-devlikeapro/waha}
+    restart: unless-stopped
+    environment:
+      # Prefixo sha512: faz o WAHA HASHEAR o X-Api-Key recebido e comparar com este
+      # hash. Sem o prefixo ele compara literal → o app (que manda o plaintext) toma 401.
+      WAHA_API_KEY: "sha512:${WAHA_API_KEY_SHA512}"
+      WHATSAPP_HOOK_URL: ${WAHA_WEBHOOK_BASE_URL}/api/v1/webhooks/waha
+      WHATSAPP_HOOK_EVENTS: "message,message.any,message.ack,session.status,state.change"
+      WHATSAPP_HOOK_HMAC: ${WAHA_HMAC_SECRET}
+      # WAHA lê WHATSAPP_DEFAULT_ENGINE (NÃO WAHA_DEFAULT_ENGINE — o nome errado
+      # fazia cair no default WEBJS, engine com browser que trava/corrompe a sessão
+      # quando o WhatsApp Web atualiza; NOWEB é websocket direto, estável e leve).
+      WHATSAPP_DEFAULT_ENGINE: ${WHATSAPP_DEFAULT_ENGINE:-NOWEB}
+      WAHA_DASHBOARD_ENABLED: "false"    # nunca expor o dashboard num template público
+    volumes:
+      - waha-data:/app/.sessions          # sessões pareadas (QR) — perder = re-parear
+      - waha-media:/app/.media
+    logging: *default-logging
+    networks: [internal]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]  # efêmero (rate-limit/debounce)
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    logging: *default-logging
+    networks: [internal]
+
+  srh:
+    # serverless-redis-http: fala o REST do Upstash sobre o redis normal, mantendo
+    # o SDK @upstash/redis sem tocar código. Pinar tag (validar encoding base64 — T6).
+    image: hiett/serverless-redis-http:latest
+    restart: unless-stopped
+    environment:
+      SRH_MODE: env
+      SRH_TOKEN: ${SRH_TOKEN}
+      SRH_CONNECTION_STRING: "redis://redis:6379"
+    depends_on:
+      redis:
+        condition: service_healthy
+    logging: *default-logging
+    networks: [internal]
+
+  scheduler:
+    # Cron sem docker.sock: alpine + crond interno batendo curl na rede interna.
+    # Resolução de 1 min (= paridade com os crons da Vercel).
+    image: alpine:3.20
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      TZ: UTC
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
+    command:
+      - /bin/sh
+      - -c
+      - |
+        apk add --no-cache curl tzdata >/dev/null 2>&1
+        cat > /etc/crontabs/root <<EOF
+        * * * * * curl -fsS -m25 -H "Authorization: Bearer $$INTERNAL_SECRET" http://app:3000/api/v1/cron/agent-dispatcher >/dev/null 2>&1
+        * * * * * curl -fsS -m25 -H "Authorization: Bearer $$INTERNAL_SECRET" http://app:3000/api/v1/cron/followup-flow-worker >/dev/null 2>&1
+        * * * * * curl -fsS -m45 -H "Authorization: Bearer $$INTERNAL_SECRET" http://app:3000/api/v1/cron/event-log-drain >/dev/null 2>&1
+        * * * * * curl -fsS -m25 -H "Authorization: Bearer $$INTERNAL_SECRET" http://app:3000/api/v1/cron/routing-worker >/dev/null 2>&1
+        * * * * * curl -fsS -m25 -H "Authorization: Bearer $$INTERNAL_SECRET" http://app:3000/api/v1/cron/recover-stuck-messages >/dev/null 2>&1
+        */5 * * * * curl -fsS -m25 -H "Authorization: Bearer $$INTERNAL_SECRET" "http://app:3000/api/v1/cron/storage-redaction?limit=50" >/dev/null 2>&1
+        */5 * * * * curl -fsS -m25 -H "Authorization: Bearer $$INTERNAL_SECRET" http://app:3000/api/v1/cron/snooze-watcher >/dev/null 2>&1
+        */5 * * * * curl -fsS -m25 -H "Authorization: Bearer $$INTERNAL_SECRET" http://app:3000/api/v1/cron/attendant-heartbeat >/dev/null 2>&1
+        */15 * * * * curl -fsS -m60 -H "Authorization: Bearer $$INTERNAL_SECRET" http://app:3000/api/v1/cron/risk-watcher >/dev/null 2>&1
+        0 12 * * * curl -fsS -m60 -H "Authorization: Bearer $$INTERNAL_SECRET" http://app:3000/api/v1/cron/lgpd-sla-watcher >/dev/null 2>&1
+        30 3 * * * curl -fsS -m120 -H "Authorization: Bearer $$INTERNAL_SECRET" http://app:3000/api/v1/cron/kb-conversations-batch >/dev/null 2>&1
+        */10 * * * * curl -fsS -m60 -H "Authorization: Bearer $$INTERNAL_SECRET" http://app:3000/api/v1/cron/contact-avatars >/dev/null 2>&1
+        0 2 * * * curl -fsS -m600 -H "x-internal-secret: $$INTERNAL_SECRET" http://app:3000/api/v1/cron/flywheel-judge-loop >/dev/null 2>&1
+        EOF
+        exec crond -f -l 2
+    logging: *default-logging
+    networks: [internal]
+
+  # Semântica opcional, isolada da stack CRM. Só inicia quando o operador usa
+  # `--profile ai-memory`; nenhuma porta é publicada e o Caddy não a expõe.
+  mem0:
+    # mem0/mem0-api-server:0.1.117 (o pin anterior) não existe mais no Docker
+    # Hub, e a única tag publicada hoje (`latest`) só tem build ARM64 — não
+    # roda nativo em x86_64. Build local a partir do source oficial; receita
+    # completa e commit pinado em docs/runbooks/mem0.md.
+    image: mem0-api-server:local
+    profiles: ["ai-memory"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: mem0-postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: mem0
+      POSTGRES_USER: mem0
+      POSTGRES_PASSWORD: ${MEM0_POSTGRES_PASSWORD:?set MEM0_POSTGRES_PASSWORD in managed runtime secrets}
+      JWT_SECRET: ${MEM0_JWT_SECRET:?set MEM0_JWT_SECRET in managed runtime secrets}
+      OPENAI_API_KEY: ${MEM0_OPENAI_API_KEY:?set MEM0_OPENAI_API_KEY in managed runtime secrets}
+    depends_on:
+      mem0-postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=3)",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+    logging: *default-logging
+    # `ai-memory-internal` alone (`internal: true`) blocks ALL routing off
+    # that network, inbound AND outbound — the sidecar could reach
+    # mem0-postgres but could never call out to its own configured LLM/
+    # embedding provider, confirmed by `httpx.ConnectError: Temporary
+    # failure in name resolution` when trying. `internal` (this compose's
+    # regular app network — same one `worker`/`app` already join) restores
+    # outbound egress without publishing any port; no `ports:` exists on
+    # this service in prod at all, so nothing becomes reachable that wasn't.
+    networks: [internal, ai-memory-internal]
+
+  # Armazenamento interno do Mem0, separado completamente do Supabase/CRM.
+  mem0-postgres:
+    image: pgvector/pgvector:pg16
+    profiles: ["ai-memory"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mem0
+      POSTGRES_USER: mem0
+      POSTGRES_PASSWORD: ${MEM0_POSTGRES_PASSWORD:?set MEM0_POSTGRES_PASSWORD in managed runtime secrets}
+    volumes:
+      - mem0-postgres-data:/var/lib/postgresql/data
+      - ./docker/mem0/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mem0 -d mem0"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging: *default-logging
+    networks: [ai-memory-internal]
+
+  # Projeção temporal/relacional opcional (Graphiti + Neo4j, Fase 4). Só
+  # inicia com `--profile ai-graph`; nenhuma porta é publicada e o Caddy não a
+  # expõe. Subir o sidecar não liga a feature — o rollout mode do CRM continua
+  # 'off' até decisão explícita de promoção.
+  #
+  # HISTÓRICO: a Task 3 original wireou este sidecar em FalkorDB. A Task 4
+  # (inspeção ao vivo + leitura do código-fonte empacotado em
+  # `zepai/graphiti:0.22.0`) descobriu que o REST server desta imagem
+  # (`graph_service`) só fala com Neo4j — `config.py` define `Settings` com
+  # os campos obrigatórios `neo4j_uri`/`neo4j_user`/`neo4j_password` e NENHUM
+  # campo FalkorDB. Os `FALKORDB_*` anteriores eram silenciosamente ignorados
+  # (`extra='ignore'`) e o container entrava em crash-loop sem as variáveis
+  # Neo4j. Decisão explícita do parceiro humano: trocar o sidecar por Neo4j
+  # (Community Edition — grátis, invariante 9 de self-host). Esta task de
+  # correção troca o sidecar; `NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD` foram
+  # confirmados lendo `config.py`/`zep_graphiti.py` diretamente da imagem, e
+  # o par `neo4j`+`graphiti` foi validado ao vivo com envs dummy de dev (ver
+  # `.superpowers/sdd/2026-08-10-ai-platform-phase-4-graphiti/task-3-neo4j-swap-report.md`
+  # pelo resultado exato). `GRAPHITI_API_KEY` continua sem middleware de auth
+  # nesta imagem — o isolamento real é a rede `ai-graph-internal` (`internal`,
+  # sem rota externa), não essa key; mantida só para never-regress. Ver
+  # docker-compose.yml para o detalhe completo desta nota (mesma inspeção).
+  neo4j:
+    image: neo4j:5.26.0
+    profiles: ["ai-graph"]
+    restart: unless-stopped
+    # Cap duro do container, além do heap/pagecache internos abaixo — pega
+    # crescimento de memória fora do JVM heap (ex.: transaction memory,
+    # overhead do SO) que os dois envs de memória do Neo4j não cobrem. VPS
+    # atual (Hetzner CPX22, 4GB total, compartilhado com app/worker/WAHA)
+    # não tem espaço pra um Neo4j sem teto — ver docs/runbooks/graphiti.md
+    # "Limite de memória".
+    mem_limit: ${GRAPHITI_NEO4J_MEM_LIMIT:-512m}
+    environment:
+      # Community Edition (tag sem sufixo -enterprise) não exige aceite de
+      # licença. `NEO4J_AUTH=neo4j/<senha>` é a forma padrão da imagem
+      # oficial de setar a auth inicial — só tem efeito na primeira
+      # inicialização do volume de dados.
+      NEO4J_AUTH: neo4j/${GRAPHITI_NEO4J_PASSWORD:?set GRAPHITI_NEO4J_PASSWORD in managed runtime secrets}
+      # Defaults pequenos de propósito (grafo single-tenant, VPS apertada).
+      # Sintaxe com "_" duplo é como a imagem oficial mapeia
+      # `server.memory.heap.max_size`/`server.memory.pagecache.size` do
+      # neo4j.conf pra env var — não é erro de digitação.
+      NEO4J_server_memory_heap_max__size: ${GRAPHITI_NEO4J_HEAP_SIZE:-256m}
+      NEO4J_server_memory_pagecache_size: ${GRAPHITI_NEO4J_PAGECACHE_SIZE:-128m}
+    volumes:
+      - neo4j-data:/data
+    healthcheck:
+      # `/` (porta HTTP 7474) responde 200 com JSON de discovery SEM auth
+      # nesta imagem — confirmado ao vivo na Task 3 de correção. Evita
+      # colocar a senha na string do healthcheck.
+      test: ["CMD", "wget", "-q", "-O-", "--tries=1", "http://127.0.0.1:7474"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
+    logging: *default-logging
+    # Nenhum `ports:` — produção não publica bolt/browser nenhum, igual ao
+    # padrão do FalkorDB anterior.
+    networks: [ai-graph-internal]
+
+  graphiti:
+    image: zepai/graphiti:0.22.0
+    profiles: ["ai-graph"]
+    restart: unless-stopped
+    environment:
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: ${GRAPHITI_NEO4J_PASSWORD:?set GRAPHITI_NEO4J_PASSWORD in managed runtime secrets}
+      # Não validado pelo servidor nesta versão da imagem (ver nota acima) —
+      # mantido para never-regress quando uma versão com auth for adotada. O
+      # app envia o mesmo valor (GRAPHITI_API_KEY em lib/env.ts) em X-Api-Key.
+      GRAPHITI_API_KEY: ${GRAPHITI_API_KEY:?set GRAPHITI_API_KEY in managed runtime secrets}
+      # Credencial de PLATAFORMA pro LLM/embedder do próprio sidecar Python —
+      # nunca a BYOK de um tenant (ai_provider_credentials).
+      OPENAI_API_KEY: ${GRAPHITI_LLM_API_KEY:?set GRAPHITI_LLM_API_KEY in managed runtime secrets}
+      # `Settings` desta imagem só conhece o contrato "shape OpenAI"
+      # (`openai_api_key`/`openai_base_url`/`model_name`/`embedding_model_name`
+      # — sem campo de seleção de provider). Qualquer API compatível com o
+      # formato REST da OpenAI funciona trocando só a URL — é assim que
+      # plugamos o Gemini (endpoint de compatibilidade OpenAI do Google) sem
+      # mexer no código do sidecar. Default aponta pra OpenAI real; setar
+      # GRAPHITI_LLM_BASE_URL troca de provider. Ver
+      # docs/runbooks/graphiti.md "Provider do LLM/embedder".
+      OPENAI_BASE_URL: ${GRAPHITI_LLM_BASE_URL:-https://api.openai.com/v1}
+      MODEL_NAME: ${GRAPHITI_LLM_MODEL:-gpt-4.1-mini}
+      EMBEDDING_MODEL_NAME: ${GRAPHITI_EMBEDDER_MODEL:-text-embedding-3-small}
+      # Cada episódio pode disparar várias chamadas de LLM. Default baixo pra
+      # não estourar rate limit/custo numa instalação self-host pequena. NÃO
+      # lido por `zepai/graphiti:0.22.0` — mantido como no-op documentado.
+      SEMAPHORE_LIMIT: ${GRAPHITI_INGESTION_CONCURRENCY:-2}
+    volumes:
+      # Patch local: upstream nunca aplica `embedding_model_name` no
+      # embedder (só no llm_client), travando o embedder no modelo default
+      # da OpenAI pra qualquer provider. Ver comentário completo no topo de
+      # docker/graphiti/zep_graphiti.py e docs/runbooks/graphiti.md "Patch
+      # local: embedder ignorado pelo upstream". Revalidar ao trocar a
+      # versão da imagem — o conteúdo do arquivo pode mudar de estrutura.
+      - ./docker/graphiti/zep_graphiti.py:/app/graph_service/zep_graphiti.py:ro
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthcheck', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+    logging: *default-logging
+    # Nenhum `ports:` — só alcançável por `app`/`worker` via ai-graph-internal.
+    # Sem essa rede o sidecar não tem egress pro provider de LLM configurado
+    # (mesmo motivo documentado no serviço mem0 acima).
+    networks: [internal, ai-graph-internal]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data           # certificados Let's Encrypt (persistir!)
+      - caddy-config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    logging: *default-logging
+    networks: [internal]
+
+volumes:
+  # Reutiliza explicitamente os volumes atuais; não criar volumes lumenva_* vazios.
+  waha-data:
+    external: true
+    name: deskcommcrm_waha-data
+  waha-media:
+    external: true
+    name: deskcommcrm_waha-media
+  caddy-data:
+    external: true
+    name: deskcommcrm_caddy-data
+  caddy-config:
+    external: true
+    name: deskcommcrm_caddy-config
+  mem0-postgres-data:
+    external: true
+    name: deskcommcrm_mem0-postgres-data
+  neo4j-data:
+    external: true
+    name: deskcommcrm_neo4j-data
+
+networks:
+  # As redes existentes ficam com o nome antigo durante a compatibilidade.
+  # Renomeá-las requer janela e recriação coordenada dos serviços.
+  internal:
+    external: true
+    name: deskcommcrm_internal
+  # Mem0 storage/API must never share a network with Caddy, WAHA, Redis or SRH.
+  # Only app and worker bridge into it for the optional client connection.
+  ai-memory-internal:
+    external: true
+    name: deskcommcrm_ai-memory-internal
+  # Graphiti/Neo4j storage/API must never share a network with Caddy, WAHA,
+  # Redis or SRH either. Only app and worker bridge into it for the optional
+  # client connection (Task 4; sidecar swapped from FalkorDB to Neo4j in the
+  # follow-up correction task). No `ports:` is ever published from this
+  # network's services in this file.
+  ai-graph-internal:
+    external: true
+    name: deskcommcrm_ai-graph-internal
