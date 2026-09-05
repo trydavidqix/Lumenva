@@ -8981,6 +8981,38 @@ CREATE POLICY "erasure_decisions_select" ON "public"."erasure_decisions" FOR SEL
 DROP POLICY IF EXISTS "erasure_decisions_insert" ON "public"."erasure_decisions";
 CREATE POLICY "erasure_decisions_insert" ON "public"."erasure_decisions" FOR INSERT WITH CHECK ("organization_id" IN (SELECT "public"."fn_user_org_ids"()));
 
+CREATE TABLE IF NOT EXISTS "public"."rgpd_breach_incidents" (
+    "id" uuid DEFAULT "gen_random_uuid"() NOT NULL,
+    "organization_id" uuid NOT NULL,
+    "known_at" timestamptz NOT NULL,
+    "risk_level" text NOT NULL,
+    "deadline_at" timestamptz NOT NULL,
+    "notification_decision" text NOT NULL,
+    "notified_at" timestamptz,
+    "cnpd_evidence_url" text,
+    "data_subject_notified_at" timestamptz,
+    "escalation_owner" uuid,
+    "escalation_notes" text,
+    "evidence" jsonb DEFAULT '{}'::jsonb NOT NULL,
+    "idempotency_key" text NOT NULL,
+    "created_at" timestamptz DEFAULT now() NOT NULL,
+    "updated_at" timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT "rgpd_breach_incidents_risk_check" CHECK ("risk_level" = ANY (ARRAY['none','low','high','unknown'])),
+    CONSTRAINT "rgpd_breach_incidents_decision_check" CHECK ("notification_decision" = ANY (ARRAY['notify','not_notify','not_notifiable_documented','pending']))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "rgpd_breach_incidents_org_key_idx" ON "public"."rgpd_breach_incidents" ("organization_id", "idempotency_key");
+CREATE INDEX IF NOT EXISTS "rgpd_breach_incidents_deadline_idx" ON "public"."rgpd_breach_incidents" ("organization_id", "deadline_at");
+ALTER TABLE "public"."rgpd_breach_incidents" ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE "public"."rgpd_breach_incidents" FROM anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE "public"."rgpd_breach_incidents" TO authenticated;
+GRANT ALL ON TABLE "public"."rgpd_breach_incidents" TO service_role;
+DROP POLICY IF EXISTS "rgpd_breach_incidents_select" ON "public"."rgpd_breach_incidents";
+CREATE POLICY "rgpd_breach_incidents_select" ON "public"."rgpd_breach_incidents" FOR SELECT USING ("organization_id" IN (SELECT "public"."fn_user_org_ids"()));
+DROP POLICY IF EXISTS "rgpd_breach_incidents_insert" ON "public"."rgpd_breach_incidents";
+CREATE POLICY "rgpd_breach_incidents_insert" ON "public"."rgpd_breach_incidents" FOR INSERT WITH CHECK ("organization_id" IN (SELECT "public"."fn_user_org_ids"()));
+DROP POLICY IF EXISTS "rgpd_breach_incidents_update" ON "public"."rgpd_breach_incidents";
+CREATE POLICY "rgpd_breach_incidents_update" ON "public"."rgpd_breach_incidents" FOR UPDATE USING ("organization_id" IN (SELECT "public"."fn_user_org_ids"())) WITH CHECK ("organization_id" IN (SELECT "public"."fn_user_org_ids"()));
+
 notify pgrst, 'reload schema';
 
 -- ---- Agent OS Phase 2 forward-fixes (2026-08-17) --------------------------

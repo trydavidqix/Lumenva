@@ -4968,6 +4968,12 @@ export type Database = {
           },
         ]
       }
+      rgpd_breach_incidents: {
+        Row: { id: string; organization_id: string; known_at: string; risk_level: string; deadline_at: string; notification_decision: string; notified_at: string | null; cnpd_evidence_url: string | null; data_subject_notified_at: string | null; escalation_owner: string | null; escalation_notes: string | null; evidence: Json; idempotency_key: string; created_at: string; updated_at: string }
+        Insert: { id?: string; organization_id: string; known_at: string; risk_level: string; deadline_at: string; notification_decision: string; notified_at?: string | null; cnpd_evidence_url?: string | null; data_subject_notified_at?: string | null; escalation_owner?: string | null; escalation_notes?: string | null; evidence?: Json; idempotency_key: string; created_at?: string; updated_at?: string }
+        Update: { id?: string; organization_id?: string; known_at?: string; risk_level?: string; deadline_at?: string; notification_decision?: string; notified_at?: string | null; cnpd_evidence_url?: string | null; data_subject_notified_at?: string | null; escalation_owner?: string | null; escalation_notes?: string | null; evidence?: Json; idempotency_key?: string; created_at?: string; updated_at?: string }
+        Relationships: []
+      }
       job_queue: {
         Row: {
           attempts: number
