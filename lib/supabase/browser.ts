@@ -8,6 +8,7 @@
  */
 
 import { createBrowserClient } from "@supabase/ssr";
+import { SUPABASE_COOKIE_NAME } from "@/lib/supabase/cookie-compat";
 
 let _client: ReturnType<typeof createBrowserClient> | null = null;
 
@@ -34,7 +35,7 @@ export function createClient() {
   _client = createBrowserClient(url, key, {
     // D-01.01: cookie name canônico alinhado ao middleware/server.
     cookieOptions: {
-      name: "sb-deskcomm-auth",
+      name: SUPABASE_COOKIE_NAME,
       sameSite: "strict",
       path: "/",
     },

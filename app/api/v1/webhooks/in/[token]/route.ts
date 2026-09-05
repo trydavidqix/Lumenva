@@ -19,6 +19,7 @@ import type { CreateLeadInput } from "@/lib/schemas";
 import { mapInboundPayload, verifyInboundSignature, type FieldMap } from "@/lib/webhooks/inbound";
 import { decryptWebhookSecret } from "@/lib/webhooks/secrets";
 import { ApiError } from "@/lib/api/types";
+import { readHeaderWithLegacy } from "@/lib/http/compat";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -88,7 +89,9 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
     }
   }
 
-  const sigHeader = req.headers.get("x-deskcomm-signature");
+  // Compatibilidade de 90 dias: o nome novo tem precedência, mas webhooks
+  // existentes que ainda enviam o header antigo continuam válidos.
+  const sigHeader = readHeaderWithLegacy(req.headers, "x-lumenva-signature", "x-deskcomm-signature");
   // secret cifrado at-rest (migration 0041). Decrypt falhou (chave da GUC
   // ausente/trocada)? Precedente WAHA: pula a validação em vez de derrubar a
   // captação — secret aqui é defesa opcional, não gate de disponibilidade.
