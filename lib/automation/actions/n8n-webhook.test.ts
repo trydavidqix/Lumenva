@@ -143,6 +143,7 @@ describe("executeN8nWebhook", () => {
 
     expect(result.status).toBe("success");
     const expectedSig = createHmac("sha256", secret).update(received!.body).digest("hex");
+    expect(received!.headers["x-lumenva-signature"]).toBe(expectedSig);
     expect(received!.headers["x-deskcomm-signature"]).toBe(expectedSig);
 
     const parsedBody = JSON.parse(received!.body);
@@ -171,6 +172,7 @@ describe("executeN8nWebhook", () => {
     );
 
     expect(result.status).toBe("success");
+    expect(received!.headers["x-lumenva-signature"]).toBeUndefined();
     expect(received!.headers["x-deskcomm-signature"]).toBeUndefined();
 
     await close();
@@ -206,6 +208,7 @@ describe("executeN8nWebhook", () => {
 
     expect(result.status).toBe("success");
     const expectedSig = createHmac("sha256", decryptedSecret).update(received!.body).digest("hex");
+    expect(received!.headers["x-lumenva-signature"]).toBe(expectedSig);
     expect(received!.headers["x-deskcomm-signature"]).toBe(expectedSig);
     expect(received!.body).not.toContain("plaintext-should-be-overridden-16");
 

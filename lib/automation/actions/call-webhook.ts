@@ -67,7 +67,7 @@ export interface DeliverSignedWebhookOpts {
   /** Pulável só nos testes — todo caller de produção passa pelo guard. */
   skipUrlCheck?: boolean;
   retryDelaysMs?: number[];
-  /** HMAC-sha256 do body vira X-Deskcomm-Signature quando presente; null/undefined → envio sem assinatura. */
+  /** HMAC-sha256 do body; durante 90 dias emitimos os headers novo e legado. */
   secret?: string | null;
   /** Headers extras do caller (ex.: X-Deskcomm-Event). Nunca inclui a assinatura — essa é sempre computada aqui. */
   headers?: Record<string, string>;
@@ -76,7 +76,7 @@ export interface DeliverSignedWebhookOpts {
 /**
  * Transporte outbound canônico — ÚNICO lugar do repo que faz fetch() de
  * webhook de tenant. Cobre assertSafeOutboundUrl, assinatura HMAC-sha256
- * (X-Deskcomm-Signature) e o loop de retry/timeout/redirect:"manual".
+ * (X-Lumenva-Signature + X-Deskcomm-Signature) e o loop de retry/timeout/redirect:"manual".
  *
  * Compartilhado por `call_webhook` (abaixo) e `n8n_webhook`
  * (lib/automation/actions/n8n-webhook.ts) — nenhuma das duas ações
@@ -100,7 +100,9 @@ export async function deliverSignedWebhook(
     ...(opts.headers ?? {}),
   };
   if (opts.secret) {
-    headers["X-Deskcomm-Signature"] = createHmac("sha256", opts.secret).update(body).digest("hex");
+    const signature = createHmac("sha256", opts.secret).update(body).digest("hex");
+    headers["X-Lumenva-Signature"] = signature;
+    headers["X-Deskcomm-Signature"] = signature;
   }
 
   const retryDelaysMs = opts.retryDelaysMs ?? RETRY_DELAYS_MS;
@@ -183,7 +185,7 @@ export async function executeCallWebhook(
     skipUrlCheck: true,
     retryDelaysMs: opts.retryDelaysMs,
     secret,
-    headers: { "X-Deskcomm-Event": ctx.event.event_type },
+    headers: { "X-Lumenva-Event": ctx.event.event_type, "X-Deskcomm-Event": ctx.event.event_type },
   });
   return { type: "call_webhook", ...result };
 }

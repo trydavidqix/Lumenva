@@ -11,7 +11,8 @@
  */
 // Local edge-safe re-declaration to avoid pulling node:crypto from cookie.ts
 // into the middleware bundle.
-export const IMPERSONATE_COOKIE_NAME_EDGE = "deskcomm-impersonate";
+export const IMPERSONATE_COOKIE_NAME_EDGE = "lumenva-impersonate";
+export const IMPERSONATE_COOKIE_NAME_EDGE_LEGACY = "deskcomm-impersonate";
 
 export interface ImpersonatePayload {
   tenantId: string;
