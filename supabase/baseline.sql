@@ -9013,6 +9013,21 @@ CREATE POLICY "rgpd_breach_incidents_insert" ON "public"."rgpd_breach_incidents"
 DROP POLICY IF EXISTS "rgpd_breach_incidents_update" ON "public"."rgpd_breach_incidents";
 CREATE POLICY "rgpd_breach_incidents_update" ON "public"."rgpd_breach_incidents" FOR UPDATE USING ("organization_id" IN (SELECT "public"."fn_user_org_ids"())) WITH CHECK ("organization_id" IN (SELECT "public"."fn_user_org_ids"()));
 
+CREATE TABLE IF NOT EXISTS "public"."transfer_inventories" (
+ "id" uuid DEFAULT "gen_random_uuid"() NOT NULL, "organization_id" uuid NOT NULL, "provider_name" text NOT NULL, "country_code" text, "subprocessor" text, "purpose" text, "data_location" text, "adequacy_decision" text DEFAULT 'unknown' NOT NULL, "safeguards" text DEFAULT 'unknown' NOT NULL, "safeguards_version" text, "tia" jsonb DEFAULT '{}'::jsonb NOT NULL, "supplementary_measures" jsonb DEFAULT '{}'::jsonb NOT NULL, "encryption" text, "reviewed_at" timestamptz, "status" text DEFAULT 'unknown' NOT NULL, "created_at" timestamptz DEFAULT now() NOT NULL, "updated_at" timestamptz DEFAULT now() NOT NULL,
+ CONSTRAINT "transfer_inventories_adequacy_check" CHECK ("adequacy_decision" = ANY (ARRAY['adequate','not_adequate','unknown'])), CONSTRAINT "transfer_inventories_safeguards_check" CHECK ("safeguards" = ANY (ARRAY['scc','bcr','none','unknown'])), CONSTRAINT "transfer_inventories_status_check" CHECK ("status" = ANY (ARRAY['unknown','approved','blocked','expired']))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "transfer_inventories_org_provider_idx" ON "public"."transfer_inventories" ("organization_id", "provider_name");
+CREATE INDEX IF NOT EXISTS "transfer_inventories_org_status_idx" ON "public"."transfer_inventories" ("organization_id", "status");
+ALTER TABLE "public"."transfer_inventories" ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE "public"."transfer_inventories" FROM anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE "public"."transfer_inventories" TO authenticated;
+GRANT ALL ON TABLE "public"."transfer_inventories" TO service_role;
+DROP POLICY IF EXISTS "transfer_inventories_select" ON "public"."transfer_inventories";
+CREATE POLICY "transfer_inventories_select" ON "public"."transfer_inventories" FOR SELECT USING ("organization_id" IN (SELECT "public"."fn_user_org_ids"()));
+DROP POLICY IF EXISTS "transfer_inventories_write" ON "public"."transfer_inventories";
+CREATE POLICY "transfer_inventories_write" ON "public"."transfer_inventories" FOR ALL USING ("organization_id" IN (SELECT "public"."fn_user_org_ids"())) WITH CHECK ("organization_id" IN (SELECT "public"."fn_user_org_ids"()));
+
 notify pgrst, 'reload schema';
 
 -- ---- Agent OS Phase 2 forward-fixes (2026-08-17) --------------------------

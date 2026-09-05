@@ -4968,6 +4968,12 @@ export type Database = {
           },
         ]
       }
+      transfer_inventories: {
+        Row: { id: string; organization_id: string; provider_name: string; country_code: string | null; subprocessor: string | null; purpose: string | null; data_location: string | null; adequacy_decision: string; safeguards: string; safeguards_version: string | null; tia: Json; supplementary_measures: Json; encryption: string | null; reviewed_at: string | null; status: string; created_at: string; updated_at: string }
+        Insert: { id?: string; organization_id: string; provider_name: string; country_code?: string | null; subprocessor?: string | null; purpose?: string | null; data_location?: string | null; adequacy_decision?: string; safeguards?: string; safeguards_version?: string | null; tia?: Json; supplementary_measures?: Json; encryption?: string | null; reviewed_at?: string | null; status?: string; created_at?: string; updated_at?: string }
+        Update: { id?: string; organization_id?: string; provider_name?: string; country_code?: string | null; subprocessor?: string | null; purpose?: string | null; data_location?: string | null; adequacy_decision?: string; safeguards?: string; safeguards_version?: string | null; tia?: Json; supplementary_measures?: Json; encryption?: string | null; reviewed_at?: string | null; status?: string; created_at?: string; updated_at?: string }
+        Relationships: []
+      }
       contact_legal_bases: {
         Row: { id: string; organization_id: string; contact_id: string; purpose: string; legal_basis: string; text_version: string | null; recorded_at: string; evidence: Json; channel: string | null; revoked_at: string | null; created_at: string }
         Insert: { id?: string; organization_id: string; contact_id: string; purpose: string; legal_basis: string; text_version?: string | null; recorded_at?: string; evidence?: Json; channel?: string | null; revoked_at?: string | null; created_at?: string }
