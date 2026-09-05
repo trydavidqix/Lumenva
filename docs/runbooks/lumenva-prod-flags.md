@@ -12,11 +12,12 @@ setup/update.
 | `DPO_ASSESSMENT_V1` | `true` | Avaliação documentada de obrigação de EPD/DPO por tenant. | migration `0151`, colunas DPO em `organizations` | `false` |
 | `ERASURE_DECISION_V1` | `true` | Regista apagamento versus anonimização irreversível. | migration `0153`, `erasure_decisions` | `false` |
 | `BREACH_WORKFLOW_V1` | `true` | Registo de incidentes e deadline RGPD de 72 horas. | migration `0154`, `rgpd_breach_incidents` | `false` |
-| `TRANSFER_GATE_V1` | `observe` | Observa transferências internacionais antes de bloquear providers. | migration `0155`, `transfer_inventories` | `off` |
+| `TRANSFER_GATE_V1` | `block` | Bloqueia providers com transferência internacional sem SCC. | migration `0155`, `transfer_inventories` | `off` |
 | `ECOMMERCE_PROVIDER_V1` | `true` | Usa a camada `EcommerceProvider` no fluxo Nuvemshop. | adapter Nuvemshop; sem migration | `false` |
 
-`TRANSFER_GATE_V1=observe` é intencional. Não usar `block`: enforcement é uma
-decisão futura do dono.
+`TRANSFER_GATE_V1=block` desde 2026-09-05 (decisão do dono). Sem clientes/dados
+reais no momento da mudança, portanto risco zero — o gate já fica correto quando
+os primeiros dados de UE entrarem. Rollback: `observe` (só observa) ou `off`.
 
 ## Bloco para reaplicar na produção
 
@@ -26,7 +27,7 @@ LEGAL_BASIS_V1=true
 DPO_ASSESSMENT_V1=true
 ERASURE_DECISION_V1=true
 BREACH_WORKFLOW_V1=true
-TRANSFER_GATE_V1=observe
+TRANSFER_GATE_V1=block
 ECOMMERCE_PROVIDER_V1=true
 ```
 
