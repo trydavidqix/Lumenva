@@ -70,6 +70,13 @@ export const tenantSchema = z.object({
     .nullable()
     .optional()
     .or(z.literal("").transform(() => null)),
+  dpo_required: z.boolean().nullable().optional(),
+  dpo_assessment: z.record(z.string(), z.unknown()).nullable().optional(),
+  dpo_assessed_at: z.string().datetime().nullable().optional(),
+  dpo_assessed_by: z.string().uuid().nullable().optional(),
+  dpo_public_contact: z.string().max(200).nullable().optional(),
+  dpo_responsibilities: z.string().max(4000).nullable().optional(),
+  dpo_cnpd_url: z.string().url().max(2048).nullable().optional(),
   privacy_policy_url: z
     .string()
     .url()

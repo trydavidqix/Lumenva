@@ -1632,6 +1632,32 @@ CREATE TABLE IF NOT EXISTS "public"."lgpd_requests" (
 
 ALTER TABLE "public"."lgpd_requests" OWNER TO "postgres";
 
+-- J1 RGPD state machine (additive compatibility layer; legacy status retained).
+ALTER TABLE "public"."lgpd_requests"
+    ADD COLUMN IF NOT EXISTS "rgpd_status" text,
+    ADD COLUMN IF NOT EXISTS "extension_reason" text,
+    ADD COLUMN IF NOT EXISTS "extension_notified_at" timestamp with time zone,
+    ADD COLUMN IF NOT EXISTS "refusal_grounds" text,
+    ADD COLUMN IF NOT EXISTS "refusal_communicated_at" timestamp with time zone;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'lgpd_requests_rgpd_status_check') THEN
+        ALTER TABLE "public"."lgpd_requests" ADD CONSTRAINT "lgpd_requests_rgpd_status_check"
+            CHECK ("rgpd_status" IS NULL OR "rgpd_status" = ANY (ARRAY['received','in_review','extension_notified','responded','refused']));
+    END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS "lgpd_requests_org_rgpd_status_idx" ON "public"."lgpd_requests" USING btree ("organization_id", "rgpd_status");
+UPDATE "public"."lgpd_requests"
+SET "rgpd_status" = CASE "status"
+    WHEN 'received' THEN 'received'
+    WHEN 'processing' THEN 'in_review'
+    WHEN 'completed' THEN 'responded'
+    WHEN 'failed' THEN 'refused'
+    WHEN 'expired' THEN 'refused'
+    ELSE NULL
+END
+WHERE "rgpd_status" IS NULL;
+
 
 CREATE TABLE IF NOT EXISTS "public"."merge_queue" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -1770,6 +1796,50 @@ CREATE TABLE IF NOT EXISTS "public"."organizations" (
 
 
 ALTER TABLE "public"."organizations" OWNER TO "postgres";
+
+-- J4 legal basis per purpose; legacy contacts.consent remains for dual-read.
+CREATE TABLE IF NOT EXISTS "public"."contact_legal_bases" (
+    "id" uuid DEFAULT "gen_random_uuid"() NOT NULL,
+    "organization_id" uuid NOT NULL,
+    "contact_id" uuid NOT NULL,
+    "purpose" text NOT NULL,
+    "legal_basis" text NOT NULL,
+    "text_version" text,
+    "recorded_at" timestamptz DEFAULT now() NOT NULL,
+    "evidence" jsonb DEFAULT '{}'::jsonb NOT NULL,
+    "channel" text,
+    "revoked_at" timestamptz,
+    "created_at" timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT "contact_legal_bases_purpose_check" CHECK ("purpose" = ANY (ARRAY['marketing','transactional','profiling'])),
+    CONSTRAINT "contact_legal_bases_basis_check" CHECK ("legal_basis" = ANY (ARRAY['consent','contract','legal_obligation','legitimate_interests','vital_interests','public_task']))
+);
+ALTER TABLE "public"."contact_legal_bases" ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS "contact_legal_bases_org_contact_idx" ON "public"."contact_legal_bases" USING btree ("organization_id", "contact_id", "purpose");
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'contact_legal_bases_pkey') THEN ALTER TABLE ONLY "public"."contact_legal_bases" ADD CONSTRAINT "contact_legal_bases_pkey" PRIMARY KEY ("id"); END IF;
+END $$;
+REVOKE ALL ON TABLE "public"."contact_legal_bases" FROM anon, authenticated;
+GRANT SELECT, INSERT ON TABLE "public"."contact_legal_bases" TO authenticated;
+GRANT ALL ON TABLE "public"."contact_legal_bases" TO service_role;
+DROP POLICY IF EXISTS "contact_legal_bases_select" ON "public"."contact_legal_bases";
+CREATE POLICY "contact_legal_bases_select" ON "public"."contact_legal_bases" FOR SELECT USING ("organization_id" IN (SELECT "public"."fn_user_org_ids"()));
+DROP POLICY IF EXISTS "contact_legal_bases_insert" ON "public"."contact_legal_bases";
+CREATE POLICY "contact_legal_bases_insert" ON "public"."contact_legal_bases" FOR INSERT WITH CHECK ("organization_id" IN (SELECT "public"."fn_user_org_ids"()));
+
+-- J2 EPD/DPO assessment (additive; dpo_email retained for compatibility).
+ALTER TABLE "public"."organizations"
+    ADD COLUMN IF NOT EXISTS "dpo_required" boolean,
+    ADD COLUMN IF NOT EXISTS "dpo_assessment" jsonb,
+    ADD COLUMN IF NOT EXISTS "dpo_assessed_at" timestamp with time zone,
+    ADD COLUMN IF NOT EXISTS "dpo_assessed_by" uuid,
+    ADD COLUMN IF NOT EXISTS "dpo_public_contact" text,
+    ADD COLUMN IF NOT EXISTS "dpo_responsibilities" text,
+    ADD COLUMN IF NOT EXISTS "dpo_cnpd_url" text;
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'organizations_dpo_assessed_by_fkey') THEN
+        ALTER TABLE "public"."organizations" ADD CONSTRAINT "organizations_dpo_assessed_by_fkey" FOREIGN KEY ("dpo_assessed_by") REFERENCES "auth"."users"("id");
+    END IF;
+END $$;
 
 
 COMMENT ON TABLE "public"."organizations" IS 'Tenants do DeskcommCRM. Cada linha = 1 e-commerce cliente.';
@@ -8882,6 +8952,82 @@ select organization_id, agent_id, contact_id,
   count(*) filter (where expires_at is null or expires_at > now()) memory_count
 from public.agent_memory group by organization_id, agent_id, contact_id;
 
+-- J6 explicit erasure/anonymisation decision metadata (append-only grants).
+CREATE TABLE IF NOT EXISTS "public"."erasure_decisions" (
+    "id" uuid DEFAULT "gen_random_uuid"() NOT NULL,
+    "organization_id" uuid NOT NULL,
+    "contact_id" uuid,
+    "request_id" uuid,
+    "result" text NOT NULL,
+    "legal_exception" text,
+    "retained_fields" jsonb DEFAULT '{}'::jsonb NOT NULL,
+    "irreversibility_proof" text NOT NULL,
+    "created_at" timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT "erasure_decisions_result_check" CHECK ("result" = ANY (ARRAY['erasure','irreversible_anonymisation']))
+);
+ALTER TABLE "public"."erasure_decisions" ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS "erasure_decisions_org_contact_idx" ON "public"."erasure_decisions" USING btree ("organization_id", "contact_id", "created_at");
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'erasure_decisions_pkey') THEN ALTER TABLE ONLY "public"."erasure_decisions" ADD CONSTRAINT "erasure_decisions_pkey" PRIMARY KEY ("id"); END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'erasure_decisions_organization_id_fkey') THEN ALTER TABLE ONLY "public"."erasure_decisions" ADD CONSTRAINT "erasure_decisions_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE CASCADE; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'erasure_decisions_contact_id_fkey') THEN ALTER TABLE ONLY "public"."erasure_decisions" ADD CONSTRAINT "erasure_decisions_contact_id_fkey" FOREIGN KEY ("contact_id") REFERENCES "public"."contacts"("id") ON DELETE SET NULL; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'erasure_decisions_request_id_fkey') THEN ALTER TABLE ONLY "public"."erasure_decisions" ADD CONSTRAINT "erasure_decisions_request_id_fkey" FOREIGN KEY ("request_id") REFERENCES "public"."lgpd_requests"("id") ON DELETE SET NULL; END IF;
+END $$;
+REVOKE ALL ON TABLE "public"."erasure_decisions" FROM anon, authenticated;
+GRANT SELECT, INSERT ON TABLE "public"."erasure_decisions" TO authenticated;
+GRANT ALL ON TABLE "public"."erasure_decisions" TO service_role;
+DROP POLICY IF EXISTS "erasure_decisions_select" ON "public"."erasure_decisions";
+CREATE POLICY "erasure_decisions_select" ON "public"."erasure_decisions" FOR SELECT USING ("organization_id" IN (SELECT "public"."fn_user_org_ids"()));
+DROP POLICY IF EXISTS "erasure_decisions_insert" ON "public"."erasure_decisions";
+CREATE POLICY "erasure_decisions_insert" ON "public"."erasure_decisions" FOR INSERT WITH CHECK ("organization_id" IN (SELECT "public"."fn_user_org_ids"()));
+
+CREATE TABLE IF NOT EXISTS "public"."rgpd_breach_incidents" (
+    "id" uuid DEFAULT "gen_random_uuid"() NOT NULL,
+    "organization_id" uuid NOT NULL,
+    "known_at" timestamptz NOT NULL,
+    "risk_level" text NOT NULL,
+    "deadline_at" timestamptz NOT NULL,
+    "notification_decision" text NOT NULL,
+    "notified_at" timestamptz,
+    "cnpd_evidence_url" text,
+    "data_subject_notified_at" timestamptz,
+    "escalation_owner" uuid,
+    "escalation_notes" text,
+    "evidence" jsonb DEFAULT '{}'::jsonb NOT NULL,
+    "idempotency_key" text NOT NULL,
+    "created_at" timestamptz DEFAULT now() NOT NULL,
+    "updated_at" timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT "rgpd_breach_incidents_risk_check" CHECK ("risk_level" = ANY (ARRAY['none','low','high','unknown'])),
+    CONSTRAINT "rgpd_breach_incidents_decision_check" CHECK ("notification_decision" = ANY (ARRAY['notify','not_notify','not_notifiable_documented','pending']))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "rgpd_breach_incidents_org_key_idx" ON "public"."rgpd_breach_incidents" ("organization_id", "idempotency_key");
+CREATE INDEX IF NOT EXISTS "rgpd_breach_incidents_deadline_idx" ON "public"."rgpd_breach_incidents" ("organization_id", "deadline_at");
+ALTER TABLE "public"."rgpd_breach_incidents" ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE "public"."rgpd_breach_incidents" FROM anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE "public"."rgpd_breach_incidents" TO authenticated;
+GRANT ALL ON TABLE "public"."rgpd_breach_incidents" TO service_role;
+DROP POLICY IF EXISTS "rgpd_breach_incidents_select" ON "public"."rgpd_breach_incidents";
+CREATE POLICY "rgpd_breach_incidents_select" ON "public"."rgpd_breach_incidents" FOR SELECT USING ("organization_id" IN (SELECT "public"."fn_user_org_ids"()));
+DROP POLICY IF EXISTS "rgpd_breach_incidents_insert" ON "public"."rgpd_breach_incidents";
+CREATE POLICY "rgpd_breach_incidents_insert" ON "public"."rgpd_breach_incidents" FOR INSERT WITH CHECK ("organization_id" IN (SELECT "public"."fn_user_org_ids"()));
+DROP POLICY IF EXISTS "rgpd_breach_incidents_update" ON "public"."rgpd_breach_incidents";
+CREATE POLICY "rgpd_breach_incidents_update" ON "public"."rgpd_breach_incidents" FOR UPDATE USING ("organization_id" IN (SELECT "public"."fn_user_org_ids"())) WITH CHECK ("organization_id" IN (SELECT "public"."fn_user_org_ids"()));
+
+CREATE TABLE IF NOT EXISTS "public"."transfer_inventories" (
+ "id" uuid DEFAULT "gen_random_uuid"() NOT NULL, "organization_id" uuid NOT NULL, "provider_name" text NOT NULL, "country_code" text, "subprocessor" text, "purpose" text, "data_location" text, "adequacy_decision" text DEFAULT 'unknown' NOT NULL, "safeguards" text DEFAULT 'unknown' NOT NULL, "safeguards_version" text, "tia" jsonb DEFAULT '{}'::jsonb NOT NULL, "supplementary_measures" jsonb DEFAULT '{}'::jsonb NOT NULL, "encryption" text, "reviewed_at" timestamptz, "status" text DEFAULT 'unknown' NOT NULL, "created_at" timestamptz DEFAULT now() NOT NULL, "updated_at" timestamptz DEFAULT now() NOT NULL,
+ CONSTRAINT "transfer_inventories_adequacy_check" CHECK ("adequacy_decision" = ANY (ARRAY['adequate','not_adequate','unknown'])), CONSTRAINT "transfer_inventories_safeguards_check" CHECK ("safeguards" = ANY (ARRAY['scc','bcr','none','unknown'])), CONSTRAINT "transfer_inventories_status_check" CHECK ("status" = ANY (ARRAY['unknown','approved','blocked','expired']))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "transfer_inventories_org_provider_idx" ON "public"."transfer_inventories" ("organization_id", "provider_name");
+CREATE INDEX IF NOT EXISTS "transfer_inventories_org_status_idx" ON "public"."transfer_inventories" ("organization_id", "status");
+ALTER TABLE "public"."transfer_inventories" ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE "public"."transfer_inventories" FROM anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE "public"."transfer_inventories" TO authenticated;
+GRANT ALL ON TABLE "public"."transfer_inventories" TO service_role;
+DROP POLICY IF EXISTS "transfer_inventories_select" ON "public"."transfer_inventories";
+CREATE POLICY "transfer_inventories_select" ON "public"."transfer_inventories" FOR SELECT USING ("organization_id" IN (SELECT "public"."fn_user_org_ids"()));
+DROP POLICY IF EXISTS "transfer_inventories_write" ON "public"."transfer_inventories";
+CREATE POLICY "transfer_inventories_write" ON "public"."transfer_inventories" FOR ALL USING ("organization_id" IN (SELECT "public"."fn_user_org_ids"())) WITH CHECK ("organization_id" IN (SELECT "public"."fn_user_org_ids"()));
+
 notify pgrst, 'reload schema';
 
 -- ---- Agent OS Phase 2 forward-fixes (2026-08-17) --------------------------
@@ -10376,6 +10522,15 @@ drop trigger if exists trg_customer_memory_audit on public.customer_memory;
 create trigger trg_customer_memory_audit
   after insert or update or delete on public.customer_memory
   for each row execute function public.fn_audit_log_row();
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'contact_legal_bases_organization_id_fkey') THEN
+    ALTER TABLE ONLY "public"."contact_legal_bases" ADD CONSTRAINT "contact_legal_bases_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE CASCADE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'contact_legal_bases_contact_id_fkey') THEN
+    ALTER TABLE ONLY "public"."contact_legal_bases" ADD CONSTRAINT "contact_legal_bases_contact_id_fkey" FOREIGN KEY ("contact_id") REFERENCES "public"."contacts"("id") ON DELETE CASCADE;
+  END IF;
+END $$;
 
 -- ---- 0133: voice_calls/voice_call_events provider amplia pra incluir asterisk ----
 -- Detalhe: 20260830190000_0133_voice_calls_provider_asterisk.sql. Forward-fix:

@@ -29,6 +29,13 @@ export type LgpdRequestStatus =
   | "failed"
   | "pending_review";
 
+export type RgpdRequestStatus =
+  | "received"
+  | "in_review"
+  | "extension_notified"
+  | "responded"
+  | "refused";
+
 export interface LgpdRequest {
   id: string;
   organization_id: string;
@@ -40,6 +47,8 @@ export interface LgpdRequest {
   /** Nuvemshop customer id or other external platform identifier. */
   external_customer_id: string | null;
   status: LgpdRequestStatus;
+  /** New RGPD state; null while legacy rows are not backfilled. */
+  rgpd_status?: RgpdRequestStatus | null;
   attempts: number;
   received_at: string; // ISO 8601 UTC
   due_at: string; // ISO 8601 UTC
@@ -53,6 +62,10 @@ export interface LgpdRequest {
   emergency: boolean;
   /** Scope of the request: 'contact' (single customer) or 'tenant' (full store uninstall). */
   scope: LgpdScope;
+  extension_reason?: string | null;
+  extension_notified_at?: string | null;
+  refusal_grounds?: string | null;
+  refusal_communicated_at?: string | null;
   created_at: string;
   updated_at: string;
 }

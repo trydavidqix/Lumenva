@@ -43,6 +43,18 @@ aplica.
 
 ## Applied
 
+| `20260905170000` | `0155_rgpd_transfer_inventory` | J5 provider/subprocessor transfer inventory with unknown initial status, SCC/BCR/TIA fields and OFF-by-default observe/block gate. |
+
+| `20260905160000` | `0154_rgpd_breach_incidents` | J3 additive breach register with UTC 72-hour deadline, notification decision, CNPD evidence and tenant RLS; workflow remains feature-flagged OFF. |
+
+| `20260905150000` | `0153_rgpd_erasure_decisions` | J6 explicit erasure/anonymisation outcome metadata with retained fields, legal exception and irreversibility proof; RLS by organization. |
+
+| `20260905140000` | `0152_rgpd_legal_basis` | J4 append-only legal basis per purpose with RLS; legacy `contacts.consent` retained for dual-read. |
+
+| `20260905130000` | `0151_rgpd_dpo_assessment` | J2 additive EPD/DPO assessment fields and public/CNPD contact metadata; legacy `dpo_email` retained, NULL means unassessed. |
+
+| `20260905120000` | `0150_rgpd_state_machine` | J1 additive RGPD request state machine (`rgpd_status`, extension/refusal metadata), legacy `status` retained for dual-read/dual-write rollout; feature flag default OFF. |
+
 | Version | Name | Description |
 | `20260810151119` | `0116_ai_platform_foundation` | AI Platform Phase 0: tenant-aware feature flags (default OFF) and idempotent projection ledger, with RLS. |
 |---|---|---|
