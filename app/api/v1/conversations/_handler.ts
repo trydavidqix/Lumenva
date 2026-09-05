@@ -163,6 +163,10 @@ export async function listConversationsHandler(
       ? encodeCursor({ sort: (last[sortCol] as string | null) ?? null, id: last.id })
       : null;
 
+  if (process.env.CONVERSATION_ARCHIVE_V1 === "true" && ctx.actor.type === "user") {
+    const ids = new Set((await supabase.from("conversation_archives").select("conversation_id").eq("organization_id", ctx.organization_id).eq("user_id", ctx.actor.id)).data?.map((r) => r.conversation_id));
+    for (const row of page as Array<Conversation & { is_archived_by_me?: boolean }>) row.is_archived_by_me = ids.has(row.id);
+  }
   return { conversations: page, cursor, has_more: hasMore };
 }
 

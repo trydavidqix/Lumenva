@@ -45,7 +45,8 @@ export function ConversationHeader({ conversation }: Props) {
   const displayName = c?.display_name?.trim() || c?.name?.trim() || c?.phone_number || "Sem nome";
   const phone = c?.phone_number ?? null;
   const status = conversation.status;
-  const archiveEnabled = process.env.NEXT_PUBLIC_CONVERSATION_ARCHIVE_V1 === "true";
+  const archiveEnabled = typeof window !== "undefined" && window.__PUBLIC_ENV__?.CONVERSATION_ARCHIVE_V1 === true;
+  const isArchived = (conversation as ConversationWithContact & { is_archived_by_me?: boolean }).is_archived_by_me === true;
   const isMineAssigned = conversation.assigned_to_user_id === user.id;
   const isOpen = status === "open" || conversation.assigned_to_user_id == null;
 
@@ -87,8 +88,8 @@ export function ConversationHeader({ conversation }: Props) {
 
       <div className="flex shrink-0 items-center gap-1.5">
         {archiveEnabled && status !== "closed" && (
-          <Button size="sm" variant="outline" disabled={archive.isPending} onClick={() => archive.mutate({ conversation_id: conversation.id, archived: true })}>
-            Arquivar
+          <Button size="sm" variant="outline" disabled={archive.isPending} onClick={() => archive.mutate({ conversation_id: conversation.id, archived: !isArchived })}>
+            {isArchived ? "Desarquivar" : "Arquivar"}
           </Button>
         )}
         {isOpen && (
