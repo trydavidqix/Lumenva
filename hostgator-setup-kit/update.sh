@@ -12,6 +12,9 @@
 source "$(dirname "$0")/_common.sh"
 enter_project
 
+env_alias AGENT_REPORT
+env_alias AGENT_REPORT_CMD
+
 FORCE=""; SKIP_BACKUP=""; TARGET_TAG=""
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -108,7 +111,7 @@ if [ -z "$SKIP_BACKUP" ]; then
 fi
 # Avisa o agente do host (se for ele quem está dirigindo) — é o que faz a tela
 # de atualização avançar passo a passo enquanto o app ainda está de pé.
-[ -n "${DESKCOMM_AGENT_REPORT:-}" ] && eval "${DESKCOMM_AGENT_REPORT_CMD}" backup
+[ -n "${LUMENVA_AGENT_REPORT:-}" ] && eval "${LUMENVA_AGENT_REPORT_CMD}" backup
 
 # ── 3. Código novo ───────────────────────────────────────────────────────────
 step "Baixando o código novo"
@@ -116,7 +119,7 @@ if ! git checkout --quiet "$TARGET_TAG" 2>&1; then
   die "Não consegui trocar para a versão $TARGET_TAG (parece haver mudanças locais que divergem).
      Rode 'git status' pra ver, ou peça ajuda. NÃO mexi no banco — está tudo como estava."
 fi
-[ -n "${DESKCOMM_AGENT_REPORT:-}" ] && eval "${DESKCOMM_AGENT_REPORT_CMD}" codigo
+[ -n "${LUMENVA_AGENT_REPORT:-}" ] && eval "${LUMENVA_AGENT_REPORT_CMD}" codigo
 
 # ── 4. Banco: schema + correções de dados (schema ANTES do app) ──────────────
 # O baseline é idempotente e auto-curativo. Re-aplicar numa base que JÁ existe
@@ -147,7 +150,7 @@ if [ -f supabase/baseline.sql ]; then
 else
   c_ylw "⚠ supabase/baseline.sql não encontrado — pulei a parte do banco."
 fi
-[ -n "${DESKCOMM_AGENT_REPORT:-}" ] && eval "${DESKCOMM_AGENT_REPORT_CMD}" banco
+[ -n "${LUMENVA_AGENT_REPORT:-}" ] && eval "${LUMENVA_AGENT_REPORT_CMD}" banco
 
 # ── 5. App novo ──────────────────────────────────────────────────────────────
 step "Baixando a versão nova do app e reiniciando"
