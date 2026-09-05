@@ -6099,6 +6099,13 @@ export type Database = {
           created_by: string | null
           display_name: string
           dpo_email: string | null
+          dpo_required: boolean | null
+          dpo_assessment: Json | null
+          dpo_assessed_at: string | null
+          dpo_assessed_by: string | null
+          dpo_public_contact: string | null
+          dpo_responsibilities: string | null
+          dpo_cnpd_url: string | null
           id: string
           legal_name: string
           locale: string
@@ -6124,6 +6131,13 @@ export type Database = {
           created_by?: string | null
           display_name: string
           dpo_email?: string | null
+          dpo_required?: boolean | null
+          dpo_assessment?: Json | null
+          dpo_assessed_at?: string | null
+          dpo_assessed_by?: string | null
+          dpo_public_contact?: string | null
+          dpo_responsibilities?: string | null
+          dpo_cnpd_url?: string | null
           id?: string
           legal_name: string
           locale?: string
@@ -6149,6 +6163,13 @@ export type Database = {
           created_by?: string | null
           display_name?: string
           dpo_email?: string | null
+          dpo_required?: boolean | null
+          dpo_assessment?: Json | null
+          dpo_assessed_at?: string | null
+          dpo_assessed_by?: string | null
+          dpo_public_contact?: string | null
+          dpo_responsibilities?: string | null
+          dpo_cnpd_url?: string | null
           id?: string
           legal_name?: string
           locale?: string
