@@ -40,8 +40,12 @@ describe("parseReaisToCents", () => {
 });
 
 describe("formatCentsBRL", () => {
-  it("mostra em reais o que está guardado em centavos", () => {
-    expect(formatCentsBRL(24990).replace(/ /g, " ")).toBe("R$ 249,90");
-    expect(formatCentsBRL(0).replace(/ /g, " ")).toBe("R$ 0,00");
+  it("usa o fallback da organização em EUR/PT", () => {
+    expect(formatCentsBRL(24990).replace(/ /g, " ")).toBe("249,90 €");
+    expect(formatCentsBRL(0).replace(/ /g, " ")).toBe("0,00 €");
+  });
+
+  it("mantém BRL como opção explícita de tenant", () => {
+    expect(formatCentsBRL(24990, "BRL", "pt-BR").replace(/ /g, " ")).toBe("R$ 249,90");
   });
 });
