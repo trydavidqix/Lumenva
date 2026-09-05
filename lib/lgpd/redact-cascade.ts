@@ -117,14 +117,18 @@ export async function cascadeRedactContact(args: CascadeArgs): Promise<CascadeRe
 
   const result = (data ?? {}) as RpcResult;
   const irreversibilityProof = "fn_lgpd_cascade_redact_contact atomically removes direct PII and preserves only minimised operational history";
-  await admin.from("erasure_decisions").insert({
-    organization_id: args.organizationId,
-    contact_id: args.contactId,
-    request_id: args.requestId,
-    result: "irreversible_anonymisation",
-    retained_fields: result.counts ?? {},
-    irreversibility_proof: irreversibilityProof,
-  });
+  // J6 is additive and opt-in. With the flag OFF, preserve the pre-J6
+  // behavior and do not touch the optional erasure_decisions table.
+  if (process.env.ERASURE_DECISION_V1 === "true") {
+    await admin.from("erasure_decisions").insert({
+      organization_id: args.organizationId,
+      contact_id: args.contactId,
+      request_id: args.requestId,
+      result: "irreversible_anonymisation",
+      retained_fields: result.counts ?? {},
+      irreversibility_proof: irreversibilityProof,
+    });
+  }
   return {
     alreadyAnonymized: result.already_anonymized === true,
     result: "irreversible_anonymisation",
