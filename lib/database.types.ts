@@ -4968,6 +4968,30 @@ export type Database = {
           },
         ]
       }
+      transfer_inventories: {
+        Row: { id: string; organization_id: string; provider_name: string; country_code: string | null; subprocessor: string | null; purpose: string | null; data_location: string | null; adequacy_decision: string; safeguards: string; safeguards_version: string | null; tia: Json; supplementary_measures: Json; encryption: string | null; reviewed_at: string | null; status: string; created_at: string; updated_at: string }
+        Insert: { id?: string; organization_id: string; provider_name: string; country_code?: string | null; subprocessor?: string | null; purpose?: string | null; data_location?: string | null; adequacy_decision?: string; safeguards?: string; safeguards_version?: string | null; tia?: Json; supplementary_measures?: Json; encryption?: string | null; reviewed_at?: string | null; status?: string; created_at?: string; updated_at?: string }
+        Update: { id?: string; organization_id?: string; provider_name?: string; country_code?: string | null; subprocessor?: string | null; purpose?: string | null; data_location?: string | null; adequacy_decision?: string; safeguards?: string; safeguards_version?: string | null; tia?: Json; supplementary_measures?: Json; encryption?: string | null; reviewed_at?: string | null; status?: string; created_at?: string; updated_at?: string }
+        Relationships: []
+      }
+      contact_legal_bases: {
+        Row: { id: string; organization_id: string; contact_id: string; purpose: string; legal_basis: string; text_version: string | null; recorded_at: string; evidence: Json; channel: string | null; revoked_at: string | null; created_at: string }
+        Insert: { id?: string; organization_id: string; contact_id: string; purpose: string; legal_basis: string; text_version?: string | null; recorded_at?: string; evidence?: Json; channel?: string | null; revoked_at?: string | null; created_at?: string }
+        Update: { id?: string; organization_id?: string; contact_id?: string; purpose?: string; legal_basis?: string; text_version?: string | null; recorded_at?: string; evidence?: Json; channel?: string | null; revoked_at?: string | null; created_at?: string }
+        Relationships: []
+      }
+      erasure_decisions: {
+        Row: { id: string; organization_id: string; contact_id: string | null; request_id: string | null; result: string; legal_exception: string | null; retained_fields: Json; irreversibility_proof: string; created_at: string }
+        Insert: { id?: string; organization_id: string; contact_id?: string | null; request_id?: string | null; result: string; legal_exception?: string | null; retained_fields?: Json; irreversibility_proof: string; created_at?: string }
+        Update: { id?: string; organization_id?: string; contact_id?: string | null; request_id?: string | null; result?: string; legal_exception?: string | null; retained_fields?: Json; irreversibility_proof?: string; created_at?: string }
+        Relationships: []
+      }
+      rgpd_breach_incidents: {
+        Row: { id: string; organization_id: string; known_at: string; risk_level: string; deadline_at: string; notification_decision: string; notified_at: string | null; cnpd_evidence_url: string | null; data_subject_notified_at: string | null; escalation_owner: string | null; escalation_notes: string | null; evidence: Json; idempotency_key: string; created_at: string; updated_at: string }
+        Insert: { id?: string; organization_id: string; known_at: string; risk_level: string; deadline_at: string; notification_decision: string; notified_at?: string | null; cnpd_evidence_url?: string | null; data_subject_notified_at?: string | null; escalation_owner?: string | null; escalation_notes?: string | null; evidence?: Json; idempotency_key: string; created_at?: string; updated_at?: string }
+        Update: { id?: string; organization_id?: string; known_at?: string; risk_level?: string; deadline_at?: string; notification_decision?: string; notified_at?: string | null; cnpd_evidence_url?: string | null; data_subject_notified_at?: string | null; escalation_owner?: string | null; escalation_notes?: string | null; evidence?: Json; idempotency_key?: string; created_at?: string; updated_at?: string }
+        Relationships: []
+      }
       job_queue: {
         Row: {
           attempts: number
@@ -5348,6 +5372,11 @@ export type Database = {
           id: string
           organization_id: string
           received_at: string
+          rgpd_status: string | null
+          extension_reason: string | null
+          extension_notified_at: string | null
+          refusal_grounds: string | null
+          refusal_communicated_at: string | null
           request_payload: Json
           request_type: string
           result: Json | null
@@ -5369,6 +5398,11 @@ export type Database = {
           id?: string
           organization_id: string
           received_at?: string
+          rgpd_status?: string | null
+          extension_reason?: string | null
+          extension_notified_at?: string | null
+          refusal_grounds?: string | null
+          refusal_communicated_at?: string | null
           request_payload?: Json
           request_type: string
           result?: Json | null
@@ -5390,6 +5424,11 @@ export type Database = {
           id?: string
           organization_id?: string
           received_at?: string
+          rgpd_status?: string | null
+          extension_reason?: string | null
+          extension_notified_at?: string | null
+          refusal_grounds?: string | null
+          refusal_communicated_at?: string | null
           request_payload?: Json
           request_type?: string
           result?: Json | null
@@ -6084,6 +6123,13 @@ export type Database = {
           created_by: string | null
           display_name: string
           dpo_email: string | null
+          dpo_required: boolean | null
+          dpo_assessment: Json | null
+          dpo_assessed_at: string | null
+          dpo_assessed_by: string | null
+          dpo_public_contact: string | null
+          dpo_responsibilities: string | null
+          dpo_cnpd_url: string | null
           id: string
           legal_name: string
           locale: string
@@ -6109,6 +6155,13 @@ export type Database = {
           created_by?: string | null
           display_name: string
           dpo_email?: string | null
+          dpo_required?: boolean | null
+          dpo_assessment?: Json | null
+          dpo_assessed_at?: string | null
+          dpo_assessed_by?: string | null
+          dpo_public_contact?: string | null
+          dpo_responsibilities?: string | null
+          dpo_cnpd_url?: string | null
           id?: string
           legal_name: string
           locale?: string
@@ -6134,6 +6187,13 @@ export type Database = {
           created_by?: string | null
           display_name?: string
           dpo_email?: string | null
+          dpo_required?: boolean | null
+          dpo_assessment?: Json | null
+          dpo_assessed_at?: string | null
+          dpo_assessed_by?: string | null
+          dpo_public_contact?: string | null
+          dpo_responsibilities?: string | null
+          dpo_cnpd_url?: string | null
           id?: string
           legal_name?: string
           locale?: string

@@ -7,7 +7,11 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeDueAtGdpr } from "./sla";
-import type { LgpdRequest, LgpdRequestType, LgpdScope } from "./types";
+import type { LgpdRequest, LgpdRequestType, LgpdScope, RgpdRequestStatus } from "./types";
+export { readRgpdStatus } from "./state-machine";
+
+export const RGPD_STATE_MACHINE_V1 = process.env.RGPD_STATE_MACHINE_V1 === "true";
+
 
 // ---------------------------------------------------------------------------
 // createLgpdRequest
@@ -50,6 +54,7 @@ export async function createLgpdRequest(
       received_at: input.receivedAt.toISOString(),
       due_at: dueAt.toISOString(),
       status: "received",
+      rgpd_status: "received",
       request_payload: input.payload ?? {},
       emergency: input.emergency ?? false,
       scope: input.scope ?? "contact",
@@ -62,6 +67,25 @@ export async function createLgpdRequest(
   }
 
   return { id: data.id, due_at: data.due_at };
+}
+
+/** Dual-write transition: legacy status remains populated for old consumers. */
+export async function transitionLgpdRequest(
+  organizationId: string,
+  id: string,
+  rgpdStatus: RgpdRequestStatus,
+  metadata: { extensionReason?: string; extensionNotifiedAt?: Date; refusalGrounds?: string; refusalCommunicatedAt?: Date } = {},
+): Promise<void> {
+  const legacyStatus: Record<RgpdRequestStatus, string> = {
+    received: "received", in_review: "processing", extension_notified: "processing", responded: "completed", refused: "failed",
+  };
+  const update: Record<string, unknown> = { rgpd_status: rgpdStatus, status: legacyStatus[rgpdStatus], updated_at: new Date().toISOString() };
+  if (metadata.extensionReason !== undefined) update.extension_reason = metadata.extensionReason;
+  if (metadata.extensionNotifiedAt) update.extension_notified_at = metadata.extensionNotifiedAt.toISOString();
+  if (metadata.refusalGrounds !== undefined) update.refusal_grounds = metadata.refusalGrounds;
+  if (metadata.refusalCommunicatedAt) update.refusal_communicated_at = metadata.refusalCommunicatedAt.toISOString();
+  const { error } = await createAdminClient().from("lgpd_requests").update(update).eq("organization_id", organizationId).eq("id", id);
+  if (error) throw new Error(`[lgpd-repository] transitionLgpdRequest failed: ${error.message}`);
 }
 
 // ---------------------------------------------------------------------------

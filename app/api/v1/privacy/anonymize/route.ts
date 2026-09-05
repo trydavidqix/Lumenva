@@ -155,5 +155,11 @@ export async function POST(req: NextRequest): Promise<Response> {
     },
   });
 
-  return ok({ contact_id: existing.id, anonymized_at: nowIso }, { requestId });
+  return ok({
+    contact_id: existing.id,
+    anonymized_at: nowIso,
+    result: cascade.result,
+    irreversibility_proof: cascade.irreversibilityProof,
+    message: "Dados pessoais anonimizados de forma irreversível; histórico operacional minimizado foi retido.",
+  }, { requestId });
 }
