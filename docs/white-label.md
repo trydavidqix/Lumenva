@@ -1,6 +1,6 @@
 # Instalar para clientes (agências e revendedores)
 
-Guia para quem instala o DeskcommCRM **para outras empresas** — agência, consultoria, revendedor — e cobra por isso.
+Guia para quem instala o Lumenva **para outras empresas** — agência, consultoria, revendedor — e cobra por isso.
 
 A licença é MIT: você pode modificar, hospedar para terceiros, revender e cobrar o que quiser. Não há royalty, não há cláusula proibindo hospedagem comercial e não existe versão paga que trave funcionalidade do seu cliente.
 
@@ -19,7 +19,7 @@ Reinicie a stack (`docker compose up -d`) e a marca vale em toda a interface: t�
 
 `APP_LOGO_URL` é opcional — sem ela, o nome aparece como texto. Com ela, o logo substitui o texto na barra lateral. A altura é fixa e a largura é livre, para não distorcer arte de proporção qualquer.
 
-O `install.sh` pergunta o `APP_NAME` durante a instalação; pressionar Enter mantém o padrão.
+O `install.sh` pergunta o `APP_NAME` durante a instalação; pressionar Enter mantém o padrão `Lumenva`.
 
 ### Por que isso é configuração, e não uma edição de código
 
@@ -56,13 +56,13 @@ Se o seu cliente pergunta "onde ficam meus dados?", a instalação dedicada tem 
 
 ---
 
-## O argumento jurídico que fecha venda no Brasil
+## O argumento jurídico para operação na União Europeia
 
-A **Resolução CD/ANPD nº 19/2024** tornou obrigatórias as cláusulas-padrão contratuais para **transferência internacional de dados pessoais**, com o prazo de adequação encerrado em **23 de agosto de 2025**.
+O RGPD exige base legal, finalidade, segurança e controlo das **transferências internacionais de dados pessoais**, incluindo as salvaguardas contratuais aplicáveis.
 
-Todo cliente seu que usa um CRM estrangeiro realiza essa transferência e precisa do artefato contratual. Hospedando em VPS no Brasil, **não há transferência internacional** — e a obrigação não se aplica.
+Hospedando na infraestrutura europeia aprovada, reduzem-se transferências internacionais desnecessárias; o gate `TRANSFER_GATE_V1` bloqueia providers sem salvaguarda aprovada.
 
-⚠️ **Não venda como "servidor no Brasil = conformidade com a LGPD".** Isso é falso e um advogado desmonta na primeira pergunta: conformidade depende de base legal, finalidade, segurança e direitos do titular. O argumento correto e defensável é o de cima: sem transferência internacional, não há exigência de cláusulas-padrão.
+⚠️ **Não venda localização de servidor como conformidade automática.** Conformidade depende de base legal, finalidade, segurança, direitos do titular e avaliação das transferências.
 
 ---
 

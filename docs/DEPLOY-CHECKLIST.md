@@ -1,5 +1,10 @@
 # Deploy Preflight Checklist
 
+> Estado atual da instalação Lumenva: o rename PT/UE, o cutover Docker e as sete
+> flags RGPD já foram executados em produção. Este checklist continua sendo um
+> preflight reutilizável para futuros deploys; não é uma indicação de que o
+> cutover esteja pendente.
+
 Run through this list before promoting to production (or before each release tag).
 
 ## Environment

@@ -1,4 +1,4 @@
-# Atualizando o DeskcommCRM na sua VPS
+# Atualizando o Lumenva na sua VPS
 
 Saiu uma versão nova? Atualizar é **um comando só**. Você não precisa saber se a
 novidade é no código, no banco de dados ou nos dois — o comando cuida de tudo, na
@@ -24,7 +24,7 @@ recente**, é porque não havia nada novo pra baixar; está tudo certo.
 3. Baixa o código novo.
 4. Atualiza o banco de dados (inclusive corrigindo sozinho conversas bagunçadas de
    versões antigas).
-5. Baixa a versão nova do aplicativo e reinicia.
+5. Constrói a versão nova do aplicativo na própria VPS e reinicia a stack Lumenva.
 6. Confere se o CRM voltou no ar.
 
 ## Coisas normais que você pode ver (não se assuste)
@@ -43,7 +43,7 @@ recente**, é porque não havia nada novo pra baixar; está tudo certo.
 - **Automático (opcional):** dá pra agendar pra toda semana. Rode `crontab -e` e adicione
   (troque o caminho pela pasta do seu projeto):
   ```
-  0 4 * * 0  cd /caminho/do/deskcommcrm && bash hostgator-setup-kit/update.sh
+  0 4 * * 0  cd /caminho/do/lumenva && bash hostgator-setup-kit/update.sh
   ```
   Isso atualiza todo domingo às 4h da manhã, já com backup automático.
 - **Deu algo estranho?** Rode `bash hostgator-setup-kit/healthcheck.sh` pra ver o estado
