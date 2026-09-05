@@ -24,7 +24,7 @@
     "e2e:env": "bash scripts/gerar-env-e2e.sh",
     "test:journeys": "playwright test -c tests/journeys/playwright.config.ts",
     "test:unit": "vitest run --exclude scripts/check-harness-consistency.test.mjs --exclude workers/voice-pipecat-runtime/main.test.mjs --exclude workers/voice-worker/pending-outbound.test.mjs",
-    "test:unit:docker-build": "pnpm test:unit --exclude tests/unit/env-example-sync.test.ts --exclude tests/unit/openrouter-alcance.test.ts --exclude tests/unit/voice-qa-harness-contract.test.ts --exclude tests/unit/e2e-workflow-honra-o-env.test.ts --exclude tests/unit/evidencia-citada.test.ts --exclude tests/unit/n8n-inbound-contract.test.ts --exclude tests/unit/n8n-reference-workflow.test.ts",
+    "test:unit:docker-build": "pnpm test:unit --exclude tests/unit/env-example-sync.test.ts --exclude tests/unit/env-alias.test.ts --exclude tests/unit/openrouter-alcance.test.ts --exclude tests/unit/voice-qa-harness-contract.test.ts --exclude tests/unit/e2e-workflow-honra-o-env.test.ts --exclude tests/unit/evidencia-citada.test.ts --exclude tests/unit/n8n-inbound-contract.test.ts --exclude tests/unit/n8n-reference-workflow.test.ts",
     "test:db": "node scripts/run-test-db.mjs",
     "test:shell": "bash tests/shell/update-guard.test.sh",
     "test:invariants": "bash scripts/test-db.sh",
