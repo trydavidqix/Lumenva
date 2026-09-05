@@ -5,7 +5,7 @@
 	email {$ACME_EMAIL}
 }
 
-{$DOMAIN} {
+{$DOMAIN}, app.lumenva.pt {
 	encode gzip
 
 	# `route` é obrigatório aqui: fora dele o Caddy reordena as diretivas pela
