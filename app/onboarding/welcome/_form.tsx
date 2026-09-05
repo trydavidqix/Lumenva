@@ -34,7 +34,7 @@ const TIMEZONES = [
 
 export function WelcomeForm({ defaultOrgName }: { defaultOrgName: string }) {
   const [displayName, setDisplayName] = useState(defaultOrgName);
-  const [timezone, setTimezone] = useState("America/Sao_Paulo");
+  const [timezone, setTimezone] = useState("Europe/Lisbon");
   const [accepted, setAccepted] = useState(false);
   const [pending, startTransition] = useTransition();
 
