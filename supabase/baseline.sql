@@ -1632,6 +1632,32 @@ CREATE TABLE IF NOT EXISTS "public"."lgpd_requests" (
 
 ALTER TABLE "public"."lgpd_requests" OWNER TO "postgres";
 
+-- J1 RGPD state machine (additive compatibility layer; legacy status retained).
+ALTER TABLE "public"."lgpd_requests"
+    ADD COLUMN IF NOT EXISTS "rgpd_status" text,
+    ADD COLUMN IF NOT EXISTS "extension_reason" text,
+    ADD COLUMN IF NOT EXISTS "extension_notified_at" timestamp with time zone,
+    ADD COLUMN IF NOT EXISTS "refusal_grounds" text,
+    ADD COLUMN IF NOT EXISTS "refusal_communicated_at" timestamp with time zone;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'lgpd_requests_rgpd_status_check') THEN
+        ALTER TABLE "public"."lgpd_requests" ADD CONSTRAINT "lgpd_requests_rgpd_status_check"
+            CHECK ("rgpd_status" IS NULL OR "rgpd_status" = ANY (ARRAY['received','in_review','extension_notified','responded','refused']));
+    END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS "lgpd_requests_org_rgpd_status_idx" ON "public"."lgpd_requests" USING btree ("organization_id", "rgpd_status");
+UPDATE "public"."lgpd_requests"
+SET "rgpd_status" = CASE "status"
+    WHEN 'received' THEN 'received'
+    WHEN 'processing' THEN 'in_review'
+    WHEN 'completed' THEN 'responded'
+    WHEN 'failed' THEN 'refused'
+    WHEN 'expired' THEN 'refused'
+    ELSE NULL
+END
+WHERE "rgpd_status" IS NULL;
+
 
 CREATE TABLE IF NOT EXISTS "public"."merge_queue" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,

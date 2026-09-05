@@ -43,6 +43,8 @@ aplica.
 
 ## Applied
 
+| `20260905120000` | `0150_rgpd_state_machine` | J1 additive RGPD request state machine (`rgpd_status`, extension/refusal metadata), legacy `status` retained for dual-read/dual-write rollout; feature flag default OFF. |
+
 | Version | Name | Description |
 | `20260810151119` | `0116_ai_platform_foundation` | AI Platform Phase 0: tenant-aware feature flags (default OFF) and idempotent projection ledger, with RLS. |
 |---|---|---|
