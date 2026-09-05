@@ -5,7 +5,7 @@ status: maintained
 last_updated: 2026-09-05
 generated_by: auditoria documental sincronizada — CRM consolidado e Voice Core
 confidence: alta (inventário de arquivos é CONFIRMADO; agrupamento temático é INFERIDO)
-audited_against: main @ 2d1c2450 (sincronização documental de incidente/restore; conferido em 2026-09-05)
+audited_against: main @ 7bbfb7f0 (sincronização PT/UE, rename Lumenva, cutover Docker e flags RGPD; conferido em 2026-09-05)
 ---
 
 # Índice da documentação — Lumenva

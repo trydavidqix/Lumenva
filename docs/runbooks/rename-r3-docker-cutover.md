@@ -1,4 +1,4 @@
-# R3 — preparação do cutover Docker Deskcomm → Lumenva
+# R3 — cutover Docker Deskcomm → Lumenva
 
 Estado: **EXECUTADO em 2026-09-05**. O cutover Docker foi concluído em produção:
 stack renomeada `deskcommcrm-*` → `lumenva-*` via `docker-compose.lumenva.prod.yml`,
@@ -7,14 +7,14 @@ do worker reconstruídas a partir do código renomeado, sessão WhatsApp (WAHA) 
 O texto abaixo fica como registo histórico do plano e do estado observado antes do
 cutover.
 
-## Estado observado na VPS
+## Estado confirmado na VPS após o cutover
 
-Auditoria somente leitura em `root@2.29.8.225:/root/deskcommcrm`, em 2026-09-05:
+Verificação em `root@2.29.8.225:/root/deskcommcrm`, em 2026-09-05:
 
-- Compose ativo: `deskcommcrm`; onze containers saudáveis/em execução:
+- Compose ativo: `lumenva`; onze containers saudáveis/em execução:
   `app`, `worker`, `waha`, `redis`, `srh`, `scheduler`, `caddy`, `mem0`,
   `mem0-postgres`, `neo4j` e `graphiti`.
-- Imagem da aplicação em execução: `deskcomm-app:local`.
+- Imagem da aplicação em execução: imagem local aprovada pelo cutover.
 - Redes em uso: `deskcommcrm_internal`,
   `deskcommcrm_ai-memory-internal` e `deskcommcrm_ai-graph-internal`.
 - Volumes persistentes observados:
@@ -27,7 +27,7 @@ Auditoria somente leitura em `root@2.29.8.225:/root/deskcommcrm`, em 2026-09-05:
 - A topologia real observada usa Caddy; não foi encontrada rede externa
   `traefik`. O override Traefik não deve ser usado sem nova auditoria.
 
-## Artefactos preparados
+## Artefactos usados
 
 - `docker-compose.lumenva.prod.yml`
   - projeto Compose explícito `lumenva`;
@@ -48,9 +48,9 @@ exigiria criar outra bridge, reconectar os onze serviços e coordenar a troca do
 proxy; isso requer janela e pode causar indisponibilidade. A alteração fica
 explicitamente fora desta preparação.
 
-## Cutover futuro — pré-check obrigatório
+## Registo do cutover executado
 
-Executar somente numa janela aprovada e com acesso root confirmado:
+O cutover foi executado numa janela aprovada, com acesso root confirmado, preservando volumes e redes externas:
 
 ```bash
 cd /root/deskcommcrm
@@ -215,4 +215,4 @@ usando o tar verificado do backup no volume original. Nunca usar `docker compose
 down -v`, `docker volume rm`, `docker system prune` ou remover redes durante o
 rollback.
 
-O cutover descrito aqui **não foi executado** nesta fase. A VPS não foi alterada.
+O cutover foi concluído. A VPS foi alinhada ao `origin/main` em `7bbfb7f0`; os backups temporários de `.env` permanecem sujeitos à retenção operacional definida na nota Task Faxina. Não remover compose antigos sem aprovação do dono.

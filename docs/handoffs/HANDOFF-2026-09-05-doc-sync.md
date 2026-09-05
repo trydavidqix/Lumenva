@@ -2,7 +2,7 @@
 type: handoff
 date: 2026-09-05
 status: closed
-audited_against: main @ 2d1c2450
+audited_against: main @ 7bbfb7f0
 ---
 
 # Handoff — sincronização documental de 2026-09-05
@@ -18,6 +18,7 @@ audited_against: main @ 2d1c2450
   `runbooks/graphiti.md`: causa (deploy sem profiles em 2026-09-03), volumes
   preservados, restore e comandos reproduzíveis.
 - `docs/runbooks/deploy.md` já contém os profiles obrigatórios em `2d1c2450`.
+- Rename PT/UE, cutover Docker e as sete flags RGPD foram executados e reconciliados em `743a909b`, `2274126e`, `edf48075`, `c1fb413a`, `8149d174` e `7bbfb7f0`.
 - Flags `graphiti` e `mem0` permanecem `shadow`; não houve ativação.
 
 ## VPS
@@ -27,8 +28,7 @@ O checkout `/root/deskcommcrm` foi alinhado com `origin/main` por `git pull`.
 `mem0-api-server:local`; no checkout VPS foi adicionado a `.git/info/exclude`
 para manter o `git status` limpo sem alterar `origin/main`. A branch deste
 handoff também adiciona a regra ao `.gitignore` para a próxima sincronização.
-Nenhum deploy, restart de container ou alteração de `.env` faz parte deste
-handoff.
+O estado de produção atual fica registrado no runbook de cutover; este handoff não autoriza novas alterações de runtime.
 
 ## Pendências
 

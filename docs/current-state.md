@@ -1,14 +1,22 @@
 ---
 type: current-state
-project: DeskcommCRM
+project: Lumenva
 status: maintained
 last_updated: 2026-09-05
 generated_by: sincronização documental do incidente e restore dos sidecars de memória
 confidence: média-alta (métricas de código são CONFIRMADO; estado de épico vem dos HANDOFFs, que são auto-relatados)
-audited_against: main @ 2d1c2450 (origin/main; conferido em 2026-09-05)
+audited_against: main @ 7bbfb7f0 (origin/main; conferido em 2026-09-05)
 ---
 
-# Estado atual — DeskcommCRM
+# Estado atual — Lumenva
+
+## Produção Lumenva — CONFIRMADO em 2026-09-05
+
+- **Código:** `main` e `origin/main` em `7bbfb7f0`; a cadeia desta entrega inclui `743a909b`, `2274126e`, `edf48075`, `c1fb413a` e `8149d174`.
+- **Rename e cutover:** a migração PT/UE, o rename público DeskcommCRM → Lumenva e o cutover Docker foram executados. A VPS usa `/root/deskcommcrm`, `docker-compose.lumenva.prod.yml`, projeto Compose `lumenva` e os onze containers `lumenva-*`.
+- **Flags RGPD:** as sete flags canónicas estão aplicadas em produção; `TRANSFER_GATE_V1=block`.
+- **Runtime:** `.env` de produção usa `APP_NAME=Lumenva` e `APP_PULL_POLICY=missing`; o site `https://app.lumenva.pt/login` responde HTTP 200.
+- **Nota de evidência:** os itens acima são estado confirmado desta reauditoria. Referências anteriores a preparação, observação ou cutover futuro abaixo são históricas e não representam o estado atual.
 
 ## Reauditoria de sincronização — 2026-09-05 — CONFIRMADO
 
@@ -16,7 +24,7 @@ audited_against: main @ 2d1c2450 (origin/main; conferido em 2026-09-05)
 - **Branches incorporadas:** `docs/session-sync-2026-09-04` e `feat/lead-pipeline-import-crm-2026-09-04` foram mescladas e empurradas no merge `e984d8b4`. O importador `scripts/lead-pipeline/import-to-crm.py` importou **40 leads reais**, `stage='Novo (frio)'`, `source='prospector_sheets'`, com **0 duplicatas**.
 - **Incidente Graphiti/Mem0:** um deploy/rebuild em 2026-09-03 entre 22:21–22:33 UTC recriou a stack sem os profiles `ai-memory`/`ai-graph`, removendo os quatro sidecars. O OOM de 2026-09-02 18:43 UTC contribuiu para a pressão de memória, mas não foi a causa final; os volumes `deskcommcrm_mem0-postgres-data` (~73 MB) e `deskcommcrm_neo4j-data` (~542 MB) foram preservados.
 - **Restore confirmado:** swap de 8 GB já existente; imagens públicas `pgvector/pgvector:pg16`, `neo4j:5.26.0` e `zepai/graphiti:0.22.0` puxadas; `mem0-api-server:local` reconstruído do commit `96d45b78c702b742fc91a2ce9eae91805be9144b` com as três correções do runbook; `docker compose --profile ai-memory --profile ai-graph up -d` deixou `mem0`, `mem0-postgres`, `neo4j` e `graphiti` saudáveis em ~25 s, sem recriar os serviços existentes. Knowledge base do Alfred intacta (7 fontes, 46 chunks).
-- **Flags e secrets:** `ai_platform_feature_flags` da organização `2e51006a-b264-48d1-8011-a33aecbdb311` continua `graphiti=shadow` e `mem0=shadow`; nenhuma flag foi promovida para `on`. As seis chaves `GRAPHITI_*` foram confirmadas no Infisical (ambiente `prod`, projeto `26e412df-a297-4ef7-8783-9b95184cd714`) sem expor valores.
+- **Flags e secrets:** `ai_platform_feature_flags` da organização `2e51006a-b264-48d1-8011-a33aecbdb311` continua `graphiti=shadow` e `mem0=shadow`; nenhuma dessas duas flags foi promovida para `on`. As seis chaves `GRAPHITI_*` foram confirmadas no Infisical (ambiente `prod`, projeto `26e412df-a297-4ef7-8783-9b95184cd714`) sem expor valores. As sete flags RGPD/transferência estão documentadas em [`runbooks/lumenva-prod-flags.md`](runbooks/lumenva-prod-flags.md).
 - **Correção permanente:** `2d1c2450` atualiza `docs/runbooks/deploy.md` para incluir `--profile ai-memory --profile ai-graph` nas receitas Caddy e Traefik.
 - **Runtime dos agentes:** todos os subagentes Maestri, incluindo Memória, passaram a ser Codex; a documentação operacional deve assumir Codex como runtime atual.
 
