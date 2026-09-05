@@ -43,6 +43,8 @@ aplica.
 
 ## Applied
 
+| `20260905170000` | `0155_rgpd_transfer_inventory` | J5 provider/subprocessor transfer inventory with unknown initial status, SCC/BCR/TIA fields and OFF-by-default observe/block gate. |
+
 | `20260905160000` | `0154_rgpd_breach_incidents` | J3 additive breach register with UTC 72-hour deadline, notification decision, CNPD evidence and tenant RLS; workflow remains feature-flagged OFF. |
 
 | `20260905150000` | `0153_rgpd_erasure_decisions` | J6 explicit erasure/anonymisation outcome metadata with retained fields, legal exception and irreversibility proof; RLS by organization. |
