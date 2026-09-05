@@ -30,6 +30,7 @@ export interface ContactSummary {
 
 export type ConversationWithContact = Conversation & {
   contacts?: ContactSummary | null;
+  is_archived_by_me?: boolean;
 };
 
 export interface ConversationsFilters {
@@ -38,6 +39,7 @@ export interface ConversationsFilters {
   search?: string;
   channel_session_id?: string;
   tag?: string;
+  archived?: boolean;
 }
 
 interface ListResponse {
@@ -75,6 +77,7 @@ export function useConversationsRealtime(
       if (filters.search) qs.set("search", filters.search);
       if (filters.channel_session_id) qs.set("channel_session_id", filters.channel_session_id);
       if (filters.tag) qs.set("tag", filters.tag);
+      if (filters.archived) qs.set("archived", "true");
       if (pageParam) qs.set("cursor", pageParam);
       qs.set("limit", "50");
       try {
