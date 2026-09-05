@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mail, MapPin, Phone } from "lucide-react";
+import { Envelope, MapPin, Phone } from "@phosphor-icons/react/ssr";
 import { contactDetails, socialLinks } from "@/content/site";
 import { socialIconMap } from "@/components/ui/BrandIcons";
 import styles from "./ContactInfoCard.module.css";
@@ -10,17 +10,17 @@ export function ContactInfoCard() {
       <h3 className={styles.title}>Fale connosco diretamente</h3>
       <ul className={styles.rows}>
         <li className={styles.row}>
-          <MapPin aria-hidden="true" size={18} strokeWidth={1.8} />
+          <MapPin aria-hidden="true" size={18} weight="duotone" color="currentColor" />
           <span>{contactDetails.address}</span>
         </li>
         <li className={styles.row}>
-          <Mail aria-hidden="true" size={18} strokeWidth={1.8} />
+          <Envelope aria-hidden="true" size={18} weight="duotone" color="currentColor" />
           <Link className={styles.rowLink} href={`mailto:${contactDetails.email}`}>
             {contactDetails.email}
           </Link>
         </li>
         <li className={styles.row}>
-          <Phone aria-hidden="true" size={18} strokeWidth={1.8} />
+          <Phone aria-hidden="true" size={18} weight="duotone" color="currentColor" />
           <Link className={styles.rowLink} href={contactDetails.whatsappHref} target="_blank" rel="noopener noreferrer">
             {contactDetails.phone}
           </Link>

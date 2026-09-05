@@ -1,4 +1,4 @@
-import { Bot, ShieldCheck, Users } from "lucide-react";
+import { Robot, ShieldCheck, UsersThree } from "@phosphor-icons/react/ssr";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { WhatsAppIcon } from "@/components/ui/BrandIcons";
@@ -31,10 +31,10 @@ export default function AboutPage() {
         title="Uma plataforma feita para equipas de vendas e suporte."
         description={description}
         capabilities={[
-          { icon: Bot, label: "Agentes de IA governados por pessoas" },
+          { icon: Robot, label: "Agentes de IA governados por pessoas" },
           { icon: WhatsAppIcon, label: "WhatsApp como canal primário" },
           { icon: ShieldCheck, label: "Multi-tenant seguro" },
-          { icon: Users, label: "Equipa acompanha cada operação" },
+          { icon: UsersThree, label: "Equipa acompanha cada operação" },
         ]}
       />
       <section className={styles.sectionAlt} aria-labelledby="principles-title">
