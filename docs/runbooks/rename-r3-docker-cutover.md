@@ -1,9 +1,11 @@
 # R3 — preparação do cutover Docker Deskcomm → Lumenva
 
-Estado: **FASE A preparada, não executada**. Nenhum comando deste documento foi
-executado na VPS além das consultas de leitura registadas abaixo. O cutover exige
-janela aprovada pelo dono; não fazer `up`, `down`, `pull`, `build`, `rm` ou
-`volume prune` como parte desta fase.
+Estado: **EXECUTADO em 2026-09-05**. O cutover Docker foi concluído em produção:
+stack renomeada `deskcommcrm-*` → `lumenva-*` via `docker-compose.lumenva.prod.yml`,
+volumes e redes preservados como `external` (zero perda de dados), imagens da app e
+do worker reconstruídas a partir do código renomeado, sessão WhatsApp (WAHA) intacta.
+O texto abaixo fica como registo histórico do plano e do estado observado antes do
+cutover.
 
 ## Estado observado na VPS
 
