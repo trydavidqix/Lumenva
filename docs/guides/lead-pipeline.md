@@ -48,6 +48,15 @@ Execução real confirmada em **2026-09-02**, no diretório
 - ScrapeGraphAI marcado como `skipped-no-OPENAI_API_KEY-or-ANTHROPIC_API_KEY`;
 - logs e contexto agent-reach presentes no diretório.
 
+### Importação para o CRM — concluída em 2026-09-05
+
+As branches `docs/session-sync-2026-09-04` e
+`feat/lead-pipeline-import-crm-2026-09-04` foram incorporadas no merge
+`e984d8b4`. A execução real de `scripts/lead-pipeline/import-to-crm.py` gravou
+40 contatos e 40 leads em `stage='Novo (frio)'`, com
+`source='prospector_sheets'` e 0 duplicatas. O importador é idempotente por
+telefone e não envia mensagens.
+
 ## Exportação para Google Sheets
 
 Depois de obter um CSV, gerar uma planilha nova (ou atualizar uma existente)

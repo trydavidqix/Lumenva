@@ -1,7 +1,7 @@
 # Auditoria Fase 3 — Content OS
 
 **Data:** 2026-09-01  
-**Checkout:** `/Users/david/Desktop/CRM/DeskcommCRM`  
+**Checkout:** `/Users/david/Desktop/Projetos/CRM/DeskcommCRM`  
 **Escopo:** somente leitura de Git e dos arquivos versionados; nenhuma operação de integração foi executada.
 
 ## Estado das refs

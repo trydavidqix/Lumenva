@@ -1,7 +1,7 @@
 # Auditoria de renomeação: DeskcommCRM/CRM para Lumenva
 
 **Data:** 2026-08-31  
-**Checkout auditado:** `/Users/david/Desktop/CRM/DeskcommCRM`  
+**Checkout auditado:** `/Users/david/Desktop/Projetos/CRM/DeskcommCRM`  
 **Branch observada:** `main`  
 **HEAD:** `56260cea7736b9133db2fd816e5fdb8c5df3fa7f`  
 **Escopo:** somente auditoria; nenhum arquivo de código, schema, configuração, branch, banco ou infraestrutura foi alterado.
@@ -19,10 +19,10 @@
 `git rev-parse --show-toplevel` retornou:
 
 ```text
-/Users/david/Desktop/CRM/DeskcommCRM
+/Users/david/Desktop/Projetos/CRM/DeskcommCRM
 ```
 
-`/Users/david/Desktop/CRM` é a pasta contêiner; o repositório real é a subpasta `DeskcommCRM`.
+`/Users/david/Desktop/Projetos/CRM` é a pasta contêiner; o repositório real é a subpasta `DeskcommCRM`.
 
 O estado inicial observado foi:
 

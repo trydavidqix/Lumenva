@@ -1,5 +1,42 @@
 # Mem0 OSS: operação do sidecar opcional
 
+## Incidente e restore — 2026-09-05 — RESOLVIDO
+
+Entre 22:21 e 22:33 UTC de 2026-09-03, um deploy/rebuild recriou a stack sem os
+profiles `ai-memory`/`ai-graph` que eram necessários para os sidecars. Os quatro
+containers desapareceram; isto foi acidente operacional, não uma decisão de
+desativação. O OOM de 2026-09-02 às 18:43 UTC agravou a pressão durante o build,
+mas não foi a causa final. Os volumes `deskcommcrm_mem0-postgres-data` (~73 MB) e
+`deskcommcrm_neo4j-data` (~542 MB) foram preservados.
+
+O restore executado na VPS em 2026-09-05 foi:
+
+```bash
+# /root/deskcommcrm — swap de 8 GB já existia; não alterar .env
+docker pull pgvector/pgvector:pg16
+docker pull neo4j:5.26.0
+docker pull zepai/graphiti:0.22.0
+git clone --depth 1 https://github.com/mem0ai/mem0.git mem0-src
+cd mem0-src
+git fetch --depth 1 origin 96d45b78c702b742fc91a2ce9eae91805be9144b
+git checkout 96d45b78c702b742fc91a2ce9eae91805be9144b
+sed -i 's/^psycopg>=/psycopg[binary]>=/' server/requirements.txt
+# em server/Dockerfile: RUN mkdir -p /app/history após COPY . .
+# e CMD: alembic upgrade head antes de uvicorn
+docker build -t mem0-api-server:local server
+cd /root/deskcommcrm
+docker compose --profile ai-memory --profile ai-graph up -d
+docker compose --profile ai-memory ps
+docker compose --profile ai-graph ps
+```
+
+Os quatro sidecars ficaram `healthy` em aproximadamente 25 segundos, sem
+`down`/recreate dos serviços existentes. A knowledge base do Alfred manteve 7
+fontes e 46 chunks. A correção permanente está em `2d1c2450`: todo deploy Caddy
+ou Traefik deve declarar ambos os profiles (ver `docs/runbooks/deploy.md`).
+Não promover as flags: `mem0` permanece `shadow` e qualquer ativação exige
+decisão de produto/compliance.
+
 ## Wiring no worker — ligado no código, ainda `off` por flag
 
 `workers/agent-worker/main.ts` constrói `Mem0ContextProvider` (via

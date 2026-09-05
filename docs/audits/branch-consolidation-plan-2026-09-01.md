@@ -1,7 +1,7 @@
 # Plano de consolidação de branches — DeskcommCRM
 
 **Data da fotografia:** 2026-09-01  
-**Checkout:** `/Users/david/Desktop/CRM/DeskcommCRM`  
+**Checkout:** `/Users/david/Desktop/Projetos/CRM/DeskcommCRM`  
 **Ponta de integração observada:** `main` = `5336a6a8f7ebda373938fdb7148206b624a2de61` (`voice: bias realtime transcription to Portuguese`)  
 **Escopo:** refs locais, `origin/*` e `upstream/*` existentes localmente.  
 **Regra:** somente leitura nesta auditoria; nenhum merge, rebase, push, fetch, remoção ou checkout foi executado.

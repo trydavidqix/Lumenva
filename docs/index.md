@@ -2,10 +2,10 @@
 type: index
 project: DeskcommCRM
 status: maintained
-last_updated: 2026-08-28
+last_updated: 2026-09-05
 generated_by: auditoria documental sincronizada — CRM consolidado e Voice Core
 confidence: alta (inventário de arquivos é CONFIRMADO; agrupamento temático é INFERIDO)
-audited_against: codex/crm-consolidated @ 54e86839 (sincronização documental de voz; inventário recontado em 2026-08-28)
+audited_against: main @ 2d1c2450 (sincronização documental de incidente/restore; conferido em 2026-09-05)
 ---
 
 # Índice da documentação — DeskcommCRM

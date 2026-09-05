@@ -262,5 +262,5 @@ With Sl
 ├─ 📌 Pinterest: 5 pins
 ├─ 🗣️ Top voices: r/StartUpIndia, r/portugal
 ├─ 🕒 Recent evidence is thin: only 3 of 7 dated items are from the last 7 days.
-└─ 📎 Raw results saved to ~/Desktop/CRM/DeskcommCRM/docs/pesquisa/lead-pipeline-run-2026-09-02c/last30days/dental-clinics-lisbon-whatsapp-customer-service-raw.md
+└─ 📎 Raw results saved to ~/Desktop/Projetos/CRM/DeskcommCRM/docs/pesquisa/lead-pipeline-run-2026-09-02c/last30days/dental-clinics-lisbon-whatsapp-customer-service-raw.md
 ---

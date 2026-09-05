@@ -1,7 +1,7 @@
 # Auditoria de branches — DeskcommCRM
 
 **Data:** 2026-08-31  
-**Repositório auditado:** `/Users/david/Desktop/CRM/DeskcommCRM`  
+**Repositório auditado:** `/Users/david/Desktop/Projetos/CRM/DeskcommCRM`  
 **Ponta de integração usada:** `main` em `56260cea`  
 **Remoto observado:** `origin/main` também em `56260cea`
 
@@ -323,7 +323,7 @@ A auditoria foi iniciada no repositório correto, confirmado por:
 
 ```text
 git rev-parse --show-toplevel
-/Users/david/Desktop/CRM/DeskcommCRM
+/Users/david/Desktop/Projetos/CRM/DeskcommCRM
 ```
 
 Estado inicial preservado:

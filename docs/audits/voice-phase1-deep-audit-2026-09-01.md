@@ -1,7 +1,7 @@
 # Auditoria aprofundada — Fase 1 (Voz)
 
 **Fotografia:** 2026-09-01  
-**Checkout:** `/Users/david/Desktop/CRM/DeskcommCRM`  
+**Checkout:** `/Users/david/Desktop/Projetos/CRM/DeskcommCRM`  
 **Base canônica:** `main` em `5336a6a8f7ebda373938fdb7148206b624a2de61`  
 **Escopo:** somente leitura; nenhum `fetch`, `merge`, `rebase`, `cherry-pick`, `push`, checkout, remoção de ref ou descarte foi executado.
 

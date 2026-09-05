@@ -1,7 +1,7 @@
 # Auditoria `upstream/*` — Agenda/produto
 
 **Data:** 2026-09-01  
-**Checkout:** `/Users/david/Desktop/CRM/DeskcommCRM`  
+**Checkout:** `/Users/david/Desktop/Projetos/CRM/DeskcommCRM`  
 **Base comparada:** `main` (a árvore de trabalho não foi alterada)  
 **Escopo:** seção 6, primeiras duas linhas da tabela de `branch-consolidation-FINAL-2026-09-01.md`: `upstream/cal/*`, `upstream/tmp-*`, `upstream/feat/*`, `upstream/fix/*`, `upstream/test/*` e `upstream/qa/*`.
 

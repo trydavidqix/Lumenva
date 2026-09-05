@@ -1,5 +1,33 @@
 # Graphiti + Neo4j: operação do sidecar opcional
 
+## Incidente e restore — 2026-09-05 — RESOLVIDO
+
+Entre 22:21 e 22:33 UTC de 2026-09-03, um deploy/rebuild recriou a stack sem os
+profiles `ai-memory`/`ai-graph`. `graphiti`, `neo4j`, `mem0` e `mem0-postgres`
+sumiram da VPS por acidente operacional; não houve decisão deliberada de
+desativação. O OOM de 2026-09-02 às 18:43 UTC contribuiu para a pressão de
+memória, mas não explica a remoção final. O volume `deskcommcrm_neo4j-data`
+(~542 MB) foi preservado (assim como o volume do Postgres Mem0, ~73 MB).
+
+Restore executado em 2026-09-05 na VPS (`/root/deskcommcrm`), sem alterar `.env`:
+
+```bash
+docker pull pgvector/pgvector:pg16
+docker pull neo4j:5.26.0
+docker pull zepai/graphiti:0.22.0
+docker compose --profile ai-memory --profile ai-graph up -d
+docker compose --profile ai-graph ps
+```
+
+Os quatro serviços ficaram `healthy` em aproximadamente 25 segundos e nenhum
+serviço existente foi recriado. A knowledge base do Alfred permanece intacta
+(7 fontes, 46 chunks). As seis chaves `GRAPHITI_*` foram confirmadas no
+Infisical, sem imprimir valores. As flags da organização
+`2e51006a-b264-4ef7-8783-9b95184cd714` continuam `graphiti=shadow` e
+`mem0=shadow`; não ligar nenhuma flag. A prevenção permanente está em
+`2d1c2450`: as receitas de deploy Caddy e Traefik incluem explicitamente os dois
+profiles.
+
 ## Wiring no worker — ligado no código, ainda `off` por flag
 
 `workers/agent-worker/main.ts` constrói `GraphitiContextProvider` (via
