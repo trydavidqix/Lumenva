@@ -9,9 +9,7 @@
  *    next business day (edge: weekend/holiday receipt).
  */
 
-import { HOLIDAYS_BR_ISO } from "./holidays-br";
-
-const _defaultHolidays = new Set(HOLIDAYS_BR_ISO);
+import { getHolidaysPt } from "./holidays-pt";
 
 /**
  * Format a Date to YYYY-MM-DD (UTC-based, suitable for set lookup when
@@ -55,17 +53,21 @@ function addOneDay(date: Date): Date {
 export function computeDueAt(
   receivedAt: Date,
   businessDays: number,
-  holidays: Set<string> = _defaultHolidays,
+  holidays?: Set<string>,
 ): Date {
+  const activeHolidays = holidays ?? new Set([
+    ...getHolidaysPt(receivedAt.getUTCFullYear()),
+    ...getHolidaysPt(receivedAt.getUTCFullYear() + 1),
+  ]);
   // Normalise to UTC midnight of the received day
   let cursor = new Date(
     Date.UTC(receivedAt.getUTCFullYear(), receivedAt.getUTCMonth(), receivedAt.getUTCDate()),
   );
 
   // If receivedAt itself is not a business day, advance to the first business day
-  if (!isBusinessDay(cursor, holidays)) {
+  if (!isBusinessDay(cursor, activeHolidays)) {
     cursor = addOneDay(cursor);
-    while (!isBusinessDay(cursor, holidays)) {
+    while (!isBusinessDay(cursor, activeHolidays)) {
       cursor = addOneDay(cursor);
     }
   }
@@ -74,7 +76,7 @@ export function computeDueAt(
   let remaining = businessDays;
   while (remaining > 0) {
     cursor = addOneDay(cursor);
-    if (isBusinessDay(cursor, holidays)) {
+    if (isBusinessDay(cursor, activeHolidays)) {
       remaining--;
     }
   }
