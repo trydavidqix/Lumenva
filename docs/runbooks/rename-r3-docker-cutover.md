@@ -172,6 +172,30 @@ O resultado esperado é o redirect de login documentado em `deploy.md`.
 
 ## Rollback e critérios de abortar
 
+Backup completo dos seis volumes persistentes observados (somente na janela
+aprovada; nunca executar nesta preparação):
+
+```bash
+for V in deskcommcrm_mem0-postgres-data deskcommcrm_neo4j-data deskcommcrm_waha-data deskcommcrm_waha-media deskcommcrm_caddy-data deskcommcrm_caddy-config; do
+  docker run --rm -v "${V}:/from:ro" -v "$BACKUP_VOLUME:/to" alpine:3.20 sh -c "tar czf /to/${V}.tar.gz -C /from ."
+done
+docker run --rm -v "$BACKUP_VOLUME:/backup:ro" alpine:3.20 sh -c 'sha256sum /backup/*.tar.gz; for f in /backup/*.tar.gz; do tar tzf "$f" >/dev/null || exit 1; done'
+```
+
+Healthcheck explícito dos onze containers após `up` (também somente na janela):
+
+```bash
+for C in app worker waha redis srh scheduler caddy mem0 mem0-postgres neo4j graphiti; do
+  docker inspect "lumenva-${C}-1" --format "{{.Name}} {{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}"
+done
+```
+
+Auditoria name-only do Infisical: se a versão instalada não suportar saída
+somente de nomes sem valores, pedir ao dono para listar no Infisical. Nunca
+imprimir secrets. Plano de resync: adicionar `LUMENVA_*`, validar duas releases,
+manter `DESKCOMM_*` como fallback nesse período e remover os nomes antigos só
+com aprovação explícita.
+
 Abortar imediatamente se houver container unhealthy, volume ausente ou vazio,
 erro de mount, falha do healthcheck, conflito de porta, ou resposta HTTP fora do
 contrato. Não remover volumes para “corrigir” a situação.
