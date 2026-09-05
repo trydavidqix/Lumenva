@@ -14,3 +14,6 @@ docs
 tasks
 scratchpad
 .vercel
+
+# clone do source do mem0 (usado só pra buildar a imagem mem0 na VPS)
+mem0-src
