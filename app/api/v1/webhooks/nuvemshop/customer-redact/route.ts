@@ -10,7 +10,7 @@
  *  4. Decrypt and verify HMAC SHA256 (timingSafeEqual).
  *  5. Idempotency: insert webhook_events_log; skip if duplicate (already ack'd).
  *  6. Resolve internal contact by Nuvemshop customer id (may be null — L-03).
- *  7. Insert lgpd_requests (due_at = now + 15 BR business days).
+ *  7. Insert lgpd_requests (due_at = one calendar month, RGPD Art. 12(3)).
  *  8. Emit lgpd.redact_received on event_log for the async worker (S-08.05).
  *  9. Audit log (no raw PII — ids only).
  * 10. Return 200 within <5s.
@@ -209,7 +209,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     contactId = contact?.id ?? null;
   }
 
-  // 7. Insert lgpd_requests (SLA = 15 BR business days per L-04)
+  // 7. Insert lgpd_requests (RGPD Art. 12(3): one calendar month)
   const now = new Date();
   let requestId: string;
   let dueAt: string;

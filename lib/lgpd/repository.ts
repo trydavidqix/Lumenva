@@ -22,6 +22,8 @@ export interface CreateLgpdRequestInput {
   receivedAt: Date;
   /** Number of calendar months for the GDPR/RGPD SLA (Art. 12(3) — default 1). */
   slaMonths: number;
+  // TODO(RGPD): persist extension_notified, extension_reason and
+  // extension_notified_at when the schema scope is explicitly approved.
   /** Extra context to store in request_payload. */
   payload?: Record<string, unknown>;
   /** Whether this is a high-priority emergency request (drives early SLA alarms). Default false. */
