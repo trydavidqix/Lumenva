@@ -1,25 +1,25 @@
 import {
-  BarChart3,
-  Bot,
-  Home,
-  Inbox,
-  MessageCircle,
-  Send,
-  Settings,
-  Sparkles,
-  Users,
-} from "lucide-react";
+  ChartBar,
+  Robot,
+  House,
+  Tray,
+  ChatCircle,
+  PaperPlaneRight,
+  Gear,
+  Sparkle,
+  UsersThree,
+} from "@phosphor-icons/react/ssr";
 import { AppWindow } from "@/components/mockup/AppWindow";
 import { SidebarNav } from "@/components/mockup/SidebarNav";
 import styles from "./AtendimentoMockup.module.css";
 
 const NAV_ITEMS = [
-  { label: "Resumo", icon: Home },
-  { label: "Inbox", icon: Inbox },
-  { label: "Leads", icon: Users },
-  { label: "Agentes IA", icon: Bot },
-  { label: "Relatórios", icon: BarChart3 },
-  { label: "Configurações", icon: Settings },
+  { label: "Resumo", icon: House },
+  { label: "Inbox", icon: Tray },
+  { label: "Leads", icon: UsersThree },
+  { label: "Agentes IA", icon: Robot },
+  { label: "Relatórios", icon: ChartBar },
+  { label: "Configurações", icon: Gear },
 ] as const;
 
 const CONVERSATIONS = [
@@ -54,7 +54,7 @@ export function AtendimentoMockup() {
           </div>
         </>
       }
-      sidebar={<SidebarNav activeLabel="Inbox" items={NAV_ITEMS} />}
+      sidebar={<SidebarNav activeLabel="Tray" items={NAV_ITEMS} />}
     >
       <div className={styles.layout}>
         <ul className={styles.conversationList}>
@@ -68,18 +68,18 @@ export function AtendimentoMockup() {
         </ul>
         <div className={styles.thread}>
           <div className={styles.bubbleIn}>
-            <MessageCircle aria-hidden="true" size={14} strokeWidth={1.8} />
+            <ChatCircle aria-hidden="true" size={14} weight="duotone" color="currentColor" />
             Olá! Queria saber mais sobre os vossos planos.
           </div>
           <div className={styles.suggestions}>
             <p className={styles.suggestionsLabel}>
-              <Sparkles aria-hidden="true" size={14} strokeWidth={1.8} />
+              <Sparkle aria-hidden="true" size={14} weight="duotone" color="currentColor" />
               IA sugeriu resposta
             </p>
             {SUGGESTIONS.map((suggestion) => (
               <div className={styles.suggestionRow} key={suggestion}>
                 <p>{suggestion}</p>
-                <Send aria-hidden="true" size={14} strokeWidth={1.8} />
+                <PaperPlaneRight aria-hidden="true" size={14} weight="duotone" color="currentColor" />
               </div>
             ))}
           </div>

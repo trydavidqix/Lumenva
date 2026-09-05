@@ -1,4 +1,4 @@
-import { BarChart3, BookOpen, ShieldCheck, User, Zap } from "lucide-react";
+import { ChartBar, BookOpen, ShieldCheck, User, Lightning } from "@phosphor-icons/react/ssr";
 import { AgentesMockup } from "@/components/sections/AgentesMockup";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
@@ -21,7 +21,7 @@ const benefits = [
   { icon: BookOpen, title: "Treine com o seu contexto", description: "Use documentos, FAQs, CRM e histórico de conversas para orientar cada agente." },
   { icon: User, title: "Especialize por função", description: "Tenha agentes dedicados para vendas, suporte, cobrança e operação." },
   { icon: ShieldCheck, title: "Automatize com controlo", description: "Defina regras, aprovações e handoff para manter qualidade e segurança." },
-  { icon: BarChart3, title: "Acompanhe desempenho", description: "Veja métricas, histórico e resultados de cada agente em tempo real." },
+  { icon: ChartBar, title: "Acompanhe desempenho", description: "Veja métricas, histórico e resultados de cada agente em tempo real." },
 ] as const;
 
 export const metadata = createPageMetadata({
@@ -43,7 +43,7 @@ export default function AgentesDeIaPage() {
         capabilities={[
           { icon: User, label: "Agentes especializados" },
           { icon: BookOpen, label: "Base de conhecimento" },
-          { icon: Zap, label: "Ações automáticas" },
+          { icon: Lightning, label: "Ações automáticas" },
           { icon: ShieldCheck, label: "Supervisão humana" },
         ]}
         visual={<AgentesMockup />}

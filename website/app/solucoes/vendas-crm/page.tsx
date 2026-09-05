@@ -1,4 +1,4 @@
-import { Filter, History, TrendingUp, Zap } from "lucide-react";
+import { Funnel, ClockCounterClockwise, TrendUp, Lightning } from "@phosphor-icons/react/ssr";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
 import { VendasCrmMockup } from "@/components/sections/VendasCrmMockup";
@@ -18,10 +18,10 @@ const breadcrumbs = [
 const service = { name: "Vendas & CRM Lumenva", description } as const;
 
 const benefits = [
-  { icon: Filter, title: "Visualize o funil", description: "Acompanhe cada oportunidade em tempo real." },
-  { icon: Zap, title: "Ganhe produtividade", description: "Automatize tarefas e follow-ups repetitivos." },
-  { icon: History, title: "Centralize contexto", description: "Tenha histórico, notas e atividades num só lugar." },
-  { icon: TrendingUp, title: "Melhore conversões", description: "Tome decisões com dados claros e previsíveis." },
+  { icon: Funnel, title: "Visualize o funil", description: "Acompanhe cada oportunidade em tempo real." },
+  { icon: Lightning, title: "Ganhe produtividade", description: "Automatize tarefas e follow-ups repetitivos." },
+  { icon: ClockCounterClockwise, title: "Centralize contexto", description: "Tenha histórico, notas e atividades num só lugar." },
+  { icon: TrendUp, title: "Melhore conversões", description: "Tome decisões com dados claros e previsíveis." },
 ] as const;
 
 export const metadata = createPageMetadata({
@@ -41,10 +41,10 @@ export default function VendasCrmPage() {
         title="Organize o funil e feche mais negócios com previsibilidade."
         description={description}
         capabilities={[
-          { icon: Filter, label: "Pipeline visual" },
-          { icon: Zap, label: "Follow-up automático" },
-          { icon: History, label: "Histórico do cliente" },
-          { icon: TrendingUp, label: "Relatórios de vendas" },
+          { icon: Funnel, label: "Pipeline visual" },
+          { icon: Lightning, label: "Follow-up automático" },
+          { icon: ClockCounterClockwise, label: "Histórico do cliente" },
+          { icon: TrendUp, label: "Relatórios de vendas" },
         ]}
         visual={<VendasCrmMockup />}
       />

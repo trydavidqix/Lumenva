@@ -1,4 +1,4 @@
-import { Clock, Clock3, Heart, History, Sparkles, Users2, Zap } from "lucide-react";
+import { Clock, Heart, ClockCounterClockwise, Sparkle, UsersThree, Lightning } from "@phosphor-icons/react/ssr";
 import { AtendimentoMockup } from "@/components/sections/AtendimentoMockup";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
@@ -19,9 +19,9 @@ const breadcrumbs = [
 const service = { name: "Atendimento com IA Lumenva", description } as const;
 
 const benefits = [
-  { icon: Clock3, title: "Atenda 24/7", description: "Responda a clientes a qualquer hora, em todos os canais." },
-  { icon: Zap, title: "Reduza o tempo de resposta", description: "A IA responde instantaneamente às perguntas mais comuns." },
-  { icon: History, title: "Mantenha histórico completo", description: "Todas as interações centralizadas com contexto e histórico." },
+  { icon: Clock, title: "Atenda 24/7", description: "Responda a clientes a qualquer hora, em todos os canais." },
+  { icon: Lightning, title: "Reduza o tempo de resposta", description: "A IA responde instantaneamente às perguntas mais comuns." },
+  { icon: ClockCounterClockwise, title: "Mantenha histórico completo", description: "Todas as interações centralizadas com contexto e histórico." },
   { icon: Heart, title: "Aumente a satisfação do cliente", description: "Respostas rápidas, precisas e o toque humano quando mais importa." },
 ] as const;
 
@@ -43,8 +43,8 @@ export default function AtendimentoComIaPage() {
         description={description}
         capabilities={[
           { icon: WhatsAppIcon, label: "WhatsApp centralizado" },
-          { icon: Sparkles, label: "Respostas automáticas" },
-          { icon: Users2, label: "Handoff inteligente" },
+          { icon: Sparkle, label: "Respostas automáticas" },
+          { icon: UsersThree, label: "Handoff inteligente" },
           { icon: Clock, label: "Contexto completo" },
         ]}
         visual={<AtendimentoMockup />}

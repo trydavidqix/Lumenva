@@ -1,31 +1,31 @@
 import {
-  BarChart3,
-  Bot,
+  ChartBar,
+  Robot,
   CreditCard,
   Headphones,
-  Home,
-  Inbox,
-  Settings,
-  TrendingUp,
-} from "lucide-react";
+  House,
+  Tray,
+  Gear,
+  TrendUp,
+} from "@phosphor-icons/react/ssr";
 import { AppWindow } from "@/components/mockup/AppWindow";
 import { SidebarNav } from "@/components/mockup/SidebarNav";
 import { StatCard } from "@/components/mockup/StatCard";
 import styles from "./AgentesMockup.module.css";
 
 const NAV_ITEMS = [
-  { label: "Resumo", icon: Home },
-  { label: "Inbox", icon: Inbox },
-  { label: "Agentes IA", icon: Bot },
-  { label: "Relatórios", icon: BarChart3 },
-  { label: "Configurações", icon: Settings },
+  { label: "Resumo", icon: House },
+  { label: "Inbox", icon: Tray },
+  { label: "Agentes IA", icon: Robot },
+  { label: "Relatórios", icon: ChartBar },
+  { label: "Configurações", icon: Gear },
 ] as const;
 
 const AGENTS = [
-  { icon: TrendingUp, name: "Agente Comercial", role: "Qualificação e follow-up", status: "Ativo", accuracy: "82%" },
+  { icon: TrendUp, name: "Agente Comercial", role: "Qualificação e follow-up", status: "Ativo", accuracy: "82%" },
   { icon: Headphones, name: "Agente de Suporte", role: "Respostas e triagem", status: "Ativo", accuracy: "85%" },
   { icon: CreditCard, name: "Agente de Cobrança", role: "Pagamentos e lembretes", status: "Em teste", accuracy: "74%" },
-  { icon: Settings, name: "Agente Operacional", role: "Tarefas internas", status: "Ativo", accuracy: "88%" },
+  { icon: Gear, name: "Agente Operacional", role: "Tarefas internas", status: "Ativo", accuracy: "88%" },
 ] as const;
 
 export function AgentesMockup() {
@@ -57,7 +57,7 @@ export function AgentesMockup() {
         {AGENTS.map(({ icon: Icon, name, role, status, accuracy }) => (
           <div className={styles.agentCard} key={name}>
             <div className={styles.agentHeader}>
-              <Icon aria-hidden="true" size={16} strokeWidth={1.8} />
+              <Icon aria-hidden="true" size={16} weight="duotone" color="currentColor" />
               <div>
                 <p className={styles.agentName}>{name}</p>
                 <p className={styles.agentRole}>{role}</p>

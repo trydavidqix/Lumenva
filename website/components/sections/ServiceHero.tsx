@@ -1,10 +1,15 @@
+import type { IconWeight } from "@phosphor-icons/react";
 import type { ComponentType, ReactNode, SVGProps } from "react";
 import { demoCta } from "@/content/site";
 import { Button } from "@/components/ui/Button";
 import styles from "./InnerPages.module.css";
 
 export type ServiceHeroIcon = ComponentType<
-  SVGProps<SVGSVGElement> & { size?: number; strokeWidth?: number }
+  SVGProps<SVGSVGElement> & {
+    size?: number;
+    weight?: IconWeight;
+    color?: string;
+  }
 >;
 
 export interface ServiceHeroChip {
@@ -43,7 +48,7 @@ export function ServiceHero({
           <ul className={styles.chipRow} aria-label="Capacidades principais">
             {capabilities.map(({ icon: Icon, label }) => (
               <li className={styles.chip} key={label}>
-                <Icon aria-hidden="true" size={16} strokeWidth={1.8} />
+                <Icon aria-hidden="true" size={16} weight="duotone" color="currentColor" />
                 {label}
               </li>
             ))}

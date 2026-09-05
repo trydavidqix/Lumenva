@@ -1,19 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { Bot, KanbanSquare, Workflow } from "lucide-react";
+import { Robot, Kanban, FlowArrow } from "@phosphor-icons/react/ssr";
 import { useEffect, useId, useRef, useState, type FocusEvent, type ComponentType, type SVGProps } from "react";
 import { solutionsMenu, type SolutionMenuItem } from "@/content/site";
 import { WhatsAppIcon } from "@/components/ui/BrandIcons";
 import styles from "./SolutionsMenu.module.css";
 
-type MenuIcon = ComponentType<SVGProps<SVGSVGElement> & { size?: number; strokeWidth?: number }>;
+type MenuIcon = ComponentType<SVGProps<SVGSVGElement> & { size?: number; weight?: "thin" | "light" | "regular" | "bold" | "duotone" | "fill" }>;
 
 const icons: Record<SolutionMenuItem["icon"], MenuIcon> = {
   atendimento: WhatsAppIcon,
-  vendas: KanbanSquare,
-  agentes: Bot,
-  automacao: Workflow,
+  vendas: Kanban,
+  agentes: Robot,
+  automacao: FlowArrow,
 };
 
 export interface SolutionsMenuProps {
@@ -71,7 +71,7 @@ export function SolutionsMenu({ triggerClassName }: Readonly<SolutionsMenuProps>
                 key={item.href}
                 onClick={() => setIsOpen(false)}
               >
-                <Icon aria-hidden="true" className={styles.icon} size={20} strokeWidth={1.6} />
+                <Icon aria-hidden="true" className={styles.icon} size={20} weight="duotone" color="currentColor" />
                 <span className={styles.itemCopy}>
                   <span className={styles.itemTitle}>{item.label}</span>
                   <span className={styles.itemDescription}>{item.description}</span>

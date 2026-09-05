@@ -64,6 +64,8 @@ CSS:
 
 **Duotone:** o peso secundário (preenchimento) usa automaticamente `currentColor` em opacidade reduzida. Não há config extra.
 
+**Exceção de marca:** logos de terceiros (Google Workspace, WhatsApp, OpenAI e equivalentes) podem manter as cores oficiais da marca para reconhecimento. Esta exceção é deliberada e não se aplica à iconografia funcional do produto, que continua monocromática e baseada em Phosphor.
+
 ## Mapeamento canônico — função → ícone
 
 Use **estes ícones** para estas funções. Se não está na lista e parece não ter um óbvio, abra RFC antes de escolher.

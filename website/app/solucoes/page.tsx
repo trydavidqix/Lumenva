@@ -1,4 +1,4 @@
-import { Bot, Database, Zap } from "lucide-react";
+import { Robot, Database, Lightning } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
 import { Breadcrumbs } from "@/components/sections/Breadcrumbs";
 import { ServiceHero } from "@/components/sections/ServiceHero";
@@ -34,8 +34,8 @@ export default function SolutionsPage() {
         title="Quatro soluções, um único sistema."
         description={description}
         capabilities={[
-          { icon: Bot, label: "Agentes de IA para vendas e suporte" },
-          { icon: Zap, label: "Automações orientadas por eventos" },
+          { icon: Robot, label: "Agentes de IA para vendas e suporte" },
+          { icon: Lightning, label: "Automações orientadas por eventos" },
           { icon: Database, label: "CRM com contexto de conversas e pipeline" },
           { icon: WhatsAppIcon, label: "WhatsApp como canal principal" },
         ]}
