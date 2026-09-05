@@ -1,6 +1,6 @@
 # Runbook — Harness de agentes
 
-Este runbook explica como manter Claude Code, Codex e os agentes especializados do DeskcommCRM alinhados sem duplicar ou enfraquecer doutrina.
+Este runbook explica como manter Claude Code, Codex e os agentes especializados do Lumenva alinhados sem duplicar ou enfraquecer doutrina.
 
 ## Hierarquia de autoridade
 

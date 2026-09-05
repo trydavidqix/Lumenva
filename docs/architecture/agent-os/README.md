@@ -1,8 +1,8 @@
-# Deskcomm Agent OS
+# Lumenva Agent OS
 
 ## Purpose
 
-This directory is the canonical architecture contract for the Deskcomm Agent Operating System. It does not replace `CLAUDE.md`, `AGENTS.md`, domain specs, database doctrine, or the existing `lib/agent-engine`; it defines how those pieces compose into one governed agent platform.
+This directory is the canonical architecture contract for the Lumenva Agent Operating System. It does not replace `CLAUDE.md`, `AGENTS.md`, domain specs, database doctrine, or the existing `lib/agent-engine`; it defines how those pieces compose into one governed agent platform.
 
 ## Canonical vocabulary
 

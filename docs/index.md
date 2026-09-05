@@ -1,6 +1,6 @@
 ---
 type: index
-project: DeskcommCRM
+project: Lumenva
 status: maintained
 last_updated: 2026-09-05
 generated_by: auditoria documental sincronizada — CRM consolidado e Voice Core
@@ -8,7 +8,7 @@ confidence: alta (inventário de arquivos é CONFIRMADO; agrupamento temático �
 audited_against: main @ 2d1c2450 (sincronização documental de incidente/restore; conferido em 2026-09-05)
 ---
 
-# Índice da documentação — DeskcommCRM
+# Índice da documentação — Lumenva
 
 Mapa da documentação versionada de `docs/` — a árvore auditada contém 214 `.md`/`.mdx`.
 Confirme a contagem com `rg --files docs -g '*.md' -g '*.mdx' | wc -l`. Existe porque a documentação cresceu sem ponto
