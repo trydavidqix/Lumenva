@@ -241,6 +241,12 @@ const schema = z.object({
     .optional()
     .default("false")
     .transform((v) => v === "true"),
+  // J9 generic EcommerceProvider adapter. OFF preserves the legacy path.
+  ECOMMERCE_PROVIDER_V1: z
+    .enum(["true", "false"])
+    .optional()
+    .default("false")
+    .transform((v) => v === "true"),
 
   // WhatsApp Cloud API (Meta) — mesmo padrão do Nuvemshop: opcional, sem elas o
   // canal oficial simplesmente não é configurado e o WAHA segue funcionando.
