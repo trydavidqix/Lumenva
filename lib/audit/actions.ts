@@ -185,6 +185,8 @@ export type AuditAction =
   | "tenant.created_by_signup"
   | "conversation.snoozed"
   | "conversation.snooze_cancelled"
+  | "conversation.archived"
+  | "conversation.unarchived"
   | "conversation.snooze_watcher_run"
   | "conversation.note_added"
   | "conversation.note_deleted"
