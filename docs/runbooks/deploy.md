@@ -51,8 +51,14 @@ APP_IMAGE=deskcomm-app:local docker compose \
 
 # 2) sobe com a imagem que acabou de ser construída
 APP_IMAGE=deskcomm-app:local APP_PULL_POLICY=never docker compose \
-  -f docker-compose.prod.yml --env-file .env up -d app
+  -f docker-compose.prod.yml --env-file .env \
+  --profile ai-memory --profile ai-graph up -d app mem0-postgres mem0 neo4j graphiti
 ```
+
+Os perfis `ai-memory` e `ai-graph` são incluídos em todo deploy para manter os
+quatro sidecars ligados (`restart: unless-stopped`). O comando não usa `down` e
+preserva os volumes nomeados `deskcommcrm_mem0-postgres-data` e
+`deskcommcrm_neo4j-data`.
 
 `APP_PULL_POLICY=never` é obrigatório no passo 2: sem ele, o compose tenta puxar
 `deskcomm-app:local` de um registry (não existe) ou, pior, silenciosamente
@@ -76,7 +82,8 @@ e SÓ nesse caso:
 
 ```bash
 APP_IMAGE=deskcomm-app:local APP_PULL_POLICY=never docker compose \
-  -f docker-compose.prod.yml -f docker-compose.traefik.yml --env-file .env up -d app
+  -f docker-compose.prod.yml -f docker-compose.traefik.yml --env-file .env \
+  --profile ai-memory --profile ai-graph up -d app mem0-postgres mem0 neo4j graphiti
 ```
 
 O cabeçalho de `docker-compose.traefik.yml` explica a equivalência exata com o
