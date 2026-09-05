@@ -4968,6 +4968,18 @@ export type Database = {
           },
         ]
       }
+      contact_legal_bases: {
+        Row: { id: string; organization_id: string; contact_id: string; purpose: string; legal_basis: string; text_version: string | null; recorded_at: string; evidence: Json; channel: string | null; revoked_at: string | null; created_at: string }
+        Insert: { id?: string; organization_id: string; contact_id: string; purpose: string; legal_basis: string; text_version?: string | null; recorded_at?: string; evidence?: Json; channel?: string | null; revoked_at?: string | null; created_at?: string }
+        Update: { id?: string; organization_id?: string; contact_id?: string; purpose?: string; legal_basis?: string; text_version?: string | null; recorded_at?: string; evidence?: Json; channel?: string | null; revoked_at?: string | null; created_at?: string }
+        Relationships: []
+      }
+      erasure_decisions: {
+        Row: { id: string; organization_id: string; contact_id: string | null; request_id: string | null; result: string; legal_exception: string | null; retained_fields: Json; irreversibility_proof: string; created_at: string }
+        Insert: { id?: string; organization_id: string; contact_id?: string | null; request_id?: string | null; result: string; legal_exception?: string | null; retained_fields?: Json; irreversibility_proof: string; created_at?: string }
+        Update: { id?: string; organization_id?: string; contact_id?: string | null; request_id?: string | null; result?: string; legal_exception?: string | null; retained_fields?: Json; irreversibility_proof?: string; created_at?: string }
+        Relationships: []
+      }
       rgpd_breach_incidents: {
         Row: { id: string; organization_id: string; known_at: string; risk_level: string; deadline_at: string; notification_decision: string; notified_at: string | null; cnpd_evidence_url: string | null; data_subject_notified_at: string | null; escalation_owner: string | null; escalation_notes: string | null; evidence: Json; idempotency_key: string; created_at: string; updated_at: string }
         Insert: { id?: string; organization_id: string; known_at: string; risk_level: string; deadline_at: string; notification_decision: string; notified_at?: string | null; cnpd_evidence_url?: string | null; data_subject_notified_at?: string | null; escalation_owner?: string | null; escalation_notes?: string | null; evidence?: Json; idempotency_key: string; created_at?: string; updated_at?: string }
