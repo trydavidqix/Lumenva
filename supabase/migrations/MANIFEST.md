@@ -192,6 +192,7 @@ aplica.
 | `20260901000000` | `0134_content_os_enforce_tenant_fk_revoke` | Hardening Content OS: a função `SECURITY DEFINER` é usada apenas por triggers internas; revoga `EXECUTE` de `public`, `anon` e `authenticated`, mantendo-o apenas para `service_role`. |
 | `20260819120000` | `0138_followup_enrollment_stats_rpc` | RPC tenant-scoped de estatísticas agregadas de follow-up para o dashboard; execução revogada para `public`/`anon` e concedida a `authenticated`. |
 | `20260819130000` | `0139_agent_memory_tables` | Projeções de memória multi-turn (`agent_memory`, `agent_decisions`, `agent_errors`) e view de contexto, todas tenant-scoped com RLS e índices de expiração. |
+| `20260905180000` | `0156_conversation_archive_per_user` | Arquivamento de conversas por utilizador, com RLS e unicidade por conversa/utilizador. |
 
 ## Reproducibility
 

@@ -18,7 +18,7 @@ import { useConversationTagVocabulary } from "@/hooks/inbox/useConversationTags"
 import { useConversationCounts } from "@/hooks/inbox/useConversationCounts";
 import type { Role, VisibilityMode } from "@/lib/auth/types";
 
-export type InboxTab = "unassigned" | "mine" | "all" | "closed" | "ai";
+export type InboxTab = "unassigned" | "mine" | "all" | "closed" | "ai" | "archived";
 
 const INBOX_TABS: { value: InboxTab; label: string }[] = [
   { value: "unassigned", label: "Fila" },
@@ -26,6 +26,7 @@ const INBOX_TABS: { value: InboxTab; label: string }[] = [
   { value: "all", label: "Todas" },
   { value: "closed", label: "Fechadas" },
   { value: "ai", label: "IA" },
+  { value: "archived", label: "Arquivadas" },
 ];
 
 /**
@@ -65,6 +66,7 @@ export function InboxFilters({ value, onChange }: Props) {
     unassigned: counts?.unassigned,
     mine: counts?.mine,
     all: counts?.all,
+    archived: counts?.archived,
   };
   // Filtrar por um número que saiu da lista (o operador acabou de excluir o
   // canal) deixa o inbox mostrando um subconjunto — às vezes vazio — sem nada na

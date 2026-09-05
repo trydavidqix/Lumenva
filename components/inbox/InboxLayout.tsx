@@ -30,13 +30,15 @@ function tabToFilter(tab: InboxFiltersValue["tab"]): Partial<ConversationsFilter
       return { status: "closed" };
     case "ai":
       return { status: "ai_handling" };
+    case "archived":
+      return { archived: true };
     case "all":
     default:
       return {};
   }
 }
 
-const FILTER_TABS: InboxTab[] = ["unassigned", "mine", "all", "closed", "ai"];
+const FILTER_TABS: InboxTab[] = ["unassigned", "mine", "all", "closed", "ai", "archived"];
 
 /**
  * Lê ?filter= (G4-02, deep-link). ?filter=all é HONRADO mesmo para agent — a
@@ -89,6 +91,7 @@ export function InboxLayout({ initialSelectedId = null }: InboxLayoutProps = {})
       search: filterValue.search || undefined,
       channel_session_id: filterValue.channel_session_id,
       tag: filterValue.tag,
+      archived: filterValue.tab === "archived",
     }),
     [filterValue.tab, filterValue.search, filterValue.channel_session_id, filterValue.tag],
   );

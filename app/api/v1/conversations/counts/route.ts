@@ -38,16 +38,18 @@ export async function GET(): Promise<Response> {
       .from("conversations")
       .select("id", { count: "exact", head: true })
       .eq("organization_id", org);
+  const archivedIds = supabase.from("conversation_archives").select("conversation_id").eq("organization_id", org).eq("user_id", user.id);
 
   // Espelha tabToFilter (InboxLayout): unassigned = fila aberta sem dono;
   // mine = atribuídas a mim; all = tudo que o usuário VÊ (RLS-scoped).
-  const [unassigned, mine, all] = await Promise.all([
+  const [unassigned, mine, all, archived] = await Promise.all([
     countExact().is("assigned_to_user_id", null).eq("status", "open"),
     countExact().eq("assigned_to_user_id", user.id),
     countExact(),
+    archivedIds,
   ]);
 
-  const firstErr = unassigned.error ?? mine.error ?? all.error;
+  const firstErr = unassigned.error ?? mine.error ?? all.error ?? archived.error;
   if (firstErr) {
     return fail("internal_error", firstErr.message, 500, { requestId });
   }
@@ -57,6 +59,7 @@ export async function GET(): Promise<Response> {
       unassigned: unassigned.count ?? 0,
       mine: mine.count ?? 0,
       all: all.count ?? 0,
+      archived: archived.data?.length ?? 0,
     },
     { requestId },
   );

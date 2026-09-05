@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
+import { useArchiveConversation } from "@/hooks/inbox/useArchiveConversation";
 
 interface Props {
   conversation: ConversationWithContact;
@@ -74,6 +75,9 @@ export function ConversationListItem({
   const unread = conversation.unread_count_for_assignee ?? 0;
   const dot = STATUS_DOT[conversation.status] ?? STATUS_DOT.open;
   const isAi = conversation.status === "ai_handling";
+  const archive = useArchiveConversation();
+  const archiveEnabled = typeof window !== "undefined" && window.__PUBLIC_ENV__?.CONVERSATION_ARCHIVE_V1 === true;
+  const isArchived = conversation.is_archived_by_me === true;
 
   return (
     <button
@@ -165,6 +169,11 @@ export function ConversationListItem({
           )}
           {unread > 0 && (
             <Badge className="ml-auto h-4 min-w-4 px-1.5 text-[10px]">{unread}</Badge>
+          )}
+          {archiveEnabled && (
+            <span role="button" tabIndex={0} className="ml-auto text-[10px] text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); archive.mutate({ conversation_id: conversation.id, archived: !isArchived }); }} onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); archive.mutate({ conversation_id: conversation.id, archived: !isArchived }); } }}>
+              {isArchived ? "Desarquivar" : "Arquivar"}
+            </span>
           )}
         </div>
       </div>

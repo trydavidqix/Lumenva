@@ -98,6 +98,14 @@ export async function listConversationsHandler(
     .order("id", { ascending: asc })
     .limit(q.limit + 1);
 
+  if (process.env.CONVERSATION_ARCHIVE_V1 === "true" && ctx.actor.type === "user") {
+    const archived = await supabase.from("conversation_archives").select("conversation_id").eq("organization_id", ctx.organization_id).eq("user_id", ctx.actor.id);
+    if (archived.error) throw new ApiError(500, "internal_error", undefined, ctx.requestId, archived.error.message);
+    const ids = (archived.data ?? []).map((r) => r.conversation_id);
+    if (q.archived === true) query = ids.length ? query.in("id", ids) : query.in("id", ["00000000-0000-0000-0000-000000000000"]);
+    else if (ids.length) query = query.not("id", "in", `(${ids.join(",")})`);
+  }
+
   if (q.status) query = query.eq("status", q.status);
   if (q.channel_session_id) query = query.eq("channel_session_id", q.channel_session_id);
   if (q.tag) query = query.contains("tags", [q.tag]); // tags @> array[tag] (GIN)
@@ -155,6 +163,10 @@ export async function listConversationsHandler(
       ? encodeCursor({ sort: (last[sortCol] as string | null) ?? null, id: last.id })
       : null;
 
+  if (process.env.CONVERSATION_ARCHIVE_V1 === "true" && ctx.actor.type === "user") {
+    const ids = new Set((await supabase.from("conversation_archives").select("conversation_id").eq("organization_id", ctx.organization_id).eq("user_id", ctx.actor.id)).data?.map((r) => r.conversation_id));
+    for (const row of page as Array<Conversation & { is_archived_by_me?: boolean }>) row.is_archived_by_me = ids.has(row.id);
+  }
   return { conversations: page, cursor, has_more: hasMore };
 }
 
