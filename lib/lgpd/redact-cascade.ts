@@ -20,6 +20,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface CascadeResult {
   alreadyAnonymized: boolean;
+  result: "irreversible_anonymisation";
+  irreversibilityProof: string;
   counts: Record<string, number>;
   mediaPaths: string[];
 }
@@ -114,8 +116,19 @@ export async function cascadeRedactContact(args: CascadeArgs): Promise<CascadeRe
   }
 
   const result = (data ?? {}) as RpcResult;
+  const irreversibilityProof = "fn_lgpd_cascade_redact_contact atomically removes direct PII and preserves only minimised operational history";
+  await admin.from("erasure_decisions" as never).insert({
+    organization_id: args.organizationId,
+    contact_id: args.contactId,
+    request_id: args.requestId,
+    result: "irreversible_anonymisation",
+    retained_fields: result.counts ?? {},
+    irreversibility_proof: irreversibilityProof,
+  });
   return {
     alreadyAnonymized: result.already_anonymized === true,
+    result: "irreversible_anonymisation",
+    irreversibilityProof,
     counts: result.counts ?? {},
     mediaPaths: result.media_paths ?? [],
   };
