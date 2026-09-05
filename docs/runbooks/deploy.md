@@ -42,6 +42,9 @@ outro path, ajuste o `cd` abaixo.
 ```bash
 cd /root/deskcommcrm
 
+# Depois de regenerar/sincronizar o .env, reaplique as feature flags de produção
+# (docs/runbooks/lumenva-prod-flags.md) — elas não vêm do Infisical.
+
 # 0) traz o código novo — sem isso o build usa o checkout antigo
 git pull origin main
 
