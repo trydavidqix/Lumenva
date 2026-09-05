@@ -24,9 +24,11 @@ audited_against: main @ 2d1c2450
 
 O checkout `/root/deskcommcrm` foi alinhado com `origin/main` por `git pull`.
 `mem0-src/` é clone local do source usado para construir
-`mem0-api-server:local`; está coberto pelo `.gitignore` do projeto e não é
-fonte versionada. Nenhum deploy, restart de container ou alteração de `.env`
-faz parte deste handoff.
+`mem0-api-server:local`; no checkout VPS foi adicionado a `.git/info/exclude`
+para manter o `git status` limpo sem alterar `origin/main`. A branch deste
+handoff também adiciona a regra ao `.gitignore` para a próxima sincronização.
+Nenhum deploy, restart de container ou alteração de `.env` faz parte deste
+handoff.
 
 ## Pendências
 
