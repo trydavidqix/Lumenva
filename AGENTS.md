@@ -9,8 +9,9 @@ A **doutrina completa e soberana** vive em [`CLAUDE.md`](CLAUDE.md). Leia-a ante
 1. [`CLAUDE.md`](CLAUDE.md) — autoridade do repositório.
 2. [`.claude/rules/`](.claude/rules/) — regras modulares por domínio.
 3. [`docs/index.md`](docs/index.md) — índice e precedência documental.
-4. Specs/PRDs/business-rules do domínio alterado.
-5. Handoffs/current-state apenas como estado temporal, conferindo data/SHA antes de tratá-los como atuais.
+4. [`docs/ai/README.md`](docs/ai/README.md) — **contexto rápido para agentes**: mapa do projeto, arquitetura, estado atual, riscos conhecidos e protocolo de auditoria. Use para acelerar descoberta, mas valide snapshots contra o código/fonte canônica.
+5. Specs/PRDs/business-rules do domínio alterado.
+6. Handoffs/current-state apenas como estado temporal, conferindo data/SHA antes de tratá-los como atuais.
 
 Se este arquivo, uma skill, agent, prompt ou artefato gerado divergir do `CLAUDE.md`, **`CLAUDE.md` vence**.
 
