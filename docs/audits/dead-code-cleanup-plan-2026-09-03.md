@@ -112,7 +112,7 @@ e a remoção estão registradas acima (`1c5b964f`).
 Executar no checkout correto, sem limpar o worktree:
 
 ```bash
-cd /Users/david/Desktop/CRM/DeskcommCRM
+cd /Users/david/Desktop/Projetos/CRM/DeskcommCRM
 git status --short
 git diff --stat
 git branch --show-current

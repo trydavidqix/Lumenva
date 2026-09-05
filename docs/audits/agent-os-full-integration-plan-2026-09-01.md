@@ -2,7 +2,7 @@
 
 ## Escopo e estado do checkout
 
-Auditoria somente leitura. Nenhum merge, push, checkout de `main` ou alteração de código foi executado. Checkout auditado: `/Users/david/Desktop/CRM/DeskcommCRM`; `main` em `f638ce8fc91f8cb6089aed875d34b66c5e1579cb`. O worktree já estava sujo apenas com `.maestri/` não rastreado; foi preservado.
+Auditoria somente leitura. Nenhum merge, push, checkout de `main` ou alteração de código foi executado. Checkout auditado: `/Users/david/Desktop/Projetos/CRM/DeskcommCRM`; `main` em `f638ce8fc91f8cb6089aed875d34b66c5e1579cb`. O worktree já estava sujo apenas com `.maestri/` não rastreado; foi preservado.
 
 As referências remotas estavam disponíveis localmente no momento da auditoria. Todas as sete referências têm `merge-base main <branch> = bdbd76703ea319dc84c85348c7a04dcf07799baf`; portanto `main` não é ancestral direto de nenhuma delas.
 

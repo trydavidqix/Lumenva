@@ -2,7 +2,7 @@
 
 ## Escopo e evidência
 
-Auditoria somente leitura, conforme a seção 6 de `branch-consolidation-FINAL-2026-09-01.md`. Checkout observado: `/Users/david/Desktop/CRM/DeskcommCRM`, `HEAD=5336a6a8f7ebda373938fdb7148206b624a2de61`, branch `fix/c2-c3-ssrf-fk`, worktree sujo. Não houve `fetch`, checkout, merge, rebase, cherry-pick, push, remoção de ref ou alteração de branch.
+Auditoria somente leitura, conforme a seção 6 de `branch-consolidation-FINAL-2026-09-01.md`. Checkout observado: `/Users/david/Desktop/Projetos/CRM/DeskcommCRM`, `HEAD=5336a6a8f7ebda373938fdb7148206b624a2de61`, branch `fix/c2-c3-ssrf-fk`, worktree sujo. Não houve `fetch`, checkout, merge, rebase, cherry-pick, push, remoção de ref ou alteração de branch.
 
 Os SHAs e assuntos abaixo são os refs locais `upstream/*` presentes neste checkout. “Útil” significa patch que merece revisão/cherry-pick seletivo; não significa que o patch foi aplicado ou que passou os gates atuais.
 

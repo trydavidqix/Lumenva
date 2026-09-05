@@ -120,3 +120,7 @@ scripts/lead-pipeline/bin/
 
 # caches locais de pesquisa (SQLite gerado, não é fonte)
 docs/pesquisa/**/*.db
+
+# Artefactos locais de sessões de pesquisa lead-pipeline (não são fonte versionada)
+docs/pesquisa/lead-pipeline-run-2026-09-02-sion/
+docs/pesquisa/lead-pipeline-run-2026-09-03-sion-ptbr/

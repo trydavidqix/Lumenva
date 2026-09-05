@@ -1,7 +1,7 @@
 # Consolidação final de branches — DeskcommCRM
 
 **Data:** 2026-09-01  
-**Checkout auditado:** `/Users/david/Desktop/CRM/DeskcommCRM`  
+**Checkout auditado:** `/Users/david/Desktop/Projetos/CRM/DeskcommCRM`  
 **Base auditado:** `main` em `60ed322f19c6bff962029bbe360f16f82913f7ae` (também `origin/main`)
 **Fontes consolidadas:**
 

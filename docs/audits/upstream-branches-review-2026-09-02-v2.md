@@ -2,7 +2,7 @@
 
 ## Escopo e estado confirmado
 
-Auditoria somente leitura no checkout principal `/Users/david/Desktop/CRM/DeskcommCRM`.
+Auditoria somente leitura no checkout principal `/Users/david/Desktop/Projetos/CRM/DeskcommCRM`.
 Foi executado `git fetch origin --prune` antes do inventário. Após o fetch, `main` e
 `origin/main` apontam para o mesmo SHA `89c90510` (`Merge phase 2 kernel contract tests`).
 O checkout principal está sujo por alterações do RelayBuilder e artefactos locais; não

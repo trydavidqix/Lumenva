@@ -1,7 +1,7 @@
 # Auditoria aprofundada — Agent OS / Fase 2 no contexto da Fase 7
 
 **Data:** 2026-09-01  
-**Checkout:** `/Users/david/Desktop/CRM/DeskcommCRM`  
+**Checkout:** `/Users/david/Desktop/Projetos/CRM/DeskcommCRM`  
 **Regra aplicada:** somente leitura de Git; nenhum fetch, merge, rebase, cherry-pick, checkout ou remoção executado.
 
 ## Conclusão

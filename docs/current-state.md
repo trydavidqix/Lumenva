@@ -2,13 +2,23 @@
 type: current-state
 project: DeskcommCRM
 status: maintained
-last_updated: 2026-09-04
-generated_by: fechamento documental da consolidação de branches e integração faseada do Agent OS
+last_updated: 2026-09-05
+generated_by: sincronização documental do incidente e restore dos sidecars de memória
 confidence: média-alta (métricas de código são CONFIRMADO; estado de épico vem dos HANDOFFs, que são auto-relatados)
-audited_against: main @ 197e65c860d12cf8b62ea543f78f7ff90a63f6c5 (origin/main; conferido em 2026-09-04)
+audited_against: main @ 2d1c2450 (origin/main; conferido em 2026-09-05)
 ---
 
 # Estado atual — DeskcommCRM
+
+## Reauditoria de sincronização — 2026-09-05 — CONFIRMADO
+
+- **Raiz do checkout:** o repositório foi movido de `/Users/david/Desktop/Projetos/CRM/DeskcommCRM` para `/Users/david/Desktop/Projetos/CRM/DeskcommCRM`. Runbooks e auditorias foram corrigidos para o caminho atual.
+- **Branches incorporadas:** `docs/session-sync-2026-09-04` e `feat/lead-pipeline-import-crm-2026-09-04` foram mescladas e empurradas no merge `e984d8b4`. O importador `scripts/lead-pipeline/import-to-crm.py` importou **40 leads reais**, `stage='Novo (frio)'`, `source='prospector_sheets'`, com **0 duplicatas**.
+- **Incidente Graphiti/Mem0:** um deploy/rebuild em 2026-09-03 entre 22:21–22:33 UTC recriou a stack sem os profiles `ai-memory`/`ai-graph`, removendo os quatro sidecars. O OOM de 2026-09-02 18:43 UTC contribuiu para a pressão de memória, mas não foi a causa final; os volumes `deskcommcrm_mem0-postgres-data` (~73 MB) e `deskcommcrm_neo4j-data` (~542 MB) foram preservados.
+- **Restore confirmado:** swap de 8 GB já existente; imagens públicas `pgvector/pgvector:pg16`, `neo4j:5.26.0` e `zepai/graphiti:0.22.0` puxadas; `mem0-api-server:local` reconstruído do commit `96d45b78c702b742fc91a2ce9eae91805be9144b` com as três correções do runbook; `docker compose --profile ai-memory --profile ai-graph up -d` deixou `mem0`, `mem0-postgres`, `neo4j` e `graphiti` saudáveis em ~25 s, sem recriar os serviços existentes. Knowledge base do Alfred intacta (7 fontes, 46 chunks).
+- **Flags e secrets:** `ai_platform_feature_flags` da organização `2e51006a-b264-48d1-8011-a33aecbdb311` continua `graphiti=shadow` e `mem0=shadow`; nenhuma flag foi promovida para `on`. As seis chaves `GRAPHITI_*` foram confirmadas no Infisical (ambiente `prod`, projeto `26e412df-a297-4ef7-8783-9b95184cd714`) sem expor valores.
+- **Correção permanente:** `2d1c2450` atualiza `docs/runbooks/deploy.md` para incluir `--profile ai-memory --profile ai-graph` nas receitas Caddy e Traefik.
+- **Runtime dos agentes:** todos os subagentes Maestri, incluindo Memória, passaram a ser Codex; a documentação operacional deve assumir Codex como runtime atual.
 
 ## Reauditoria de sincronização — 2026-09-04 — CONFIRMADO
 
@@ -19,9 +29,9 @@ audited_against: main @ 197e65c860d12cf8b62ea543f78f7ff90a63f6c5 (origin/main; c
 - **Rename confirmado na main:** Fase 1 cosmética em `1e1e216c`; Fase 2 de branding público em `197e65c8`/`175aee0b`. Fases 3–8 continuam explicitamente descopadas conforme [`docs/audits/rename-crm-to-lumenva-2026-08-31.md`](audits/rename-crm-to-lumenva-2026-08-31.md).
 - **Integração Git confirmada:** esses commits estão alcançáveis a partir de `origin/main`; não há merge ou push adicional necessário.
 - **Produção confirmada por leitura read-only do Supabase em 2026-09-04:** existem os agentes ativos `Briefing` e `Vendas`, roteados pelo router existente com `precisa_briefing` e `pronto_pra_proposta`, e a etapa `Novo (frio)` no pipeline `Leads Alfred`. É configuração de produto/dado, não schema; nenhuma migration é necessária.
-- **Importador de leads:** `scripts/lead-pipeline/import-to-crm.py` existe somente na branch `feat/lead-pipeline-import-crm-2026-09-04` (`4c477990`), ainda fora de `main`. Lê linhas `Não contatado`, grava `contacts` + `crm_leads`, é idempotente por telefone e oferece `--dry-run`. A primeira rodada real foi confirmada no banco com **40 contatos e 40 leads** de `prospector_sheets`; não envia mensagens nem atualiza leads existentes.
+- **Importador de leads:** `scripts/lead-pipeline/import-to-crm.py` está em `main` após o merge `e984d8b4`. Lê linhas `Não contatado`, grava `contacts` + `crm_leads`, é idempotente por telefone e oferece `--dry-run`. A primeira rodada real foi confirmada no banco com **40 contatos e 40 leads** de `prospector_sheets`, `stage='Novo (frio)'` e **0 duplicatas**; não envia mensagens nem atualiza leads existentes.
 
-Este bloco é estado temporal; não promove a branch de importação nem transforma configuração de produção em schema versionado.
+Este bloco é estado temporal; a branch de importação já foi incorporada. A configuração de produção continua sendo dado operacional, não schema versionado.
 
 **Fechamento documental do dia (2026-09-03):** o trabalho de hoje foi reconciliado neste
 snapshot. O relay MCP de e-mail → WhatsApp foi testado de ponta a ponta e está **DONE —

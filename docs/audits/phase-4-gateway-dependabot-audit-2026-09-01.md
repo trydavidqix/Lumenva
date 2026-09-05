@@ -1,7 +1,7 @@
 # Auditoria Fase 4 — Gateway e Dependabot
 
 Data da fotografia: 2026-09-01  
-Checkout auditado: `/Users/david/Desktop/CRM/DeskcommCRM`  
+Checkout auditado: `/Users/david/Desktop/Projetos/CRM/DeskcommCRM`  
 Base: `main` em `5336a6a8f7ebda373938fdb7148206b624a2de61`  
 Escopo: somente leitura de Git; não foram executados merge, rebase, cherry-pick, push, fetch, checkout ou remoção de refs.
 
@@ -19,7 +19,7 @@ Comandos executados no checkout correto:
 
 ```text
 git rev-parse --show-toplevel
-/Users/david/Desktop/CRM/DeskcommCRM
+/Users/david/Desktop/Projetos/CRM/DeskcommCRM
 
 git status --short --branch
 ## main...origin/main [ahead 15]
