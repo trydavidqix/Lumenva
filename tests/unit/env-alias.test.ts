@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
-const helper = resolve(process.cwd(), "hostgator-setup-kit/_env-alias.sh");
+// Resolve from this test file, not process.cwd(). Docker/build runners may
+// invoke Vitest from a different working directory.
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+const helper = resolve(repoRoot, "hostgator-setup-kit/_env-alias.sh");
 
 function run(env: Record<string, string | undefined>) {
   const script = `set -e; source ${JSON.stringify(helper)}; env_alias AGENT_REPORT; printf '%s' "\${LUMENVA_AGENT_REPORT-}"`;
