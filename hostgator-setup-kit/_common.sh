@@ -2,6 +2,8 @@
 # Helpers compartilhados pelos scripts do kit. Sourced, não executado direto.
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/_env-alias.sh"
+
 COMPOSE="docker-compose.prod.yml"
 COMPOSE_TRAEFIK="docker-compose.traefik.yml"
 
