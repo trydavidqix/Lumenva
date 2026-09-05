@@ -1797,6 +1797,35 @@ CREATE TABLE IF NOT EXISTS "public"."organizations" (
 
 ALTER TABLE "public"."organizations" OWNER TO "postgres";
 
+-- J4 legal basis per purpose; legacy contacts.consent remains for dual-read.
+CREATE TABLE IF NOT EXISTS "public"."contact_legal_bases" (
+    "id" uuid DEFAULT "gen_random_uuid"() NOT NULL,
+    "organization_id" uuid NOT NULL,
+    "contact_id" uuid NOT NULL,
+    "purpose" text NOT NULL,
+    "legal_basis" text NOT NULL,
+    "text_version" text,
+    "recorded_at" timestamptz DEFAULT now() NOT NULL,
+    "evidence" jsonb DEFAULT '{}'::jsonb NOT NULL,
+    "channel" text,
+    "revoked_at" timestamptz,
+    "created_at" timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT "contact_legal_bases_purpose_check" CHECK ("purpose" = ANY (ARRAY['marketing','transactional','profiling'])),
+    CONSTRAINT "contact_legal_bases_basis_check" CHECK ("legal_basis" = ANY (ARRAY['consent','contract','legal_obligation','legitimate_interests','vital_interests','public_task']))
+);
+ALTER TABLE "public"."contact_legal_bases" ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS "contact_legal_bases_org_contact_idx" ON "public"."contact_legal_bases" USING btree ("organization_id", "contact_id", "purpose");
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'contact_legal_bases_pkey') THEN ALTER TABLE ONLY "public"."contact_legal_bases" ADD CONSTRAINT "contact_legal_bases_pkey" PRIMARY KEY ("id"); END IF;
+END $$;
+REVOKE ALL ON TABLE "public"."contact_legal_bases" FROM anon, authenticated;
+GRANT SELECT, INSERT ON TABLE "public"."contact_legal_bases" TO authenticated;
+GRANT ALL ON TABLE "public"."contact_legal_bases" TO service_role;
+DROP POLICY IF EXISTS "contact_legal_bases_select" ON "public"."contact_legal_bases";
+CREATE POLICY "contact_legal_bases_select" ON "public"."contact_legal_bases" FOR SELECT USING ("organization_id" IN (SELECT "public"."fn_user_org_ids"()));
+DROP POLICY IF EXISTS "contact_legal_bases_insert" ON "public"."contact_legal_bases";
+CREATE POLICY "contact_legal_bases_insert" ON "public"."contact_legal_bases" FOR INSERT WITH CHECK ("organization_id" IN (SELECT "public"."fn_user_org_ids"()));
+
 -- J2 EPD/DPO assessment (additive; dpo_email retained for compatibility).
 ALTER TABLE "public"."organizations"
     ADD COLUMN IF NOT EXISTS "dpo_required" boolean,
@@ -10417,6 +10446,15 @@ drop trigger if exists trg_customer_memory_audit on public.customer_memory;
 create trigger trg_customer_memory_audit
   after insert or update or delete on public.customer_memory
   for each row execute function public.fn_audit_log_row();
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'contact_legal_bases_organization_id_fkey') THEN
+    ALTER TABLE ONLY "public"."contact_legal_bases" ADD CONSTRAINT "contact_legal_bases_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE CASCADE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'contact_legal_bases_contact_id_fkey') THEN
+    ALTER TABLE ONLY "public"."contact_legal_bases" ADD CONSTRAINT "contact_legal_bases_contact_id_fkey" FOREIGN KEY ("contact_id") REFERENCES "public"."contacts"("id") ON DELETE CASCADE;
+  END IF;
+END $$;
 
 -- ---- 0133: voice_calls/voice_call_events provider amplia pra incluir asterisk ----
 -- Detalhe: 20260830190000_0133_voice_calls_provider_asterisk.sql. Forward-fix:
