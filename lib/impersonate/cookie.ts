@@ -19,9 +19,9 @@
  */
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { env } from "@/lib/env";
-
-export const IMPERSONATE_COOKIE_NAME = "deskcomm-impersonate";
+export { IMPERSONATE_COOKIE_NAME, IMPERSONATE_COOKIE_NAME_LEGACY, readImpersonateCookie } from "./names";
 export const IMPERSONATE_TTL_SECONDS = 3600; // 1 hour
+
 
 export interface ImpersonatePayload {
   /** Tenant the platform admin is acting as. */

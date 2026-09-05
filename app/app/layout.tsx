@@ -6,10 +6,7 @@ import { AuthProvider } from "@/hooks/auth/AuthProvider";
 import { AppShell } from "./_components/AppShell";
 import { MfaEnrollGate } from "@/components/auth/MfaEnrollGate";
 import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  IMPERSONATE_COOKIE_NAME,
-  verifyImpersonateCookie,
-} from "@/lib/impersonate/cookie";
+import { readImpersonateCookie, verifyImpersonateCookie } from "@/lib/impersonate/cookie";
 import {
   ImpersonateBanner,
   type ImpersonatingInfo,
@@ -47,7 +44,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Middleware already validates HMAC + expiry on /app/*; we re-verify here as
   // defence-in-depth and to extract the payload safely.
   let impersonating: ImpersonatingInfo | null = null;
-  const impCookie = store.get(IMPERSONATE_COOKIE_NAME)?.value;
+  const impCookie = readImpersonateCookie((name) => store.get(name));
   if (impCookie) {
     const result = verifyImpersonateCookie(impCookie);
     if (result.valid && result.payload) {

@@ -68,7 +68,9 @@ describe("executeCallWebhook", () => {
     expect(result.status).toBe("success");
     expect(result.detail?.response_status).toBe(200);
     expect(received).toBeDefined();
+    expect(received!.headers["x-lumenva-event"]).toBe("lead.created");
     expect(received!.headers["x-deskcomm-event"]).toBe("lead.created");
+    expect(received!.headers["x-lumenva-signature"]).toBeUndefined();
     expect(received!.headers["x-deskcomm-signature"]).toBeUndefined();
 
     const parsedBody = JSON.parse(received!.body);
@@ -102,6 +104,7 @@ describe("executeCallWebhook", () => {
 
     expect(result.status).toBe("success");
     const expectedSig = createHmac("sha256", "s3cr3t").update(received!.body).digest("hex");
+    expect(received!.headers["x-lumenva-signature"]).toBe(expectedSig);
     expect(received!.headers["x-deskcomm-signature"]).toBe(expectedSig);
 
     await close();

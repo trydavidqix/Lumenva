@@ -15,6 +15,8 @@ import { ok, fail } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import {
   IMPERSONATE_COOKIE_NAME,
+  IMPERSONATE_COOKIE_NAME_LEGACY,
+  readImpersonateCookie,
   verifyImpersonateCookie,
 } from "@/lib/impersonate/cookie";
 
@@ -29,10 +31,11 @@ export async function POST() {
   }
 
   const cookieStore = await cookies();
-  const raw = cookieStore.get(IMPERSONATE_COOKIE_NAME)?.value ?? null;
+  const raw = readImpersonateCookie((name) => cookieStore.get(name));
 
   // Always clear, even if invalid — defence-in-depth against stale cookies.
   cookieStore.delete(IMPERSONATE_COOKIE_NAME);
+  cookieStore.delete(IMPERSONATE_COOKIE_NAME_LEGACY);
 
   if (!raw) {
     return ok({ ended: false, tenant_id: null }, { requestId });
