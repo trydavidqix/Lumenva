@@ -90,7 +90,7 @@ export function NewContactDialog({ open, onOpenChange }: Props) {
             <Label htmlFor="phone_number">Telefone (E.164)</Label>
             <Input
               id="phone_number"
-              placeholder="+5511999998888"
+              placeholder="+351912345678"
               {...form.register("phone_number")}
             />
           </div>

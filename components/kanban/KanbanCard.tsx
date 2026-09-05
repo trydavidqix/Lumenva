@@ -29,11 +29,11 @@ interface KanbanCardProps {
   onOpen?: (leadId: string) => void;
 }
 
-function formatBRL(cents: number | null, currency: string | null): string | null {
+function formatCurrency(cents: number | null, currency: string | null): string | null {
   if (cents == null) return null;
-  const code = currency ?? "BRL";
+  const code = currency ?? "EUR";
   try {
-    return new Intl.NumberFormat("pt-BR", {
+    return new Intl.NumberFormat("pt-PT", {
       style: "currency",
       currency: code,
       maximumFractionDigits: 0,
@@ -64,7 +64,7 @@ export function KanbanCard({
   onSelect,
   onOpen,
 }: KanbanCardProps) {
-  const value = formatBRL(card.valueCents, card.currency);
+  const value = formatCurrency(card.valueCents, card.currency);
   const state = resolveCardState(card);
   const age = stageAgeLabel(card.hoursInStage);
 

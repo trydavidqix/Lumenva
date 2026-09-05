@@ -109,7 +109,7 @@ describe("sanitizeExternalGuardrailCandidate", () => {
           leadId: "lead-999",
           contactId: "contact-123",
           contactEmail: "cliente@example.com",
-          contactPhone: "+5511999998888",
+          contactPhone: "+351912345678",
           conversationId: "conv-42",
         },
       });

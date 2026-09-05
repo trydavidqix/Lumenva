@@ -27,15 +27,15 @@ interface StageColumnProps {
   onOpen?: (leadId: string) => void;
 }
 
-function formatBRL(cents: number): string {
+function formatCurrency(cents: number, currency: string | null): string {
   try {
-    return new Intl.NumberFormat("pt-BR", {
+    return new Intl.NumberFormat("pt-PT", {
       style: "currency",
-      currency: "BRL",
+      currency: currency ?? "EUR",
       maximumFractionDigits: 0,
     }).format(cents / 100);
   } catch {
-    return `R$ ${(cents / 100).toFixed(0)}`;
+    return `${(cents / 100).toFixed(0)} ${currency ?? "EUR"}`;
   }
 }
 
@@ -78,7 +78,7 @@ export function StageColumn({
 
       {totalCents > 0 && (
         <div className="border-b border-border px-3 py-1.5 text-[11px] tabular-nums text-text-muted">
-          {formatBRL(totalCents)}
+          {formatCurrency(totalCents, leads[0]?.currency ?? null)}
         </div>
       )}
 

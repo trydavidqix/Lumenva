@@ -236,7 +236,7 @@ describe("o que a leitura NÃO devolve", () => {
         received_at: "2026-08-04T10:00:00Z",
         valid_signature: true,
         status: "ok",
-        payload_parsed: { name: "Joana da Silva", phone: "+5511999998888" },
+        payload_parsed: { name: "Joana da Silva", phone: "+351912345678" },
       },
     ];
 
@@ -368,7 +368,7 @@ describe("preencher resposta pronta", () => {
       id: "c1",
       organization_id: ORG_ID,
       name: "Joana",
-      phone_number: "+5511999998888",
+      phone_number: "+351912345678",
       email: null,
     });
     const r = await preencherModeloDeMensagem(deps(db), { templateId: "t1", contactId: "c1" });

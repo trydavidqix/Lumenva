@@ -6,7 +6,7 @@ import { z } from "zod";
 
 export const welcomeSchema = z.object({
   display_name: z.string().min(2).max(120),
-  timezone: z.string().min(1).default("America/Sao_Paulo"),
+  timezone: z.string().min(1).default("Europe/Lisbon"),
   accepted_terms_at: z.string().datetime().optional(),
 });
 export type WelcomeInput = z.infer<typeof welcomeSchema>;
