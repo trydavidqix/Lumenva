@@ -16,6 +16,7 @@ import { ok, fail } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { transitionLgpdRequest } from "@/lib/lgpd/repository";
 
 export const dynamic = "force-dynamic";
 
@@ -157,14 +158,10 @@ export async function POST(
   }
 
   // Transition status → processing
-  const { error: updateErr } = await admin
-    .from("lgpd_requests")
-    .update({ status: "processing", updated_at: new Date().toISOString() })
-    .eq("organization_id", orgId)
-    .eq("id", id);
-
-  if (updateErr) {
-    return fail("internal_error", updateErr.message, 500, { requestId });
+  try {
+    await transitionLgpdRequest(orgId, id, "in_review");
+  } catch (err) {
+    return fail("internal_error", (err as Error).message, 500, { requestId });
   }
 
   // Audit — fire-and-forget
