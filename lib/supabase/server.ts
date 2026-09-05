@@ -9,6 +9,7 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookieSecure } from "@/lib/supabase/cookie-secure";
 import { cookies } from "next/headers";
 import { env } from "@/lib/env";
+import { normalizeSupabaseCookies, SUPABASE_COOKIE_NAME } from "@/lib/supabase/cookie-compat";
 
 export async function createClient() {
   const cookieStore = await cookies();
@@ -16,7 +17,7 @@ export async function createClient() {
   return createServerClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
     cookies: {
       getAll() {
-        return cookieStore.getAll();
+        return normalizeSupabaseCookies(cookieStore.getAll());
       },
       setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
         try {
@@ -31,7 +32,7 @@ export async function createClient() {
     },
     // D-01.01: cookie name canônico alinhado ao middleware.
     cookieOptions: {
-      name: "sb-deskcomm-auth",
+      name: SUPABASE_COOKIE_NAME,
       sameSite: "strict",
       httpOnly: true,
       secure: cookieSecure(),
