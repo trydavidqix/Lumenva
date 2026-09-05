@@ -1,4 +1,4 @@
-# DeskcommCRM — Handoff Autônomo
+# Lumenva — Handoff Autônomo
 
 **Data**: 2026-04-28 (entrega overnight pra apresentação SP 2026-04-29 cedo)
 **Sessão**: autônoma via Claude Opus 4.7 + 11 subagentes paralelos

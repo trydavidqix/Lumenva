@@ -1,4 +1,4 @@
-# Contributing — DeskcommCRM
+# Contributing — Lumenva
 
 ## Antes de começar
 
