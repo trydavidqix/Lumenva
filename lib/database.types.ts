@@ -5348,6 +5348,11 @@ export type Database = {
           id: string
           organization_id: string
           received_at: string
+          rgpd_status: string | null
+          extension_reason: string | null
+          extension_notified_at: string | null
+          refusal_grounds: string | null
+          refusal_communicated_at: string | null
           request_payload: Json
           request_type: string
           result: Json | null
@@ -5369,6 +5374,11 @@ export type Database = {
           id?: string
           organization_id: string
           received_at?: string
+          rgpd_status?: string | null
+          extension_reason?: string | null
+          extension_notified_at?: string | null
+          refusal_grounds?: string | null
+          refusal_communicated_at?: string | null
           request_payload?: Json
           request_type: string
           result?: Json | null
@@ -5390,6 +5400,11 @@ export type Database = {
           id?: string
           organization_id?: string
           received_at?: string
+          rgpd_status?: string | null
+          extension_reason?: string | null
+          extension_notified_at?: string | null
+          refusal_grounds?: string | null
+          refusal_communicated_at?: string | null
           request_payload?: Json
           request_type?: string
           result?: Json | null
