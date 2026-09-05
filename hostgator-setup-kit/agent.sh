@@ -8,6 +8,10 @@
 source "$(dirname "$0")/_common.sh"
 enter_project
 
+env_alias AGENT_REPORT
+env_alias AGENT_PREV_IMAGE
+env_alias AGENT_REPORT_CMD
+
 SECRET="${INTERNAL_CRON_SECRET:-${INTERNAL_SECRET:-}}"
 [ -n "$SECRET" ] || exit 0
 [ -n "${NEXT_PUBLIC_APP_URL:-}" ] || exit 0
@@ -210,9 +214,9 @@ export API SECRET ERRLOG RUN_ID
 UPDATE_ARGS=()
 [ -n "$LATEST_TAG" ] && UPDATE_ARGS=(--to "$LATEST_TAG")
 set +e
-DESKCOMM_AGENT_REPORT=1 \
-DESKCOMM_AGENT_PREV_IMAGE="$PREV_IMAGE" \
-DESKCOMM_AGENT_REPORT_CMD="$(declare -f post report log_err); report" \
+LUMENVA_AGENT_REPORT=1 \
+LUMENVA_AGENT_PREV_IMAGE="$PREV_IMAGE" \
+LUMENVA_AGENT_REPORT_CMD="$(declare -f post report log_err); report" \
   bash "$(dirname "$0")/update.sh" "${UPDATE_ARGS[@]+"${UPDATE_ARGS[@]}"}" >"$LOG" 2>&1
 RC=$?
 set -e
