@@ -19,16 +19,16 @@ interface Props {
   ownerNames?: Map<string, string | null>;
 }
 
-function formatBRL(cents: number | null, currency: string | null): string {
+function formatCurrency(cents: number | null, currency: string | null): string {
   if (cents === null) return "—";
   try {
-    return new Intl.NumberFormat("pt-BR", {
+    return new Intl.NumberFormat("pt-PT", {
       style: "currency",
-      currency: currency ?? "BRL",
+      currency: currency ?? "EUR",
       maximumFractionDigits: 0,
     }).format(cents / 100);
   } catch {
-    return `R$ ${(cents / 100).toFixed(0)}`;
+    return `${(cents / 100).toFixed(0)} ${currency ?? "EUR"}`;
   }
 }
 
@@ -78,7 +78,7 @@ export function LeadDossier({
         {/* ① cabeçalho vivo */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-border pb-3 text-xs">
           <span className="font-medium tabular-nums text-text">
-            {formatBRL(lead.value_cents, lead.currency)}
+            {formatCurrency(lead.value_cents, lead.currency)}
           </span>
           <span className="text-text-muted">{stageName}</span>
           <OwnerBadge

@@ -10,7 +10,7 @@ import { z } from "zod";
 
 import { conversationTagSchema } from "./messaging";
 
-const LOCALES = ["pt-BR", "en-US"] as const;
+const LOCALES = ["pt-PT", "pt-BR", "en-US"] as const;
 
 /**
  * G6-02: organizations.settings.ai_dispatch_mode (edge-contract do Vendaval).

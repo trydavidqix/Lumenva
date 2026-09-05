@@ -3,7 +3,7 @@
  *
  * Receives Nuvemshop `store/redact` LGPD webhook — the "nuclear" webhook
  * emitted when a merchant uninstalls the app. Signals a full tenant redact
- * within 30 days (D+15 SLA per BR business days).
+ * within one calendar month under RGPD Art. 12(3).
  *
  * Flow (Spec 06 §5.6, CLAUDE.md LGPD rules L-01..L-06):
  *
@@ -13,7 +13,8 @@
  *  4. Decrypt and verify HMAC SHA256 (timingSafeEqual).
  *  5. Idempotency: insert webhook_events_log; skip if duplicate (23505).
  *  6. Count active (non-anonymized) contacts → expected_contacts_count.
- *  7. Insert lgpd_requests (emergency=true, scope='tenant', SLA=15 BR biz days).
+ *  7. Insert lgpd_requests (emergency=true, scope='tenant', RGPD Art. 12(3)
+ *     SLA of one calendar month).
  *  8. Emit lgpd.redact_received with tenant-scope payload.
  *  9. Audit log (no PII — store_id + counts only).
  * 10. Return 200 within <5s.
@@ -209,7 +210,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const expectedContactsCount = activeContactsCount ?? 0;
 
-  // 7. Insert lgpd_requests (emergency=true, scope='tenant', SLA=15 BR biz days)
+  // 7. Insert lgpd_requests (emergency=true, scope='tenant', RGPD Art. 12(3): one calendar month)
   const now = new Date();
   let requestId: string;
   let dueAt: string;

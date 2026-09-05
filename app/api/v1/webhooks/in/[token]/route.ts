@@ -241,6 +241,8 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
     stage_id: source.default_stage_id,
     title: mapped.name ?? mapped.phone ?? mapped.email ?? "Lead sem nome",
     contact_id: contactId,
+    // TODO(i18n): read the organisation currency from settings when that
+    // field has a stable schema contract; no schema change in this item.
     currency: "BRL",
     tags: [],
     source: "webhook",

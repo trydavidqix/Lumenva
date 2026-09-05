@@ -1,7 +1,7 @@
 /**
- * LGPD SLA business-day calculator.
+ * Legacy business-day calculator for non-RGPD operational policies.
  *
- * Rules (L-04):
+ * Rules (legacy L-04):
  *  - SLA is expressed in Brazilian business days (dias úteis).
  *  - Skip Saturdays (getDay()===6) and Sundays (getDay()===0).
  *  - Skip Brazilian national holidays from HOLIDAYS_BR_ISO.
@@ -9,9 +9,7 @@
  *    next business day (edge: weekend/holiday receipt).
  */
 
-import { HOLIDAYS_BR_ISO } from "./holidays-br";
-
-const _defaultHolidays = new Set(HOLIDAYS_BR_ISO);
+import { getHolidaysPt } from "./holidays-pt";
 
 /**
  * Format a Date to YYYY-MM-DD (UTC-based, suitable for set lookup when
@@ -42,7 +40,10 @@ function addOneDay(date: Date): Date {
 }
 
 /**
- * Compute the due date for an LGPD SLA.
+ * Compute the due date for a legacy operational SLA.
+ *
+ * This function must not be used for data-subject rights. Those requests use
+ * computeDueAtGdpr() below and a one-calendar-month deadline under Art. 12(3).
  *
  * @param receivedAt   Timestamp when the request was received.
  * @param businessDays Number of business days allowed (e.g. 15 for redact).
@@ -52,17 +53,21 @@ function addOneDay(date: Date): Date {
 export function computeDueAt(
   receivedAt: Date,
   businessDays: number,
-  holidays: Set<string> = _defaultHolidays,
+  holidays?: Set<string>,
 ): Date {
+  const activeHolidays = holidays ?? new Set([
+    ...getHolidaysPt(receivedAt.getUTCFullYear()),
+    ...getHolidaysPt(receivedAt.getUTCFullYear() + 1),
+  ]);
   // Normalise to UTC midnight of the received day
   let cursor = new Date(
     Date.UTC(receivedAt.getUTCFullYear(), receivedAt.getUTCMonth(), receivedAt.getUTCDate()),
   );
 
   // If receivedAt itself is not a business day, advance to the first business day
-  if (!isBusinessDay(cursor, holidays)) {
+  if (!isBusinessDay(cursor, activeHolidays)) {
     cursor = addOneDay(cursor);
-    while (!isBusinessDay(cursor, holidays)) {
+    while (!isBusinessDay(cursor, activeHolidays)) {
       cursor = addOneDay(cursor);
     }
   }
@@ -71,7 +76,7 @@ export function computeDueAt(
   let remaining = businessDays;
   while (remaining > 0) {
     cursor = addOneDay(cursor);
-    if (isBusinessDay(cursor, holidays)) {
+    if (isBusinessDay(cursor, activeHolidays)) {
       remaining--;
     }
   }

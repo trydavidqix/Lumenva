@@ -29,24 +29,24 @@ owner: Rafael Melgaço
 
 # EPIC-08 — LGPD Compliance
 
-> **Para o epic-executor**: leia inteiro antes de qualquer wave. Stories em ordem de dependência. Cada story = 1 wave. `Deps:` é lei. Este epic encerra o ciclo de compliance: 3 webhooks Nuvemshop LGPD → workers (export D+7, redact D+15) → UI de gestão → audit dense + SLA watcher. Sem isso, o produto está em violação ANPD assim que conectar uma loja Nuvemshop com clientes ativos.
+> **Para o epic-executor**: leia inteiro antes de qualquer wave. Stories em ordem de dependência. Cada story = 1 wave. `Deps:` é lei. Este epic encerra o ciclo de compliance: 3 webhooks Nuvemshop LGPD → workers (export/redact no prazo RGPD de um mês de calendário) → UI de gestão → audit dense + SLA watcher. Sem isso, o produto está em violação RGPD assim que conectar uma loja Nuvemshop com clientes ativos.
 
 ## 1. Objetivo
 
-Entregar pipeline LGPD completo e auditável: receber 3 webhooks Nuvemshop (`customer/redact`, `customer/data_request`, `store/redact`), processar via workers reativos (export PAdES em D+7 úteis, anonimização cascade em D+15 úteis), expor UI `/app/lgpd/requests` pra admin acompanhar SLA, alarmar D+5/D+10 via Sentry, e gravar audit dense com cascaded counts em `api_audit_log` append-only.
+Entregar pipeline RGPD completo e auditável: receber 3 webhooks Nuvemshop (`customer/redact`, `customer/data_request`, `store/redact`), processar via workers reativos dentro do prazo de um mês de calendário, expor UI `/app/lgpd/requests` pra admin acompanhar SLA, manter alarmes operacionais antecipados via Sentry, e gravar audit dense com cascaded counts em `api_audit_log` append-only.
 
 ## 2. Resultado esperado (Definition of Done do Epic)
 
-- [ ] 3 webhook receivers Nuvemshop (`customer/redact`, `customer/data_request`, `store/redact`) recebem POST, validam HMAC, gravam em `lgpd_requests` com `due_at` correto (D+7 ou D+15 úteis), emitem `lgpd.data_request_received` ou `lgpd.redact_received`, retornam 200 dentro de 5s.
+- [ ] 3 webhook receivers Nuvemshop (`customer/redact`, `customer/data_request`, `store/redact`) recebem POST, validam HMAC, gravam em `lgpd_requests` com `due_at` de um mês de calendário (RGPD art. 12.º, n.º 3), emitem `lgpd.data_request_received` ou `lgpd.redact_received`, retornam 200 dentro de 5s.
 - [ ] Worker `lgpd-export-worker` consome `lgpd.data_request_received`, coleta JSON estruturado conforme Spec 01 §8.3, gera PDF assinado PAdES, faz upload em `lgpd-exports/{request_id}.pdf`, envia email com signed URL ao titular, marca `status=completed`.
 - [ ] Worker `lgpd-redact-worker` consome `lgpd.redact_received`, executa cascade SQL transacional (Spec 01 §8.2), preserva orders por valor histórico, grava audit dense com `cascaded_to` counts, callback Nuvemshop confirmation.
 - [ ] `store/redact` cobre TODOS os contacts do tenant com flag `emergency=true` (operação massiva, SLA acelerado).
 - [ ] Page `/app/lgpd/requests` lista requests com filtros status/tipo/SLA + banner de alarme em D+5 (data_request) e D+10 (redact).
-- [ ] Page `/app/lgpd/requests/[id]` mostra timeline visual SLA (D+0/D+5/D+7 ou D+0/D+10/D+15), preview dos dados a anonimizar/exportar, botões "Aprovar export" e "Aprovar redact".
+- [ ] Page `/app/lgpd/requests/[id]` mostra timeline visual do SLA RGPD de um mês, com alarmes operacionais antecipados configuráveis, preview dos dados a anonimizar/exportar, botões "Aprovar export" e "Aprovar redact".
 - [ ] Cron `lgpd-sla-watcher` (1×/dia) alerta no Sentry + email pro admin quando data_request atinge D+5 ou redact atinge D+10 sem `status=completed`.
-- [ ] L-01 a L-10 (rules catalog) enforced: anonimização preferida sobre delete, SLA D+7/D+15, irreversibilidade, audit append-only com retenção 5 anos, CPF nunca em logs.
+- [ ] L-01 a L-10 (rules catalog) enforced: anonimização preferida sobre delete, SLA RGPD de um mês de calendário, irreversibilidade, audit append-only com retenção 5 anos, CPF nunca em logs.
 - [ ] `api_audit_log` recebe entries `lgpd.data_request_received`, `lgpd.export_generated`, `lgpd.export_delivered`, `lgpd.redact_received`, `lgpd.redact_executed`, `lgpd.redact_failed` com payload completo.
-- [ ] Regression suite cobre: webhook idempotency, SLA computation (dias úteis BR), cascade SQL transactional rollback, PDF signature verification, RLS isolation entre tenants em `/app/lgpd/requests`.
+- [ ] Regression suite cobre: webhook idempotency, SLA computation de mês de calendário RGPD, cascade SQL transactional rollback, PDF signature verification, RLS isolation entre tenants em `/app/lgpd/requests`.
 
 ## 3. Pré-requisitos
 
@@ -113,13 +113,13 @@ Entregar pipeline LGPD completo e auditável: receber 3 webhooks Nuvemshop (`cus
 **Points**: 4 | **Priority**: P0 | **Deps**: (none) | **FR refs**: Spec 06 §5.6, Spec 01 §8.1, BR L-01, L-03, L-06
 
 #### Contexto
-Primeira story do epic. Cria a tabela canônica `lgpd_requests` (já prevista na migration 0011 — confirmar aplicação) e o primeiro receiver. Decisão lockada: SLA `due_at` é calculado em **dias úteis brasileiros** (BMF&Bovespa calendar) — não dias corridos. Lib: `date-fns-tz` + `date-fns-business-days` com lista de feriados nacionais. `webhook_events_log` (Spec 06 §3.4) já existe — reusar pra idempotency com partial index `where event_type in ('customer/redact', 'customer/data_request', 'store/redact')`.
+Primeira story do epic. Cria a tabela canônica `lgpd_requests` (já prevista na migration 0011 — confirmar aplicação) e o primeiro receiver. Para direitos do titular, `due_at` segue o prazo único de **um mês de calendário** do RGPD, art. 12.º, n.º 3; pedidos complexos podem ter extensão documentada e comunicada dentro do primeiro mês. `webhook_events_log` (Spec 06 §3.4) já existe — reusar pra idempotency com partial index `where event_type in ('customer/redact', 'customer/data_request', 'store/redact')`.
 
 Receiver retorna 200 dentro de 5s **antes** do processing — pipeline é totalmente reativo via event. HMAC validado conforme Spec 06 §5.0.
 
 #### Files to create
 - `app/api/v1/webhooks/nuvemshop/customer-redact/route.ts` — POST receiver
-- `lib/lgpd/sla.ts` — `computeDueAt(receivedAt, slaDays, holidays)` (dias úteis BR)
+- `lib/lgpd/sla.ts` — `computeDueAtGdpr(receivedAt, months = 1)` (mês de calendário, RGPD art. 12.º, n.º 3)
 - `lib/lgpd/holidays-br.ts` — lista de feriados nacionais 2026-2030
 - `lib/lgpd/repository.ts` — `createLgpdRequest()`, `findLgpdRequest()`, helpers
 - `lib/lgpd/types.ts` — types canônicos (`LgpdRequest`, `LgpdRequestType`, `LgpdRequestStatus`)
@@ -131,17 +131,17 @@ Receiver retorna 200 dentro de 5s **antes** do processing — pipeline é totalm
 
 #### Implementation steps
 1. Confirmar/aplicar migration 0011_lgpd_requests com schema acima + index `(organization_id, status, due_at)`.
-2. Implementar `computeDueAt(now, 15, holidaysBR)` — pula sábado/domingo/feriados.
-3. Receiver: validar HMAC (reuse middleware Spec 06 §5.0) → resolver `organization_id` via `tenant_integrations.store_id` → INSERT em `webhook_events_log` (idempotent) → resolver contact local via `customer_external_id` (pode ser `null` — L-03 ainda registra) → INSERT em `lgpd_requests` com `type='customer_redact'`, `due_at = now + 15d úteis`, `status='received'` → emit `lgpd.redact_received` → audit `lgpd.redact_received` → return 200.
+2. Usar `computeDueAtGdpr(now, 1)` para o prazo RGPD de um mês de calendário, sem saltar fins de semana ou feriados.
+3. Receiver: validar HMAC (reuse middleware Spec 06 §5.0) → resolver `organization_id` via `tenant_integrations.store_id` → INSERT em `webhook_events_log` (idempotent) → resolver contact local via `customer_external_id` (pode ser `null` — L-03 ainda registra) → INSERT em `lgpd_requests` com `type='customer_redact'`, `due_at = computeDueAtGdpr(now, 1)`, `status='received'` → emit `lgpd.redact_received` → audit `lgpd.redact_received` → return 200.
 4. Se webhook duplicado (`webhook_events_log` colision), retornar 200 sem reprocessar.
-5. Testes unitários SLA: D+15 a partir de 2026-04-29 (qua) → 2026-05-21 (qui, pulando Tiradentes 21/04? não, já passou; pulando final de semanas).
+5. Testes unitários SLA: um mês de calendário a partir de 2026-04-29 → 2026-05-29, sem cálculo de dias úteis.
 
 #### Acceptance Criteria
 
 ```gherkin
 Given Nuvemshop envia POST customer/redact com HMAC válido pra tenant T1
 When receiver recebe payload com customer { id, email }
-Then INSERT em lgpd_requests com type='customer_redact', due_at = now + 15d úteis BR, status='received'
+Then INSERT em lgpd_requests com type='customer_redact', due_at = now + 1 mês de calendário (RGPD art. 12.º, n.º 3), status='received'
 And event lgpd.redact_received emitido com { request_id, organization_id, customer_external_id }
 And audit_log contém lgpd.redact_received
 And response 200 retorna em <5s
@@ -171,9 +171,9 @@ And event lgpd.redact_received ainda é emitido (worker decide o que fazer)
 ```
 
 ```gherkin
-Given hoje é sexta 2026-05-01 (feriado dia trabalho)
-When computeDueAt(now, 15, holidaysBR)
-Then due_at é 2026-05-25 (segunda) — pulando 02/05 sab, 03/05 dom, 01/05 feriado
+Given o pedido é recebido em 2026-05-01
+When computeDueAtGdpr(now, 1)
+Then due_at é 2026-06-01 — um mês de calendário, sem saltar fim de semana ou feriado
 ```
 
 #### QA test cases
@@ -185,7 +185,7 @@ Then due_at é 2026-05-25 (segunda) — pulando 02/05 sab, 03/05 dom, 01/05 feri
 | t3 | db | `lgpd_requests` row criada com due_at correto | SQL: `select due_at from lgpd_requests where id=$1` |
 | t4 | db | Idempotency: 3× mesmo webhook → 1 row | webhook_events_log conflict |
 | t5 | rls | Tenant T2 não vê requests do T1 | session T2 query → empty |
-| t6 | unit | SLA pula feriados BR + final de semana | vitest com 10 cases edge |
+| t6 | unit | SLA usa um mês de calendário RGPD | vitest com casos de mês curto, fim de semana e feriado |
 | t7 | event | event.lgpd.redact_received presente em event_log | SQL select |
 | t8 | audit | Audit dense gravado | `select metadata from api_audit_log where action='lgpd.redact_received'` |
 
@@ -205,12 +205,12 @@ exposes:
     id: "lgpd.redact_received"
     payload: "{ request_id, organization_id, scope: 'contact', emergency: false, customer_external_id, contact_id?: string|null }"
   - type: lib
-    id: "lib/lgpd/sla.ts:computeDueAt"
-    signature: "(receivedAt: Date, slaDays: number, holidays: Date[]) => Date"
+    id: "lib/lgpd/sla.ts:computeDueAtGdpr"
+    signature: "(receivedAt: Date, months = 1) => Date"
 ```
 
 #### Decisões a registrar
-- SLA é em **dias úteis BR**, não corridos. Lista de feriados em `lib/lgpd/holidays-br.ts` revisada anualmente.
+- SLA de direitos do titular é de **um mês de calendário**, conforme RGPD art. 12.º, n.º 3; extensão de até dois meses exige motivo e notificação no primeiro mês. O calendário de feriados não participa deste cálculo.
 - Receiver retorna 200 antes do processing — pipeline reativo via event obrigatório.
 - `subject.contact_id` pode ser null se sem footprint local (L-03 mesmo assim cria request pra audit).
 
@@ -228,7 +228,7 @@ exposes:
 **Points**: 3 | **Priority**: P0 | **Deps**: S-08.01 | **FR refs**: Spec 06 §5.7, Spec 01 §8.1, BR L-02
 
 #### Contexto
-Mesmo padrão do S-08.01, mas SLA D+7 úteis e emite `lgpd.data_request_received`. Reaproveita 100% da infra (sla.ts, repository, holidays). Decisão: o receiver **não** dispara o worker direto — apenas emite o event. O worker `lgpd-export-worker` (S-08.04) escuta o event.
+Mesmo padrão do S-08.01, mas emite `lgpd.data_request_received` com SLA RGPD de um mês de calendário. Reaproveita 100% da infra (`sla.ts`, repository). Decisão: o receiver **não** dispara o worker direto — apenas emite o event. O worker `lgpd-export-worker` (S-08.04) escuta o event.
 
 #### Files to create
 - `app/api/v1/webhooks/nuvemshop/customer-data-request/route.ts`
@@ -298,7 +298,7 @@ exposes:
 **Points**: 3 | **Priority**: P0 | **Deps**: S-08.01 | **FR refs**: Spec 06 §5.8, BR L-01, L-03
 
 #### Contexto
-`store/redact` é o webhook nuclear: Nuvemshop avisa que o tenant **inteiro** desinstalou o app — temos 30 dias pra apagar tudo. Cria request com `emergency=true`, `scope='tenant'`, e o worker S-08.05 vai iterar sobre **todos** os contacts do tenant. SLA continua D+15 úteis mas com flag de prioridade pra alarme cedo. Importante: também atualiza `organizations.status='redacted'` ao final (Spec 01 §59 comment).
+`store/redact` é o webhook nuclear: Nuvemshop avisa que o tenant **inteiro** desinstalou o app — temos um mês de calendário para tratar o pedido RGPD. Cria request com `emergency=true`, `scope='tenant'`, e o worker S-08.05 vai iterar sobre **todos** os contacts do tenant. Mantém flag de prioridade para alarme operacional cedo. Importante: também atualiza `organizations.status='redacted'` ao final (Spec 01 §59 comment).
 
 #### Files to create
 - `app/api/v1/webhooks/nuvemshop/store-redact/route.ts`
@@ -698,7 +698,7 @@ exposes:
 **Points**: 4 | **Priority**: P0 | **Deps**: S-08.06 | **FR refs**: Spec 01 §8, BR L-01, L-02, L-03
 
 #### Contexto
-Detalhe da request com timeline visual SLA (D+0/D+5/D+7 pra data_request; D+0/D+10/D+15 pra redact), preview dos dados que serão exportados/anonimizados (dry-run via API), e botões "Aprovar export" / "Aprovar redact" (idempotency-key obrigatório). Aprovar dispara o worker S-08.04 ou S-08.05 mesmo que a request tenha vindo de webhook (operador pode escolher quando — útil pra requests manuais via API ou pra atrasar até validação humana).
+Detalhe da request com timeline visual do SLA RGPD de um mês e alarmes operacionais antecipados, preview dos dados que serão exportados/anonimizados (dry-run via API), e botões "Aprovar export" / "Aprovar redact" (idempotency-key obrigatório). Aprovar dispara o worker S-08.04 ou S-08.05 mesmo que a request tenha vindo de webhook (operador pode escolher quando — útil pra requests manuais via API ou pra atrasar até validação humana).
 
 Decisão: para requests vindas de webhook Nuvemshop, o worker já dispara automaticamente (S-08.01 emite event imediato). O botão "Aprovar" é redundante mas existe pra requests **manuais** (criadas via API direta ou pela própria UI futura). Aprovação manual também é audit gate L-06.
 
@@ -725,7 +725,7 @@ Decisão: para requests vindas de webhook Nuvemshop, o worker já dispara automa
 ```gherkin
 Given request data_request received_at=2026-04-21, due_at=2026-04-30
 When user abre detalhe em 2026-04-26
-Then timeline mostra 3 marcos: D+0 (verde, completo), D+5 warning (amarelo, atual), D+7 due (cinza, futuro)
+Then timeline mostra receção (verde, completo), alarme operacional antecipado (amarelo, quando aplicável) e vencimento de um mês RGPD (cinza, futuro)
 And progresso linear ~70%
 ```
 
@@ -919,7 +919,7 @@ exposes:
 
 ## 8. Decisões arquiteturais novas que este epic introduz
 
-- **ADR-LGPD-01**: SLA é em **dias úteis BR**, não corridos. Lib `lib/lgpd/sla.ts` é fonte única; revisão anual de feriados.
+- **ADR-RGPD-01**: SLA de direitos do titular é um mês de calendário (RGPD art. 12.º, n.º 3). `computeDueAtGdpr` em `lib/lgpd/sla.ts` é a fonte única; extensão exige motivo e notificação documentados.
 - **ADR-LGPD-02**: PAdES via `node-signpdf` + P12 cert. Renovação anual responsabilidade Ops.
 - **ADR-LGPD-03**: Receiver de webhook LGPD retorna 200 **antes** do processing — pipeline reativo via event obrigatório.
 - **ADR-LGPD-04**: Orders são **preservadas** em redact (valor histórico fiscal) — apenas metadata pessoal stripped.
@@ -932,7 +932,7 @@ exposes:
 ## 9. Anexos
 
 - Specs refs: 01 §8 (LGPD endpoints + layout export), 06 §5.6/5.7/5.8 (3 webhooks), 06 §7 (workers cascade), 06 §3.4 (webhook_events_log)
-- Business rules: L-01 (anonimização preferida), L-02 (D+7 data_request), L-03 (D+15 redact), L-04 (irreversível), L-05 (consent), L-06 (audit), L-07 (CPF encrypted), L-08 (logs sem CPF), L-09 (token encrypted), L-10 (audit append-only 5y)
+- Business rules: L-01 (anonimização preferida), L-02/L-03 (prazo RGPD de um mês de calendário), L-04 (irreversível), L-05 (consent), L-06 (audit), L-07 (CPF encrypted), L-08 (logs sem CPF), L-09 (token encrypted), L-10 (audit append-only 5y)
 - Migration: `supabase/migrations/0011_lgpd_requests.sql`
 - Reconciliation log: R-05 (Server Action `connectNuvemshop`)
 - Screen flow refs: rotas `/app/lgpd/requests`, `/app/lgpd/requests/[id]`

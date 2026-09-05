@@ -58,7 +58,7 @@ describe("contactCreateSchema", () => {
   });
 
   it("accepts E.164 phones", () => {
-    const r = contactCreateSchema.safeParse({ phone_number: "+5511999998888" });
+    const r = contactCreateSchema.safeParse({ phone_number: "+351912345678" });
     expect(r.success).toBe(true);
   });
 
