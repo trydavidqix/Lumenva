@@ -43,6 +43,8 @@ aplica.
 
 ## Applied
 
+| `20260905150000` | `0153_rgpd_erasure_decisions` | J6 explicit erasure/anonymisation outcome metadata with retained fields, legal exception and irreversibility proof; RLS by organization. |
+
 | `20260905140000` | `0152_rgpd_legal_basis` | J4 append-only legal basis per purpose with RLS; legacy `contacts.consent` retained for dual-read. |
 
 | `20260905130000` | `0151_rgpd_dpo_assessment` | J2 additive EPD/DPO assessment fields and public/CNPD contact metadata; legacy `dpo_email` retained, NULL means unassessed. |

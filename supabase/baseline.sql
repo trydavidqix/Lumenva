@@ -8952,6 +8952,35 @@ select organization_id, agent_id, contact_id,
   count(*) filter (where expires_at is null or expires_at > now()) memory_count
 from public.agent_memory group by organization_id, agent_id, contact_id;
 
+-- J6 explicit erasure/anonymisation decision metadata (append-only grants).
+CREATE TABLE IF NOT EXISTS "public"."erasure_decisions" (
+    "id" uuid DEFAULT "gen_random_uuid"() NOT NULL,
+    "organization_id" uuid NOT NULL,
+    "contact_id" uuid,
+    "request_id" uuid,
+    "result" text NOT NULL,
+    "legal_exception" text,
+    "retained_fields" jsonb DEFAULT '{}'::jsonb NOT NULL,
+    "irreversibility_proof" text NOT NULL,
+    "created_at" timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT "erasure_decisions_result_check" CHECK ("result" = ANY (ARRAY['erasure','irreversible_anonymisation']))
+);
+ALTER TABLE "public"."erasure_decisions" ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS "erasure_decisions_org_contact_idx" ON "public"."erasure_decisions" USING btree ("organization_id", "contact_id", "created_at");
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'erasure_decisions_pkey') THEN ALTER TABLE ONLY "public"."erasure_decisions" ADD CONSTRAINT "erasure_decisions_pkey" PRIMARY KEY ("id"); END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'erasure_decisions_organization_id_fkey') THEN ALTER TABLE ONLY "public"."erasure_decisions" ADD CONSTRAINT "erasure_decisions_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE CASCADE; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'erasure_decisions_contact_id_fkey') THEN ALTER TABLE ONLY "public"."erasure_decisions" ADD CONSTRAINT "erasure_decisions_contact_id_fkey" FOREIGN KEY ("contact_id") REFERENCES "public"."contacts"("id") ON DELETE SET NULL; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'erasure_decisions_request_id_fkey') THEN ALTER TABLE ONLY "public"."erasure_decisions" ADD CONSTRAINT "erasure_decisions_request_id_fkey" FOREIGN KEY ("request_id") REFERENCES "public"."lgpd_requests"("id") ON DELETE SET NULL; END IF;
+END $$;
+REVOKE ALL ON TABLE "public"."erasure_decisions" FROM anon, authenticated;
+GRANT SELECT, INSERT ON TABLE "public"."erasure_decisions" TO authenticated;
+GRANT ALL ON TABLE "public"."erasure_decisions" TO service_role;
+DROP POLICY IF EXISTS "erasure_decisions_select" ON "public"."erasure_decisions";
+CREATE POLICY "erasure_decisions_select" ON "public"."erasure_decisions" FOR SELECT USING ("organization_id" IN (SELECT "public"."fn_user_org_ids"()));
+DROP POLICY IF EXISTS "erasure_decisions_insert" ON "public"."erasure_decisions";
+CREATE POLICY "erasure_decisions_insert" ON "public"."erasure_decisions" FOR INSERT WITH CHECK ("organization_id" IN (SELECT "public"."fn_user_org_ids"()));
+
 notify pgrst, 'reload schema';
 
 -- ---- Agent OS Phase 2 forward-fixes (2026-08-17) --------------------------
