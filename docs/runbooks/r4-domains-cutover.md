@@ -1,6 +1,6 @@
 # R4 — cutover de domínios (preparação)
 
-Não executado. Requer janela e aprovação do dono. Domínios alvo: `app.lumenva.pt` e `lumenva.pt`; manter `deskcomm.*` com redirect 301 durante a compatibilidade.
+Executado em 2026-09-05. `app.lumenva.pt` está live com HTTPS (Caddy + Let's Encrypt HTTP-01), a servir o CRM a par de `crm.lumenva.pt` (Caddyfile linha 8). DNS no Cloudflare (registo A `app`, modo DNS-only/cinza) e callback OAuth do Supabase para o host novo configurados. `deskcomm.*` mantido durante a janela de compatibilidade. O texto abaixo fica como registo do plano original.
 
 ## Ordem humana
 
