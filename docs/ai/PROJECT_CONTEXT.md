@@ -1,11 +1,11 @@
-# Project Context — DeskcommCRM
+# Project Context — Lumenva
 
 > Contexto condensado para agentes. Validar contra fontes canônicas antes de editar.  
 > Snapshot: 2026-09-03, criado contra `main @ 589872303ed11108c0e74db77aa356cfca921b6f`.
 
 ## 1. Identidade do projeto
 
-- **Produto:** DeskcommCRM / ecossistema Lumenva.
+- **Produto:** Lumenva.
 - **Repo:** `trydavidqix/CRM` (privado no GitHub do dono).
 - **Tipo:** sistema operacional de vendas open source/self-host com agentes de IA nativos.
 - **Canal histórico principal:** WhatsApp via WAHA; há abstração/caminhos para Meta Cloud API e evolução omnichannel.
