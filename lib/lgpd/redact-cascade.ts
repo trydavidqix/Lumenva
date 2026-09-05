@@ -117,7 +117,7 @@ export async function cascadeRedactContact(args: CascadeArgs): Promise<CascadeRe
 
   const result = (data ?? {}) as RpcResult;
   const irreversibilityProof = "fn_lgpd_cascade_redact_contact atomically removes direct PII and preserves only minimised operational history";
-  await admin.from("erasure_decisions" as never).insert({
+  await admin.from("erasure_decisions").insert({
     organization_id: args.organizationId,
     contact_id: args.contactId,
     request_id: args.requestId,
