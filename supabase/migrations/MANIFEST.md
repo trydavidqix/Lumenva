@@ -43,6 +43,8 @@ aplica.
 
 ## Applied
 
+| `20260905160000` | `0154_rgpd_breach_incidents` | J3 additive breach register with UTC 72-hour deadline, notification decision, CNPD evidence and tenant RLS; workflow remains feature-flagged OFF. |
+
 | `20260905150000` | `0153_rgpd_erasure_decisions` | J6 explicit erasure/anonymisation outcome metadata with retained fields, legal exception and irreversibility proof; RLS by organization. |
 
 | `20260905140000` | `0152_rgpd_legal_basis` | J4 append-only legal basis per purpose with RLS; legacy `contacts.consent` retained for dual-read. |
