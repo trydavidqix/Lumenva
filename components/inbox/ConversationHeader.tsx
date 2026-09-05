@@ -11,6 +11,7 @@ import { useCloseConversation } from "@/hooks/inbox/useCloseConversation";
 import { useResumeAiAttendance } from "@/hooks/inbox/useResumeAiAttendance";
 import { ReassignDialog } from "@/components/inbox/ReassignDialog";
 import { SnoozeButton } from "@/components/inbox/SnoozeButton";
+import { useArchiveConversation } from "@/hooks/inbox/useArchiveConversation";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
 
 interface Props {
@@ -37,12 +38,14 @@ export function ConversationHeader({ conversation }: Props) {
   const release = useReleaseConversation();
   const close = useCloseConversation();
   const retomar = useResumeAiAttendance();
+  const archive = useArchiveConversation();
   const [reassignOpen, setReassignOpen] = useState(false);
 
   const c = conversation.contacts ?? null;
   const displayName = c?.display_name?.trim() || c?.name?.trim() || c?.phone_number || "Sem nome";
   const phone = c?.phone_number ?? null;
   const status = conversation.status;
+  const archiveEnabled = process.env.NEXT_PUBLIC_CONVERSATION_ARCHIVE_V1 === "true";
   const isMineAssigned = conversation.assigned_to_user_id === user.id;
   const isOpen = status === "open" || conversation.assigned_to_user_id == null;
 
@@ -83,6 +86,11 @@ export function ConversationHeader({ conversation }: Props) {
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5">
+        {archiveEnabled && status !== "closed" && (
+          <Button size="sm" variant="outline" disabled={archive.isPending} onClick={() => archive.mutate({ conversation_id: conversation.id, archived: true })}>
+            Arquivar
+          </Button>
+        )}
         {isOpen && (
           <Button
             size="sm"
