@@ -2,7 +2,7 @@
 
 [🇧🇷 Português](README.md) · [🇺🇸 English](README.en.md) · 🇪🇸 Español
 
-# 🛠️ DeskcommCRM — El Sistema Operativo de Ventas con Agentes de IA
+# 🛠️ Lumenva — El Sistema Operativo de Ventas con Agentes de IA
 
 **Agentes de IA que atienden, califican y venden por WhatsApp — dentro de un CRM open source corriendo en tu propio servidor.**
 **Sin mensualidad, sin funciones bloqueadas, tus datos contigo. La alternativa abierta a Kommo, Octadesk e Intercom.**
@@ -21,7 +21,7 @@
 
 > ### ☁️ Pon este CRM en producción con un solo comando
 >
-> DeskcommCRM se desarrolla en **alianza con HostGator**: el [`hostgator-setup-kit/`](hostgator-setup-kit/)
+> Lumenva se desarrolla en **alianza con HostGator**: el [`hostgator-setup-kit/`](hostgator-setup-kit/)
 > instala el CRM completo (app + WAHA + base de datos) en un VPS con un único comando, y el
 > [runbook de producción](docs/runbooks/waha-hostgator.md) ya asume ese entorno.
 >
@@ -46,7 +46,7 @@
 
 ## ✨ Qué es
 
-**Deskcomm** viene de **Desk** (escritorio) + **comm** (comercio): toda la operación de ventas de tu negocio en un solo escritorio, operada por personas y agentes de IA trabajando juntos.
+**Lumenva** es toda la operación de ventas de tu negocio en un solo escritorio, operada por personas y agentes de IA trabajando juntos.
 
 El proyecto nació como un CRM de e-commerce — y la comunidad open source lo llevó mucho más allá: hoy funciona en **clínicas, inmobiliarias, negocios de infoproductos, agencias, tiendas y empresas de servicios** — cualquier negocio que vende por WhatsApp. El producto acompañó ese giro y se convirtió en un **sistema operativo de ventas**: agentes de IA con RAG por tenant atienden clientes, califican leads, los mueven por el embudo, disparan automatizaciones y saben cuándo pasar la conversación a un humano — con el CRM completo expuesto vía **MCP** para que los agentes lo operen de verdad. La historia completa está en [`VISION.md`](VISION.md).
 
@@ -196,7 +196,7 @@ Para **vulnerabilidades de seguridad**, **NO abras un issue público** — usa e
 
 ### 🔮 Próximo
 
-- **MCP público** — capacidades del CRM expuestas al ecosistema de agentes: conecta el agente que quieras y opera Deskcomm.
+- **MCP público** — capacidades del CRM expuestas al ecosistema de agentes: conecta el agente que quieras y opera Lumenva.
 - **Flywheel de auto-mejora** — el ciclo conversación resuelta → conocimiento → agente mejor, medido y con compuerta humana.
 - **Plantillas por nicho** — pipelines y vocabularios listos para clínicas, inmobiliarias, infoproductos y servicios (e-commerce ya entregado).
 - **Integraciones** — VTEX y Shopify vía adapter pattern (Nuvemshop ya entregada).
@@ -234,7 +234,7 @@ Este es un proyecto **self-hosted**: cada persona ejecuta el CRM en su **propia 
 
 - **WAHA** ([devlikeapro](https://waha.devlikeapro.com/)) — engine de WhatsApp.
 - **Supabase**, **Vercel**, **Anthropic** (Claude), **shadcn/ui**.
-- La comunidad que llevó Deskcomm del e-commerce a clínicas, inmobiliarias, infoproductos y más allá — ustedes definieron lo que este proyecto es.
+- La comunidad que llevó Lumenva del e-commerce a clínicas, inmobiliarias, infoproductos y más allá — ustedes definieron lo que este proyecto es.
 
 ---
 
