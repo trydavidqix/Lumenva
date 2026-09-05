@@ -19,7 +19,7 @@ import { audit } from "@/lib/audit";
 import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { slugToEvent } from "@/lib/nuvemshop/config";
-import { verifyHmac } from "@/lib/nuvemshop/oauth";
+import { verifyNuvemshopWebhook } from "@/lib/ecommerce/feature-flag";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
   const sigHeader =
     req.headers.get("x-linkedstore-hmac-sha256") ??
     req.headers.get("X-Linkedstore-Hmac-Sha256");
-  const valid = verifyHmac(rawBody, sigHeader, clientSecret);
+  const valid = verifyNuvemshopWebhook(rawBody, sigHeader, clientSecret);
   if (!valid) {
     await audit({
       action: "nuvemshop.webhook_invalid_signature",
