@@ -43,6 +43,8 @@ aplica.
 
 ## Applied
 
+| `20260905130000` | `0151_rgpd_dpo_assessment` | J2 additive EPD/DPO assessment fields and public/CNPD contact metadata; legacy `dpo_email` retained, NULL means unassessed. |
+
 | `20260905120000` | `0150_rgpd_state_machine` | J1 additive RGPD request state machine (`rgpd_status`, extension/refusal metadata), legacy `status` retained for dual-read/dual-write rollout; feature flag default OFF. |
 
 | Version | Name | Description |

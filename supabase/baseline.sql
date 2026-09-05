@@ -1797,6 +1797,21 @@ CREATE TABLE IF NOT EXISTS "public"."organizations" (
 
 ALTER TABLE "public"."organizations" OWNER TO "postgres";
 
+-- J2 EPD/DPO assessment (additive; dpo_email retained for compatibility).
+ALTER TABLE "public"."organizations"
+    ADD COLUMN IF NOT EXISTS "dpo_required" boolean,
+    ADD COLUMN IF NOT EXISTS "dpo_assessment" jsonb,
+    ADD COLUMN IF NOT EXISTS "dpo_assessed_at" timestamp with time zone,
+    ADD COLUMN IF NOT EXISTS "dpo_assessed_by" uuid,
+    ADD COLUMN IF NOT EXISTS "dpo_public_contact" text,
+    ADD COLUMN IF NOT EXISTS "dpo_responsibilities" text,
+    ADD COLUMN IF NOT EXISTS "dpo_cnpd_url" text;
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'organizations_dpo_assessed_by_fkey') THEN
+        ALTER TABLE "public"."organizations" ADD CONSTRAINT "organizations_dpo_assessed_by_fkey" FOREIGN KEY ("dpo_assessed_by") REFERENCES "auth"."users"("id");
+    END IF;
+END $$;
+
 
 COMMENT ON TABLE "public"."organizations" IS 'Tenants do DeskcommCRM. Cada linha = 1 e-commerce cliente.';
 

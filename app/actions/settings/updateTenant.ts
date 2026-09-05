@@ -77,6 +77,13 @@ export async function updateTenant(input: TenantInput): Promise<UpdateTenantResu
       locale: parsed.data.locale,
       media_retention_days: parsed.data.media_retention_days,
       dpo_email: parsed.data.dpo_email ?? null,
+      dpo_required: parsed.data.dpo_required ?? null,
+      dpo_assessment: parsed.data.dpo_assessment ?? null,
+      dpo_assessed_at: parsed.data.dpo_assessed_at ?? null,
+      dpo_assessed_by: parsed.data.dpo_assessed_by ?? null,
+      dpo_public_contact: parsed.data.dpo_public_contact ?? null,
+      dpo_responsibilities: parsed.data.dpo_responsibilities ?? null,
+      dpo_cnpd_url: parsed.data.dpo_cnpd_url ?? null,
       privacy_policy_url: parsed.data.privacy_policy_url ?? null,
       settings: nextSettings,
     })
