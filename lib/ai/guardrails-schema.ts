@@ -5,13 +5,15 @@
 import { z } from "zod";
 
 // ---------------------------------------------------------------------------
-// Models permitidos (Vercel AI Gateway)
+// Models permitidos (Vercel AI Gateway / provider direto)
 // ---------------------------------------------------------------------------
 
 export const AGENT_MODELS = [
   "anthropic/claude-sonnet-4-6",
   "anthropic/claude-haiku-4-5",
   "anthropic/claude-opus-4-7",
+  "openai/gpt-5.6-terra",
+  "openai/gpt-5-mini",
 ] as const;
 
 export const agentModelSchema = z.enum(AGENT_MODELS);
