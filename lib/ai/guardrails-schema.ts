@@ -84,7 +84,7 @@ export type Guardrails = z.infer<typeof guardrailsSchema>;
 // ---------------------------------------------------------------------------
 
 export const agentConfigSchema = z.object({
-  temperature: z.number().min(0).max(2).default(0.4),
+  temperature: z.number().min(0).max(2).default(0.2),
   max_tokens: z.number().int().min(64).max(4096).default(1024),
   context_message_window: z.number().int().min(1).max(50).default(20),
   rag_top_k: z.number().int().min(1).max(20).default(5),
@@ -94,7 +94,7 @@ export const agentConfigSchema = z.object({
 export type AgentConfig = z.infer<typeof agentConfigSchema>;
 
 export const AGENT_CONFIG_DEFAULTS: AgentConfig = {
-  temperature: 0.4,
+  temperature: 0.2,
   max_tokens: 1024,
   context_message_window: 20,
   rag_top_k: 5,
