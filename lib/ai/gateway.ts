@@ -29,6 +29,8 @@ export type ModelId =
   | "google/gemini-3.7-flash"
   | "google/gemini-3.6-flash"
   | "openai/text-embedding-3-small"
+  | "openai/gpt-5.6-terra"
+  | "openai/gpt-5-mini"
   // Allow arbitrary tenant-configured strings without losing autocomplete on the canonical ones.
   | (string & {});
 
