@@ -56,7 +56,7 @@ export function defaultBotModel(): ModelId {
 
 export function defaultClassifierModel(): ModelId {
   if (directProviderIsAnthropic()) return "anthropic/claude-haiku-4-5";
-  if (directProviderIsOpenAI()) return "openai/gpt-5.6-mini";
+  if (directProviderIsOpenAI()) return "openai/gpt-5-mini";
   return !env.GOOGLE_API_KEY ? "anthropic/claude-haiku-4-5" : "google/gemini-3.6-flash";
 }
 
