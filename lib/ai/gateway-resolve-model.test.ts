@@ -87,7 +87,7 @@ describe("resolveLanguageModel", () => {
 
     expect(isAiGatewayConfigured()).toBe(true);
     expect(defaultBotModel()).toBe("openai/gpt-5.6-terra");
-    expect(defaultClassifierModel()).toBe("openai/gpt-5.6-mini");
+    expect(defaultClassifierModel()).toBe("openai/gpt-5-mini");
   });
 
   it("mantém precedência Anthropic quando ambas as chaves estão configuradas", () => {
