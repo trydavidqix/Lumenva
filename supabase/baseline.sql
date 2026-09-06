@@ -1367,6 +1367,7 @@ CREATE TABLE IF NOT EXISTS "public"."contacts" (
     "created_by_user_id" "uuid",
     "last_activity_at" timestamp with time zone,
     "force_human" boolean DEFAULT false NOT NULL,
+    "pacing_exempt" boolean DEFAULT false NOT NULL,
     CONSTRAINT "contacts_anonymized_locked" CHECK ((("is_anonymized" = false) OR (("is_anonymized" = true) AND ("anonymized_at" IS NOT NULL)))),
     CONSTRAINT "contacts_cpf_consistency" CHECK ((("cpf_encrypted" IS NULL) = ("cpf_hash" IS NULL))),
     CONSTRAINT "contacts_email_format" CHECK ((("email" IS NULL) OR ("email" ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'::"text"))),

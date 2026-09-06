@@ -90,6 +90,18 @@ describe('gate de pacing respeita a capability do canal', () => {
     if (v.pass) throw new Error('inalcançável');
     expect(v.code).toBe('outside_window');
   });
+
+  it('isenção por contacto passa e deixa marcador de auditoria', () => {
+    const v = pacingGate.evaluate(
+      baseCtx({ pacingExempt: true, now: MADRUGADA, pacing: {
+        knobs: PACING_DEFAULTS,
+        state: { lastSentAt: new Date('2026-07-28T05:59:59Z'), sentToday: 999, numberActivatedAt: null },
+        crmDailyLimit: 1,
+        rng: () => 0,
+      } }),
+    );
+    expect(v).toEqual({ pass: true, waitMs: 0, skipped: 'pacing_exempt' });
+  });
 });
 
 /**

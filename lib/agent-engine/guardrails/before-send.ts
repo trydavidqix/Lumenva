@@ -83,6 +83,8 @@ export interface GateContext {
    * OR o sinal lido no `get_lead_context` deste turno.
    */
   optedOut: boolean;
+  /** Isenção de pacing por contacto, lida da fonte contacts sob o lock. */
+  pacingExempt?: boolean;
   /**
    * Canal desta tentativa. Nenhum gate pergunta QUEM é o provider (invariante 1
    * de `docs/doctrine/restricao-de-canal.md`) — só o entrega a `capabilitiesOf`
@@ -211,7 +213,7 @@ export type GateVerdict =
   // `skipped: 'not_applicable'` (invariante 4 de `docs/doctrine/restricao-de-canal.md`): a
   // restrição não existe NESTE canal. Passa, mas o trace registra que não se aplicava — um
   // `pass` silencioso apagaria a diferença entre "não regrediu" e "provo que não regrediu".
-  | { pass: true; waitMs?: number; amendBody?: string; skipped?: 'not_applicable' }
+  | { pass: true; waitMs?: number; amendBody?: string; skipped?: 'not_applicable' | 'pacing_exempt' }
   | { pass: false; code: string; reason: string; nextAllowedAt?: Date; detail?: Record<string, string | number> };
 
 export interface Gate {
@@ -428,12 +430,14 @@ export const pacingGate: Gate = {
       knobs: ctx.pacing.knobs,
       state: ctx.pacing.state,
       crmDailyLimit: ctx.pacing.crmDailyLimit,
+      pacingExempt: ctx.pacingExempt,
       banRisk,
       rng: ctx.pacing.rng,
     });
     if (!decision.allow) {
       return { pass: false, code: decision.code, reason: decision.reason, nextAllowedAt: decision.nextAllowedAt };
     }
+    if (ctx.pacingExempt === true) return { pass: true, waitMs: 0, skipped: 'pacing_exempt' };
     return banRisk
       ? { pass: true, waitMs: decision.waitMs }
       : { pass: true, waitMs: decision.waitMs, skipped: 'not_applicable' };
@@ -670,6 +674,7 @@ export async function runBeforeSend(args: RunBeforeSendArgs): Promise<BeforeSend
     // são racy — precisam ver o que o worker anterior já efetivou).
     const provider = await loadChannelProvider(client, args.tenantId, args.channelSessionId);
     const optedOut = args.optedOutThisTurn || (await readStopFlags(client, args.tenantId, args.leadId));
+    const pacingExempt = await readPacingExempt(client, args.tenantId, args.leadId);
     const pacingCfg = await loadChannelKnobs(client, args.tenantId, args.channelSessionId, args.log);
     const pacingState = await loadPacingState(client, args.tenantId, args.channelSessionId, {
       now: args.now,
@@ -704,6 +709,7 @@ export async function runBeforeSend(args: RunBeforeSendArgs): Promise<BeforeSend
       now: args.now,
       body: args.body,
       optedOut,
+      pacingExempt,
       provider,
       messagingWindow: { lastInboundAt, ...(args.isTemplate === true ? { isTemplate: true } : {}) },
       pacing: { knobs: pacingCfg.knobs, state: pacingState, crmDailyLimit: args.crmDailyLimit, rng: args.rng },
@@ -869,6 +875,15 @@ async function readStopFlags(db: Queryable, organizationId: string, contactId: s
     [organizationId, contactId],
   );
   return rows[0]?.stopped === true;
+}
+
+/** Flag tenant-aware de exceção: lida sob o mesmo lock do pacing, nunca do payload. */
+async function readPacingExempt(db: Queryable, organizationId: string, contactId: string): Promise<boolean> {
+  const { rows } = await db.query<{ pacing_exempt: boolean }>(
+    'select pacing_exempt from contacts where organization_id = $1 and id = $2',
+    [organizationId, contactId],
+  );
+  return rows[0]?.pacing_exempt === true;
 }
 
 /**
