@@ -41,6 +41,7 @@ import type {
 } from "@/lib/ai/types";
 import type { EventRow } from "@/lib/event-log/dispatcher";
 import { logger } from "@/lib/logger";
+import { detectScriptContamination } from "@/lib/ai/output-script-guard";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const RECENT_MESSAGES_LIMIT = 20;
@@ -560,12 +561,20 @@ async function invokeBot(ctx: BotContext, model: LanguageModel): Promise<BotResp
   }
 
   const start = Date.now();
-  const result = await generateText({
+  let result = await generateText({
     model,
     system: renderedSystem,
     messages,
     headers,
+    temperature: 0.2,
   });
+  const contamination = detectScriptContamination(ctx.inbound_body, result.text);
+  if (contamination.contaminated) {
+    const retry = await generateText({ model, system: `${renderedSystem}\n\nResponde inteiramente num único alfabeto coerente com a língua da conversa; não mistures sistemas de escrita.`, messages, headers, temperature: 0.2 });
+    const retryContamination = detectScriptContamination(ctx.inbound_body, retry.text);
+    logger.warn('[ai-response-worker] script_contamination', { organization_id: ctx.organization_id, agent_id: ctx.agent.id, retry_clean: !retryContamination.contaminated, dominant_script: contamination.dominantScript });
+    if (!retryContamination.contaminated || retry.text.length >= result.text.length) result = retry;
+  }
   const latency = Date.now() - start;
 
   const usage = result.usage as
