@@ -26,7 +26,12 @@ vi.mock("@/lib/env", () => ({
   },
 }));
 
-import { resolveLanguageModel } from "@/lib/ai/gateway";
+import {
+  defaultBotModel,
+  defaultClassifierModel,
+  isAiGatewayConfigured,
+  resolveLanguageModel,
+} from "@/lib/ai/gateway";
 
 beforeEach(() => {
   for (const k of Object.keys(envMock)) delete envMock[k];
@@ -75,5 +80,21 @@ describe("resolveLanguageModel", () => {
     // Só OpenAI configurada, mas o id pede Anthropic: não dá para atender.
     envMock.OPENAI_API_KEY = "sk-openai";
     expect(resolveLanguageModel("anthropic/claude-haiku-4-5")).toBeNull();
+  });
+
+  it("considera só OPENAI_API_KEY configurada e seleciona defaults OpenAI", () => {
+    envMock.OPENAI_API_KEY = "sk-openai";
+
+    expect(isAiGatewayConfigured()).toBe(true);
+    expect(defaultBotModel()).toBe("openai/gpt-5.6-terra");
+    expect(defaultClassifierModel()).toBe("openai/gpt-5.6-mini");
+  });
+
+  it("mantém precedência Anthropic quando ambas as chaves estão configuradas", () => {
+    envMock.ANTHROPIC_API_KEY = "sk-ant";
+    envMock.OPENAI_API_KEY = "sk-openai";
+
+    expect(defaultBotModel()).toBe("anthropic/claude-sonnet-5");
+    expect(defaultClassifierModel()).toBe("anthropic/claude-haiku-4-5");
   });
 });
