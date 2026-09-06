@@ -44,16 +44,20 @@ function directProviderIsAnthropic(): boolean {
   return Boolean(env.AI_GATEWAY_API_KEY || env.OPENROUTER_API_KEY || env.ANTHROPIC_API_KEY);
 }
 
+function directProviderIsOpenAI(): boolean {
+  return Boolean(env.OPENAI_API_KEY);
+}
+
 export function defaultBotModel(): ModelId {
-  return directProviderIsAnthropic() || !env.GOOGLE_API_KEY
-    ? "anthropic/claude-sonnet-5"
-    : "google/gemini-3.7-flash";
+  if (directProviderIsAnthropic()) return "anthropic/claude-sonnet-5";
+  if (directProviderIsOpenAI()) return "openai/gpt-5.6-terra";
+  return !env.GOOGLE_API_KEY ? "anthropic/claude-sonnet-5" : "google/gemini-3.7-flash";
 }
 
 export function defaultClassifierModel(): ModelId {
-  return directProviderIsAnthropic() || !env.GOOGLE_API_KEY
-    ? "anthropic/claude-haiku-4-5"
-    : "google/gemini-3.6-flash";
+  if (directProviderIsAnthropic()) return "anthropic/claude-haiku-4-5";
+  if (directProviderIsOpenAI()) return "openai/gpt-5.6-mini";
+  return !env.GOOGLE_API_KEY ? "anthropic/claude-haiku-4-5" : "google/gemini-3.6-flash";
 }
 
 export const DEFAULT_EMBEDDING_MODEL: ModelId = "openai/text-embedding-3-small";
@@ -63,6 +67,7 @@ export function isAiGatewayConfigured(): boolean {
     Boolean(env.AI_GATEWAY_API_KEY) ||
     Boolean(env.OPENROUTER_API_KEY) ||
     Boolean(env.ANTHROPIC_API_KEY) ||
+    Boolean(env.OPENAI_API_KEY) ||
     Boolean(env.GOOGLE_API_KEY)
   );
 }
