@@ -2,20 +2,23 @@
 type: current-state
 project: Lumenva
 status: maintained
-last_updated: 2026-09-05
+last_updated: 2026-09-06
 generated_by: sincronização documental do incidente e restore dos sidecars de memória
 confidence: média-alta (métricas de código são CONFIRMADO; estado de épico vem dos HANDOFFs, que são auto-relatados)
-audited_against: main @ 7bbfb7f0 (origin/main; conferido em 2026-09-05)
+audited_against: main @ ed70187c (origin/main e VPS; conferido em 2026-09-06)
 ---
 
 # Estado atual — Lumenva
 
-## Produção Lumenva — CONFIRMADO em 2026-09-05
+## Produção Lumenva — CONFIRMADO em 2026-09-06
 
-- **Código:** `main` e `origin/main` em `7bbfb7f0`; a cadeia desta entrega inclui `743a909b`, `2274126e`, `edf48075`, `c1fb413a` e `8149d174`.
+- **Código:** `main`, `origin/main` e VPS em `ed70187c`; a cadeia desta entrega inclui `743a909b`, `2274126e`, `edf48075`, `c1fb413a`, `8149d174` e `bedff65a`.
 - **Rename e cutover:** a migração PT/UE, o rename público DeskcommCRM → Lumenva e o cutover Docker foram executados. A VPS usa `/root/deskcommcrm`, `docker-compose.lumenva.prod.yml`, projeto Compose `lumenva` e os onze containers `lumenva-*`.
 - **Flags RGPD:** as sete flags canónicas estão aplicadas em produção; `TRANSFER_GATE_V1=block`.
 - **Runtime:** `.env` de produção usa `APP_NAME=Lumenva` e `APP_PULL_POLICY=missing`; o site `https://app.lumenva.pt/login` responde HTTP 200.
+- **Agentes:** os seis agentes publicados usam `provider=openai`, `model=gpt-5.6-terra` e credencial BYOK; o runtime lê `ai_agents.published_version_id`.
+- **Provider chain:** `AI_GATEWAY_API_KEY` e `OPENROUTER_API_KEY` estão vazias; `OPENAI_API_KEY` é o provider direto dos agentes, embeddings/RAG e transcrição; Anthropic é fallback.
+- **Branching:** `main` é a única branch de integração; `upstream/*` é o fork upstream e permanece somente leitura.
 - **Nota de evidência:** os itens acima são estado confirmado desta reauditoria. Referências anteriores a preparação, observação ou cutover futuro abaixo são históricas e não representam o estado atual.
 
 ## Reauditoria de sincronização — 2026-09-05 — CONFIRMADO

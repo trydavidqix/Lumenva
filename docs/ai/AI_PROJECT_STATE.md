@@ -1,9 +1,9 @@
 # AI Project State — Lumenva
 
 > Snapshot operacional rápido para iniciar uma sessão sem reler todo o histórico.  
-> **Data:** 2026-09-03  
-> **Fonte principal:** GitHub `trydavidqix/CRM`  
-> **Main auditada:** `589872303ed11108c0e74db77aa356cfca921b6f`
+> **Data:** 2026-09-06
+> **Fonte principal:** GitHub `trydavidqix/Lumenva`
+> **Main/VPS auditada:** `ed70187c`
 
 ## 1. Estado do Git
 
@@ -13,8 +13,9 @@
 - owner: `trydavidqix`;
 - default branch: `main`;
 - permissões do dono incluem admin/push;
-- `main` é produção/fonte de integração;
-- não trabalhar diretamente em `main`.
+- `main` é produção/fonte de integração e a única branch de entrega;
+- `origin/main` e VPS devem permanecer no mesmo SHA;
+- `upstream/*` é o fork upstream e permanece somente leitura.
 
 ### Branches observadas antes desta camada de contexto
 
@@ -38,17 +39,19 @@
 - toca formulário, design/iconografia e vários arquivos do website;
 - precisa reconciliação seletiva antes de qualquer integração.
 
-### Branch criada para esta tarefa
+### Estado atual de agentes e providers
 
-`docs/ai-context-2026-09-03`
-
-Objetivo: adicionar apenas documentação de contexto para agentes, sem editar código de produção e sem merge automático em main.
+Os seis agentes de produção estão publicados em `openai/gpt-5.6-terra`, com
+credencial BYOK e provider direto. Gateway e OpenRouter não estão ativos na
+cadeia de produção; Anthropic permanece fallback. O campo consumido pelo
+runtime é a versão apontada por `ai_agents.published_version_id`, não
+`ai_agents.model`.
 
 ## 2. Últimos commits relevantes observados em main
 
 ### 2026-09-03 — website/performance
 
-`589872303ed11108c0e74db77aa356cfca921b6f`
+`ed70187c`
 
 - otimização do site institucional;
 - logo grande substituído por asset otimizado;

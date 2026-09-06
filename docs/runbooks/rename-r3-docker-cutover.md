@@ -215,4 +215,7 @@ usando o tar verificado do backup no volume original. Nunca usar `docker compose
 down -v`, `docker volume rm`, `docker system prune` ou remover redes durante o
 rollback.
 
-O cutover foi concluído. A VPS foi alinhada ao `origin/main` em `7bbfb7f0`; os backups temporários de `.env` permanecem sujeitos à retenção operacional definida na nota Task Faxina. Não remover compose antigos sem aprovação do dono.
+O cutover foi concluído. A VPS foi alinhada ao `origin/main` em `ed70187c`;
+`7bbfb7f0` permanece como SHA histórico da reconciliação anterior. Os backups
+temporários de `.env` permanecem sujeitos à retenção operacional definida na
+nota Task Faxina. Não remover compose antigos sem aprovação do dono.
