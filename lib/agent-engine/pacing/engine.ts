@@ -41,6 +41,8 @@ export interface PacingInput {
    * Omitir = `true`: nenhum chamador existente muda de comportamento.
    */
   banRisk?: boolean;
+  /** Isenção explícita por contacto: mantém STOP/LGPD fora deste motor. */
+  pacingExempt?: boolean;
   /** [0,1) — injetável nos testes; default Math.random. */
   rng?: () => number;
 }
@@ -57,6 +59,7 @@ export function decidePacing(input: PacingInput): PacingDecision {
   const { now, knobs, state, crmDailyLimit } = input;
   const rng = input.rng ?? Math.random;
   const banRisk = input.banRisk ?? true; // default preserva o comportamento atual
+  if (input.pacingExempt === true) return { allow: true, waitMs: 0 };
   const wall = wallClock(now, knobs.timezone);
 
   if (!insideWindow(wall, knobs)) {

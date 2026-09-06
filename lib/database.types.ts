@@ -2340,6 +2340,7 @@ export type Database = {
           email: string | null
           email_normalized: string | null
           force_human: boolean
+          pacing_exempt: boolean
           id: string
           is_anonymized: boolean
           is_blocked: boolean
@@ -2372,6 +2373,7 @@ export type Database = {
           email?: string | null
           email_normalized?: string | null
           force_human?: boolean
+          pacing_exempt?: boolean
           id?: string
           is_anonymized?: boolean
           is_blocked?: boolean
@@ -2404,6 +2406,7 @@ export type Database = {
           email?: string | null
           email_normalized?: string | null
           force_human?: boolean
+          pacing_exempt?: boolean
           id?: string
           is_anonymized?: boolean
           is_blocked?: boolean

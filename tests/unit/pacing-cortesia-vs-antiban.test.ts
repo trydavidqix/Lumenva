@@ -13,11 +13,12 @@ import { PACING_DEFAULTS } from '@/lib/agent-engine/pacing/defaults';
 const MADRUGADA = new Date('2026-07-28T06:00:00Z'); // 03h BRT — fora da janela 7h-22h
 const COMERCIAL = new Date('2026-07-28T13:00:00Z'); // 10h BRT — terça, dentro da janela
 
-function input(over: { now: Date; banRisk?: boolean; sentToday?: number }) {
+function input(over: { now: Date; banRisk?: boolean; sentToday?: number; pacingExempt?: boolean }) {
   return {
     now: over.now,
     knobs: PACING_DEFAULTS,
     banRisk: over.banRisk,
+    pacingExempt: over.pacingExempt,
     state: {
       lastSentAt: null,
       sentToday: over.sentToday ?? 0,
@@ -51,5 +52,10 @@ describe('cortesia não é anti-ban', () => {
   it('omitir banRisk preserva o comportamento atual (default = true)', () => {
     const d = decidePacing(input({ now: COMERCIAL, sentToday: 999 }));
     expect(d.allow).toBe(false); // nenhum chamador existente muda de resultado
+  });
+
+  it('isenção por contacto salta janela e todos os limites de pacing', () => {
+    const d = decidePacing(input({ now: MADRUGADA, sentToday: 999, pacingExempt: true }));
+    expect(d).toEqual({ allow: true, waitMs: 0 });
   });
 });

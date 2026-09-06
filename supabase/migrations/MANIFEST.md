@@ -193,6 +193,7 @@ aplica.
 | `20260819120000` | `0138_followup_enrollment_stats_rpc` | RPC tenant-scoped de estatísticas agregadas de follow-up para o dashboard; execução revogada para `public`/`anon` e concedida a `authenticated`. |
 | `20260819130000` | `0139_agent_memory_tables` | Projeções de memória multi-turn (`agent_memory`, `agent_decisions`, `agent_errors`) e view de contexto, todas tenant-scoped com RLS e índices de expiração. |
 | `20260905180000` | `0156_conversation_archive_per_user` | Arquivamento de conversas por utilizador, com RLS e unicidade por conversa/utilizador. |
+| `20260906100000` | `0157_contacts_pacing_exempt` | Coluna aditiva `contacts.pacing_exempt` (default false) para isenção por contacto dos gates de pacing/janela; STOP e LGPD permanecem ativos. |
 
 ## Reproducibility
 
