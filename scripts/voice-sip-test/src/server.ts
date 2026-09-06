@@ -57,7 +57,7 @@ async function connectSideband(callId: string): Promise<void> {
     id?: string;
     outputItemId?: string;
     audioEndMs: number;
-    interrupted: boolean;
+    state: "active" | "cancel_requested" | "completed";
   };
   let activeResponse: ActiveResponse | undefined;
   // This process does not own a SIP/RTP playback queue. Keep the hook explicit so
@@ -70,8 +70,10 @@ async function connectSideband(callId: string): Promise<void> {
     if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(event));
   };
   const interruptActiveResponse = (): void => {
-    if (!activeResponse || activeResponse.interrupted) return;
-    activeResponse.interrupted = true;
+    // A speech-start event can race with response.done/response.cancelled. Never
+    // send response.cancel without an identified response that is still active.
+    if (!activeResponse?.id || activeResponse.state !== "active") return;
+    activeResponse.state = "cancel_requested";
 
     // The order is intentional: stop local playback, cancel generation, truncate
     // the assistant item to what was actually played, then clear provider audio.
@@ -123,7 +125,7 @@ async function connectSideband(callId: string): Promise<void> {
         activeResponse = {
           id: typeof response.id === "string" ? response.id : undefined,
           audioEndMs: 0,
-          interrupted: false,
+          state: "active",
         };
       } else if (type === "response.output_item.added") {
         const response = (event.response ?? {}) as Record<string, unknown>;
@@ -139,6 +141,10 @@ async function connectSideband(callId: string): Promise<void> {
         interruptActiveResponse();
       } else if (type === "response.done") {
         console.error("sideband response.done", summarizeResponse(event));
+        if (activeResponse) activeResponse.state = "completed";
+        activeResponse = undefined;
+      } else if (type === "response.cancelled") {
+        if (activeResponse) activeResponse.state = "completed";
         activeResponse = undefined;
       } else if (
         type === "error" ||
