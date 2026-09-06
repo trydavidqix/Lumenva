@@ -140,14 +140,15 @@ docker inspect "$(docker compose -f docker-compose.prod.yml ps -q app)" \
 ## 3. Fluxo completo (do código à produção)
 
 ```
-commit → push → PR → merge na main → build na VPS → up -d
+commit → push main → git pull --ff-only na VPS → build na VPS → up -d
 ```
 
-1. **Commit + push** numa branch de feature. Trabalho que fica só no disco da
-   VPS não existe: o Git não o vê, some se a VPS for reconstruída, e é invisível
-   pra qualquer outra pessoa.
-2. **PR e merge na `main`.** Sem CI, isso não dispara nenhum build automático —
-   é só o ponto de integração do código.
+1. **Commit + push** na linha `main`, após os gates locais. O estado operacional
+   atual tem uma única branch de integração; refs `upstream/*` são o fork
+   upstream e não devem ser usados para deploy.
+2. **Sincronizar a VPS com `git pull --ff-only origin main`.** Sem CI, isto não
+   dispara build automático — é apenas a atualização do checkout antes do
+   comando de build/up documentado acima.
 3. **Deploy na VPS** com os três comandos da seção 1: `git pull` traz o código
    novo pro checkout da VPS, o `build` gera a imagem local, o `up -d` sobe ela.
 

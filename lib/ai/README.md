@@ -4,7 +4,7 @@
 
 Escopo previsto:
 
-- `gateway.ts` — wrapper Vercel AI Gateway (fallback de provedor; observability por tenant)
+- `gateway.ts` — resolução de modelo; em produção os agentes usam provider OpenAI direto via credencial/env, com Gateway/OpenRouter apenas quando configurados
 - `agent.ts` — orquestrador do chatbot por tenant (carrega config de `ai_agents`)
 - `rag/`
   - `ingest.ts` — pipeline de ingestão (FAQ + política + catálogo Nuvemshop + conversas resolvidas)
@@ -15,8 +15,13 @@ Escopo previsto:
 
 ## Strings de modelo (canônicas)
 
-- `"anthropic/claude-sonnet-4-6"` — agente principal (atendimento)
-- `"anthropic/claude-haiku-4-5"` — sentiment + classificação
+- `"openai/gpt-5.6-terra"` — agente principal em produção (os seis agentes publicados)
+- `"openai/gpt-5-mini"` — opção OpenAI exposta no editor
+- `"anthropic/claude-sonnet-4-6"` / `"anthropic/claude-haiku-4-5"` — fallback/compatibilidade quando configurado
 - `"openai/text-embedding-3-large"` — embeddings RAG
 
-Prefira sempre roteamento via Vercel AI Gateway. Import direto do SDK Anthropic só como fallback.
+O runtime escolhe a cadeia configurada: em produção `AI_GATEWAY_API_KEY` e
+`OPENROUTER_API_KEY` estão vazias, `OPENAI_API_KEY` é o provider direto dos
+agentes/embeddings/transcrição e `ANTHROPIC_API_KEY` fica disponível como fallback.
+Trocas de versão publicada seguem `draft -> fn_publish_ai_agent_version`; UPDATE
+direto é bloqueado pelo trigger de imutabilidade.

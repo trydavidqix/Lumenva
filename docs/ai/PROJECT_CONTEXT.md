@@ -1,7 +1,7 @@
 # Project Context — Lumenva
 
 > Contexto condensado para agentes. Validar contra fontes canônicas antes de editar.  
-> Snapshot: 2026-09-03, criado contra `main @ 589872303ed11108c0e74db77aa356cfca921b6f`.
+> Snapshot: 2026-09-06, atualizado contra `main @ ed70187c` (origin/main e VPS).
 
 ## 1. Identidade do projeto
 
@@ -52,8 +52,10 @@ Nunca transforme texto de um handoff antigo em regra permanente.
 
 - Vercel AI SDK v7.
 - Providers Anthropic, OpenAI e Google via adapters oficiais.
-- Vercel AI Gateway no boundary canônico de modelos; existem caminhos diretos/fallbacks quando configurados.
-- OpenRouter existe como rota opcional em superfícies específicas; não assumir que preencher `OPENROUTER_API_KEY` troca o provider do agente por organização.
+- Os seis agentes de produção estão publicados em `openai/gpt-5.6-terra` por provider direto, com credencial BYOK em `ai_agent_versions.credential_id`.
+- `AI_GATEWAY_API_KEY` e `OPENROUTER_API_KEY` estão vazias na produção; `OPENAI_API_KEY` é usada pelos agentes, embeddings/RAG e transcrição; Anthropic permanece fallback.
+- O editor expõe `openai/gpt-5.6-terra` e `openai/gpt-5-mini` em `AGENT_MODELS`.
+- Mudança de modelo publicada é sempre `draft -> fn_publish_ai_agent_version`; UPDATE direto é bloqueado pelo trigger de imutabilidade.
 - LangGraph / LangChain presentes.
 - LlamaIndex presente.
 - Composio presente para tools externas.
@@ -270,7 +272,7 @@ A direção de produto documentada é free/cheap-first quando a qualidade permit
 - WAHA — WhatsApp histórico/produção.
 - Meta Cloud API — canal opcional.
 - Upstash/Redis — rate limit/debounce/estado efêmero distribuído.
-- Vercel AI Gateway / providers de IA.
+- Provider OpenAI direto dos agentes em produção (`gpt-5.6-terra`) via credencial BYOK; AI Gateway e OpenRouter são opcionais e não estão ativos na produção.
 - Nuvemshop — integração opcional de e-commerce.
 - Sentry — observabilidade.
 - Resend — e-mail.
@@ -345,7 +347,7 @@ Existem comandos especializados de eval, voice QA e benchmarks. Consulte `packag
 
 Branches históricas citadas em docs podem já ter sido integradas/removidas. Nunca assumir existência só porque um handoff cita o nome.
 
-## 17. Estado recente confirmado no Git em 2026-09-03
+## 17. Estado recente confirmado no Git em 2026-09-06
 
 Main avançou além do snapshot de `docs/current-state.md` de 2026-09-01. Entre as mudanças recentes:
 
@@ -354,7 +356,7 @@ Main avançou além do snapshot de `docs/current-state.md` de 2026-09-01. Entre 
 - correções de OAuth/Redis e parsing em produção após investigação de causa raiz;
 - atualização do Vercel AI SDK para linha 7.0.91 no repo atual;
 - website institucional recebeu hardening SEO/GEO, segurança, UX, acessibilidade e performance;
-- último commit observado no snapshot: `589872303ed11108c0e74db77aa356cfca921b6f` (`perf(website): ...`).
+- estado atual: `main`, `origin/main` e VPS em `ed70187c`; os seis agentes publicados usam OpenAI `gpt-5.6-terra` via provider direto.
 
 Isto significa que `docs/current-state.md` é útil, mas seu cabeçalho/audited_against não representa sozinho o HEAD de 2026-09-03.
 

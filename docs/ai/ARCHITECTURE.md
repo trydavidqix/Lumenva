@@ -1,7 +1,17 @@
 # Architecture for AI Agents — Lumenva
 
 > Mapa operacional para acelerar leitura de codebase. Não substitui `ARCHITECTURE.md`, specs nem rules.  
-> Snapshot inicial: 2026-09-03, base `main @ 589872303ed11108c0e74db77aa356cfca921b6f`.
+> Snapshot atualizado: 2026-09-06, base `main @ ed70187c`.
+
+## Estado de provider em produção
+
+Os seis agentes publicados usam `provider=openai`, `model=gpt-5.6-terra` e
+`credential_id` BYOK em `ai_agent_versions`; o runtime resolve a configuração
+pelo `ai_agents.published_version_id`. Em produção o provider é direto:
+`AI_GATEWAY_API_KEY` e `OPENROUTER_API_KEY` ficam vazias, `OPENAI_API_KEY` é a
+chave ativa para OpenAI, e Anthropic é fallback. Trocas de versão seguem
+`draft -> public.fn_publish_ai_agent_version`; o trigger de imutabilidade recusa
+UPDATE direto de conteúdo em versão publicada.
 
 ## 1. Princípio arquitetural
 

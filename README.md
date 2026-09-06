@@ -78,7 +78,7 @@ pnpm dev
 
 App: <http://localhost:3000> · Health check: <http://localhost:3000/api/v1/health>
 
-> Primeira vez? [`docs/SETUP.md`](docs/SETUP.md) é o passo a passo completo de todas as integrações (Supabase, WAHA, Anthropic, Upstash, Sentry, Resend, Nuvemshop).
+> Primeira vez? [`docs/SETUP.md`](docs/SETUP.md) é o passo a passo completo de todas as integrações (Supabase, WAHA, OpenAI, Anthropic como fallback, Upstash, Sentry, Resend, Nuvemshop).
 
 ### Produção (self-host, um comando)
 
@@ -105,7 +105,7 @@ O instalador pergunta só o que é teu (domínio, chaves do Supabase, chave de I
 | **WhatsApp** | WAHA Plus (engine NOWEB) |
 | **Filas** | tabela `event_log` + workers (cron) |
 | **Rate limit** | Upstash Redis (sliding window) |
-| **AI** | Vercel AI SDK via AI Gateway (Anthropic / Google / OpenAI) |
+| **AI** | Vercel AI SDK com provider direto em produção (agentes OpenAI `gpt-5.6-terra`, credencial BYOK; Anthropic como fallback) |
 | **Validação** | Zod (input externo, env, payloads) |
 | **Observability** | Sentry (scrub em erro, transação, span, breadcrumb) — opt-in |
 

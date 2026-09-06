@@ -1,7 +1,15 @@
 # Known Issues / Risks / Pending Work — Lumenva
 
 > Lista de triagem para agentes. **Não tratar item como bug reproduzido sem validar no HEAD atual.**  
-> Snapshot inicial: 2026-09-03, base `main @ 589872303ed11108c0e74db77aa356cfca921b6f`.
+> Snapshot atualizado: 2026-09-06, base `main @ ed70187c`.
+
+## Estado reconciliado: agentes OpenAI
+
+Os seis agentes de produção estão confirmados em `openai/gpt-5.6-terra` com
+provider direto, credencial BYOK e versões publicadas. Não tratar referências
+antigas a agentes Claude/Anthropic ou a AI Gateway como estado atual; elas são
+históricas ou fallback. O fluxo de alteração continua sendo draft +
+`fn_publish_ai_agent_version`, nunca UPDATE direto em versão publicada.
 
 ## Legenda
 

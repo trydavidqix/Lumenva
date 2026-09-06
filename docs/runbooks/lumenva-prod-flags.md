@@ -5,6 +5,11 @@ variáveis não são secrets e não são sincronizadas pelo Infisical. Uma
 regeneração de `.env` pode removê-las; reaplicar o bloco abaixo depois de cada
 setup/update.
 
+Estado operacional de referência: `main @ ed70187c`. Os seis agentes publicados
+usam provider OpenAI direto (`gpt-5.6-terra`) via credencial BYOK; Gateway e
+OpenRouter não estão ativos na produção, e Anthropic é fallback. Este runbook
+documenta flags, não credenciais.
+
 | Flag | Produção | Função | Dependência | Rollback |
 |---|---|---|---|---|
 | `RGPD_STATE_MACHINE_V1` | `true` | Estados RGPD, extensão e recusa com prazo de um mês corrido. | migration `0150`, `lgpd_requests` | `false` |

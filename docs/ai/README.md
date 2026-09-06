@@ -2,9 +2,13 @@
 
 > Camada de contexto rápido para agentes de engenharia. Não substitui a doutrina nem as specs; reduz o tempo de descoberta antes de uma auditoria, planejamento ou implementação.
 
-**Snapshot inicial:** 2026-09-03  
-**Base:** `main @ 589872303ed11108c0e74db77aa356cfca921b6f`  
-**Repo:** `trydavidqix/CRM`
+**Snapshot atualizado:** 2026-09-06
+**Base:** `main @ ed70187c` (origin/main e VPS sincronizados)
+**Repo:** `trydavidqix/Lumenva`
+
+Estado operacional atual: os seis agentes de produção estão publicados em
+`openai/gpt-5.6-terra` via credencial BYOK e provider direto. `main` é a única
+branch de integração; `upstream/*` pertence ao fork upstream e é somente leitura.
 
 ## Ordem de leitura recomendada
 

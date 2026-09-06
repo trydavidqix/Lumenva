@@ -7,6 +7,11 @@
 
 Run through this list before promoting to production (or before each release tag).
 
+Current release line: `main @ ed70187c`, único branch de integração; `origin/main`
+e VPS devem estar no mesmo SHA. O runtime dos seis agentes de produção usa
+provider direto OpenAI `gpt-5.6-terra` via credencial BYOK. AI Gateway e
+OpenRouter não estão ativos na produção; Anthropic é fallback.
+
 ## Environment
 
 - [ ] All envs set in Vercel project (mirror `.env.local`)

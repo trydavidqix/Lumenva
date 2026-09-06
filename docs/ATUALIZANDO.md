@@ -1,5 +1,9 @@
 # Atualizando o Lumenva na sua VPS
 
+Estado de referência: `main @ ed70187c`, única branch de integração. Os seis
+agentes publicados usam provider OpenAI direto com `gpt-5.6-terra`; AI Gateway e
+OpenRouter não estão ativos na produção, e Anthropic é fallback.
+
 Saiu uma versão nova? Atualizar é **um comando só**. Você não precisa saber se a
 novidade é no código, no banco de dados ou nos dois — o comando cuida de tudo, na
 ordem certa e com backup automático antes de mexer em qualquer coisa.
