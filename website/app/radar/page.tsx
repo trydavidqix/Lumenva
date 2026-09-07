@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { ArticleList } from "@/components/radar/ArticleList";
 import { CategoryNav } from "@/components/radar/CategoryNav";
+import { FeaturedArticle } from "@/components/radar/FeaturedArticle";
 import { NewsletterCTA } from "@/components/radar/NewsletterCTA";
 import { QuickRadar } from "@/components/radar/QuickRadar";
 import { RadarSearch } from "@/components/radar/RadarSearch";
+import { RadarHero } from "@/components/radar/RadarHero";
+import { TrendingTopics } from "@/components/radar/TrendingTopics";
 import { radarQuickItems } from "@/content/radar/quick";
 import { getAllRadarArticles, getFeaturedRadarArticle, getRadarCategories, getRadarTags } from "@/lib/radar/articles";
 import { createPageMetadata } from "@/lib/metadata";
@@ -16,12 +18,13 @@ export default function RadarPage() {
   const articles = getAllRadarArticles();
   const featured = getFeaturedRadarArticle();
   return <div className={styles.shell}>
-    <header className={styles.hero}><p className={styles.eyebrow}>LUMENVA RADAR</p><h1>O que está a mudar em IA — e o que isso muda para empresas.</h1><p className={styles.lead}>Notícias selecionadas, análises e guias sobre agentes, automação e tecnologia aplicada.</p>{featured && <p><Link href={`/radar/${featured.slug}`}>Em destaque: {featured.title} →</Link></p>}</header>
+    <RadarHero featured={featured} />
+    {featured ? <FeaturedArticle article={featured} /> : null}
     <CategoryNav categories={getRadarCategories()} />
     <section className={styles.section}><p className={styles.eyebrow}>ÚLTIMAS PUBLICAÇÕES</p><h2>Radar</h2><ArticleList articles={articles} /></section>
     <QuickRadar items={radarQuickItems} />
     <RadarSearch articles={articles} />
-    <section className={styles.section}><p className={styles.eyebrow}>TEMAS</p><h2>Em foco</h2><div className={styles.categories}>{getRadarTags().map(tag => <span key={tag}>{tag}</span>)}</div></section>
+    <TrendingTopics tags={getRadarTags()} />
     <NewsletterCTA />
   </div>;
 }
