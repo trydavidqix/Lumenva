@@ -1,0 +1,2 @@
+import Link from "next/link"; import type { RadarArticle } from "@/lib/radar/types"; import styles from "./radar.module.css";
+export function ArticleCard({article}:{article:RadarArticle}){return <article className={styles.card}><p className={styles.eyebrow}>{article.category} · {article.readingTime} min</p><h3><Link href={`/radar/${article.slug}`}>{article.title}</Link></h3><p>{article.excerpt}</p></article>}

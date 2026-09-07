@@ -1,0 +1,11 @@
+import { radarArticles } from "@/content/radar/articles";
+import type { RadarArticle, RadarArticleType } from "./types";
+const sort = (items: readonly RadarArticle[]) => [...items].sort((a,b)=> b.publishedAt.localeCompare(a.publishedAt) || a.slug.localeCompare(b.slug));
+export const getAllRadarArticles=()=>sort(radarArticles);
+export const getRadarArticleBySlug=(slug:string)=>radarArticles.find(a=>a.slug===slug);
+export const getFeaturedRadarArticle=()=>getAllRadarArticles().find(a=>a.featured);
+export const getRadarArticlesByType=(type:RadarArticleType)=>sort(radarArticles.filter(a=>a.type===type));
+export const getRadarArticlesByCategory=(category:string)=>sort(radarArticles.filter(a=>a.category.toLocaleLowerCase("pt")==category.toLocaleLowerCase("pt")));
+export const getRadarCategories=()=>[...new Set(radarArticles.map(a=>a.category))].sort((a,b)=>a.localeCompare(b,"pt"));
+export const getRadarTags=()=>[...new Set(radarArticles.flatMap(a=>a.tags))].sort((a,b)=>a.localeCompare(b,"pt"));
+export const categorySlug=(value:string)=>value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");

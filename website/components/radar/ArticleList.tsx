@@ -1,0 +1,1 @@
+import type { RadarArticle } from "@/lib/radar/types"; import { ArticleCard } from "./ArticleCard"; import styles from "./radar.module.css"; export function ArticleList({articles}:{articles:RadarArticle[]}){return <div className={styles.list}>{articles.map(a=><ArticleCard key={a.slug} article={a}/>)}</div>}

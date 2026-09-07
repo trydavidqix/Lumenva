@@ -1,0 +1,1 @@
+import type { RadarSource } from "@/lib/radar/types"; import styles from "./radar.module.css"; export function ArticleSources({sources}:{sources:RadarSource[]}){return <section className={styles.sources}><h2>Fontes</h2><ul>{sources.map(s=><li key={s.url}><a href={s.url} target="_blank" rel="noopener noreferrer">{s.label}</a></li>)}</ul></section>}
