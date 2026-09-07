@@ -1,0 +1,6 @@
+import type { Metadata } from "next";
+import { ArticleList, BlogCategoryNav } from "@/components/blog";
+import { blogCategorySlug } from "@/lib/blog/articles";
+import { loadPublishedBlogArticles } from "@/lib/blog/published";
+export const metadata: Metadata = { title: "Insights | Blog Lumenva", description: "Análises da Lumenva sobre IA, agentes e automação." };
+export default async function InsightsPage() { const articles = await loadPublishedBlogArticles(); const categories = [{ label: "Todos", href: "/blog", slug: "all" }, { label: "Notícias", href: "/blog/noticias", slug: "noticias" }, { label: "Insights", href: "/blog/insights", slug: "insights" }, { label: "Guias", href: "/blog/guias", slug: "guias" }, ...[...new Set(articles.map((article) => article.category))].map((category) => ({ label: category, href: `/blog/categoria/${blogCategorySlug(category)}`, slug: blogCategorySlug(category) }))]; return <div className="blogShell"><header className="pageHeader"><p>LUMENVA BLOG</p><h1>Insights</h1><p>Análises sobre o impacto prático da tecnologia.</p></header><BlogCategoryNav categories={categories} current="insights" /><ArticleList articles={articles.filter((article) => article.type === "insight")} /></div>; }

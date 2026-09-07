@@ -135,12 +135,12 @@ export const navigation: readonly NavigationItem[] = [
   { label: "Soluções", href: "/solucoes" },
   { label: "Integrações", href: "/integracoes" },
   { label: "Serviços", href: "/servicos" },
-  { label: "Blog", href: "/blog" },
   { label: "Contacto", href: "/contato" },
 ] as const;
 
 export const footerNavigation: readonly NavigationItem[] = [
   ...navigation,
+  { label: "Blog", href: "/blog" },
   ...solutionsMenu.map(({ href, label }) => ({ href, label })),
   { label: "Sobre", href: "/sobre" },
   { label: "Projetos", href: "/projetos" },
