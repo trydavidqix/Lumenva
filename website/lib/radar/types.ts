@@ -8,8 +8,20 @@ export type RadarBlock =
   | { type: "image"; src: string; alt: string; caption?: string };
 export type RadarSource = { label: string; url: string };
 export type RadarArticle = {
-  slug: string; title: string; subtitle?: string; excerpt: string; type: RadarArticleType;
-  category: string; tags: string[]; publishedAt: string; updatedAt?: string; readingTime: number;
-  featured?: boolean; coverImage?: string; blocks: RadarBlock[]; sources: RadarSource[];
+  slug: string;
+  title: string;
+  subtitle?: string;
+  excerpt: string;
+  type: RadarArticleType;
+  category: string;
+  tags: string[];
+  publishedAt: string;
+  updatedAt?: string;
+  readingMinutes: number;
+  featured: boolean;
+  cover?: { src: string; alt: string };
+  seo?: { title?: string; description?: string };
+  sources: RadarSource[];
+  body: RadarBlock[];
 };
-export type RadarQuickItem = { id: string; title: string; summary: string; publishedAt: string; href?: string };
+export type RadarQuickItem = { id: string; title: string; summary: string; publishedAt: string; href?: string; source?: RadarSource };
