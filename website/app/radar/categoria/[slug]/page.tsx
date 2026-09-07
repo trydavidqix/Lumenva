@@ -1,5 +1,0 @@
-import { notFound } from "next/navigation"; import { RadarListingPage } from "@/components/radar/RadarListingPage"; import { categorySlug,getRadarArticlesByCategory,getRadarCategories } from "@/lib/radar/articles"; import { createPageMetadata } from "@/lib/metadata";
-export function generateStaticParams(){return getRadarCategories().map(category=>({slug:categorySlug(category)}));}
-const resolveCategory=(slug:string)=>getRadarCategories().find(c=>categorySlug(c)===slug);
-export async function generateMetadata({params}:{params:Promise<{slug:string}>}){const {slug}=await params;const category=resolveCategory(slug);if(!category)return {};return createPageMetadata({title:`${category} | Lumenva Radar`,description:`Conteúdo do Lumenva Radar sobre ${category}.`,path:`/radar/categoria/${slug}`});}
-export default async function Page({params}:{params:Promise<{slug:string}>}){const {slug}=await params;const category=resolveCategory(slug);if(!category)notFound();return <RadarListingPage title={category} description={`Publicações sobre ${category}.`} articles={getRadarArticlesByCategory(category)}/>}
