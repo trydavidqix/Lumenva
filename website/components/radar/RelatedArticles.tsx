@@ -1,0 +1,1 @@
+import type { RadarArticle } from "@/lib/radar/types"; import { ArticleList } from "./ArticleList"; import styles from "./radar.module.css"; export function RelatedArticles({articles}:{articles:RadarArticle[]}){if(!articles.length)return null;return <section className={styles.section}><h2>Leia também</h2><ArticleList articles={articles}/></section>}
