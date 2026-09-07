@@ -1,0 +1,1 @@
+import { expect,it } from "vitest"; import { getAllRadarArticles } from "@/lib/radar/articles"; import { createRadarArticleJsonLd } from "@/lib/radar/metadata"; it("emits Article structured data",()=>{const data=createRadarArticleJsonLd(getAllRadarArticles()[0]!);expect(data["@type"]).toBe("Article");expect(data.publisher.name).toBe("Lumenva")});
