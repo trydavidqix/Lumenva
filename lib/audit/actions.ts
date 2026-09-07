@@ -215,4 +215,13 @@ export type AuditAction =
   | "ai.flywheel_proposal_rejected"
   | "ai.flywheel_proposal_revision_requested"
   | "ai.flywheel_proposal_approved"
-  | "ai.flywheel_candidate_approved";
+  | "ai.flywheel_candidate_approved"
+  | "content_os.distribution_connection_created"
+  | "content_os.publication_requested"
+  | "content_os.publication_cancelled"
+  | "content_os.source_created"
+  | "content_os.source_status_changed"
+  | "content_os.source_collection_requested"
+  | "content_os.opportunity_status_changed"
+  | "content_os.creative_job_created"
+  | "content_os.asset_registered";

@@ -193,6 +193,35 @@ const schema = z.object({
     .optional()
     .default(""),
   CONTENT_OS_CHANGEDETECTION_API_KEY: z.string().optional().default(""),
+  // Content OS rendering/distribution providers. These are server-only
+  // endpoints and credentials; never expose them through NEXT_PUBLIC_*.
+  CONTENT_OS_POSTIZ_BASE_URL: z
+    .union([z.string().url(), z.literal("")])
+    .optional()
+    .default(""),
+  CONTENT_OS_POSTIZ_API_KEY: z.string().optional().default(""),
+  CONTENT_OS_POSTIZ_TIMEOUT_MS: z.preprocess(
+    (value) => value === "" ? undefined : value,
+    z.coerce.number().int().positive().optional().default(10_000),
+  ),
+  CONTENT_OS_COMFY_BASE_URL: z
+    .union([z.string().url(), z.literal("")])
+    .optional()
+    .default(""),
+  CONTENT_OS_COMFY_API_KEY: z.string().optional().default(""),
+  CONTENT_OS_COMFY_TIMEOUT_MS: z.preprocess(
+    (value) => value === "" ? undefined : value,
+    z.coerce.number().int().positive().optional().default(15_000),
+  ),
+  CONTENT_OS_VIDEO_COMPOSER_BASE_URL: z
+    .union([z.string().url(), z.literal("")])
+    .optional()
+    .default(""),
+  CONTENT_OS_VIDEO_COMPOSER_API_KEY: z.string().optional().default(""),
+  CONTENT_OS_VIDEO_COMPOSER_TIMEOUT_MS: z.preprocess(
+    (value) => value === "" ? undefined : value,
+    z.coerce.number().int().positive().optional().default(30_000),
+  ),
 
   // Fusão (Fase 4): DONO ÚNICO dos eventos ai_agent.dispatch_requested.
   // 'engine' (default) = o worker agent-engine é o único consumidor (o cron
