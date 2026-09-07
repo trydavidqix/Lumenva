@@ -1,0 +1,1 @@
+import { getAllRadarArticles } from "@/lib/radar/articles"; import { serializeRadarRss } from "@/lib/radar/rss"; export function GET(){return new Response(serializeRadarRss(getAllRadarArticles()),{headers:{"Content-Type":"application/rss+xml; charset=utf-8","Cache-Control":"public, max-age=300, s-maxage=3600"}})}

@@ -1,0 +1,1 @@
+import { expect,it } from "vitest"; import { searchRadarArticles } from "@/lib/radar/search"; it("searches case and accents locally",()=>{expect(searchRadarArticles("AUTOMACAO").some(a=>a.slug==="whatsapp-crm-e-automacao")).toBe(true);expect(searchRadarArticles("governanca").some(a=>a.slug==="agentes-de-ia-com-governanca-humana")).toBe(true)});
