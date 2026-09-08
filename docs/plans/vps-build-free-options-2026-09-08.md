@@ -11,9 +11,55 @@ O repositório `trydavidqix/Lumenva` permanece privado. O registry não é o gar
 Recomendação principal, em duas verificações sequenciais:
 
 1. O dono deve verificar no GitHub se o saldo devido é zero e se é possível voltar ao plano Free sem pagamento. Se sim, reativar somente o workflow de publicação de imagem, com limites e permissões mínimas; não reativar `ci`, `e2e` ou `perf`.
-2. Se existir saldo real que não possa ser removido sem pagar, usar uma VM Oracle Cloud Always Free Ampere A1, dedicada ao build, com `buildx` + QEMU para produzir `linux/amd64` e publicar no GHCR. Esta é a única opção pesquisada que oferece uma máquina privada contínua sem preço mensal depois do trial, embora tenha risco de capacidade e de reclaim por ociosidade. O Mac do dono fica como fallback manual para uma publicação urgente.
+2. O repo público temporário + Actions é uma candidata forte de zero infra, mas só após o scan limpo, aprovação de janela pública e confirmação da rede de forks. Não é o default: exposição de código, forks, caches e indexação não têm rollback confiável.
+3. Se existir saldo real que não possa ser removido sem pagar, e a janela pública for rejeitada, usar uma VM Oracle Cloud Always Free Ampere A1, dedicada ao build, com `buildx` + QEMU para produzir `linux/amd64` e publicar no GHCR. Esta é a única opção pesquisada que oferece uma máquina privada contínua sem preço mensal depois do trial, embora tenha risco de capacidade e de reclaim por ociosidade. O Mac do dono fica como fallback manual para uma publicação urgente.
 
 O critério de escolha é custo recorrente zero; “free trial”, créditos promocionais e planos que exigem pagamento para manter o serviço não contam como gratuitos.
+
+## Scan de segredos antes de considerar visibilidade pública
+
+O scan foi somente leitura e cobriu os 4.250 commits alcançáveis por todas as branches locais e remotas (`git rev-list --all`), 93 refs e 42.973 blobs únicos. `gitleaks` e `trufflehog` não estavam instalados; foi usado um scanner local equivalente sobre o conteúdo Git completo, com padrões para `sk-`, `ghp_`, `AKIA`, `SUPABASE_SERVICE_ROLE_KEY`, `PGURL`, `WAHA_API_KEY` e marcadores PEM. Nenhum valor foi gravado no repositório ou incluído neste documento.
+
+Resultado: 437 ocorrências sintáticas, **0 segredos reais confirmados**. As ocorrências são fixtures de testes, marcadores e nomes/valores de exemplo. Evidência representativa, sempre sem o conteúdo do valor:
+
+- `lib/ai/rag/publication/sanitize.test.ts:33,65,121,135,139` — fixtures sintéticas de AWS/PEM.
+- `lib/agent-engine/guardrails/external/sanitize.test.ts:51,70` — fixtures sintéticas de prefixo OpenAI.
+- `lib/automation/n8n/envelope.test.ts:245,256` — fixtures sintéticas de AWS/GitHub.
+- `tests/unit/obsidian-export.test.ts:142` — fixture sintética de AWS.
+
+O resultado é “limpo para esta decisão”, não uma garantia de que uma credencial externa nunca tenha existido: o scanner não valida credenciais contra os provedores e não substitui rotação se alguém reconhecer um valor real. Antes de abrir a visibilidade, o dono deve repetir um scanner de reputação/secret completo em ambiente confiável e revisar manualmente qualquer nova exceção.
+
+## Candidata forte: repositório público apenas durante o build
+
+Como o scan histórico acima não encontrou segredo real, existe uma candidata de custo zero e sem infraestrutura: abrir temporariamente o repositório, executar somente o workflow de publicação no GitHub Actions e voltar a privado. Os runners standard hospedados pelo GitHub são gratuitos e ilimitados para repositórios públicos, incluindo `ubuntu-latest` `linux/amd64`, conforme [GitHub-hosted runners](https://docs.github.com/en/actions/reference/runners/github-hosted-runners) e [Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions).
+
+Esta opção é forte tecnicamente, mas não é a recomendação padrão sem uma janela de exposição aprovada. O repositório já é fork de um projeto open-source; a rede de forks impõe regras próprias. A documentação de [forks](https://docs.github.com/en/pull-requests/reference/forks) diz que a visibilidade é ligada à rede e que um fork não pode ser tornado público isoladamente em todos os casos. A página de [setting repository visibility](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/setting-repository-visibility) também alerta que forks públicos continuam públicos quando a origem volta a privada e que commits podem permanecer acessíveis em outra rede. A UI deve confirmar que esta transição é permitida; se não for, não criar uma cópia pública sem nova aprovação.
+
+### Pré-condições obrigatórias
+
+- **Scan limpo obrigatório:** zero segredo real, zero credencial reconhecível, zero `.env` real e revisão dos artefatos/logs que o workflow publica.
+- **PRECISA DONO:** aprovação explícita da janela pública e aceitação de que a exposição pode ser irreversível.
+- **PRECISA DONO:** confirmar na UI a política da rede de forks e o efeito sobre o fork upstream; não presumir que “voltar a privado” desfaz a exposição.
+- O workflow público deve ser manual (`workflow_dispatch`) ou protegido por branch/tag, publicar app e worker, usar somente secrets mínimos e nunca executar deploy na VPS.
+- Nenhum secret de produção pode ser necessário para o build. O token de push do GHCR deve ser um secret de publicação mínimo; pull/deploy permanece separado.
+
+### Sequência proposta, se autorizada
+
+1. **PRECISA DONO.** Fazer snapshot de branch/SHA e confirmar scan limpo, sem executar qualquer workflow ainda.
+2. **PRECISA DONO.** Nas configurações do repositório, usar **Danger Zone → Change repository visibility → Make public**, somente se a página mostrar o efeito esperado para a rede de forks.
+3. **PRECISA DONO.** Confirmar publicamente que `.env*`, dumps, artifacts antigos, caches, issues, Actions logs, releases e branches não expõem dados que não foram cobertos pelo scan de padrões.
+4. Executar somente `publish-image.yml` por `workflow_dispatch`, com `permissions: contents: read, packages: write`, sem gates `ci`, `e2e` ou `perf` e sem qualquer passo SSH/deploy. Publicar app e worker com tags por SHA e digests.
+5. **PRECISA DONO.** Verificar os dois digests e a ausência de secrets nos logs; depois desabilitar o workflow de publicação, remover o secret de push se aplicável e voltar a privado.
+6. **PRECISA DONO.** Revalidar a rede de forks, branches públicas, caches, artifacts e indexação. Não declarar que o código foi apagado da Internet: forks, clones, caches e indexadores podem persistir.
+
+### Riscos reais e rollback
+
+- **Exposição irreversível:** qualquer pessoa pode clonar, criar fork, espelhar ou indexar o código durante a janela. Voltar a privado não revoga cópias.
+- **Fork network:** como este repositório já é fork, a transição pode desanexar redes, deixar forks públicos ou impedir a operação isolada. O rollback de visibilidade não garante retorno ao estado anterior.
+- **Logs e cache:** um log público, artifact ou layer de imagem pode conter caminho, dependência, source map ou metadata sensível. Limpar depois pode não remover cópias externas.
+- **Abuso de Actions:** mesmo público, limitar o gatilho a owner/manual, não aceitar `pull_request` de forks com secrets e manter o workflow sem deploy.
+
+Rollback operacional é somente voltar a privado, desativar o workflow, revogar tokens e verificar packages/logs; não existe rollback confiável da cópia já observada por terceiros. Se qualquer segredo real aparecer em revisão manual, esta candidata sai imediatamente: primeiro seria necessário `git filter-repo`/limpeza completa e rotação de todas as chaves afetadas, com nova aprovação. Sem essa pré-condição, a recomendação continua Oracle A1.
 
 ## Evidência atual do projeto
 
@@ -158,6 +204,9 @@ Cada passo abaixo é plano futuro. Nenhum foi executado.
 - [GitHub budgets](https://docs.github.com/en/billing/how-tos/set-up-budgets?apiVersion=2022-11-28)
 - [GitHub Packages billing](https://docs.github.com/en/billing/concepts/product-billing/github-packages)
 - [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
+- [GitHub-hosted runners](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
+- [GitHub forks and visibility](https://docs.github.com/en/pull-requests/reference/forks)
+- [Setting repository visibility](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/setting-repository-visibility)
 - [GitLab compute minutes](https://docs.gitlab.com/ci/pipelines/compute_minutes/)
 - [GitLab Community programs](https://docs.gitlab.com/subscriptions/community_programs/)
 - [CircleCI credits](https://circleci.com/docs/guides/plans-pricing/credits/)
