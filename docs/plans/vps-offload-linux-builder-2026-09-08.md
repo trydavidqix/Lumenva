@@ -420,6 +420,185 @@ docker compose -f docker-compose.lumenva.prod.yml --env-file .env up -d --no-dep
   drift de horário, custo ou ausência de audit; manter o scheduler atual até a
   substituição ser provada.
 
+## 8. Tailscale nos três nós
+
+Esta camada fornece SSH privado entre Mac, VPS e builder. Não move serviços,
+não substitui GHCR e não autoriza portas públicas. O Mac já tem Network
+Extension 1.102.3; apenas confirmar o estado. O builder não vira runtime.
+
+**Pre-check**
+
+- **PRECISA DONO.** Confirmar a conta/tailnet, administradores de ACL/tags e se
+  há aprovação de dispositivos. Escolher auth key pré-gerada com expiração curta
+  e tags mínimas, ou login headless por URL. Nunca registrar a chave.
+- Confirmar que não serão abertas portas públicas novas. Tailscale usa NAT
+  traversal; permitir egress HTTPS `*:443` para coordenação/DERP e UDP de saída
+  `:41641` quando possível. UDP `41641` é o padrão de WireGuard direto; DERP é
+  fallback. A firewall deve aceitar na interface `tailscale0` somente as portas
+  necessárias entre estes três nós.
+
+**Ação — VPS**
+
+- **PRECISA DONO.** Depois de backup/registro do estado, instalar headless na
+  VPS:
+
+```sh
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up --auth-key=<AUTH_KEY_NAO_REGISTRAR> --hostname=lumenva-vps --ssh
+```
+
+- Autenticar por auth key não exposta ou pela URL apresentada; usar `--ssh`
+  somente se aprovado.
+
+**Ação — worker Linux**
+
+- **PRECISA DONO.** Somente depois de o PhotoRec terminar, instalar o mesmo
+  cliente e autenticar com chave separada ou URL:
+
+```sh
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up --auth-key=<AUTH_KEY_NAO_REGISTRAR> --hostname=lumenva-worker --ssh
+```
+
+- **PRECISA DONO.** No Admin Console, ativar MagicDNS e aplicar ACLs/tags
+  mínimas: SSH do Mac para VPS/worker; portas de mem0/Graphiti/Neo4j somente se
+  B2 for aprovada. Não conceder acesso amplo ao tailnet.
+- **Ação — Mac. PRECISA DONO.** Confirmar o mesmo tailnet, aprovação e hostname
+  `macbookair`; não reinstalar nem atualizar o cliente neste runbook.
+- **PRECISA DONO.** Restringir `tailscale0` às portas aprovadas; não liberar
+  Docker API, `80/tcp` ou `443/tcp` publicamente. Rever UFW/nftables antes de
+  editar, pois Tailscale instala regras próprias.
+
+**Verificação**
+
+Em cada nó, sem imprimir auth keys:
+
+```sh
+tailscale status
+tailscale netcheck
+```
+
+- Os três nós aparecem online, MagicDNS resolve e `100.x.y.z` é conhecido
+  apenas pelo dono.
+- **PRECISA DONO.** Testar `tailscale ping` e SSH por MagicDNS nos dois sentidos
+  VPS ↔ worker e também Mac → VPS/worker. Medir latência, registrar direct/DERP
+  e confirmar que uma porta não necessária é bloqueada.
+- Confirmar que nenhuma porta nova aparece na interface pública.
+
+**Segurança e rollback**
+
+- **PRECISA DONO.** Rotacionar/revogar auth keys ao fim da janela; remover
+  dispositivos antigos. Considerar Tailscale lock somente após revisão, pois
+  pode impedir alterações sem a chave de desbloqueio.
+- **PRECISA DONO.** Retirar nó isoladamente com `sudo tailscale down` e, no
+  Ubuntu, `sudo apt remove tailscale`; remover apenas ACLs/regras desse nó.
+  Não tocar em volumes, redes Docker, chaves GitHub ou credenciais GHCR.
+
+Fontes: [instalação Linux](https://tailscale.com/docs/install/linux),
+[servidores/auth keys](https://tailscale.com/kb/1245/set-up-servers),
+[auth keys](https://tailscale.com/docs/features/access-control/auth-keys),
+[CLI](https://tailscale.com/kb/1080/cli),
+[firewall/portas](https://tailscale.com/docs/reference/faq/firewall-ports),
+[firewall/DERP](https://tailscale.com/docs/integrations/firewalls),
+[tipos de conexão](https://tailscale.com/docs/reference/connection-types) e
+[ACLs/tags](https://tailscale.com/docs/features/tailnet-policy-file).
+
+## 9. Sidecars de IA: desligar na VPS ou mover para o worker
+
+Serviços: `mem0`, `mem0-postgres`, `neo4j` e `graphiti`. B1 é o default:
+desligar na VPS e aceitar projeções `skipped`. B2 mantém a feature, mas cria
+dependência do PC de casa; nenhuma chamada síncrona de hot-path pode depender
+dela.
+
+### B1 — desligar na VPS (default)
+
+**Pre-check**
+
+- **PRECISA DONO MAIS JANELA.** Confirmar no Supabase que nenhuma organização
+  usa mem0/Graphiti, ou aprovar canary isolado. Confirmar que CRM, WAHA e cron
+  não dependem de resposta síncrona.
+- Fazer backup dos volumes `deskcommcrm_mem0-postgres-data` e
+  `deskcommcrm_neo4j-data` com `tar` e `sha256sum`; guardar fora dos diretórios
+  alvo, sem copiar para builder/GitHub. Registrar só caminho, bytes e checksum.
+
+**Ação**
+
+- **PRECISA DONO MAIS JANELA.** Parar somente os quatro:
+
+```sh
+docker compose -f docker-compose.lumenva.prod.yml stop \
+  mem0 mem0-postgres neo4j graphiti
+```
+
+- Nunca `down`, `down -v`, `rm` ou remoção de volume/rede. Remover `ai-memory` e
+  `ai-graph` somente de comandos futuros de subida; não editar compose agora.
+
+**Verificação e rollback**
+
+- Os quatro param; os outros sete ficam `healthy`; HTTP segue `307`; Caddy,
+  app, worker, WAHA, Redis e scheduler permanecem verdes. Medir `free -h`,
+  `docker stats --no-stream` e swap; a recuperação aproximada de 0.7 GB é
+  expectativa, não prova. Projeções ficam `skipped` conforme esperado.
+- **PRECISA DONO MAIS JANELA.** Reverter sem recriar volumes:
+
+```sh
+docker compose -f docker-compose.lumenva.prod.yml start \
+  mem0 mem0-postgres neo4j graphiti
+```
+
+Revalidar healthchecks, HTTP, logs e projeções; não usar `up` como atalho.
+
+### B2 — mover para o worker Linux via Tailscale
+
+**Caveat:** a VPS passa a depender do PC de casa para mem0, Graphiti e Neo4j.
+A latência VPS ↔ casa é maior/variável; se o worker ou tailnet cair, projeções
+degradam para `skipped` e CRM, WAHA e cron continuam verdes. Não colocar essa
+dependência no hot-path síncrono.
+
+**Pre-check**
+
+- **PRECISA DONO MAIS JANELA.** Completar a secção 8: três nós no tailnet,
+  MagicDNS, ACL mínima, ping nos dois sentidos, latência medida e firewall do
+  worker restrita à interface/portas necessárias.
+- Confirmar compose próprio no worker, imagens/versões, RAM/espaço e ausência
+  de segredos de produção. Fazer backup verificado dos volumes. Confirmar as
+  portas reais no compose: mem0/Graphiti HTTP e Neo4j Bolt `7687` são hipóteses
+  a validar, não valores presumidos.
+
+**Ação — transferir e subir**
+
+- **PRECISA DONO MAIS JANELA.** Parar os quatro na VPS com `stop`; tar dos
+  volumes; transferir por SSH sobre Tailscale; restaurar em volumes Docker do
+  worker com owner/permissões/checksum verificados. Nunca `down -v`/`rm`.
+- Subir somente os quatro no compose próprio do worker. Publicar apenas na
+  interface/IP Tailscale; nunca no IP público `0.0.0.0`.
+- **PRECISA DONO MAIS JANELA.** Na VPS, apontar o env aprovado para
+  `MEM0_BASE_URL=http://<IP_TAILSCALE_WORKER>:<PORTA_MEM0>` e
+  `GRAPHITI_BASE_URL=http://<IP_TAILSCALE_WORKER>:<PORTA_GRAPHITI>`. Se houver
+  ligação Neo4j direta, usar `<IP_TAILSCALE_WORKER>:7687` somente após confirmar
+  a porta. ACL permite apenas `lumenva-vps` → estas portas.
+
+```sh
+docker compose -f docker-compose.lumenva.prod.yml up -d --no-deps app worker
+```
+
+**Verificação e rollback**
+
+- Medir da VPS latência, timeout e taxa de erro das chamadas mem0/Graphiti;
+  confirmar healthchecks no worker, ausência de portas públicas, HTTP `307`,
+  WAHA, Redis/SRH/scheduler/Caddy verdes e projeções não `skipped` apenas após
+  resposta remota válida. Canary de queda do worker deve produzir `skipped`,
+  sem degradar CRM/WAHA/cron.
+- **PRECISA DONO MAIS JANELA.** Repor env para sidecars locais da VPS e subir:
+
+```sh
+docker compose -f docker-compose.lumenva.prod.yml \
+  --profile ai-memory --profile ai-graph up -d
+```
+
+Confirmar healthchecks/HTTP/logs e só então parar os quatro no worker; preservar
+backups/volumes até aceitar o rollback.
+
 ## Critérios de abortar e estado de não execução
 
 Abortar imediatamente se: PhotoRec ainda estiver em curso; faltar aprovação do
@@ -429,9 +608,10 @@ aprovada; GHCR não aceitar escopo mínimo; o worker/app falhar inspeção;
 healthcheck, HTTP `307`, WAHA, cron, RAM/swap ou volume divergir; ou qualquer
 passo pedir `down`, `rm`, `prune` amplo, migration ou alteração de rede/volume.
 
-Neste commit documental: **não executado** — SSH no PC, login GHCR, buildx,
-push, inspeção de imagem, alteração de Compose, token read-only, pull/deploy na
-VPS, prune, parada de sidecars e scheduler externo.
+Neste commit documental: **não executado** — SSH no PC, PhotoRec ainda em curso,
+instalação/login/alteração Tailscale, login GHCR, buildx, push, inspeção de
+imagem, alteração de Compose, token read-only, pull/deploy na VPS, prune,
+parada ou migração de sidecars e scheduler externo.
 
 ## Checklist de aprovação do dono
 
@@ -446,3 +626,6 @@ VPS, prune, parada de sidecars e scheduler externo.
 - [ ] Rollout app → worker e observação aos 5/15/30 minutos autorizados.
 - [ ] Prune limitado e sidecars somente com prova Supabase/canary e checksum.
 - [ ] Opcional de scheduler aprovado somente após idempotência.
+- [ ] Tailscale nos três nós, MagicDNS, ACLs/tags mínimas, firewall e
+      conectividade direct/DERP medidos.
+- [ ] Opção B1 ou B2 escolhida pelo dono; backups/checksums e canary aprovados.
