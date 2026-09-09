@@ -1,0 +1,6 @@
+import type { Metadata } from "next";
+import { ArticleList, BlogCategoryNav } from "@/components/blog";
+import { blogCategorySlug } from "@/lib/blog/articles";
+import { loadPublishedBlogArticles } from "@/lib/blog/published";
+export const metadata: Metadata = { title: "Guias | Blog Lumenva", description: "Guias práticos de IA, CRM, agentes e automação." };
+export default async function GuidesPage() { const articles = await loadPublishedBlogArticles(); const categories = [{ label: "Todos", href: "/blog", slug: "all" }, { label: "Notícias", href: "/blog/noticias", slug: "noticias" }, { label: "Insights", href: "/blog/insights", slug: "insights" }, { label: "Guias", href: "/blog/guias", slug: "guias" }, ...[...new Set(articles.map((article) => article.category))].map((category) => ({ label: category, href: `/blog/categoria/${blogCategorySlug(category)}`, slug: blogCategorySlug(category) }))]; return <div className="blogShell"><header className="pageHeader"><p>LUMENVA BLOG</p><h1>Guias</h1><p>Conteúdo prático para entender e aplicar tecnologia.</p></header><BlogCategoryNav categories={categories} current="guias" /><ArticleList articles={articles.filter((article) => article.type === "guia")} /></div>; }

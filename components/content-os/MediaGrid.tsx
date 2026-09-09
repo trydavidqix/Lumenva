@@ -1,0 +1,16 @@
+"use client";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ArrowsClockwise, ImageSquare, Pause, Play, Trash } from "@/lib/ui/icons";
+
+export type MediaJobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
+export interface MediaAsset { id: string; name: string; kind: "image" | "video"; url?: string; status: MediaJobStatus; workflow?: string; createdAt?: string; error?: string; }
+const STATUS_LABEL: Record<MediaJobStatus, string> = { queued: "Na fila", running: "A gerar", succeeded: "Pronto", failed: "Falhou", cancelled: "Cancelado" };
+const STATUS_VARIANT: Record<MediaJobStatus, "neutral" | "warning" | "success" | "error"> = { queued: "neutral", running: "warning", succeeded: "success", failed: "error", cancelled: "neutral" };
+
+export function MediaGrid({ assets, onRetry, onCancel }: { assets: MediaAsset[]; onRetry?: (asset: MediaAsset) => void; onCancel?: (asset: MediaAsset) => void }) {
+  if (!assets.length) return <div className="rounded-lg border border-dashed border-border p-12 text-center"><ImageSquare className="mx-auto mb-3 text-text-muted" size={32} /><p className="font-medium text-text">Nenhum asset ainda</p><p className="mt-1 text-sm text-text-muted">Gere ou carregue uma mídia aprovada para começar.</p></div>;
+  return <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{assets.map((asset) => <article key={asset.id} className="overflow-hidden rounded-lg border border-border bg-surface shadow-xs"><div className="relative aspect-video bg-surface-elevated">{asset.url && asset.status === "succeeded" ? asset.kind === "video" ? <video src={asset.url} controls className="h-full w-full object-cover" aria-label={asset.name} /> : <img src={asset.url} alt={asset.name} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-text-muted">{asset.status === "running" ? <ArrowsClockwise className="animate-spin" size={28} /> : <ImageSquare size={28} />}</div>}</div><div className="space-y-3 p-4"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><h2 className="truncate text-sm font-medium text-text">{asset.name}</h2><p className="mt-1 text-xs text-text-muted">{asset.workflow ?? (asset.kind === "video" ? "Vídeo" : "Imagem")}</p></div><Badge variant={STATUS_VARIANT[asset.status]}>{STATUS_LABEL[asset.status]}</Badge></div>{asset.error ? <p className="text-xs text-error-fg">{asset.error}</p> : null}<div className="flex gap-2">{asset.status === "failed" ? <Button type="button" size="sm" variant="secondary" onClick={() => onRetry?.(asset)}><ArrowsClockwise size={14} /> Tentar novamente</Button> : null}{asset.status === "queued" ? <Button type="button" size="sm" variant="ghost" onClick={() => onCancel?.(asset)}><Pause size={14} /> Cancelar</Button> : null}{asset.status === "running" ? <Button type="button" size="sm" variant="ghost" onClick={() => onCancel?.(asset)}><Trash size={14} /> Parar</Button> : null}{asset.status === "succeeded" ? <Button type="button" size="sm" variant="ghost" onClick={() => onRetry?.(asset)}><Play size={14} /> Nova variação</Button> : null}</div></div></article>)}</div>;
+}
+

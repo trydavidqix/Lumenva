@@ -8,6 +8,11 @@ import type {
   ContentSourceRecord,
   IntelligenceRepository,
 } from "./source-service";
+import type {
+  ContentOpportunityRecord,
+  ContentSignalRecord,
+  SignalCollectionRepository,
+} from "./collection-service";
 
 type Db = SupabaseClient<Database>;
 
@@ -63,13 +68,48 @@ function monitor(row: Database["public"]["Tables"]["competitor_monitors"]["Row"]
   };
 }
 
-function requireRow<T>(data: T | null, error: { message: string } | null): T {
-  if (error || !data) throw new Error(error?.message ?? "Content OS persistence failed");
+function signal(row: Database["public"]["Tables"]["content_signals"]["Row"]): ContentSignalRecord {
+  return {
+    id: row.id,
+    organizationId: row.organization_id,
+    sourceId: row.source_id,
+    provider: row.provider,
+    externalId: row.external_id,
+    rawHash: row.raw_hash,
+    sourceUrl: row.source_url,
+    title: row.title,
+    body: row.body,
+    publishedAt: row.published_at,
+    observedAt: row.observed_at,
+    metadata: asRecord(row.metadata),
+  };
+}
+
+function opportunity(row: Database["public"]["Tables"]["content_opportunities"]["Row"]): ContentOpportunityRecord {
+  return {
+    id: row.id,
+    organizationId: row.organization_id,
+    signalId: row.signal_id,
+    title: row.title,
+    rationale: row.rationale,
+    priority: row.priority,
+    status: row.status as ContentOpportunityRecord["status"],
+    metadata: asRecord(row.metadata),
+  };
+}
+
+function requireRow<T>(data: T | null, error: { message: string; code?: string } | null): T {
+  if (error) {
+    const failure = new Error(error.message) as Error & { code?: string };
+    failure.code = error.code;
+    throw failure;
+  }
+  if (!data) throw new Error("Content OS persistence failed");
   return data;
 }
 
 /** Maps Content OS domain records to the existing Supabase schema. */
-export class SupabaseIntelligenceRepository implements IntelligenceRepository {
+export class SupabaseIntelligenceRepository implements IntelligenceRepository, SignalCollectionRepository {
   constructor(private readonly db: Db) {}
 
   async createSource(input: Omit<ContentSourceRecord, "id" | "status" | "externalRef">): Promise<ContentSourceRecord> {
@@ -96,6 +136,61 @@ export class SupabaseIntelligenceRepository implements IntelligenceRepository {
       .maybeSingle();
     if (error) throw new Error(error.message);
     return data ? source(data) : null;
+  }
+
+  async findSignalByDedupKey(input: {
+    organizationId: string;
+    provider: string;
+    sourceId: string;
+    externalId: string;
+    rawHash: string;
+  }): Promise<ContentSignalRecord | null> {
+    const base = this.db.from("content_signals").select().eq("organization_id", input.organizationId)
+      .eq("provider", input.provider).eq("source_id", input.sourceId);
+    const byExternal = await base.eq("external_id", input.externalId).maybeSingle();
+    if (byExternal.error) throw new Error(byExternal.error.message);
+    if (byExternal.data) return signal(byExternal.data);
+    const byHash = await this.db.from("content_signals").select().eq("organization_id", input.organizationId)
+      .eq("provider", input.provider).eq("source_id", input.sourceId).eq("raw_hash", input.rawHash).maybeSingle();
+    if (byHash.error) throw new Error(byHash.error.message);
+    return byHash.data ? signal(byHash.data) : null;
+  }
+
+  async createSignal(input: Omit<ContentSignalRecord, "id">): Promise<ContentSignalRecord> {
+    const { data, error } = await this.db.from("content_signals").insert({
+      organization_id: input.organizationId,
+      source_id: input.sourceId,
+      provider: input.provider,
+      external_id: input.externalId,
+      raw_hash: input.rawHash,
+      source_url: input.sourceUrl,
+      title: input.title,
+      body: input.body,
+      published_at: input.publishedAt,
+      observed_at: input.observedAt,
+      metadata: toJson(input.metadata),
+    }).select().single();
+    return signal(requireRow(data, error));
+  }
+
+  async findOpportunityBySignal(organizationId: string, signalId: string): Promise<ContentOpportunityRecord | null> {
+    const { data, error } = await this.db.from("content_opportunities").select().eq("organization_id", organizationId)
+      .eq("signal_id", signalId).maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ? opportunity(data) : null;
+  }
+
+  async createOpportunity(input: Omit<ContentOpportunityRecord, "id">): Promise<ContentOpportunityRecord> {
+    const { data, error } = await this.db.from("content_opportunities").insert({
+      organization_id: input.organizationId,
+      signal_id: input.signalId,
+      title: input.title,
+      rationale: input.rationale,
+      priority: input.priority,
+      status: input.status,
+      metadata: toJson(input.metadata),
+    }).select().single();
+    return opportunity(requireRow(data, error));
   }
 
   async updateSource(organizationId: string, sourceId: string, patch: Partial<Pick<ContentSourceRecord, "configuration" | "status">>): Promise<ContentSourceRecord | null> {
@@ -151,10 +246,15 @@ export class SupabaseIntelligenceRepository implements IntelligenceRepository {
   }
 
   async emit(input: { type: string; organizationId: string; entityId: string; metadata?: Record<string, unknown> }): Promise<void> {
+    const entityKind = input.type === "content.signal_collected"
+      ? "content_signal"
+      : input.type === "content.opportunity_created"
+        ? "content_opportunity"
+        : "content_source";
     const { error } = await this.db.from("event_log").insert({
       organization_id: input.organizationId,
       event_type: input.type,
-      entity_kind: "content_source",
+      entity_kind: entityKind,
       entity_id: input.entityId,
       payload: { organizationId: input.organizationId, entityId: input.entityId },
       metadata: toJson(input.metadata ?? {}),
