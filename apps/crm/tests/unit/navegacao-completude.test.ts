@@ -20,7 +20,7 @@ import { NAV_DESTINATIONS, NAV_GROUPS } from "@/lib/navigation/registry";
  * (`app/admin/`), o onboarding e as páginas públicas têm navegação própria.
  */
 
-const RAIZ = process.cwd();
+const RAIZ = path.join(process.cwd(), "apps/crm");
 const BASE = path.join(RAIZ, "app", "app");
 
 /**

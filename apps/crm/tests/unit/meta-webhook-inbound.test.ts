@@ -10,7 +10,7 @@ import { parseMetaWebhook, type InboundMessageEvent } from "@/lib/channels/meta/
  * `parameter_format` só vem se pedido e que `quality_score` vem como objeto.
  */
 const REAIS = JSON.parse(
-  readFileSync("tests/fixtures/meta/inbound-webhooks.json", "utf8"),
+  readFileSync("apps/crm/tests/fixtures/meta/inbound-webhooks.json", "utf8"),
 ) as Parameters<typeof parseMetaWebhook>[0][];
 
 const inbound = (i: number) =>

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const read = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
+const read = (path: string) => readFileSync(join(process.cwd(), "apps/crm", path), "utf8");
 
 describe("voice worker tenant binding", () => {
   it("sends the worker technical number with every turn and lifecycle event", () => {

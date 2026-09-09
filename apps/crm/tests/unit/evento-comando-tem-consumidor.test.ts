@@ -37,7 +37,7 @@ import { join } from "node:path";
 import { getRegisteredHandlers } from "@/lib/event-log/dispatcher";
 import { ensureHandlersRegistered } from "@/lib/event-log/register-handlers";
 
-const RAIZES = ["app", "lib", "workers"];
+const RAIZES = ["apps/crm/app", "apps/crm/lib", "apps/crm/workers"];
 const EMISSAO = /p_event_type:\s*"([a-z0-9_.]+)"/g;
 
 /**

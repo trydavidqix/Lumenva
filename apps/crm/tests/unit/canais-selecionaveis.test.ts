@@ -126,7 +126,7 @@ describe("listSelectableChannels", () => {
 });
 
 /** Telas: onde um seletor de canal pode nascer. A API tem regras próprias. */
-const RAIZES_DE_TELA = ["app/app", "app/actions", "app/onboarding", "components", "hooks"];
+const RAIZES_DE_TELA = ["apps/crm/app/app", "apps/crm/app/actions", "apps/crm/app/onboarding", "apps/crm/components", "apps/crm/hooks"];
 
 /** Sem try/catch: raiz que sumiu tem que explodir, não virar varredura vazia. */
 function arquivosFonte(dir: string): string[] {

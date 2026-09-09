@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const root = process.cwd();
+const root = path.join(process.cwd(), "apps/crm");
 
 describe('Phase 7 all-engine benchmark command', () => {
   it('exposes the single package script and executable orchestrator', () => {

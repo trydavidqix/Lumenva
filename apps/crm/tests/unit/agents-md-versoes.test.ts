@@ -13,7 +13,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const root = process.cwd();
+const root = join(process.cwd(), "apps/crm");
 
 /** Como o nome pode aparecer no AGENTS.md → nome canônico no package.json. */
 const BIBLIOTECAS: Array<{ rotulo: string; pacote: string }> = [

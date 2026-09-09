@@ -22,7 +22,7 @@ interface RawTemplate {
 }
 
 const FIXTURE = JSON.parse(
-  readFileSync("tests/fixtures/meta/message-templates.json", "utf8"),
+  readFileSync("apps/crm/tests/fixtures/meta/message-templates.json", "utf8"),
 ) as { data: RawTemplate[] };
 
 function contractOf(name: string): TemplateContract {

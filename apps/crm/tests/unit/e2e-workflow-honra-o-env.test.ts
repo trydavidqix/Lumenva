@@ -42,11 +42,12 @@ import { describe, expect, it } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-const RAIZ = path.resolve(__dirname, "../..");
+const RAIZ = path.resolve(__dirname, "../../../..");
+const CRM_ROOT = path.join(RAIZ, "apps/crm");
 
 const workflow = fs.readFileSync(path.join(RAIZ, ".github/workflows/e2e.yml"), "utf8");
-const config = fs.readFileSync(path.join(RAIZ, "playwright.config.ts"), "utf8");
-const packageJson = JSON.parse(fs.readFileSync(path.join(RAIZ, "package.json"), "utf8")) as {
+const config = fs.readFileSync(path.join(CRM_ROOT, "playwright.config.ts"), "utf8");
+const packageJson = JSON.parse(fs.readFileSync(path.join(CRM_ROOT, "package.json"), "utf8")) as {
   scripts: Record<string, string>;
 };
 
@@ -79,7 +80,7 @@ describe("o workflow do e2e honra o contrato de ambiente que a suíte exige", ()
 
   it("o script que gera o arquivo existe e está no package.json", () => {
     expect(packageJson.scripts["e2e:env"]).toBeTruthy();
-    expect(fs.existsSync(path.join(RAIZ, "scripts/gerar-env-e2e.sh"))).toBe(true);
+    expect(fs.existsSync(path.join(CRM_ROOT, "scripts/gerar-env-e2e.sh"))).toBe(true);
   });
 
   it("algum passo do workflow gera o .env.e2e ANTES de qualquer passo que o consuma", () => {
@@ -167,7 +168,7 @@ describe("o workflow do e2e honra o contrato de ambiente que a suíte exige", ()
     expect(workflow).toMatch(/require\(["']@upstash\/redis["']\)/);
     expect(workflow).toMatch(/new Redis\(\{\s*url:\s*["']http:\/\/127\.0\.0\.1:3998["']/);
     expect(workflow).toMatch(/redis\.ping\(\)/);
-    const gerador = fs.readFileSync(path.join(RAIZ, "scripts/gerar-env-e2e.sh"), "utf8");
+    const gerador = fs.readFileSync(path.join(CRM_ROOT, "scripts/gerar-env-e2e.sh"), "utf8");
     expect(gerador).toMatch(/TOKEN_REDIS="\$\{E2E_SRH_TOKEN:-e2e-placeholder-nao-e-segredo\}"/);
   });
 

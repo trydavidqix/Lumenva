@@ -5,7 +5,7 @@ import { phoneLookupVariants, samePhone } from "@/lib/channels/phone-variants";
 
 /** Payloads REAIS capturados da WABA de teste em 2026-07-29. */
 const INBOUND = JSON.parse(
-  readFileSync("tests/fixtures/meta/inbound-webhooks.json", "utf8"),
+  readFileSync("apps/crm/tests/fixtures/meta/inbound-webhooks.json", "utf8"),
 ) as Array<{ entry: Array<{ changes: Array<{ value: { contacts?: Array<{ wa_id: string }> } }> }> }>;
 
 const waIdReal = INBOUND[0]!.entry[0]!.changes[0]!.value.contacts![0]!.wa_id;

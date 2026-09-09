@@ -36,9 +36,9 @@ import { describe, expect, it } from "vitest";
  * rodam sem ninguém olhando, dentro da suíte. Uma sonda é disparada à mão, com
  * a pessoa lendo a saída — exigir a linha de todas seria cerimônia sem ganho.
  */
-const SEEDS = readdirSync(join(process.cwd(), "scripts"))
+const SEEDS = readdirSync(join(process.cwd(), "apps/crm/scripts"))
   .filter((f) => f.startsWith("seed-e2e-") && f.endsWith(".ts"))
-  .map((f) => join("scripts", f))
+  .map((f) => join("apps/crm/scripts", f))
   .sort();
 
 /** Toda sonda/prova/seed que possa falar com um Supabase. */
@@ -47,7 +47,7 @@ function varrer(dir: string): string[] {
     .filter((f) => f.endsWith(".ts") || f.endsWith(".tsx"))
     .map((f) => join(dir, f));
 }
-const SONDAS = [...varrer("scripts"), ...varrer("tests"), ...varrer("tests/e2e")].sort();
+const SONDAS = [...varrer("apps/crm/scripts"), ...varrer("apps/crm/tests"), ...varrer("apps/crm/tests/e2e")].sort();
 
 /**
  * A forma que denuncia: ler o arquivo, em vez de perguntar ao ambiente.

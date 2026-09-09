@@ -19,7 +19,7 @@ import { lerEnvelopeMeta } from "@/lib/channels/meta/envelope";
 import { parseMetaWebhook } from "@/lib/channels/meta/webhook";
 
 /** Payloads REAIS capturados da WABA de teste — os mesmos de `meta-webhook-inbound.test.ts`. */
-const REAIS = JSON.parse(readFileSync("tests/fixtures/meta/inbound-webhooks.json", "utf8")) as unknown[];
+const REAIS = JSON.parse(readFileSync("apps/crm/tests/fixtures/meta/inbound-webhooks.json", "utf8")) as unknown[];
 
 describe("os payloads reais atravessam inteiros", () => {
   it.each(REAIS.map((p, i) => [i, p] as const))("payload real #%i passa e nada some", (_i, cru) => {

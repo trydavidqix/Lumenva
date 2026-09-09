@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const source = () => readFileSync(join(process.cwd(), "app/api/v1/voice/calls/route.ts"), "utf8");
+const source = () => readFileSync(join(process.cwd(), "apps/crm/app/api/v1/voice/calls/route.ts"), "utf8");
 
 describe("governed outbound voice route", () => {
   it("requires manager role and derives tenant from authenticated organization", () => {

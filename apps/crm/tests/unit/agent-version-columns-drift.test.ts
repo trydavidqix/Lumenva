@@ -16,7 +16,7 @@ import { describe, expect, it } from "vitest";
 
 import { versionCreateSchema } from "@/lib/ai/agents/validation";
 
-const ROOT = process.cwd();
+const ROOT = join(process.cwd(), "apps/crm");
 
 /** Todo arquivo que carrega uma cópia da lista de colunas de versão. */
 const FILES_WITH_VERSION_COLUMNS = [
