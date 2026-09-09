@@ -1,0 +1,5 @@
+"use client";
+import { useEffect, useState } from "react";
+import { ContentOsShell } from "@/components/content-os/ContentOsShell";
+import { CompetitorMonitorList, type CompetitorMonitor } from "@/components/content-os/CompetitorMonitorList";
+export default function ContentCompetitorsPage() { const [items, setItems] = useState<CompetitorMonitor[]>([]); const [loading, setLoading] = useState(true); useEffect(() => { void fetch("/api/v1/content-os/intelligence/competitors", { credentials: "include" }).then((r) => r.ok ? r.json() : Promise.reject()).then((p: { data?: CompetitorMonitor[] }) => setItems(Array.isArray(p.data) ? p.data : [])).catch(() => setItems([])).finally(() => setLoading(false)); }, []); return <ContentOsShell><div className="space-y-4"><div><h2 className="text-lg font-semibold">Radar de concorrentes</h2><p className="text-sm text-muted-foreground">Acompanhe páginas importantes e receba mudanças relevantes em um só lugar.</p></div><CompetitorMonitorList monitors={items} loading={loading} /></div></ContentOsShell>; }
