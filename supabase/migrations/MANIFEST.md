@@ -194,6 +194,9 @@ aplica.
 | `20260819130000` | `0139_agent_memory_tables` | Projeções de memória multi-turn (`agent_memory`, `agent_decisions`, `agent_errors`) e view de contexto, todas tenant-scoped com RLS e índices de expiração. |
 | `20260905180000` | `0156_conversation_archive_per_user` | Arquivamento de conversas por utilizador, com RLS e unicidade por conversa/utilizador. |
 | `20260906100000` | `0157_contacts_pacing_exempt` | Coluna aditiva `contacts.pacing_exempt` (default false) para isenção por contacto dos gates de pacing/janela; STOP e LGPD permanecem ativos. |
+| `20260907100000` | `0158_content_os_editorial_persistence` | Content OS V1: research runs retomáveis, evidências com hash e estado de verificação, claims ligados a evidências, quality gates e revisões versionadas; todas tenant-aware, com RLS, índices de reconciliação, idempotência e triggers de coerência entre organizações. |
+| `20260907110000` | `0159_content_os_learning_idempotency` | Chave de idempotência tenant-aware para eventos de aprendizagem e detecção segura de content decay. |
+| `20260907120000` | `0160_ai_agent_command_approvals` | Nova Mode V1: aprovações duráveis de comandos do navegador, com idempotência por organização, expiração, estado de execução, RLS manager+ e guarda de coerência entre agente, versão e tenant. |
 
 ## Reproducibility
 

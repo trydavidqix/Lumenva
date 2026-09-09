@@ -8,6 +8,7 @@ import {
   Buildings,
   ChartBar,
   ChartLineUp,
+  CalendarBlank,
   ClipboardText,
   ClockCountdown,
   ClockCounterClockwise,
@@ -21,6 +22,7 @@ import {
   Key,
   Lightbulb,
   Lock,
+  ImageSquare,
   Phone,
   PlugsConnected,
   PuzzlePiece,
@@ -28,6 +30,7 @@ import {
   Robot,
   ScalesSimple,
   ShieldCheck,
+  Sparkle,
   Signpost,
   Storefront,
   UserCircle,
@@ -51,7 +54,14 @@ import {
  * Doutrina: docs/doctrine/sistema-vivo.md — "por qual porta se chega até mim?"
  */
 
-export type NavGroupId = "atendimento" | "crm" | "ia" | "canais" | "analise" | "organizacao";
+export type NavGroupId =
+  | "atendimento"
+  | "crm"
+  | "ia"
+  | "canais"
+  | "analise"
+  | "organizacao"
+  | "conteudo";
 
 export interface NavGroup {
   id: NavGroupId;
@@ -98,6 +108,7 @@ export const NAV_GROUPS: NavGroup[] = [
   { id: "atendimento", label: "Atendimento" },
   { id: "crm", label: "CRM" },
   { id: "ia", label: "Agente de IA", hub: { href: "/app/ai", label: "Ver tudo em IA" } },
+  { id: "conteudo", label: "Content OS", hub: { href: "/app/content-os", label: "Ver tudo em conteúdo" } },
   { id: "canais", label: "Canais" },
   { id: "analise", label: "Análise" },
   {
@@ -300,6 +311,90 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     icon: Gauge,
     group: "ia",
     section: "Acompanhar o agente",
+    minRole: "manager",
+  },
+
+  // ---- Content OS — descobrir, criar, publicar, aprender ----
+  {
+    href: "/app/content-os",
+    label: "Visão geral",
+    description: "O que precisa de uma decisão, está em produção ou foi publicado.",
+    icon: ChartLineUp,
+    group: "conteudo",
+    sidebar: true,
+  },
+  {
+    href: "/app/content-os/radar",
+    label: "Radar de notícias",
+    description: "Sinais relevantes transformados em oportunidades de conteúdo.",
+    icon: ClockCountdown,
+    group: "conteudo",
+    section: "Descobrir",
+    minRole: "manager",
+    sidebar: true,
+  },
+  {
+    href: "/app/content-os/competitors",
+    label: "Concorrentes",
+    description: "Mudanças relevantes nas páginas que você acompanha.",
+    icon: Buildings,
+    group: "conteudo",
+    section: "Descobrir",
+    minRole: "manager",
+    sidebar: true,
+  },
+  {
+    href: "/app/content-os/create",
+    label: "Criar conteúdo",
+    description: "Transforme uma oportunidade em conteúdo revisável e aprovado.",
+    icon: Sparkle,
+    group: "conteudo",
+    section: "Criar",
+    minRole: "manager",
+  },
+  {
+    href: "/app/content-os/scripts",
+    label: "Roteiros",
+    description: "Roteiros versionados ligados a campanhas e conteúdos.",
+    icon: FileText,
+    group: "conteudo",
+    section: "Criar",
+    minRole: "manager",
+  },
+  {
+    href: "/app/content-os/hooks",
+    label: "Biblioteca de hooks",
+    description: "Aberturas reutilizáveis com contexto de uso e resultado.",
+    icon: Lightbulb,
+    group: "conteudo",
+    section: "Criar",
+    minRole: "manager",
+  },
+  {
+    href: "/app/content-os/creators",
+    label: "Criadores",
+    description: "Pessoas, marcas e agentes ligados aos seus conteúdos.",
+    icon: UsersThree,
+    group: "conteudo",
+    section: "Operar",
+    minRole: "manager",
+  },
+  {
+    href: "/app/content-os/media",
+    label: "Media Studio",
+    description: "Assets e gerações de mídia em um só lugar.",
+    icon: ImageSquare,
+    group: "conteudo",
+    section: "Operar",
+    minRole: "manager",
+  },
+  {
+    href: "/app/content-os/calendar",
+    label: "Calendário",
+    description: "Aprovações, agendamentos e publicações próximas.",
+    icon: CalendarBlank,
+    group: "conteudo",
+    section: "Operar",
     minRole: "manager",
   },
 

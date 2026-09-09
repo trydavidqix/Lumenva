@@ -140,6 +140,7 @@ export const navigation: readonly NavigationItem[] = [
 
 export const footerNavigation: readonly NavigationItem[] = [
   ...navigation,
+  { label: "Blog", href: "/blog" },
   ...solutionsMenu.map(({ href, label }) => ({ href, label })),
   { label: "Sobre", href: "/sobre" },
   { label: "Projetos", href: "/projetos" },
