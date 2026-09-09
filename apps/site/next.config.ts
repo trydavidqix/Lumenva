@@ -2,7 +2,9 @@ import type { NextConfig } from "next";
 import { fileURLToPath } from "node:url";
 import withBundleAnalyzer from "@next/bundle-analyzer";
 
-const websiteRoot = fileURLToPath(new URL(".", import.meta.url));
+// The workspace root must include the root node_modules/next symlink after the
+// former website/ app moved under apps/site.
+const workspaceRoot = fileURLToPath(new URL("../..", import.meta.url));
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
@@ -38,7 +40,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   images: { formats: ["image/avif", "image/webp"] },
   turbopack: {
-    root: websiteRoot,
+    root: workspaceRoot,
   },
   async headers() {
     return [
