@@ -1,0 +1,10 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { ArticleList, BlogCategoryNav } from "@/components/blog";
+import { blogCategorySlug } from "@/lib/blog/articles";
+import { loadPublishedBlogArticles } from "@/lib/blog/published";
+
+const resolve = (slug: string, categories: readonly string[]) => categories.find((category) => blogCategorySlug(category) === slug);
+export async function generateStaticParams() { const articles = await loadPublishedBlogArticles(); return [...new Set(articles.map((article) => article.category))].map((category) => ({ slug: blogCategorySlug(category) })); }
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> { const articles = await loadPublishedBlogArticles(); const category = resolve((await params).slug, [...new Set(articles.map((article) => article.category))]); return category ? { title: `${category} | Blog Lumenva`, description: `Conteúdo da Lumenva sobre ${category}.` } : {}; }
+export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) { const articles = await loadPublishedBlogArticles(); const slug = (await params).slug; const category = resolve(slug, [...new Set(articles.map((article) => article.category))]); if (!category) notFound(); const categories = [{ label: "Todos", href: "/blog", slug: "all" }, { label: "Notícias", href: "/blog/noticias", slug: "noticias" }, { label: "Insights", href: "/blog/insights", slug: "insights" }, { label: "Guias", href: "/blog/guias", slug: "guias" }, ...[...new Set(articles.map((article) => article.category))].map((item) => ({ label: item, href: `/blog/categoria/${blogCategorySlug(item)}`, slug: blogCategorySlug(item) }))]; return <div className="blogShell"><header className="pageHeader"><p>LUMENVA BLOG</p><h1>{category}</h1><p>Publicações sobre {category}.</p></header><BlogCategoryNav categories={categories} current={slug} /><ArticleList articles={articles.filter((article) => article.category.toLocaleLowerCase("pt") === category.toLocaleLowerCase("pt"))} /></div>; }
