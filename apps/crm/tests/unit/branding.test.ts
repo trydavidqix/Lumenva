@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { DEFAULT_APP_NAME, resolveBranding } from "@/lib/branding";
 
-const RAIZ = process.cwd();
+const RAIZ = path.join(process.cwd(), "apps/crm");
 
 describe("resolveBranding", () => {
   it("cai no padrão quando não há marca configurada", () => {

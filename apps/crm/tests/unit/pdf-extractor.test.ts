@@ -13,7 +13,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const FIXTURE = join(process.cwd(), "tests/fixtures/sample-text.pdf");
+const FIXTURE = join(process.cwd(), "apps/crm/tests/fixtures/sample-text.pdf");
 const TEXTO_ESPERADO = "DeskcommCRM RAG fixture";
 
 afterEach(() => {

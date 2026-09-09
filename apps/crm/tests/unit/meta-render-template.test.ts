@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { renderTemplateBody } from "@/lib/channels/meta/render-template";
 
 const FIXTURE = JSON.parse(
-  readFileSync("tests/fixtures/meta/message-templates.json", "utf8"),
+  readFileSync("apps/crm/tests/fixtures/meta/message-templates.json", "utf8"),
 ) as { data: { name: string; language: string; components?: unknown[] }[] };
 
 const tpl = (n: string) => FIXTURE.data.find((t) => t.name === n)!;

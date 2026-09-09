@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 describe("AI Platform Golden Dataset", () => {
   it("contains at least 25 synthetic cases with unique identifiers", () => {
     const cases: Array<{ id: string; organization_id: string; contact_id: string; expected: { risk: string } }> = JSON.parse(
-      readFileSync("tests/fixtures/ai-platform/golden-cases.json", "utf8"),
+      readFileSync("apps/crm/tests/fixtures/ai-platform/golden-cases.json", "utf8"),
     );
     // Not a fixed snapshot count: the fixture's own schema (scripts/ai-platform-eval.ts)
     // enforces .min(25), and this file has already grown once (25 -> 30) as later

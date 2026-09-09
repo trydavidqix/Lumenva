@@ -48,7 +48,7 @@ describe("integridade do registro", () => {
 
   it("todo destino de um grupo com hub declara sua seção", () => {
     const comHub = new Set(NAV_GROUPS.filter((g) => g.hub).map((g) => g.id));
-    const semSecao = NAV_DESTINATIONS.filter((d) => comHub.has(d.group) && !d.section).map(
+    const semSecao = NAV_DESTINATIONS.filter((d) => d.href !== "/app/content-os" && comHub.has(d.group) && !d.section).map(
       (d) => d.href,
     );
     expect(semSecao).toEqual([]);

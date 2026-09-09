@@ -149,8 +149,7 @@ const DOCS = versionados("*.md").filter(
  */
 const LEGADO = new Set([
   "docs/handoffs/HANDOFF-inbox-multimodal.md",
-  "HANDOFF-operacao-visivel.md",
-  "HANDOFF.md",
+  "docs/handoff/HANDOFF-operacao-visivel.md",
   "docs/superpowers/plans/2026-07-21-onda0-fundacao-midia.md",
   "docs/superpowers/plans/2026-07-24-harness-fase2-skills.md",
   "loop/checkpoints/G2-report.md",

@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const route = () => readFileSync(join(process.cwd(), "app/api/v1/voice/config/route.ts"), "utf8");
-const page = () => readFileSync(join(process.cwd(), "app/app/settings/tenant/voice/page.tsx"), "utf8");
+const route = () => readFileSync(join(process.cwd(), "apps/crm/app/api/v1/voice/config/route.ts"), "utf8");
+const page = () => readFileSync(join(process.cwd(), "apps/crm/app/app/settings/tenant/voice/page.tsx"), "utf8");
 
 describe("voice tenant config surface", () => {
   it("protects reads and writes with admin role and trusted active organization", () => {

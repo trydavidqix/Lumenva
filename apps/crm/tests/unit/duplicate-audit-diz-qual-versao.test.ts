@@ -29,7 +29,7 @@ const ROTA = "app/api/v1/ai/agents/[id]/duplicate/route.ts";
 const ACAO = "app/app/ai/agents/_actions.ts";
 
 function fonte(rel: string): string {
-  return readFileSync(join(process.cwd(), rel), "utf8");
+  return readFileSync(join(process.cwd(), "apps/crm", rel), "utf8");
 }
 
 /** Recorta o bloco `metadata: { ... }` que acompanha `ai_agent.duplicated`. */

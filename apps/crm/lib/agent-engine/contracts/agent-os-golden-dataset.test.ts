@@ -16,7 +16,7 @@ interface GoldenCase {
 }
 
 const cases = JSON.parse(
-  readFileSync(join(process.cwd(), 'tests/fixtures/agent-os/phase-1-6-golden-cases.json'), 'utf8'),
+  readFileSync(join(process.cwd(), 'apps/crm/tests/fixtures/agent-os/phase-1-6-golden-cases.json'), 'utf8'),
 ) as GoldenCase[];
 
 const REQUIRED_SCENARIOS = [

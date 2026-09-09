@@ -5,7 +5,7 @@ import { sendTemplate } from "@/lib/channels/meta/send-template";
 import type { TemplateBinding } from "@/lib/channels/meta/template-binding";
 
 const FIXTURE = JSON.parse(
-  readFileSync("tests/fixtures/meta/message-templates.json", "utf8"),
+  readFileSync("apps/crm/tests/fixtures/meta/message-templates.json", "utf8"),
 ) as { data: { name: string; language: string; components?: unknown[] }[] };
 
 const PEDIDO = FIXTURE.data.find((t) => t.name === "jaspers_market_order_confirmation_v1")!;

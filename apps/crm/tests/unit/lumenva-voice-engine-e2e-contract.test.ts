@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const read = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
+const read = (path: string) => readFileSync(join(process.cwd(), "apps/crm", path), "utf8");
 
 describe("Lumenva Voice Engine E2E architecture", () => {
   it("keeps Patter in the media worker and CRM/Agent OS as the brain", () => {

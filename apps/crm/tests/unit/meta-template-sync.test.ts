@@ -12,7 +12,7 @@ import {
 } from "@/lib/channels/meta/template-sync";
 
 const FIXTURE: unknown = JSON.parse(
-  readFileSync("tests/fixtures/meta/message-templates.json", "utf8"),
+  readFileSync("apps/crm/tests/fixtures/meta/message-templates.json", "utf8"),
 );
 
 const ORG = "11111111-1111-4000-8000-000000000001";

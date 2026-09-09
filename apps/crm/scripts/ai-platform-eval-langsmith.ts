@@ -96,7 +96,7 @@ const SECRET_PATTERN = /\b(?:sk|pk|rk)-[A-Za-z0-9_-]{6,}\b/;
 
 export function loadGoldenCases(): GoldenCase[] {
   return goldenCasesSchema.parse(
-    JSON.parse(readFileSync(resolve(process.cwd(), "tests/fixtures/ai-platform/golden-cases.json"), "utf8")),
+    JSON.parse(readFileSync(resolve(process.cwd(), "apps/crm/tests/fixtures/ai-platform/golden-cases.json"), "utf8")),
   );
 }
 

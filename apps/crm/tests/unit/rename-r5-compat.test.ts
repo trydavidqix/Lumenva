@@ -42,13 +42,13 @@ describe("compatibilidade HTTP do rename R5", () => {
   });
 
   it("mantém o nome novo e a remoção explícita do legado", () => {
-    const source = readFileSync(resolve(process.cwd(), "lib/impersonate/names.ts"), "utf8");
+    const source = readFileSync(resolve(process.cwd(), "apps/crm/lib/impersonate/names.ts"), "utf8");
     expect(source).toContain('"lumenva-impersonate"');
     expect(source).toContain('"deskcomm-impersonate"');
   });
 
   it("confirma o nome do pacote novo e pacote privado único", () => {
-    const pkg = JSON.parse(readFileSync(resolve(process.cwd(), "package.json"), "utf8")) as {
+    const pkg = JSON.parse(readFileSync(resolve(process.cwd(), "apps/crm/package.json"), "utf8")) as {
       name: string;
       private: boolean;
     };
