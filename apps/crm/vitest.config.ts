@@ -17,7 +17,7 @@ export default defineConfig({
     // depois); só para de cronometrar a lentidão da máquina como se fosse
     // asserção. Caso que precisa de mais (abrir processo filho) declara o seu.
     testTimeout: 15_000,
-    setupFiles: ["./tests/setup/vitest.setup.ts"],
+    setupFiles: ["./apps/crm/tests/setup/vitest.setup.ts"],
     globals: true,
     coverage: { provider: "v8", reporter: ["text", "html"] },
     // tests/journeys/** roda no Playwright (jornada de baseline dos canais), igual
@@ -32,6 +32,10 @@ export default defineConfig({
       "tests/invariants/**",
       "tests/journeys/**",
       "website/**",
+      "apps/crm/tests/e2e/**",
+      "apps/crm/tests/invariants/**",
+      "apps/crm/tests/journeys/**",
+      "apps/crm/website/**",
       // Worktrees vivem dentro da própria árvore (.worktrees/, .claude/worktrees/) e cada um
       // é um checkout completo com sua própria tests/e2e/** (Playwright). Sem o prefixo `**/`,
       // os padrões acima só casam a partir da raiz e não alcançam esses checkouts aninhados —
