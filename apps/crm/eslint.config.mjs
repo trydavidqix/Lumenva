@@ -15,7 +15,7 @@ export default defineConfig([
   // de voz presentes: 46929 erros que sumiram ao adicionar este padrão. Mesma classe
   // de bug já corrigida em `vitest.config.ts` (exclude sem essas duas pastas). (Na CI,
   // checkout limpo, nenhum dos dois diretórios existe.)
-  globalIgnores([".next/", "node_modules/", "dist/", "supabase/", "next-env.d.ts", ".worktrees/", ".claude/worktrees/", "website/"]),
+  globalIgnores([".next/", "node_modules/", "dist/", "supabase/", "next-env.d.ts", ".worktrees/", ".claude/worktrees/"]),
   nextPlugin.configs["core-web-vitals"],
   reactHooks.configs.flat.recommended,
   ...tseslint.configs.recommended,

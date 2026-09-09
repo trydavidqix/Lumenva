@@ -31,11 +31,9 @@ export default defineConfig({
       "tests/e2e/**",
       "tests/invariants/**",
       "tests/journeys/**",
-      "website/**",
       "apps/crm/tests/e2e/**",
       "apps/crm/tests/invariants/**",
       "apps/crm/tests/journeys/**",
-      "apps/crm/website/**",
       // Worktrees vivem dentro da própria árvore (.worktrees/, .claude/worktrees/) e cada um
       // é um checkout completo com sua própria tests/e2e/** (Playwright). Sem o prefixo `**/`,
       // os padrões acima só casam a partir da raiz e não alcançam esses checkouts aninhados —

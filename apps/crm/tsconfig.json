@@ -42,6 +42,5 @@
     ".next",
     "dist",
     "scripts/**",
-    "website/**"
   ]
 }

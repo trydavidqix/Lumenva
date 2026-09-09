@@ -20,7 +20,7 @@ Blog é extensão editorial do site institucional. Site e blog mantêm fronteira
 
 1. Adicionar artigo ao registro file-backed do blog.
 2. Validar slug único, categoria, tags, data e tempo de leitura.
-3. Executar `pnpm typecheck`, `pnpm test` e `pnpm test:e2e` em `website/`.
+3. Executar `pnpm typecheck`, `pnpm test` e `pnpm test:e2e` em `apps/site/`.
 4. Abrir `/blog`, uma categoria, um artigo e `/blog/rss.xml`.
 5. Verificar viewport de 390 px e navegação por teclado antes de pedir revisão.
 
@@ -28,4 +28,4 @@ Não publicar conteúdo sem fonte, data e responsável editorial definidos. News
 
 ## Validação automatizada
 
-`website/tests/e2e/blog.spec.ts` cobre homepage, categorias, busca, artigo, breadcrumb/JSON-LD, RSS, landmarks acessíveis e viewport mobile.
+`apps/site/tests/e2e/blog.spec.ts` cobre homepage, categorias, busca, artigo, breadcrumb/JSON-LD, RSS, landmarks acessíveis e viewport mobile.
