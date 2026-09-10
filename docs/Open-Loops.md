@@ -1,22 +1,30 @@
 ---
 type: open-loops
 project: Lumenva
-last_updated: 2026-09-09
-audited_against: main @ 2341dd517967b58b9c50bb326b8c8f974d2d5dff
-source_note: itens abaixo são pendências observadas em documentação existente; não foram marcados como concluídos sem prova nova nesta F1
+last_updated: 2026-09-10
+audited_against: f1/baseline-pnpm-2026-09-09 @ e020cd6f4f4a8958e8e30ab9ab29e53494565f9c
 ---
 
-# Open loops — baseline F1
+# Open loops - baseline F1
 
-Esta lista preserva pendências que continuam sem prova de encerramento no baseline. A presença de um item não é uma afirmação de falha atual; cada loop precisa de reprodução, evidência e decisão própria.
+- Format baseline: format=1686 ficheiros falham prettier check no baseline e020cd6f; propor chore(format) repo-wide como PR isolado antes de F8.
+- Harness baseline: harness=17 findings; agendar task de governanca, nao F1. Paths DeskcommCRM e CLAUDE.md alimentam task Batismo.
+  - .claude/rules/git-workflow.md: missing-rule
+  - .claude/rules/security.md: missing-rule
+  - .claude/rules/multi-tenancy.md: missing-rule
+  - .claude/rules/api-contract.md: missing-rule
+  - .claude/rules/audit-observability.md: missing-rule
+  - .claude/rules/lgpd.md: missing-rule
+  - .claude/rules/whatsapp-waha.md: missing-rule
+  - .claude/rules/data-modeling.md: missing-rule
+  - .claude/rules/database-migrations.md: missing-rule
+  - .claude/rules/testing-verification.md: missing-rule
+  - .claude/rules/documentation.md: missing-rule
+  - .claude/rules/graphify.md: missing-rule
+  - .claude/rules/skill-routing.md: missing-rule
+  - .gitignore: rules-not-versionable
+  - CLAUDE.md: missing-doctrine
+  - .claude/skills/DeskcommCRM/SKILL.md: missing-repo-skill
+  - .agents/skills/DeskcommCRM/SKILL.md: missing-repo-skill
 
-- **Voz/SIP:** a prova de conversa ponta a ponta e a causa do loop de repetição continuam sem validação nova nesta F1.
-- **Twilio Trial / ligação de saída:** a limitação de conta permanece um bloqueador documentado até existir capacidade e teste autorizado.
-- **Mem0/Graphiti:** as flags de produção permanecem atrás de rollout; promoção para `on` não foi feita nem provada nesta F1.
-- **Deploy/runtime:** não há prova nesta F1 de que imagens, containers ou VPS estejam alinhados ao SHA do baseline.
-- **Suítes dependentes de serviços:** `test:db`, `test:e2e` e provas visuais não foram executados nesta F1; seus resultados permanecem não provados aqui.
-- **Dependências e worktrees:** qualquer limpeza, remoção de duplicatas ou encerramento de worktree requer nova reconciliação e autorização própria.
-
-## Regra de encerramento
-
-Um loop só pode mudar para concluído quando houver comando ou artefato reproduzível, código de saída, SHA/ambiente identificável e revisão correspondente. Ausência de erro, snapshot antigo ou relato de sessão não é prova suficiente.
+Estes loops nao estao resolvidos. Cada encerramento exige prova reproduzivel, exit code, SHA e revisao.
