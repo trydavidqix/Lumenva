@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { signWebhook } from "@/lib/nuvemshop/oauth";
 import { NuvemshopAdapter } from "@/lib/ecommerce/nuvemshop-adapter";
 import { NuvemshopApiClient } from "@/lib/nuvemshop/api-client";
+import { NuvemshopCircuitBreaker } from "@/lib/ecommerce/nuvemshop-circuit";
 import type { EcommerceProvider } from "@/lib/ecommerce/types";
 
 const SECRET = "contract-secret";
@@ -66,6 +67,23 @@ describe("EcommerceProvider contract — NuvemshopAdapter", () => {
     const redelivery = provider.parseOrderEvent({ eventType: "order/created", rawBody: raw });
     expect(redelivery.idempotencyKey).toBe(first.idempotencyKey);
     expect(redelivery.idempotencyKey).toBe("nuvemshop:order/created:42:7");
+  });
+
+
+  it("abre o circuito após falhas, bloqueia chamadas e permite rollback", async () => {
+    let now = 0;
+    const circuit = new NuvemshopCircuitBreaker({ failureThreshold: 2, cooldownMs: 100, now: () => now });
+    const failure = async () => { throw new Error("upstream"); };
+    await expect(circuit.execute(failure)).rejects.toThrow("upstream");
+    await expect(circuit.execute(failure)).rejects.toThrow("upstream");
+    expect(circuit.health()).toMatchObject({ state: "open", healthy: false, failureCount: 2 });
+    await expect(circuit.execute(async () => "blocked")).rejects.toThrow("nuvemshop_circuit_open");
+    now = 100;
+    await expect(circuit.execute(async () => "recovered")).resolves.toBe("recovered");
+    expect(circuit.health()).toMatchObject({ state: "closed", healthy: true, failureCount: 0 });
+    await expect(circuit.execute(failure)).rejects.toThrow("upstream");
+    circuit.rollback();
+    expect(circuit.health()).toMatchObject({ state: "closed", healthy: true, failureCount: 0 });
   });
 
 });
