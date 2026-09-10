@@ -52,6 +52,12 @@ export async function GET(
       },
       { contactId: id, decryptPurpose },
     );
+    if (result.is_merged_into) {
+      return fail("contact_merged", "Contato mesclado; consulte o contato principal.", 410, {
+        requestId,
+        headers: { Location: "/api/v1/contacts/" + result.is_merged_into },
+      });
+    }
     return ok(result, { requestId });
   } catch (err) {
     if (err instanceof ApiError) {
