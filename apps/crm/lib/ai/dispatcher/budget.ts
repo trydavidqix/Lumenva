@@ -17,6 +17,11 @@ export interface TenantBudgetCheck {
   current_month_consumed_cents: number;
 }
 
+/** Deterministic tenant gate: either throttle or disable blocks dispatch. */
+export function isTenantBudgetBlocked(input: Pick<TenantBudgetCheck, "is_throttled" | "is_disabled">): boolean {
+  return input.is_throttled || input.is_disabled;
+}
+
 export async function checkTenantBudget(orgId: string): Promise<TenantBudgetCheck> {
   const admin = createAdminClient();
   const { data } = await admin
@@ -39,7 +44,10 @@ export async function checkTenantBudget(orgId: string): Promise<TenantBudgetChec
     };
   }
 
-  const blocked = Boolean(data.is_throttled) || Boolean(data.is_disabled);
+  const blocked = isTenantBudgetBlocked({
+    is_throttled: Boolean(data.is_throttled),
+    is_disabled: Boolean(data.is_disabled),
+  });
   return {
     ok: !blocked,
     is_throttled: Boolean(data.is_throttled),
