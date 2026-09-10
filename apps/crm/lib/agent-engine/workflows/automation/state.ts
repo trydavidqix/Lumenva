@@ -42,7 +42,9 @@ export interface AutomationSchedulingGraphState {
 }
 
 export const AutomationSchedulingGraphStateAnnotation = Annotation.Root({
-  seed: Annotation<string>({ default: () => 'f2-f3-vertical-001' }),
+  // Scalar seed is part of the public graph input; explicit reducer keeps
+  // LangGraph's UpdateType aligned with the string consumed by every node.
+  seed: Annotation<string>({ reducer: (_prev, next) => next, default: () => 'f2-f3-vertical-001' }),
   output: Annotation<Record<string, unknown> | null>({ reducer: (_prev, next) => next, default: () => null }),
   workflowRunId: Annotation<string>(),
   organizationId: Annotation<string>(),
