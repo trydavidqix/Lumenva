@@ -34,3 +34,28 @@ export function validateMergeAction(input: unknown): MergeValidation {
   if (losers.includes(value.primary_id)) return { ok: false, reason: "primary_in_losers" };
   return { ok: true, value: { action: "merge", primary_id: value.primary_id, loser_ids: [...new Set(losers)] } };
 }
+
+export interface MergeContactRecord {
+  id: string;
+  organization_id: string;
+  is_anonymized: boolean;
+}
+
+export type MergePlanResult =
+  | { ok: true; primary_id: string; loser_ids: string[] }
+  | { ok: false; reason: "forbidden_role" | "tenant_mismatch" | "primary_anonymized" | "contacts_not_found" };
+
+export function buildMergePlan(
+  roleRank: number,
+  organizationId: string,
+  contacts: readonly MergeContactRecord[],
+  action: Extract<MergeAction, { action: "merge" }>,
+): MergePlanResult {
+  if (roleRank < 3) return { ok: false, reason: "forbidden_role" };
+  if (contacts.some((c) => c.organization_id !== organizationId)) return { ok: false, reason: "tenant_mismatch" };
+  const byId = new Map(contacts.map((c) => [c.id, c]));
+  const primary = byId.get(action.primary_id);
+  if (!primary || action.loser_ids.some((id) => !byId.has(id))) return { ok: false, reason: "contacts_not_found" };
+  if (primary.is_anonymized) return { ok: false, reason: "primary_anonymized" };
+  return { ok: true, primary_id: primary.id, loser_ids: [...new Set(action.loser_ids)] };
+}
