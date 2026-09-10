@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { signWebhook } from "@/lib/nuvemshop/oauth";
 import { NuvemshopAdapter } from "@/lib/ecommerce/nuvemshop-adapter";
+import { NuvemshopApiClient } from "@/lib/nuvemshop/api-client";
 import type { EcommerceProvider } from "@/lib/ecommerce/types";
 
 const SECRET = "contract-secret";
@@ -45,4 +46,26 @@ describe("EcommerceProvider contract — NuvemshopAdapter", () => {
     await expect(provider.listOrdersSince("2026-01-01T00:00:00Z")).resolves.toEqual([{ externalId: "1", currency: "EUR", totalCents: 1234, createdAt: "2026-01-01T00:00:00Z", raw: expect.any(Object) }]);
     expect(client.get).toHaveBeenCalledWith(expect.stringContaining("created_at_min="));
   });
+
+  it("repete falhas transitórias sem repetir erros permanentes", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("upstream", { status: 503 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ id: 2 }]), { status: 200 }));
+    const sleeps: number[] = [];
+    const client = new NuvemshopApiClient({ storeId: "42", accessToken: "token", retryDelaysMs: [0], sleep: async (ms) => { sleeps.push(ms); } });
+    await expect(client.listWebhooks()).resolves.toEqual([{ id: 2 }]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(sleeps).toEqual([0]);
+    fetchMock.mockRestore();
+  });
+
+  it("mantém idempotência determinística em reentrega do webhook", () => {
+    const provider = makeProvider();
+    const raw = JSON.stringify({ store_id: 42, id: 7 });
+    const first = provider.parseOrderEvent({ eventType: "order/created", rawBody: raw });
+    const redelivery = provider.parseOrderEvent({ eventType: "order/created", rawBody: raw });
+    expect(redelivery.idempotencyKey).toBe(first.idempotencyKey);
+    expect(redelivery.idempotencyKey).toBe("nuvemshop:order/created:42:7");
+  });
+
 });
