@@ -45,7 +45,8 @@
     "test:f2-f3": "cd ../.. && node apps/crm/node_modules/vitest/vitest.mjs run --config apps/crm/vitest.config.ts apps/crm/lib/agent-engine/workflows/automation/vertical.test.ts",
     "test:fast": "cd ../.. && node apps/crm/node_modules/vitest/vitest.mjs run --config apps/crm/vitest.config.ts apps/crm/tests/unit/baseline-constraint-reconstruida.test.ts apps/crm/tests/unit/manifest-x-migrations.test.ts apps/crm/lib/ai/dispatcher/budget.test.ts apps/crm/lib/agent-engine/agent/f4-rag-001.test.ts apps/crm/lib/agent-engine/agent/f4-handoff-001.test.ts apps/crm/lib/agent-engine/agent/f4-sentiment.test.ts apps/crm/lib/schemas/settings-notification.test.ts apps/crm/lib/custom-fields/build-schema.test.ts apps/crm/lib/contacts/merge.test.ts apps/crm/tests/unit/customer360-security-contract.test.ts apps/crm/tests/unit/team-role-change.test.ts apps/crm/tests/unit/team-revoke.test.ts",
     "test:scripts": "cd ../.. && node --test apps/crm/scripts/*.test.mjs",
-    "test:pades": "cd ../.. && node apps/crm/node_modules/vitest/vitest.mjs run --config apps/crm/vitest.config.ts apps/crm/tests/unit/pades-signer.test.ts"
+    "test:pades": "cd ../.. && node apps/crm/node_modules/vitest/vitest.mjs run --config apps/crm/vitest.config.ts apps/crm/tests/unit/pades-signer.test.ts",
+    "test:waha-contract": "cd ../.. && node apps/crm/node_modules/vitest/vitest.mjs run --config apps/crm/vitest.config.ts apps/crm/lib/waha/retry.test.ts apps/crm/lib/waha/webhook-auth.test.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.49",
