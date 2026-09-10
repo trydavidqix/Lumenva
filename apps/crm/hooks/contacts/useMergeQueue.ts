@@ -16,11 +16,12 @@ export interface MergeQueueItem {
 
 export const mergeQueueQueryKey = ["customer360", "merge-queue"] as const;
 
-export function useMergeQueue() {
+export function useMergeQueue(options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: mergeQueueQueryKey,
     queryFn: () => apiClient.get<{ data: MergeQueueItem[] }>("/api/v1/merge_queue"),
     staleTime: 15_000,
+    enabled: options.enabled ?? true,
   });
 }
 

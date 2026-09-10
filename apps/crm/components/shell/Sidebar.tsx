@@ -7,6 +7,9 @@ import { cn } from "@/lib/utils";
 import { toggleSidebar } from "@/app/actions/shell/toggleSidebar";
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import { ConnectionHealthDot } from "@/components/connections/ConnectionHealthDot";
+import { Badge } from "@/components/ui/badge";
+import { useMergeQueue } from "@/hooks/contacts/useMergeQueue";
+import { ROLE_RANK } from "@/lib/auth/types";
 import { VersionFooter } from "@/components/shell/VersionFooter";
 import { branding } from "@/lib/branding";
 import { GRUPO_NO_RODAPE, NAV_GROUPS, sidebarGroups } from "@/lib/navigation/registry";
@@ -23,6 +26,9 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
   const { user, activeOrg } = useAuth();
+  const canReviewMerges = user.is_platform_admin || (activeOrg ? ROLE_RANK[activeOrg.role] >= ROLE_RANK.manager : false);
+  const mergeQueue = useMergeQueue({ enabled: canReviewMerges });
+  const pendingMerges = mergeQueue.data?.data.length ?? 0;
   const todos = sidebarGroups(user.is_platform_admin, activeOrg?.role ?? null);
   // Configurações sai da área que rola e vai para o rodapé fixo: medido em
   // 1280x768, ele caía fora da dobra mesmo em telas de 1080px.
@@ -99,6 +105,9 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
                       >
                         <Icon size={18} weight={isActive ? "fill" : "regular"} aria-hidden />
                         {!collapsed && <span className="truncate">{item.label}</span>}
+                        {item.href === "/app/merge-queue" && pendingMerges > 0 && (
+                          <Badge variant="warning" className={cn("ml-auto", collapsed && "absolute right-1.5 top-1.5 px-1")}>{pendingMerges}</Badge>
+                        )}
                         {item.healthDot && (
                           <ConnectionHealthDot
                             className={cn(collapsed ? "absolute right-1.5 top-1.5" : "ml-auto")}
