@@ -59,3 +59,26 @@ export function buildMergePlan(
   if (primary.is_anonymized) return { ok: false, reason: "primary_anonymized" };
   return { ok: true, primary_id: primary.id, loser_ids: [...new Set(action.loser_ids)] };
 }
+
+export function canAccessMergeQueue(roleRank: number): boolean {
+  return Number.isInteger(roleRank) && roleRank >= 3;
+}
+
+export interface MergeTransaction<T> {
+  begin(): Promise<void>;
+  commit(): Promise<void>;
+  rollback(): Promise<void>;
+  apply(): Promise<T>;
+}
+
+export async function runAtomicMerge<T>(tx: MergeTransaction<T>): Promise<T> {
+  await tx.begin();
+  try {
+    const result = await tx.apply();
+    await tx.commit();
+    return result;
+  } catch (error) {
+    await tx.rollback();
+    throw error;
+  }
+}
