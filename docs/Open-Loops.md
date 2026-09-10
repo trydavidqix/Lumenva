@@ -28,3 +28,12 @@ audited_against: f1/baseline-pnpm-2026-09-09 @ e020cd6f4f4a8958e8e30ab9ab29e5349
   - .agents/skills/DeskcommCRM/SKILL.md: missing-repo-skill
 
 Estes loops nao estao resolvidos. Cada encerramento exige prova reproduzivel, exit code, SHA e revisao.
+
+## F2-DB-CHAIN-002 — squash canónico de migrations
+
+- Estado confirmado: a cadeia histórica é incoerente. supabase/baseline.sql e as migrations até ao cutoff 160 divergem; a migration 0014_storage_policies_ai_policy tenta recriar a policy tenant_read_ai_policy que já existe no baseline.
+- O caminho db:migrate a partir de uma base vazia não fecha EXIT=0 sem reconciliar esse histórico redundante.
+- O runner usa o baseline como base canónica (00000_baseline), regista sem executar as migrations contidas até BASELINE_APPLIED_THROUGH = 160 e executa apenas deltas posteriores.
+- Prova disponível: o baseline criou public.contacts; o runner avançou até à primeira migration fora do conjunto consolidado, onde a divergência de trigger foi observada.
+- Open-loop futuro — PRECISA DONO=sim: reconciliar o schema canónico CRM, escolhendo baseline de produção ou remoção formal das migrations redundantes. Estimativa: 90–180 min. Não executar nesta tarefa.
+- Spot-check pendente: reconciliar explicitamente a policy storage.objects.tenant_read_ai_policy da migration 0014 com a definição já presente no baseline.
