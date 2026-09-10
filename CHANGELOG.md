@@ -8,6 +8,10 @@ Se você roda o Lumenva numa VPS, **leia a seção da versão para a qual está 
 
 ## [Não lançado]
 
+### F8 — Release readiness
+
+- Preparado contrato de release `0.2.0`, probe `/api/v1/readyz`, inventário de migrations em dry-run e checklist de rollback/deploy. Nenhum deploy foi executado.
+
 ### Alterado
 
 - **Voz (sessão 2026-08-29, integração):** `codex/voice-media-integration` (276 commits, 234
