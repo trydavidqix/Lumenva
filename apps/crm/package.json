@@ -1,6 +1,6 @@
 {
   "name": "lumenva-crm",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Lumenva — sistema operacional de vendas open source com agentes de IA nativos e WhatsApp (WAHA). Self-hosted, multi-tenant, RGPD by-design.",
   "engines": {
@@ -46,7 +46,8 @@
     "test:fast": "cd ../.. && node apps/crm/node_modules/vitest/vitest.mjs run --config apps/crm/vitest.config.ts apps/crm/tests/unit/baseline-constraint-reconstruida.test.ts apps/crm/tests/unit/manifest-x-migrations.test.ts apps/crm/lib/ai/dispatcher/budget.test.ts apps/crm/lib/agent-engine/agent/f4-rag-001.test.ts apps/crm/lib/agent-engine/agent/f4-handoff-001.test.ts apps/crm/lib/agent-engine/agent/f4-sentiment.test.ts apps/crm/lib/schemas/settings-notification.test.ts apps/crm/lib/custom-fields/build-schema.test.ts apps/crm/lib/contacts/merge.test.ts apps/crm/tests/unit/customer360-security-contract.test.ts apps/crm/tests/unit/team-role-change.test.ts apps/crm/tests/unit/team-revoke.test.ts",
     "test:scripts": "cd ../.. && node --test apps/crm/scripts/*.test.mjs",
     "test:pades": "cd ../.. && node apps/crm/node_modules/vitest/vitest.mjs run --config apps/crm/vitest.config.ts apps/crm/tests/unit/pades-signer.test.ts",
-    "test:waha-contract": "cd ../.. && node apps/crm/node_modules/vitest/vitest.mjs run --config apps/crm/vitest.config.ts apps/crm/lib/waha/retry.test.ts apps/crm/lib/waha/webhook-auth.test.ts"
+    "test:waha-contract": "cd ../.. && node apps/crm/node_modules/vitest/vitest.mjs run --config apps/crm/vitest.config.ts apps/crm/lib/waha/retry.test.ts apps/crm/lib/waha/webhook-auth.test.ts",
+    "release:migrations:dry-run": "node scripts/migrate-dry-run.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.49",
