@@ -12,12 +12,31 @@
  */
 
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 
 export interface SignResult {
   signed: Buffer;
   sha256: string;
   signed_pades: boolean;
   warning?: "pades_key_missing";
+}
+
+export interface PadesVerification {
+  valid: boolean;
+  reason: "signature_backend_unavailable" | "empty_document";
+}
+
+/** Loads a test-only PKCS#12 fixture; production callers must provide their own key. */
+export function loadP12Fixture(path: string): Buffer {
+  const fixture = readFileSync(path);
+  if (fixture.length === 0) throw new Error("p12_fixture_empty");
+  return fixture;
+}
+
+/** Verification remains fail-closed until the approved PAdES backend is provisioned. */
+export function verifyPdfSignature(buffer: Buffer): PadesVerification {
+  if (buffer.length === 0) return { valid: false, reason: "empty_document" };
+  return { valid: false, reason: "signature_backend_unavailable" };
 }
 
 export function isPadesConfigured(): boolean {
