@@ -82,7 +82,7 @@ export async function changeMemberRole(
   if (updErr) return fail("internal_error", updErr.message, 500, { requestId });
 
   await audit({
-    action: "team.role_changed",
+    action: "member.role_changed",
     actorUserId: authUser.id,
     organizationId: activeOrg.orgId,
     resourceType: "membership",
