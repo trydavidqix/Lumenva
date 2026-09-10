@@ -4,7 +4,7 @@
  * Prova, contra o Route Handler REAL (auth e Supabase mockados):
  *  - último admin da org não pode ser rebaixado (409 state_conflict, sem write);
  *  - com 2 admins ativos o rebaixamento passa (200) e audita
- *    action='team.role_changed' com actor e antes/depois;
+ *    action='member.role_changed' com actor e antes/depois;
  *  - role fora do enum → 422 validation_error (Zod);
  *  - o alias /role continua roteando pela mesma lógica.
  */
@@ -120,7 +120,7 @@ describe("PATCH /api/v1/team/[user_id] — guard de último admin", () => {
     expect(body.error.code).toBe("state_conflict");
     expect(state.updates).toHaveLength(0);
     expect(
-      vi.mocked(audit).mock.calls.some(([e]) => e.action === "team.role_changed"),
+      vi.mocked(audit).mock.calls.some(([e]) => e.action === "member.role_changed"),
     ).toBe(false);
   });
 
@@ -137,8 +137,8 @@ describe("PATCH /api/v1/team/[user_id] — guard de último admin", () => {
   });
 });
 
-describe("PATCH /api/v1/team/[user_id] — audit team.role_changed", () => {
-  it("mudança audita action='team.role_changed' com actor e antes/depois", async () => {
+describe("PATCH /api/v1/team/[user_id] — audit member.role_changed", () => {
+  it("mudança audita action='member.role_changed' com actor e antes/depois", async () => {
     const state = stubState({
       target: { id: MEMBERSHIP_ID, user_id: TARGET_ID, role: "agent", revoked_at: null },
     });
@@ -149,10 +149,10 @@ describe("PATCH /api/v1/team/[user_id] — audit team.role_changed", () => {
     const entry = vi
       .mocked(audit)
       .mock.calls.map(([e]) => e)
-      .find((e) => e.action === "team.role_changed");
+      .find((e) => e.action === "member.role_changed");
     expect(entry).toBeDefined();
     expect(entry).toMatchObject({
-      action: "team.role_changed",
+      action: "member.role_changed",
       actorUserId: ADMIN_ID,
       organizationId: ORG_ID,
       resourceType: "membership",
