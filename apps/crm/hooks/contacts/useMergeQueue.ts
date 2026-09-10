@@ -1,9 +1,11 @@
 "use client";
 
+import { useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api/client";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
+import { useRealtimeChannel } from "@/hooks/realtime/useRealtimeChannel";
 
 export interface MergeQueueItem {
   id: string;
@@ -17,12 +19,26 @@ export interface MergeQueueItem {
 export const mergeQueueQueryKey = ["customer360", "merge-queue"] as const;
 
 export function useMergeQueue(options: { enabled?: boolean } = {}) {
-  return useQuery({
+  const queryClient = useQueryClient();
+  const enabled = options.enabled ?? true;
+  const query = useQuery({
     queryKey: mergeQueueQueryKey,
     queryFn: () => apiClient.get<{ data: MergeQueueItem[] }>("/api/v1/merge_queue"),
     staleTime: 15_000,
-    enabled: options.enabled ?? true,
+    enabled,
   });
+  const onChange = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: mergeQueueQueryKey });
+  }, [queryClient]);
+  useRealtimeChannel({
+    name: "customer360-merge-queue",
+    postgresChanges: enabled
+      ? { event: "*", schema: "public", table: "merge_queue" }
+      : undefined,
+    onChange,
+    enabled,
+  });
+  return query;
 }
 
 export function useResolveMerge() {
