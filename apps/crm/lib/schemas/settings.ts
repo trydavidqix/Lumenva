@@ -107,6 +107,16 @@ export const notificationPrefsSchema = z.object({
 });
 export type NotificationPrefsInput = z.infer<typeof notificationPrefsSchema>;
 
+export function normalizeNotificationPrefs(input: NotificationPrefsInput): NotificationPrefsInput {
+  const byKey = new Map<string, NotificationPrefsInput["prefs"][number]>();
+  for (const pref of input.prefs) byKey.set(pref.category + ":" + pref.channel, pref);
+  return {
+    prefs: [...byKey.values()].sort((a, b) =>
+      (a.category + ":" + a.channel).localeCompare(b.category + ":" + b.channel),
+    ),
+  };
+}
+
 const customFieldSchema = z.object({
   key: z
     .string()
