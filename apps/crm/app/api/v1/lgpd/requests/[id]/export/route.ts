@@ -47,5 +47,12 @@ export async function GET(
   const dataJson = JSON.stringify(payload, null, 2);
   const manifestJson = JSON.stringify(manifest, null, 2);
   const zip = zipSync({ "data.json": strToU8(dataJson), "manifest.json": strToU8(manifestJson) });
-  return new Response(zip, { status: 200, headers: { "content-type": "application/zip", "content-disposition": `attachment; filename="lgpd-${id}.zip"`, "x-lgpd-signed-pades": "false" } });
+  return new Response(zip, { status: 200, headers: {
+    "content-type": "application/zip",
+    "content-disposition": `attachment; filename="lgpd-${id}.zip"`,
+    "content-length": String(zip.byteLength),
+    "cache-control": "private, no-store, max-age=0",
+    "x-request-id": requestId,
+    "x-lgpd-signed-pades": "false",
+  } });
 }
