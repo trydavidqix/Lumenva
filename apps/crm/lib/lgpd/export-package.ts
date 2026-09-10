@@ -111,6 +111,15 @@ export function verifyExportPackage(
   const errors: string[] = [];
   if (manifest.format_version !== 1) errors.push("unsupported_manifest_version");
   if (manifest.provenance.generator !== "lumenva-lgpd-export") errors.push("invalid_generator");
+  const manifestBase = {
+    format_version: manifest.format_version,
+    request_id: manifest.request_id,
+    organization_id: manifest.organization_id,
+    generated_at: manifest.generated_at,
+    files: manifest.files,
+  };
+  const manifestHash = createHash("sha256").update(JSON.stringify(manifestBase)).digest("hex");
+  if (manifestHash !== manifest.provenance.manifest_sha256) errors.push("manifest_hash_mismatch");
   const byPath = new Map(files.map((file) => [file.path, Buffer.from(file.content)]));
   for (const expected of manifest.files) {
     const content = byPath.get(expected.path);

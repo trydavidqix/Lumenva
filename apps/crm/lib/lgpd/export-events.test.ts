@@ -40,4 +40,33 @@ describe("LGPD export provider-free flow", () => {
       metadata: expect.objectContaining({ error_code: "verification_failed" }),
     }));
   });
+
+  it("fecha JSON → ZIP → manifest → verify e audita tampering", async () => {
+    const files = [{ path: "export.json", content: JSON.stringify({ contact_id: "contact-fixture" }) }];
+    const packaged = buildExportPackage({
+      requestId: "request-e2e",
+      organizationId: "org-1",
+      generatedAt: "2026-09-10T20:30:00.000Z",
+      files,
+    });
+    expect(packaged.zip.subarray(0, 4).toString("hex")).toBe("504b0304");
+    expect(verifyExportPackage(packaged.manifest, files)).toEqual({ valid: true, errors: [] });
+
+    const tamperedManifest = { ...packaged.manifest, organization_id: "org-attacker" };
+    const verification = verifyExportPackage(tamperedManifest, files);
+    expect(verification).toEqual({ valid: false, errors: ["manifest_hash_mismatch"] });
+    await recordExportEvent({
+      event: "failed",
+      requestId: "request-e2e",
+      organizationId: "org-1",
+      exportSha256: packaged.sha256,
+      manifestSha256: packaged.manifest.provenance.manifest_sha256,
+      errorCode: verification.errors[0],
+    });
+    expect(audit).toHaveBeenLastCalledWith(expect.objectContaining({
+      action: "lgpd.export_failed",
+      resourceId: "request-e2e",
+      metadata: expect.objectContaining({ error_code: "manifest_hash_mismatch" }),
+    }));
+  });
 });
