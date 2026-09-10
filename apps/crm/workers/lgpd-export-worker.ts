@@ -78,7 +78,7 @@ export async function processLgpdExport(event: EventRow): Promise<HandlerResult>
   const req = await findLgpdRequest(orgId, requestId).catch((err: unknown) => {
     logger.error("[lgpd-export-worker] findLgpdRequest threw", {
       request_id: shortId(requestId),
-      error: err instanceof Error ? err.message : String(err),
+      error_hash: sha256(err instanceof Error ? err.message : String(err)),
     });
     return null;
   });
@@ -417,7 +417,8 @@ export async function processLgpdExport(event: EventRow): Promise<HandlerResult>
       .from("lgpd_requests")
       .update({
         status: nextAttempts >= MAX_ATTEMPTS ? "failed" : "received",
-        error_message: detail.slice(0, 500),
+        // Persist only stable code; provider errors can contain PII.
+        error_message: "export_failed",
       })
       .eq("organization_id", orgId)
       .eq("id", requestId);
