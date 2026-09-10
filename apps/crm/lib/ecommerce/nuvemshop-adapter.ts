@@ -1,5 +1,6 @@
 import { signWebhook, verifyHmac } from "@/lib/nuvemshop/oauth";
 import { NuvemshopApiClient } from "@/lib/nuvemshop/api-client";
+import { NUVEMSHOP_SECURITY_HEADERS, safeNuvemshopError } from "./nuvemshop-hardening";
 import { NuvemshopCircuitBreaker, type NuvemshopCircuitHealth } from "./nuvemshop-circuit";
 import type {
   EcommerceCustomerDataRequest,
@@ -47,6 +48,15 @@ export class NuvemshopAdapter implements EcommerceProvider {
 
   executeWithCircuit<T>(operation: () => Promise<T>): Promise<T> {
     return this.circuit.execute(operation);
+  }
+
+  securityHeaders(): typeof NUVEMSHOP_SECURITY_HEADERS {
+    return NUVEMSHOP_SECURITY_HEADERS;
+  }
+
+  async executeSafely<T>(operation: () => Promise<T>): Promise<{ ok: true; data: T } | { ok: false; error: ReturnType<typeof safeNuvemshopError> }> {
+    try { return { ok: true, data: await this.executeWithCircuit(operation) }; }
+    catch (error) { return { ok: false, error: safeNuvemshopError(error) }; }
   }
 
   verifyWebhookSignature(
