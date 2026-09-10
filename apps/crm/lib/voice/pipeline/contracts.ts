@@ -40,6 +40,28 @@ export interface VoicePipeline {
   snapshot(): VoicePipelineSnapshot;
 }
 
+export interface VoicePipelineHealth {
+  ok: boolean;
+  checkedAt: string;
+}
+
+export interface VoicePipelineFlags {
+  enabled?: boolean;
+  rollback?: boolean;
+}
+
+export type VoicePipelineDecision = "disabled" | "ready" | "rollback_required";
+
+/** Fail-closed gate used by a future runtime; it does not select a provider. */
+export function evaluateVoicePipeline(
+  flags: VoicePipelineFlags = {},
+  health: VoicePipelineHealth = { ok: false, checkedAt: "" },
+): VoicePipelineDecision {
+  if (flags.enabled !== true) return "disabled";
+  if (flags.rollback === true || health.ok !== true) return "rollback_required";
+  return "ready";
+}
+
 export function transitionVoicePipeline(
   previous: VoicePipelineSnapshot,
   event: VoicePipelineEvent,
