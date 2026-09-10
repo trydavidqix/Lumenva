@@ -34,3 +34,26 @@ export function validateMergeAction(input: unknown): MergeValidation {
   if (losers.includes(value.primary_id)) return { ok: false, reason: "primary_in_losers" };
   return { ok: true, value: { action: "merge", primary_id: value.primary_id, loser_ids: [...new Set(losers)] } };
 }
+
+export function canAccessMergeQueue(roleRank: number): boolean {
+  return Number.isInteger(roleRank) && roleRank >= 3;
+}
+
+export interface MergeTransaction<T> {
+  begin(): Promise<void>;
+  commit(): Promise<void>;
+  rollback(): Promise<void>;
+  apply(): Promise<T>;
+}
+
+export async function runAtomicMerge<T>(tx: MergeTransaction<T>): Promise<T> {
+  await tx.begin();
+  try {
+    const result = await tx.apply();
+    await tx.commit();
+    return result;
+  } catch (error) {
+    await tx.rollback();
+    throw error;
+  }
+}
