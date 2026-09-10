@@ -7,6 +7,8 @@
 import { Annotation } from '@langchain/langgraph';
 
 export interface AutomationSchedulingGraphState {
+  seed: string;
+  output: Record<string, unknown> | null;
   workflowRunId: string;
   organizationId: string;
   automationId: string;
@@ -40,6 +42,8 @@ export interface AutomationSchedulingGraphState {
 }
 
 export const AutomationSchedulingGraphStateAnnotation = Annotation.Root({
+  seed: Annotation<string>({ default: () => 'f2-f3-vertical-001' }),
+  output: Annotation<Record<string, unknown> | null>({ reducer: (_prev, next) => next, default: () => null }),
   workflowRunId: Annotation<string>(),
   organizationId: Annotation<string>(),
   automationId: Annotation<string>(),
