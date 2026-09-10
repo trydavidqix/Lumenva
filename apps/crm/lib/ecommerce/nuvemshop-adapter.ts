@@ -1,5 +1,6 @@
 import { signWebhook, verifyHmac } from "@/lib/nuvemshop/oauth";
 import { NuvemshopApiClient } from "@/lib/nuvemshop/api-client";
+import { NuvemshopCircuitBreaker, type NuvemshopCircuitHealth } from "./nuvemshop-circuit";
 import type {
   EcommerceCustomerDataRequest,
   EcommerceOrder,
@@ -28,10 +29,24 @@ export class NuvemshopAdapter implements EcommerceProvider {
   readonly provider = "nuvemshop";
   private readonly clientSecret: string;
   private readonly client: NuvemshopApiClient;
+  private readonly circuit: NuvemshopCircuitBreaker;
 
   constructor(options: NuvemshopAdapterOptions) {
     this.clientSecret = options.clientSecret;
     this.client = options.client ?? new NuvemshopApiClient(options);
+    this.circuit = new NuvemshopCircuitBreaker();
+  }
+
+  health(): NuvemshopCircuitHealth {
+    return this.circuit.health();
+  }
+
+  rollback(): void {
+    this.circuit.rollback();
+  }
+
+  executeWithCircuit<T>(operation: () => Promise<T>): Promise<T> {
+    return this.circuit.execute(operation);
   }
 
   verifyWebhookSignature(
