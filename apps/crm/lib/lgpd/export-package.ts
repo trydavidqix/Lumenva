@@ -11,6 +11,8 @@ export interface ExportPackageInput {
   generatedAt: string;
   files: ExportPackageFile[];
   signedPades?: boolean;
+  /** Hash of the rendered PDF; signature validity is never inferred from it. */
+  pdfSha256?: string;
 }
 
 export interface ExportManifest {
@@ -22,6 +24,7 @@ export interface ExportManifest {
     generator: "lumenva-lgpd-export";
     signed_pades: boolean;
     manifest_sha256: string;
+    pdf_sha256?: string;
   };
   files: Array<{ path: string; size: number; sha256: string }>;
 }
@@ -35,6 +38,10 @@ export interface ExportPackageResult {
 export interface ExportVerification {
   valid: boolean;
   errors: string[];
+}
+
+export function sha256Hex(content: Uint8Array | string): string {
+  return createHash("sha256").update(Buffer.from(content)).digest("hex");
 }
 
 function crc32(data: Uint8Array): number {
@@ -81,6 +88,7 @@ export function buildExportPackage(input: ExportPackageInput): ExportPackageResu
     provenance: {
       generator: "lumenva-lgpd-export",
       signed_pades: input.signedPades === true,
+      ...(input.pdfSha256 ? { pdf_sha256: input.pdfSha256 } : {}),
       manifest_sha256: manifestHash,
     },
   };
