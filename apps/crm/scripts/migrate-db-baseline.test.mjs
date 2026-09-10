@@ -12,4 +12,3 @@ test("db:migrate aplica baseline canónico antes do glob de migrations", () => {
   assert.match(runner, /00000_baseline/);
   assert.ok(runner.indexOf("baseline.sql") < runner.indexOf("readdir(dir)"));
 });
- 
