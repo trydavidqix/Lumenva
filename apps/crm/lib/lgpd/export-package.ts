@@ -32,6 +32,11 @@ export interface ExportPackageResult {
   sha256: string;
 }
 
+export interface ExportVerification {
+  valid: boolean;
+  errors: string[];
+}
+
 function crc32(data: Uint8Array): number {
   let crc = 0xffffffff;
   for (const byte of data) {
@@ -96,4 +101,26 @@ export function buildExportPackage(input: ExportPackageInput): ExportPackageResu
   const centralBytes = Buffer.concat(central);
   const zip = Buffer.concat([...local, centralBytes, Buffer.concat([u32(0x06054b50), u16(0), u16(0), u16(entries.length), u16(entries.length), u32(centralBytes.length), u32(offset), u16(0)])]);
   return { zip, manifest, sha256: createHash("sha256").update(zip).digest("hex") };
+}
+
+/** Verifies provenance and per-file hashes before an export is delivered. */
+export function verifyExportPackage(
+  manifest: ExportManifest,
+  files: ExportPackageFile[],
+): ExportVerification {
+  const errors: string[] = [];
+  if (manifest.format_version !== 1) errors.push("unsupported_manifest_version");
+  if (manifest.provenance.generator !== "lumenva-lgpd-export") errors.push("invalid_generator");
+  const byPath = new Map(files.map((file) => [file.path, Buffer.from(file.content)]));
+  for (const expected of manifest.files) {
+    const content = byPath.get(expected.path);
+    if (!content) {
+      errors.push(`missing_file:${expected.path}`);
+      continue;
+    }
+    if (content.length !== expected.size) errors.push(`size_mismatch:${expected.path}`);
+    const actual = createHash("sha256").update(content).digest("hex");
+    if (actual !== expected.sha256) errors.push(`hash_mismatch:${expected.path}`);
+  }
+  return { valid: errors.length === 0, errors };
 }
