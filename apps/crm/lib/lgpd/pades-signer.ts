@@ -1,16 +1,11 @@
 /**
- * PAdES signing for LGPD export PDFs.
+ * PAdES signing/verification boundary for LGPD exports.
  *
- * MVP: real PAdES requires P12 cert provisioning that's still pending. When
- * `LGPD_SIGNING_KEY` is unset, we render the PDF with an "unsigned" warning
- * banner (caller already does that), compute SHA-256 over the buffer for
- * integrity logging, and surface a `signed_pades=false` + `warning='pades_key_missing'`
- * flag so downstream audit captures the gap.
- *
- * When the key + cert are wired in, swap `signPdfPades` to use
- * `node-signpdf` + `@signpdf/signer-p12` (interface stays identical).
+ * The real P12 certificate/backend is intentionally not provisioned yet.
+ * Verification therefore remains fail-closed: a fixture can be loaded and
+ * identity-checked, but no document is ever reported as signed without the
+ * approved PAdES backend.
  */
-
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
@@ -23,8 +18,10 @@ export interface SignResult {
 
 export interface PadesVerification {
   valid: boolean;
-  reason: "signature_backend_unavailable" | "empty_document";
+  reason: "signature_backend_unavailable" | "empty_document" | "invalid_fixture";
 }
+
+const TEST_FIXTURE_SHA256 = "0c53d00ed2f1da83cc87ddac075c26860de7ac0fa2b57e374d880e95e6faaa08";
 
 /** Loads a test-only PKCS#12 fixture; production callers must provide their own key. */
 export function loadP12Fixture(path: string): Buffer {
@@ -33,9 +30,17 @@ export function loadP12Fixture(path: string): Buffer {
   return fixture;
 }
 
-/** Verification remains fail-closed until the approved PAdES backend is provisioned. */
-export function verifyPdfSignature(buffer: Buffer): PadesVerification {
+/** Confirms the supplied fixture is the checked-in test certificate, by hash. */
+export function isApprovedTestP12(fixture: Buffer): boolean {
+  return createHash("sha256").update(fixture).digest("hex") === TEST_FIXTURE_SHA256;
+}
+
+/** Never claims a signature until the approved PAdES backend is provisioned. */
+export function verifyPdfSignature(buffer: Buffer, p12Fixture?: Buffer): PadesVerification {
   if (buffer.length === 0) return { valid: false, reason: "empty_document" };
+  if (p12Fixture !== undefined && !isApprovedTestP12(p12Fixture)) {
+    return { valid: false, reason: "invalid_fixture" };
+  }
   return { valid: false, reason: "signature_backend_unavailable" };
 }
 
@@ -48,29 +53,6 @@ function sha256Hex(buffer: Buffer): string {
   return createHash("sha256").update(buffer).digest("hex");
 }
 
-/**
- * Sign (or stub-sign) a PDF buffer.
- *
- * Caller is expected to have ALREADY rendered the PDF with the unsigned
- * warning banner when `isPadesConfigured()` returns false.
- */
 export async function signPdfPades(buffer: Buffer): Promise<SignResult> {
-  if (!isPadesConfigured()) {
-    return {
-      signed: buffer,
-      sha256: sha256Hex(buffer),
-      signed_pades: false,
-      warning: "pades_key_missing",
-    };
-  }
-
-  // TODO(LGPD): wire node-signpdf + @signpdf/signer-p12 once cert is provisioned.
-  // Until then, even with the key set we degrade to unsigned to avoid producing
-  // a falsely-marked-signed document.
-  return {
-    signed: buffer,
-    sha256: sha256Hex(buffer),
-    signed_pades: false,
-    warning: "pades_key_missing",
-  };
+  return { signed: buffer, sha256: sha256Hex(buffer), signed_pades: false, warning: "pades_key_missing" };
 }
