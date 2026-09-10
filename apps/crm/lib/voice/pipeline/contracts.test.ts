@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { transitionVoicePipeline, type VoicePipelineSnapshot } from "./contracts";
+import { evaluateVoicePipeline, transitionVoicePipeline, type VoicePipelineSnapshot } from "./contracts";
 
 const initial: VoicePipelineSnapshot = { stage: "idle", lastEventAt: null };
 
@@ -25,5 +25,16 @@ describe("provider-free voice pipeline contract", () => {
   it("does not select a telephony or media provider", () => {
     const neutralEvent = { type: "session_started" as const, at: "t1" };
     expect(transitionVoicePipeline(initial, neutralEvent).stage).toBe("listening");
+  });
+
+  it("fails closed with feature flags OFF", () => {
+    expect(evaluateVoicePipeline()).toBe("disabled");
+    expect(evaluateVoicePipeline({ enabled: false }, { ok: true, checkedAt: "t1" })).toBe("disabled");
+  });
+
+  it("requires healthy runtime and supports rollback", () => {
+    expect(evaluateVoicePipeline({ enabled: true }, { ok: false, checkedAt: "t1" })).toBe("rollback_required");
+    expect(evaluateVoicePipeline({ enabled: true, rollback: true }, { ok: true, checkedAt: "t2" })).toBe("rollback_required");
+    expect(evaluateVoicePipeline({ enabled: true }, { ok: true, checkedAt: "t3" })).toBe("ready");
   });
 });
