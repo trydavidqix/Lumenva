@@ -41,20 +41,27 @@ export interface NuvemshopStore {
   main_language?: string;
 }
 
-interface ApiClientOptions {
+export interface ApiClientOptions {
   storeId: string;
   accessToken: string;
+  /** Deterministic delays; empty disables retries (useful for provider-free tests). */
+  retryDelaysMs?: readonly number[];
+  sleep?: (ms: number) => Promise<void>;
 }
 
 export class NuvemshopApiClient {
   private readonly storeId: string;
   private readonly accessToken: string;
+  private readonly retryDelaysMs: readonly number[];
+  private readonly sleep: (ms: number) => Promise<void>;
 
-  constructor({ storeId, accessToken }: ApiClientOptions) {
+  constructor({ storeId, accessToken, retryDelaysMs = [100, 500], sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)) }: ApiClientOptions) {
     if (!storeId) throw new Error("NuvemshopApiClient: storeId required");
     if (!accessToken) throw new Error("NuvemshopApiClient: accessToken required");
     this.storeId = storeId;
     this.accessToken = accessToken;
+    this.retryDelaysMs = retryDelaysMs;
+    this.sleep = sleep;
   }
 
   private url(path: string): string {
@@ -73,43 +80,23 @@ export class NuvemshopApiClient {
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    let res: Response;
-    try {
-      res = await fetch(this.url(path), {
-        method,
-        headers: this.headers(),
-        body: body !== undefined ? JSON.stringify(body) : undefined,
-        cache: "no-store",
-      });
-    } catch (err) {
-      throw new NuvemshopApiError(0, "network_error", String((err as Error).message));
-    }
-
-    const text = await res.text();
-    if (res.status === 204 || text.length === 0) {
-      return undefined as T;
-    }
-
-    if (!res.ok) {
-      const code =
-        res.status === 401
-          ? "unauthorized"
-          : res.status === 403
-            ? "forbidden"
-            : res.status === 404
-              ? "not_found"
-              : res.status === 429
-                ? "rate_limited"
-                : res.status >= 500
-                  ? "upstream_error"
-                  : "request_failed";
-      throw new NuvemshopApiError(res.status, code, text);
-    }
-
-    try {
-      return JSON.parse(text) as T;
-    } catch {
-      throw new NuvemshopApiError(res.status, "invalid_json", text);
+    for (let attempt = 0; ; attempt += 1) {
+      let res: Response;
+      try {
+        res = await fetch(this.url(path), { method, headers: this.headers(), body: body !== undefined ? JSON.stringify(body) : undefined, cache: "no-store" });
+      } catch (err) {
+        if (attempt < this.retryDelaysMs.length) { await this.sleep(this.retryDelaysMs[attempt]!); continue; }
+        throw new NuvemshopApiError(0, "network_error", String((err as Error).message));
+      }
+      const text = await res.text();
+      if (res.status === 204 || text.length === 0) return undefined as T;
+      if (!res.ok) {
+        const code = res.status === 401 ? "unauthorized" : res.status === 403 ? "forbidden" : res.status === 404 ? "not_found" : res.status === 429 ? "rate_limited" : res.status >= 500 ? "upstream_error" : "request_failed";
+        if ((res.status === 429 || res.status >= 500) && attempt < this.retryDelaysMs.length) { await this.sleep(this.retryDelaysMs[attempt]!); continue; }
+        throw new NuvemshopApiError(res.status, code, text);
+      }
+      try { return JSON.parse(text) as T; }
+      catch { throw new NuvemshopApiError(res.status, "invalid_json", text); }
     }
   }
 
