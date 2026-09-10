@@ -1,5 +1,14 @@
 # Deploy Preflight Checklist
 
+## F8 release readiness (0.2.0)
+
+- Confirmar SHA aprovado e executar `pnpm --dir apps/crm release:migrations:dry-run` para listar baseline e migrations sem tocar na base.
+- Verificar `GET /api/v1/health` e `GET /api/v1/readyz`; readiness apenas confirma processo, health confirma dependências.
+- Registar URL/sha do deploy anterior antes de promover.
+- Rollback de aplicação: apontar para a imagem/SHA anterior e repetir o smoke de health/readiness.
+- Migrations são forward-only; qualquer correção de dados exige migration nova e aprovação explícita.
+- Não executar deploy a partir desta checklist sem janela, dono e aprovação.
+
 > Estado atual da instalação Lumenva: o rename PT/UE, o cutover Docker e as sete
 > flags RGPD já foram executados em produção. Este checklist continua sendo um
 > preflight reutilizável para futuros deploys; não é uma indicação de que o
