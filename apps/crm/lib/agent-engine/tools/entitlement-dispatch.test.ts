@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { executeThroughEntitledToolGateway } from "@/lib/agent-engine/tools/gateway";
+import { executeThroughToolGateway } from "@/lib/agent-engine/tools/gateway";
 import type { AgentToolDefinition } from "@/lib/agent-engine/tools/registry";
 import type { AuthorizeModuleInput } from "@/lib/entitlements/authorize-module";
 
@@ -19,7 +19,7 @@ const tool: AgentToolDefinition = {
 describe("dispatch entitlement boundary", () => {
   it("returns a DENY receipt before executing an unentitled tool", async () => {
     let executed = false;
-    const result = await executeThroughEntitledToolGateway({
+    const result = await executeThroughToolGateway({
       organizationId: "org-a", agentId: "agent-a", autonomyLevel: "assisted", tool, args: {}, idempotencyKey: "dispatch-1", approvalStore: null,
       entitlement,
       execute: async () => { executed = true; return "ok"; },
@@ -33,10 +33,10 @@ describe("dispatch entitlement boundary", () => {
 
 it("refuses dispatch when the central entitlement context is missing", async () => {
   let executed = false;
-  const result = await executeThroughEntitledToolGateway({
+  const result = await executeThroughToolGateway({
     organizationId: "org-a", agentId: "agent-a", autonomyLevel: "assisted", tool, args: {}, idempotencyKey: "missing-entitlement", approvalStore: null,
     execute: async () => { executed = true; return "ok"; },
-  } as never);
+  });
   expect(result).toMatchObject({ kind: "denied", reason: "entitlement:authorization_contract_invalid", receipt: { decision: "DENY" } });
   expect(executed).toBe(false);
 });
