@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   const modules = assignment.data ? await db.from("plan_modules").select("modules!inner(slug)").eq("plan_id", assignment.data.plan_id) : { data: [], error: null };
   if (modules.error) return fail("internal_error", modules.error.message, 500, { requestId });
   const plan = typeof assignment.data?.plans?.slug === "string" ? assignment.data.plans.slug : "standard";
-  const entitledModules = (modules.data ?? []).map((row: any) => row.modules?.slug).filter((v: unknown): v is string => typeof v === "string");
+  const entitledModules = (modules.data ?? []).map((row: any) => (row as { modules?: { slug?: unknown } }).modules?.slug).filter((v: unknown): v is string => typeof v === "string");
   const actorCapabilities = (authz.user as unknown as { capabilities?: unknown }).capabilities;
   const trustedCapabilities = Array.isArray(actorCapabilities) ? actorCapabilities.filter((v): v is string => typeof v === "string") : [];
   const decision = authorizeModule(buildEntitlementInput({
