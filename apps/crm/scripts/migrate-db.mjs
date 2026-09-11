@@ -42,9 +42,7 @@ try {
     const version = file.replace(/\.sql$/, "");
     const { rowCount } = await pool.query("select 1 from public.schema_migrations where version = $1", [version]);
     if (rowCount) continue;
-    const numericMatch = file.match(/_(\d+)_/) ?? file.match(/^(\d+)_/);
-    const migrationNumber = numericMatch ? Number(numericMatch[1]) : null;
-    const baselineCoversMigration = migrationNumber !== null ? migrationNumber <= BASELINE_APPLIED_THROUGH : file.slice(0, 14) <= BASELINE_APPLIED_THROUGH_TIMESTAMP;
+    const baselineCoversMigration = isBaselineCovered(file);
     if (baselineCoversMigration) {
       await pool.query("insert into public.schema_migrations(version) values ($1) on conflict (version) do nothing", [version]);
       console.log(`baseline contains ${version}`);
