@@ -79,6 +79,10 @@ export type AuthorizationDecision =
 
 const riskRank = (risk: ModuleRiskTier): number => MODULE_RISK_TIERS.indexOf(risk);
 
+function isRiskTier(value: unknown): value is ModuleRiskTier {
+  return typeof value === "string" && MODULE_RISK_TIERS.includes(value as ModuleRiskTier);
+}
+
 function auditFor(input: AuthorizeModuleInput, checks: AuthorizationCheck[]): AuthorizationAudit {
   return {
     requestId: input.requestId,
@@ -99,7 +103,7 @@ function deny(input: AuthorizeModuleInput, reason: AuthorizationDenyReason, chec
 function validContract(module: ModuleContract): boolean {
   return Boolean(
     module.id.trim() && module.version.trim() &&
-      MODULE_RISK_TIERS.includes(module.risk) &&
+      isRiskTier(module.risk) &&
       !module.dependencies.includes(module.id) &&
       !module.conflicts.includes(module.id),
   );
@@ -107,7 +111,7 @@ function validContract(module: ModuleContract): boolean {
 
 export function authorizeModule(input: AuthorizeModuleInput): AuthorizationDecision {
   const checks: AuthorizationCheck[] = [];
-  if (!validContract(input.module)) return deny(input, "authorization_contract_invalid", checks);
+  if (!validContract(input.module) || !isRiskTier(input.maxRisk)) return deny(input, "authorization_contract_invalid", checks);
 
   if (!input.tenant.rlsAllowed || input.tenant.rlsOrganizationId !== input.tenant.organizationId || input.actor.organizationId !== input.tenant.organizationId) {
     checks.push({ stage: "tenant_rls", result: "FAIL", reason: "tenant_rls_denied" });

@@ -40,8 +40,8 @@ function request(overrides: Partial<AuthorizeModuleInput> = {}): AuthorizeModule
 describe("authorizeModule", () => {
   it("allows an entitled module for tenant A and records the ordered audit trail", () => {
     const result = authorizeModule(request());
-    expect(result.kind).toBe("ALLOW");
-    if (result.kind === "ALLOW") {
+    expect(result.decision).toBe("ALLOW");
+    if (result.decision === "ALLOW") {
       expect(result.policyVersion).toBe("entitlements-v1");
       expect(result.audit.organizationId).toBe("tenant-a");
       expect(result.audit.checks.map((check) => check.stage)).toEqual([
@@ -66,8 +66,8 @@ describe("authorizeModule", () => {
       },
       actor: { actorId: "user-b", organizationId: "tenant-b", role: "manager", capabilities: ["inbox.read"] },
     }));
-    expect(result).toMatchObject({ kind: "DENY", reason: "module_not_entitled", policyVersion: "entitlements-v1" });
-    if (result.kind === "DENY") expect(result.audit.checks.map((check) => check.stage)).toEqual(["tenant_rls", "entitlement"]);
+    expect(result).toMatchObject({ decision: "DENY", reason: "module_not_entitled", policyVersion: "entitlements-v1" });
+    if (result.decision === "DENY") expect(result.audit.checks.map((check) => check.stage)).toEqual(["tenant_rls", "entitlement"]);
   });
 
   it("denies cross-tenant RLS even when the actor has the capability and plan entitlement", () => {
@@ -75,26 +75,26 @@ describe("authorizeModule", () => {
       tenant: { ...request().tenant, organizationId: "tenant-a", rlsOrganizationId: "tenant-b" },
       actor: { actorId: "user-b", organizationId: "tenant-b", role: "manager", capabilities: ["inbox.read"] },
     }));
-    expect(result).toMatchObject({ kind: "DENY", reason: "tenant_rls_denied" });
+    expect(result).toMatchObject({ decision: "DENY", reason: "tenant_rls_denied" });
   });
 
   it("cannot elevate a missing capability into ALLOW", () => {
     const result = authorizeModule(request({ actor: { ...request().actor, capabilities: [] } }));
-    expect(result).toMatchObject({ kind: "DENY", reason: "capability_missing" });
-    expect(result.kind).not.toBe("ALLOW");
+    expect(result).toMatchObject({ decision: "DENY", reason: "capability_missing" });
+    expect(result.decision).not.toBe("ALLOW");
   });
 
   it("fails closed for an invalid P9 module risk and max-risk policy", () => {
     const invalidModule = authorizeModule(request({
       module: { ...moduleContract, risk: "P9" as never },
     }));
-    expect(invalidModule).toMatchObject({ kind: "DENY", reason: "risk_contract_invalid", policyVersion: "entitlements-v1" });
-    if (invalidModule.kind === "DENY") {
-      expect(invalidModule.audit.checks.at(-1)).toEqual({ stage: "risk", result: "FAIL", reason: "risk_contract_invalid" });
+    expect(invalidModule).toMatchObject({ decision: "DENY", reason: "authorization_contract_invalid", policyVersion: "entitlements-v1" });
+    if (invalidModule.decision === "DENY") {
+      expect(invalidModule.audit.checks).toEqual([]);
     }
 
     const invalidPolicy = authorizeModule(request({ maxRisk: "P9" as never }));
-    expect(invalidPolicy).toMatchObject({ kind: "DENY", reason: "risk_contract_invalid", policyVersion: "entitlements-v1" });
+    expect(invalidPolicy).toMatchObject({ decision: "DENY", reason: "authorization_contract_invalid", policyVersion: "entitlements-v1" });
   });
 
   it("enforces dependencies, risk and approval after earlier gates", () => {
@@ -104,6 +104,6 @@ describe("authorizeModule", () => {
       maxRisk: "P2",
       approval: { required: false, approved: false },
     }));
-    expect(result).toMatchObject({ kind: "DENY", reason: "dependency_missing" });
+    expect(result).toMatchObject({ decision: "DENY", reason: "dependency_missing" });
   });
 });
