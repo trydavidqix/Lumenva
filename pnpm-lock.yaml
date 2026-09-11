@@ -70,6 +70,7 @@ overrides:
 
 importers:
   packages/operating-core: {}
+  packages/prompt-compiler: {}
 
   apps/crm:
     dependencies:
