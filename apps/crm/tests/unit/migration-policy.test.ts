@@ -8,6 +8,7 @@ describe("migration policy", () => {
   });
   it("detects managed Supabase hosts", () => {
     expect(isSupabaseManagedUrl("postgres://x:y@pooler.supabase.com/db.test")).toBe(true);
+    expect(isSupabaseManagedUrl("postgres://x:y@aws-1-eu-west-1.pooler.supabase.com/db.test")).toBe(true);
     expect(isSupabaseManagedUrl("postgres://x:y@db.abc.supabase.co:5432/postgres")).toBe(true);
     expect(isSupabaseManagedUrl("postgres://x:y@127.0.0.1:5432/postgres")).toBe(false);
   });

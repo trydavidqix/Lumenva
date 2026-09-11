@@ -11,7 +11,7 @@ export function isBaselineCovered(file) {
 export function isSupabaseManagedUrl(value) {
   try {
     const host = new URL(value).hostname.toLowerCase();
-    return host === "pooler.supabase.com" || host.endsWith(".supabase.co");
+    return host.endsWith(".pooler.supabase.com") || host.endsWith(".supabase.co") || host === "pooler.supabase.com";
   } catch {
     return false;
   }
