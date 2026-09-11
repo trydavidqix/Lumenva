@@ -2,14 +2,13 @@ import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
+import { isBaselineCovered } from "./migration-policy.mjs";
 
 const url = process.env.DATABASE_URL ?? process.env.SUPABASE_DB_URL;
 if (!url) throw new Error("DATABASE_URL ou SUPABASE_DB_URL é obrigatório");
 const root = fileURLToPath(new URL("..", import.meta.url));
 const dir = join(root, "supabase", "migrations");
 const baseline = join(root, "supabase", "baseline.sql");
-const BASELINE_APPLIED_THROUGH = 160; // Squash canónico: baseline contém migrations numeradas até 0160; não editar histórico.
-const BASELINE_APPLIED_THROUGH_TIMESTAMP = "20260907120000";
 const pool = new pg.Pool({ connectionString: url });
 try {
   // Supabase-compatible prelude for self-host PostgreSQL; baseline is canonical schema.
