@@ -1,1 +1,18 @@
-{"compilerOptions":{"target":"ES2022","module":"NodeNext","moduleResolution":"NodeNext","strict":true,"noEmit":true,"skipLibCheck":true},"include":["src/verification.ts"]}
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/context.ts",
+    "src/index.ts",
+    "src/locks.ts",
+    "src/model.ts",
+    "src/node-compat.d.ts",
+    "src/verification.ts"
+  ]
+}
