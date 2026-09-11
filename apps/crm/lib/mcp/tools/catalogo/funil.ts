@@ -38,7 +38,7 @@ export const TOOLS_FUNIL = declararTools([
       "Mostra os funis de venda existentes e suas etapas, para o agente saber onde pode colocar uma oportunidade.",
     oQueToca: "Funil de vendas",
     risco: "seguro",
-    pacotes: ["vender", "organizar"],
+    pacotes: ["vender"],
   },
   {
     name: "crm_create_lead",
