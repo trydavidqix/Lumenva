@@ -16,8 +16,12 @@ describe("entitlements migration contract", () => {
     expect(migration).toContain("fn_is_platform_admin()");
   });
 
-  it("seeds a deterministic Premium catalog and exposes safe tenant fixtures", () => {
+  it("declares safe, idempotent Premium assignments for test tenants", () => {
+    expect(migration).toContain("insert into public.organization_plan");
+    expect(migration).toContain("join public.organizations o on o.id = fixture.organization_id");
+    expect(migration).toContain("on conflict (organization_id) do update");
     expect(migration).toContain("'" + PREMIUM_PLAN_SLUG + "'");
+    for (const tenant of PREMIUM_TEST_TENANTS) expect(migration).toContain(tenant);
     for (const module of PREMIUM_MODULE_SLUGS) expect(migration).toContain("'" + module + "'");
     expect(PREMIUM_TEST_TENANTS).toHaveLength(2);
     expect(migration).not.toMatch(/(api[_ -]?key|secret[[:space:]]*[:=]|password[[:space:]]*[:=]|token[[:space:]]*[:=])/i);

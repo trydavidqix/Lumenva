@@ -64,3 +64,17 @@ on conflict (slug) do update set name = excluded.name, description = excluded.de
 insert into public.plan_modules (plan_id, module_id)
 select p.id, m.id from public.plans p cross join public.modules m
 where p.slug = 'premium' and m.slug in ('contacts', 'agents', 'jobs', 'audit') on conflict do nothing;
+
+-- Optional Premium fixtures: only existing test organizations are assigned.
+-- The join keeps fresh environments safe from FK failures.
+insert into public.organization_plan (organization_id, plan_id, status)
+select fixture.organization_id, p.id, 'active'
+from (values
+  ('00000000-0000-4000-8000-000000000001'::uuid),
+  ('00000000-0000-4000-8000-000000000002'::uuid)
+) as fixture(organization_id)
+join public.organizations o on o.id = fixture.organization_id
+cross join public.plans p
+where p.slug = 'premium'
+on conflict (organization_id) do update
+set plan_id = excluded.plan_id, status = excluded.status, updated_at = now();
