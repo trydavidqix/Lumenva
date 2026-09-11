@@ -4,11 +4,13 @@ import { getToolByName } from "@/lib/mcp/tools";
 
 const moduleContract = {
   id: "inbox", version: "1.0.0", dependencies: [], conflicts: [], requiredCapabilities: [],
-  allowedRoles: ["agent"], risk: "P1" as const, requiresApproval: false,
+  allowedRoles: ["agent", "manager", "admin"], risk: "P4" as const, requiresApproval: false,
 };
 const args = { module: moduleContract, enabled_modules: [], max_risk: "P4" as const, approval: { required: false, approved: false } };
 function fakeSupabase(entitledModules: string[]) {
-  return { from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: { settings: { plan: "pro", entitled_modules: entitledModules } }, error: null }) }) }) }) };
+  return { from: (table: string) => table === "organization_plan"
+    ? { select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { plan_id: "plan-pro", plans: { slug: "pro" } }, error: null }) }) }) }) }
+    : { select: () => ({ eq: async () => ({ data: entitledModules.map((slug) => ({ modules: { slug } })), error: null }) }) } };
 }
 const auth = { organizationId: "org-1", role: "agent" as const, actor: { type: "user" as const, id: "user-1", role: "agent" as const }, apiTokenId: "token-1", scopes: ["mcp:read"] };
 const ctx = { organizationId: "org-1", role: "agent" as const, actor: auth.actor, apiTokenId: "token-1", requestId: "req-equivalence", supabase: fakeSupabase(["inbox"]) as never };
