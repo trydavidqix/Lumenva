@@ -7,8 +7,7 @@ import {
   verifyImpersonateCookieEdge,
   IMPERSONATE_COOKIE_NAME_EDGE,
 } from "@/lib/impersonate/cookie-edge";
-
-const COOKIE_NAME = "sb-deskcomm-auth";
+import { normalizeSupabaseCookies, SUPABASE_COOKIE_NAME } from "@/lib/supabase/cookie-compat";
 
 export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request: { headers: request.headers } });
@@ -39,7 +38,7 @@ export async function proxy(request: NextRequest) {
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll();
+          return normalizeSupabaseCookies(request.cookies.getAll());
         },
         setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
           cookiesToSet.forEach(({ name, value, options }) => {
@@ -49,7 +48,7 @@ export async function proxy(request: NextRequest) {
         },
       },
       cookieOptions: {
-        name: COOKIE_NAME,
+        name: SUPABASE_COOKIE_NAME,
         sameSite: "strict",
         httpOnly: true,
         secure: cookieSecure(),

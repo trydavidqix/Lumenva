@@ -56,6 +56,11 @@ describe("compatibilidade HTTP do rename R5", () => {
     expect(pkg.private).toBe(true);
   });
 
+  it("faz o proxy aplicar a normalização aos cookies recebidos", () => {
+    const source = readFileSync(resolve(process.cwd(), "apps/crm/proxy.ts"), "utf8");
+    expect(source).toContain("normalizeSupabaseCookies(request.cookies.getAll())");
+  });
+
   it("normaliza cookie Supabase legado e preserva sessão nova quando presente", () => {
     expect(normalizeSupabaseCookies([{ name: `${SUPABASE_COOKIE_NAME_LEGACY}_0`, value: "old" }])).toEqual([
       { name: `${SUPABASE_COOKIE_NAME}_0`, value: "old" },
