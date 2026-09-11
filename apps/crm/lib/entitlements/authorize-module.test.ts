@@ -94,7 +94,10 @@ describe("authorizeModule", () => {
     }
 
     const invalidPolicy = authorizeModule(request({ maxRisk: "P9" as never }));
-    expect(invalidPolicy).toMatchObject({ decision: "DENY", reason: "authorization_contract_invalid", policyVersion: "entitlements-v1" });
+    expect(invalidPolicy).toMatchObject({ decision: "DENY", reason: "risk_contract_invalid", policyVersion: "entitlements-v1" });
+    if (invalidPolicy.decision === "DENY") {
+      expect(invalidPolicy.audit.checks.at(-1)).toEqual({ stage: "risk", result: "FAIL", reason: "risk_contract_invalid" });
+    }
   });
 
   it("enforces dependencies, risk and approval after earlier gates", () => {
