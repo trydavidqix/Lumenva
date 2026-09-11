@@ -21,7 +21,7 @@ export const TOOLS_OPERATING_CORE = declararTools([
     description: "Lista jobs do Agent OS sem payload sensível.",
     rotulo: "Listar jobs",
     explicacao:
-      "Mostra o estado e a execução dos jobs da organização, sem revelar o payload de trabalho.",
+      "Mostra o estado e a execução dos jobs da organização, sem revelar o conteúdo de trabalho.",
     oQueToca: "Operação dos agentes",
     risco: "seguro",
     pacotes: ["organizar"],
