@@ -23,7 +23,7 @@ Authority: `~/master-blueprint-IMPLEMENTAVEL.md`, top-level plus `PHASE 0` and �
 | Wave 3 depends on Waves 1–2 and owns session-aware runtime, routing, memory and handoff | sequencing | BLUEPRINT | `~/master-blueprint-IMPLEMENTAVEL.md:WAVE 3`, `9779-9783` | CONFIRMED target; current agent runtime is under `apps/crm/lib/agent-engine`, not canonical `packages/agent-runtime` |
 | BrowserMesh/Shift precede Command Center | sequencing | BLUEPRINT | `~/master-blueprint-IMPLEMENTAVEL.md:WAVE 4-5`, `9779-9785` | CONFIRMED target |
 | Studio, editor, assets, Product Factory and delivery are ordered Waves 6–10 | sequencing | BLUEPRINT | `~/master-blueprint-IMPLEMENTAVEL.md:WAVE 6-10`, `9779-9789` | CONFIRMED target; current repo has CRM/site surfaces but no audited canonical `packages/studio-*` tree |
-| Integrations, governance, observability, business ops and integrated acceptance are Waves 11–15 | sequencing | BLUEPRINT | `~/master-blueprint-IMPLEMENTAVEL.md:WAVE 11-15`, `9779-9796` | CONFIRMED target |
+| Unified integrations, Marketing/Video, Hermes/Advanced Memory, Evals/Agent Evolution and Autonomy/Optimization are Waves 11–15 | sequencing | BLUEPRINT | `~/master-blueprint-IMPLEMENTAVEL.md:WAVE 11-15`, §17/Part F lines 677-689 and 7518-7524 | CONFIRMED target for this audit; later §9 table uses a conflicting governance/observability/business-ops sequence and remains OWNER_REQUIRED to reconcile |
 | Documentation precedence is CLAUDE.md > docs/specs > docs/prd > HANDOFF > README | repository documentation rule | REPO | `docs/index.md:12-15` | CONFIRMED repository rule |
 | Current repo has mature CRM, audit, event-log, agent-engine, voice, LGPD and provider integrations | current capability | REPO | `apps/crm/lib/`, `apps/crm/app/api/`, `supabase/`, `workers/`, `docs/current-state.md` | CONFIRMED by path inventory; completeness varies per module |
 | Current production/runtime claims in `docs/current-state.md` are historical snapshots, not Phase 0 target proof | evidence boundary | REPO + INFERENCE | `docs/current-state.md` front matter and audit warning | INFERRED; must be reverified before release claims |
@@ -38,3 +38,7 @@ Authority: `~/master-blueprint-IMPLEMENTAVEL.md`, top-level plus `PHASE 0` and �
 ## Explicit non-decisions
 
 This audit does not select Telnyx, SIP, Pipecat, a model provider, a memory provider, a deployment target, or a package implementation strategy. Those choices remain `UNKNOWN` or `OWNER_REQUIRED` until their declared wave and source review.
+
+## Blueprint discrepancy requiring owner resolution
+
+`§17/Part F` defines Waves 12–15 as Marketing/Video, Hermes/Advanced Memory, Evals/Agent Evolution and Autonomy/Optimization. The later `§9 Phase 0 → Wave 15` table lists Governance/Security, Observability/Reliability, Business Operations and Integrated Acceptance instead. This delivery follows §17/Part F because that section is in scope, records the conflict explicitly, and does not treat either sequence as an implementation authorization.
