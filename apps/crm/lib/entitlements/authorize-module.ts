@@ -109,6 +109,10 @@ function validContract(module: ModuleContract): boolean {
   );
 }
 
+export function denyAuthorizationContract(input: AuthorizeModuleInput): AuthorizationDecision {
+  return deny(input, "authorization_contract_invalid", []);
+}
+
 export function authorizeModule(input: AuthorizeModuleInput): AuthorizationDecision {
   const checks: AuthorizationCheck[] = [];
   if (!validContract(input.module) || !isRiskTier(input.maxRisk)) return deny(input, "authorization_contract_invalid", checks);

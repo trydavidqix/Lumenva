@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { requireRole } from "@/lib/auth/require-role";
 import { createClient } from "@/lib/supabase/server";
 import { fail, ok } from "@/lib/api/wrappers";
-import { authorizeModuleForContext, entitlementRequestSchema, readOrganizationEntitlements } from "@/lib/entitlements/adapter";
+import { authorizeModuleForContext, decisionPayload, entitlementRequestSchema, readOrganizationEntitlements } from "@/lib/entitlements/adapter";
 
 export { entitlementRequestSchema, buildEntitlementInput } from "@/lib/entitlements/adapter";
 
@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
     requestId, organizationId: authz.org.orgId, actorId: authz.user.id, role: authz.org.role,
     ...tenant, request: parsed.data,
   });
-  if (decision.decision === "DENY") return fail("entitlement_denied", "Entitlement denied", 403, { requestId, details: { receipt: decision } });
-  return ok({ decision: "ALLOW", receipt: decision }, { requestId });
+  const payload = decisionPayload(decision);
+  if (decision.decision === "DENY") return fail("entitlement_denied", "Entitlement denied", 403, { requestId, details: payload });
+  return ok(payload, { requestId });
 }
