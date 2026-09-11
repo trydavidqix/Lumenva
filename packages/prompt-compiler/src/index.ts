@@ -30,3 +30,16 @@ export {
   type CompilePromptInput,
   type CompiledSystemPrompt,
 } from "./compiler.js";
+
+export {
+  certifyBirth,
+  type BirthArtifact,
+  type CertificationCheck,
+  type CertificationDecision,
+  type CertificationInput,
+  type CertificationPolicy,
+  type CertificationResult,
+  type CompletionPolicyInput,
+  type VerificationPolicyInput,
+  type VersionedCapability,
+} from "./certification.js";
