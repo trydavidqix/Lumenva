@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { authorizeModule, type ModuleContract } from "@/lib/entitlements/authorize-module";
-import { buildEntitlementInput, entitlementRequestSchema } from "@/app/api/v1/entitlements/check/route";
+import { buildEntitlementInput, entitlementRequestSchema, evaluateEntitlementRequest } from "@/app/api/v1/entitlements/check/route";
 import { toEntitlementReceiptView } from "@/lib/entitlements/receipt";
 
 const moduleContract: ModuleContract = {
@@ -53,6 +53,11 @@ describe("entitlement boundary", () => {
       { stage: "tenant_rls", result: "PASS" },
       { stage: "entitlement", result: "FAIL", reason: "module_not_entitled" },
     ]);
+  });
+
+  it("keeps the route compatibility export delegated to the central evaluator", () => {
+    const decision = evaluateEntitlementRequest({ requestId: "req-route", module: moduleContract, organizationId: "org-a", actorId: "user-a", role: "agent", enabledModules: [], maxRisk: "P4", approval: { required: false, approved: false } }, { plan: "pro", entitledModules: ["inbox"] });
+    expect(decision.decision).toBe("ALLOW");
   });
 
   it("builds server input from trusted context without accepting a client plan", () => {
