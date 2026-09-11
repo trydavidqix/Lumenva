@@ -32,6 +32,8 @@ export interface ApprovalRequest {
 export interface ApprovalStore {
   save(request: ApprovalRequest): Promise<void>;
   load(id: string): Promise<ApprovalRequest | null>;
+  /** Optional atomic transition used by stores that can serialize concurrent decisions. */
+  compareAndSet?(id: string, expectedStatus: ApprovalStatus, next: ApprovalRequest): Promise<boolean>;
 }
 
 export interface CreateApprovalRequestInput {
@@ -133,6 +135,12 @@ export async function decideApprovalRequest(
     decidedBy: decision.decidedBy,
     ...(decision.reason === undefined ? {} : { decisionReason: decision.reason }),
   };
+
+  if (store.compareAndSet) {
+    const committed = await store.compareAndSet(request.id, 'pending', next);
+    if (committed) return next;
+    return requireApproval(await store.load(approvalId), approvalId, guard);
+  }
 
   await store.save(next);
   return next;
