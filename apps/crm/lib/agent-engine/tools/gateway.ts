@@ -39,8 +39,6 @@ export interface ExecuteThroughToolGatewayInput {
   idempotencyKey: string;
   execute: () => Promise<unknown> | unknown;
   approvalStore: ApprovalStore | null;
-  /** Optional central entitlement check; omitted callers retain existing policy flow. */
-  entitlement?: AuthorizeModuleInput;
 }
 
 function disabledReason(input: {
@@ -54,6 +52,35 @@ function disabledReason(input: {
   if (!input.agentEnabled) return 'agent_kill_switch';
   if (!input.capabilityEnabled) return 'capability_kill_switch';
   return null;
+}
+
+export async function executeThroughEntitledToolGateway(
+  input: ExecuteThroughToolGatewayInput & { entitlement: AuthorizeModuleInput },
+): Promise<ToolGatewayResult> {
+  const entitlement = (input as { entitlement?: AuthorizeModuleInput }).entitlement;
+  if (!entitlement) {
+    const receipt: AuthorizationDecision = {
+      decision: 'DENY',
+      reason: 'authorization_contract_invalid',
+      policyVersion: 'entitlements.v1',
+      audit: {
+        requestId: input.idempotencyKey,
+        moduleId: input.tool.id,
+        moduleVersion: 'unknown',
+        organizationId: input.organizationId,
+        plan: 'unknown',
+        actorId: input.agentId,
+        policyVersion: 'entitlements.v1',
+        checks: [],
+      },
+    };
+    return { kind: 'denied', reason: 'entitlement:authorization_contract_invalid', receipt };
+  }
+  const decision = authorizeModule(entitlement);
+  if (decision.decision === 'DENY') {
+    return { kind: 'denied', reason: `entitlement:${decision.reason}`, receipt: decision };
+  }
+  return executeThroughToolGateway(input);
 }
 
 export async function executeThroughToolGateway(
@@ -106,14 +133,6 @@ export async function executeThroughToolGateway(
       }),
     );
   };
-
-  if (input.entitlement) {
-    const entitlement = authorizeModule(input.entitlement);
-    if (entitlement.decision === 'DENY') {
-      await emit({ policyOutcome: 'deny', executionOutcome: `entitlement:${entitlement.reason}` });
-      return { kind: 'denied', reason: `entitlement:${entitlement.reason}`, receipt: entitlement };
-    }
-  }
 
   if (input.tool.idempotencyRequired && input.idempotencyKey.trim().length === 0) {
     await emit({ policyOutcome: 'deny', executionOutcome: 'idempotency_key_required' });
