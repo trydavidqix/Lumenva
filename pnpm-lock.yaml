@@ -70,7 +70,11 @@ overrides:
 
 importers:
   packages/operating-core: {}
-  packages/prompt-compiler: {}
+  packages/prompt-compiler:
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
 
   apps/crm:
     dependencies:
