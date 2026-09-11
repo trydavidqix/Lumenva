@@ -180,3 +180,73 @@ Cada pessoa corre o Lumenva na **própria infraestrutura** (VPS, Supabase e chav
 **Open source · Made for the community**
 
 </div>
+
+## Arquitetura
+
+```text
+Cliente / operador
+        │
+        ▼
+CRM — Control Plane (decide)
+        │  API · MCP · CLI · workers · agentes · browser
+        ▼
+authorize_module(organization_id, module, action, ...)
+        │
+        ├── ALLOW / DENY
+        └── Stripe webhook assinado → estado de pagamento
+        │
+        ├── Agent Birth Pipeline → agentes com identidade e políticas versionadas
+        ├── Job Engine / workers / agentes Codex (Claude é o único orquestrador)
+        └── BrowserMesh — Execution Plane (executa; repo próprio)
+                         │
+                         └── trydavidqix/BrowserMesh
+
+Postgres — fonte única da verdade
+organization_id — tenant canónico; RLS em toda fronteira tenant-aware
+```
+
+### Regras constitucionais
+
+- O **CRM é o Control Plane**: decide estado, políticas, aprovações, módulos e ações.
+- O **BrowserMesh é o Execution Plane**: executa processos; o projeto real é `trydavidqix/BrowserMesh`. A integração estende esse repositório e nunca reescreve o BrowserMesh do zero.
+- O **Postgres é a fonte única da verdade** para o estado persistente. Contexto de frontend, browser, CLI ou modelo não é autoridade.
+- `organization_id` é o tenant canónico. Toda API, MCP, CLI, worker, agente e browser boundary tenant-aware aplica RLS e nunca confia no `organization_id` vindo do body como autoridade.
+- Todo agente nasce pelo mesmo **Agent Birth Pipeline**, com definição, contratos, políticas, ferramentas, skills, memória, verificação, guardrails, evals e versão publicada.
+- **Claude é o único orquestrador de agentes Codex**. O CRM decide e regista; BrowserMesh executa; os agentes não se auto-orquestram fora das políticas.
+
+### Camada comercial: planos e entitlements
+
+Os planos comerciais são **Básico**, **Médio** e **Premium**. O acesso é definido por módulos e entitlements, nunca por verificações de plano espalhadas pelo código.
+
+Modelo persistente:
+
+- `plans` — catálogo dos três planos.
+- `modules` — capacidades comerciais nomeadas.
+- `plan_modules` — módulos incluídos por plano.
+- `organization_plan` — plano vigente por organização.
+- `entitlement_events` — histórico append-only de concessões, alterações, suspensões e revogações.
+
+Todo boundary chama o mesmo gate central:
+
+```text
+authorize_module(organization_id, module, action, ...)
+        ├── ALLOW
+        └── DENY
+```
+
+O gate é obrigatório em API, MCP, CLI, worker, agente e browser. Não usar `if-plan` espalhado em handlers, componentes, workers ou prompts. A decisão deve ser server-side, tenant-aware, auditável e consistente em todas as superfícies.
+
+O **Stripe é a fonte da verdade do estado de pagamento**. A aplicação aceita apenas webhooks Stripe assinados, verifica a assinatura e atualiza `organization_plan`/`entitlement_events`. O frontend nunca decide que uma compra foi paga nem concede módulos por conta própria.
+
+### Ordem de execução atual
+
+1. Implementar entitlements e o gate `authorize_module` em todos os boundaries.
+2. Corrigir produção e migrations necessárias, preservando baseline, RLS e evidência de schema.
+3. Integrar Stripe por webhook assinado; frontend sem autoridade de pagamento.
+4. Entregar o primeiro cliente ponta a ponta, da contratação ao uso real dos módulos.
+5. Executar os testes relevantes de módulo, tenant, pagamento, webhook, idempotência e regressão.
+6. Só depois retomar o restante do roadmap de 16 waves do Business OS. Agentes de vendas, suporte, marketing, memória e autonomia continuam secundários a esta camada comercial.
+
+### Limite de prioridade
+
+Cada nova feature deve declarar o módulo e a ação que autoriza. Se não aproxima o primeiro cliente ou não torna o entitlement verificável, permanece fora da prioridade atual. A camada comercial não altera as regras constitucionais de Control Plane, Execution Plane, Postgres, RLS ou Agent Birth Pipeline.
