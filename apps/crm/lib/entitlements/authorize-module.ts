@@ -22,6 +22,7 @@ export type AuthorizationDenyReason =
   | "capability_missing"
   | "role_denied"
   | "risk_exceeds_policy"
+  | "risk_contract_invalid"
   | "approval_required"
   | "approval_invalid"
   | "authorization_contract_invalid";
@@ -117,6 +118,10 @@ function invalidContract(input: AuthorizeModuleInput): boolean {
   );
 }
 
+function isModuleRiskTier(value: unknown): value is ModuleRiskTier {
+  return typeof value === "string" && MODULE_RISK_TIERS.includes(value as ModuleRiskTier);
+}
+
 function auditFor(input: AuthorizeModuleInput, checks: readonly AuthorizationCheck[]): AuthorizationAudit {
   return {
     requestId: input.requestId,
@@ -161,6 +166,9 @@ export function authorizeModule(input: AuthorizeModuleInput): AuthorizationDecis
   if (!input.module.allowedRoles.includes(input.actor.role)) return deny("capability_role", "role_denied");
   checks.push({ stage: "capability_role", result: "PASS" });
 
+  if (!isModuleRiskTier(input.module.risk) || !isModuleRiskTier(input.maxRisk)) {
+    return deny("risk", "risk_contract_invalid");
+  }
   if (RISK_RANK[input.module.risk] > RISK_RANK[input.maxRisk]) return deny("risk", "risk_exceeds_policy");
   checks.push({ stage: "risk", result: "PASS" });
 

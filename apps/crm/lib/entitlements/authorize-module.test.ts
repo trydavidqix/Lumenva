@@ -84,6 +84,19 @@ describe("authorizeModule", () => {
     expect(result.kind).not.toBe("ALLOW");
   });
 
+  it("fails closed for an invalid P9 module risk and max-risk policy", () => {
+    const invalidModule = authorizeModule(request({
+      module: { ...moduleContract, risk: "P9" as never },
+    }));
+    expect(invalidModule).toMatchObject({ kind: "DENY", reason: "risk_contract_invalid", policyVersion: "entitlements-v1" });
+    if (invalidModule.kind === "DENY") {
+      expect(invalidModule.audit.checks.at(-1)).toEqual({ stage: "risk", result: "FAIL", reason: "risk_contract_invalid" });
+    }
+
+    const invalidPolicy = authorizeModule(request({ maxRisk: "P9" as never }));
+    expect(invalidPolicy).toMatchObject({ kind: "DENY", reason: "risk_contract_invalid", policyVersion: "entitlements-v1" });
+  });
+
   it("enforces dependencies, risk and approval after earlier gates", () => {
     const result = authorizeModule(request({
       module: { ...moduleContract, dependencies: ["contacts"], risk: "P3", requiresApproval: true },
