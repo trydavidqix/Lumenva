@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fail, ok } from "@/lib/api/wrappers";
 import { authorizeModuleForContext, decisionPayload, entitlementRequestSchema, readOrganizationEntitlements } from "@/lib/entitlements/adapter";
 
-export { entitlementRequestSchema, buildEntitlementInput } from "@/lib/entitlements/adapter";
+export { entitlementRequestSchema, buildEntitlementInput, evaluateEntitlementRequest } from "@/lib/entitlements/adapter";
 
 export async function POST(req: NextRequest) {
   const requestId = req.headers.get("x-request-id") ?? randomUUID();

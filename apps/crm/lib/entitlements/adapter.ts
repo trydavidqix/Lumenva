@@ -71,6 +71,16 @@ export function authorizeModuleForContext(input: {
   return policyDiverges(request.module) ? denyAuthorizationContract({ ...baseInput, module: request.module }) : authorizeModule(baseInput);
 }
 
+export function evaluateEntitlementRequest(input: {
+  requestId: string; module: ModuleContract; organizationId: string; actorId: string; role: string;
+  actorCapabilities?: string[]; enabledModules: string[]; maxRisk: ModuleRiskTier; approval: ApprovalContext;
+}, catalog: { plan: string; entitledModules: string[] }): AuthorizationDecision {
+  return authorizeModule(buildEntitlementInput({
+    ...input, policyVersion: "entitlements.v1", plan: catalog.plan, entitledModules: catalog.entitledModules,
+    capabilities: input.actorCapabilities,
+  }));
+}
+
 export function decisionPayload(decision: AuthorizationDecision) {
   return decision.decision === "ALLOW"
     ? { decision: "ALLOW" as const, policyVersion: decision.policyVersion, receipt: decision.audit }
