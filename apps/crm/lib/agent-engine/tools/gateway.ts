@@ -13,10 +13,11 @@ import {
   type ToolPolicyOverrides,
 } from '../policies/engine';
 import type { AgentToolDefinition } from './registry';
+import { authorizeModule, type AuthorizeModuleInput, type AuthorizationDecision } from '@/lib/entitlements/authorize-module';
 
 export type ToolGatewayResult =
   | { kind: 'executed'; result: unknown }
-  | { kind: 'denied'; reason: string }
+  | { kind: 'denied'; reason: string; receipt?: AuthorizationDecision }
   | { kind: 'draft'; proposal: { toolId: string; args: unknown; idempotencyKey: string } }
   | { kind: 'pending_approval'; approvalId: string };
 
@@ -38,6 +39,8 @@ export interface ExecuteThroughToolGatewayInput {
   idempotencyKey: string;
   execute: () => Promise<unknown> | unknown;
   approvalStore: ApprovalStore | null;
+  /** Optional central entitlement check; omitted callers retain existing policy flow. */
+  entitlement?: AuthorizeModuleInput;
 }
 
 function disabledReason(input: {
@@ -103,6 +106,14 @@ export async function executeThroughToolGateway(
       }),
     );
   };
+
+  if (input.entitlement) {
+    const entitlement = authorizeModule(input.entitlement);
+    if (entitlement.decision === 'DENY') {
+      await emit({ policyOutcome: 'deny', executionOutcome: `entitlement:${entitlement.reason}` });
+      return { kind: 'denied', reason: `entitlement:${entitlement.reason}`, receipt: entitlement };
+    }
+  }
 
   if (input.tool.idempotencyRequired && input.idempotencyKey.trim().length === 0) {
     await emit({ policyOutcome: 'deny', executionOutcome: 'idempotency_key_required' });

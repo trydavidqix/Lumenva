@@ -1,0 +1,28 @@
+import { describe, expect, it } from "vitest";
+import { executeThroughToolGateway } from "@/lib/agent-engine/tools/gateway";
+import type { AgentToolDefinition } from "@/lib/agent-engine/tools/registry";
+import type { AuthorizeModuleInput } from "@/lib/entitlements/authorize-module";
+
+const entitlement: AuthorizeModuleInput = {
+  requestId: "dispatch-deny",
+  policyVersion: "entitlements.v1",
+  module: { id: "inbox", version: "1.0.0", dependencies: [], conflicts: [], requiredCapabilities: [], allowedRoles: ["agent"], risk: "P1", requiresApproval: false },
+  tenant: { organizationId: "org-a", rlsOrganizationId: "org-a", rlsAllowed: true, plan: "standard", entitledModules: [] },
+  actor: { actorId: "agent-a", organizationId: "org-a", role: "agent", capabilities: [] },
+  enabledModules: [], maxRisk: "P4", approval: { required: false, approved: false },
+};
+const tool = { id: "inbox", risk: "low", hasSideEffect: false, idempotencyRequired: false } as AgentToolDefinition;
+
+describe("dispatch entitlement boundary", () => {
+  it("returns a DENY receipt before executing an unentitled tool", async () => {
+    let executed = false;
+    const result = await executeThroughToolGateway({
+      organizationId: "org-a", agentId: "agent-a", autonomyLevel: "assisted", tool, args: {}, idempotencyKey: "dispatch-1", approvalStore: null,
+      entitlement,
+      execute: async () => { executed = true; return "ok"; },
+    });
+    expect(result.kind).toBe("denied");
+    expect(result).toMatchObject({ reason: "entitlement:module_not_entitled", receipt: { decision: "DENY", reason: "module_not_entitled" } });
+    expect(executed).toBe(false);
+  });
+});
