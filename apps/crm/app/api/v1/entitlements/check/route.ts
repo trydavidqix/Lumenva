@@ -57,10 +57,14 @@ export async function POST(req: NextRequest) {
   if (modules.error) return fail("internal_error", modules.error.message, 500, { requestId });
   const plan = typeof assignment.data?.plans?.slug === "string" ? assignment.data.plans.slug : "standard";
   const entitledModules = (modules.data ?? []).map((row: unknown) => (row as { modules?: { slug?: unknown } }).modules?.slug).filter((v: unknown): v is string => typeof v === "string");
+  const canonicalModule: ModuleContract = { id: parsed.data.module.id, version: parsed.data.module.version, dependencies: [], conflicts: [], requiredCapabilities: [], allowedRoles: ["agent", "manager", "admin"], risk: "P4", requiresApproval: false };
+  const clientPolicy = parsed.data.module;
+  const policyDiverges = JSON.stringify({ dependencies: clientPolicy.dependencies, conflicts: clientPolicy.conflicts, requiredCapabilities: clientPolicy.requiredCapabilities, allowedRoles: clientPolicy.allowedRoles, risk: clientPolicy.risk, requiresApproval: clientPolicy.requiresApproval }) !== JSON.stringify({ dependencies: canonicalModule.dependencies, conflicts: canonicalModule.conflicts, requiredCapabilities: canonicalModule.requiredCapabilities, allowedRoles: canonicalModule.allowedRoles, risk: canonicalModule.risk, requiresApproval: canonicalModule.requiresApproval });
+  if (policyDiverges) return fail("validation_error", "Module policy is server-managed", 400, { requestId });
   const actorCapabilities = (authz.user as unknown as { capabilities?: unknown }).capabilities;
   const trustedCapabilities = Array.isArray(actorCapabilities) ? actorCapabilities.filter((v): v is string => typeof v === "string") : [];
   const decision = authorizeModule(buildEntitlementInput({
-    requestId, policyVersion: "entitlements.v1", module: parsed.data.module, organizationId: authz.org.orgId, plan, entitledModules,
+    requestId, policyVersion: "entitlements.v1", module: canonicalModule, organizationId: authz.org.orgId, plan, entitledModules,
     actorId: authz.user.id, role: authz.org.role, actorCapabilities: trustedCapabilities, enabledModules: parsed.data.enabled_modules, maxRisk: parsed.data.max_risk,
     approval: { required: parsed.data.approval.required, approved: parsed.data.approval.approved, approvalId: parsed.data.approval.approval_id },
   }));
