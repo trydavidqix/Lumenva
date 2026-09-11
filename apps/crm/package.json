@@ -48,7 +48,7 @@
     "test:pades": "cd ../.. && node apps/crm/node_modules/vitest/vitest.mjs run --config apps/crm/vitest.config.ts apps/crm/tests/unit/pades-signer.test.ts",
     "test:waha-contract": "cd ../.. && node apps/crm/node_modules/vitest/vitest.mjs run --config apps/crm/vitest.config.ts apps/crm/lib/waha/retry.test.ts apps/crm/lib/waha/webhook-auth.test.ts",
     "release:migrations:dry-run": "node scripts/migrate-dry-run.mjs",
-    "cli:lumenva": "tsx scripts/lumenva.ts"
+    "cli:lumenva": "node --experimental-default-type=module --import tsx/esm scripts/lumenva.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.49",
