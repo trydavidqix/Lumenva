@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   cancelApprovalRequest,
@@ -102,5 +102,19 @@ describe('Wave 1 policy and approval edge contracts', () => {
     await enforceApprovalDecision(store, request.id, execute, { organizationId: 'org-a' });
     await expect(enforceApprovalDecision(store, request.id, execute, { organizationId: 'org-a' })).resolves.toEqual({ kind: 'already_executed' });
     expect(executions).toBe(1);
+  });
+
+  it('serializes concurrent execution claims and invokes the capability once', async () => {
+    const store = atomicStore();
+    const request = await pending(store);
+    await decideApprovalRequest(store, request.id, { decision: 'approved', decidedBy: 'user-1' }, { organizationId: 'org-a' });
+    const execute = vi.fn(async () => ({ ok: true }));
+    const results = await Promise.all([
+      enforceApprovalDecision(store, request.id, execute, { organizationId: 'org-a' }),
+      enforceApprovalDecision(store, request.id, execute, { organizationId: 'org-a' }),
+    ]);
+    expect(results.filter((result) => result.kind === 'executed')).toHaveLength(1);
+    expect(results.filter((result) => result.kind === 'already_executed')).toHaveLength(1);
+    expect(execute).toHaveBeenCalledTimes(1);
   });
 });
