@@ -32,7 +32,11 @@ export interface ApprovalRequest {
 export interface ApprovalStore {
   save(request: ApprovalRequest): Promise<void>;
   load(id: string): Promise<ApprovalRequest | null>;
+  /** Optional atomic transition used by stores that can serialize concurrent decisions. */
+  compareAndSet?(id: string, expectedStatus: ApprovalStatus, next: ApprovalRequest): Promise<boolean>;
 }
+
+const executionLocks = new Map<string, Promise<void>>();
 
 export interface CreateApprovalRequestInput {
   organizationId: string;
@@ -134,6 +138,12 @@ export async function decideApprovalRequest(
     ...(decision.reason === undefined ? {} : { decisionReason: decision.reason }),
   };
 
+  if (store.compareAndSet) {
+    const committed = await store.compareAndSet(request.id, 'pending', next);
+    if (committed) return next;
+    return requireApproval(await store.load(approvalId), approvalId, guard);
+  }
+
   await store.save(next);
   return next;
 }
@@ -157,6 +167,10 @@ export async function expireApprovalRequest(
     decidedAt: input.now,
     decisionReason: 'approval_expired',
   };
+  if (store.compareAndSet) {
+    const committed = await store.compareAndSet(request.id, 'pending', expired);
+    return committed ? expired : requireApproval(await store.load(approvalId), approvalId, { organizationId: input.organizationId });
+  }
   await store.save(expired);
   return expired;
 }
@@ -178,11 +192,35 @@ export async function cancelApprovalRequest(
     cancelledBy: input.cancelledBy,
     ...(input.reason === undefined ? {} : { decisionReason: input.reason }),
   };
+  if (store.compareAndSet) {
+    const committed = await store.compareAndSet(request.id, 'pending', cancelled);
+    return committed ? cancelled : requireApproval(await store.load(approvalId), approvalId, { organizationId: input.organizationId });
+  }
   await store.save(cancelled);
   return cancelled;
 }
 
 export async function enforceApprovalDecision(
+  store: ApprovalStore,
+  approvalId: string,
+  execute: (request: ApprovalRequest) => Promise<unknown> | unknown,
+  guard?: Pick<ApprovalGuard, 'organizationId'>,
+): Promise<ApprovalExecutionResult> {
+  const previous = executionLocks.get(approvalId) ?? Promise.resolve();
+  let release!: () => void;
+  const current = new Promise<void>((resolve) => { release = resolve; });
+  const queued = previous.then(() => current);
+  executionLocks.set(approvalId, queued);
+  await previous;
+  try {
+    return await enforceApprovalDecisionLocked(store, approvalId, execute, guard);
+  } finally {
+    release();
+    if (executionLocks.get(approvalId) === queued) executionLocks.delete(approvalId);
+  }
+}
+
+async function enforceApprovalDecisionLocked(
   store: ApprovalStore,
   approvalId: string,
   execute: (request: ApprovalRequest) => Promise<unknown> | unknown,
@@ -217,7 +255,18 @@ export async function enforceApprovalDecision(
           ...request,
           status: 'executing',
         };
-  if (request.status !== 'executing') await store.save(executing);
+  if (request.status !== 'executing') {
+    if (store.compareAndSet) {
+      const committed = await store.compareAndSet(request.id, 'approved', executing);
+      if (!committed) {
+        const latest = requireApproval(await store.load(approvalId), approvalId, guard);
+        if (latest.status !== 'executing') return enforceApprovalDecisionLocked(store, approvalId, execute, guard);
+        return { kind: 'already_executed' };
+      }
+    } else {
+      await store.save(executing);
+    }
+  }
 
   const result = await execute(executing);
   const executed: ApprovalRequest = {
