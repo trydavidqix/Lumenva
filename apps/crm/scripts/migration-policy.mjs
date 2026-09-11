@@ -7,3 +7,12 @@ export function isBaselineCovered(file) {
   if (sequence) return Number(sequence) <= BASELINE_APPLIED_THROUGH;
   return file.slice(0, 14) <= BASELINE_APPLIED_THROUGH_TIMESTAMP;
 }
+
+export function isSupabaseManagedUrl(value) {
+  try {
+    const host = new URL(value).hostname.toLowerCase();
+    return host === "pooler.supabase.com" || host.endsWith(".supabase.co");
+  } catch {
+    return false;
+  }
+}
