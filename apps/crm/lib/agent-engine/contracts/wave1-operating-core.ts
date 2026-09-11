@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createHash } from 'node:crypto';
 
 const FORBIDDEN_DEFINITION_KEYS = new Set([
   'model',
@@ -148,6 +149,54 @@ export function parseAgentResponse(value: unknown): AgentResponse {
   return AgentResponseSchema.parse(value);
 }
 
+export type DefinitionValidationReport =
+  | { ok: true; definitionHash: string }
+  | { ok: false; errors: string[] };
+
+export interface StoredAgentVersion {
+  status: 'draft';
+  definition: AgentDefinition;
+  definitionHash: string;
+}
+
+function canonicalDefinition(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalDefinition).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, nested]) => `${JSON.stringify(key)}:${canonicalDefinition(nested)}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
+}
+
+export class InMemoryAgentVersionStore {
+  private readonly versions = new Map<string, StoredAgentVersion>();
+
+  validateAndStore(input: unknown): DefinitionValidationReport {
+    const parsed = AgentDefinitionSchema.safeParse(input);
+    if (!parsed.success) {
+      return { ok: false, errors: parsed.error.issues.map((issue) => issue.message) };
+    }
+    const definitionHash = createHash('sha256')
+      .update(canonicalDefinition(parsed.data))
+      .digest('hex');
+    const version: StoredAgentVersion = { status: 'draft', definition: parsed.data, definitionHash };
+    this.versions.set(`${parsed.data.id}:${parsed.data.version}`, version);
+    return { ok: true, definitionHash };
+  }
+
+  get(id: string, version: string): StoredAgentVersion | undefined {
+    return this.versions.get(`${id}:${version}`);
+  }
+
+  validateStored(id: string, version: string): DefinitionValidationReport {
+    const stored = this.get(id, version);
+    if (!stored) return { ok: false, errors: ['E_VERSION_NOT_FOUND'] };
+    return this.validateAndStore(stored.definition);
+  }
+}
+
 export type SessionStatus = 'open' | 'blocked' | 'completed';
 
 export interface SessionState {
@@ -247,7 +296,7 @@ export function reduceState(state: SessionState, input: unknown): StateReducerRe
 }
 
 export function replaySession(snapshot: SessionSnapshot, events: readonly SessionEvent[]): SessionState {
-  let state = { ...snapshot.state, knownFacts: { ...snapshot.state.knownFacts } };
+  const state = { ...snapshot.state, knownFacts: { ...snapshot.state.knownFacts } };
   for (const event of events) {
     if (event.sessionId !== snapshot.sessionId) continue;
     if (event.kind === 'fact.learned') {
