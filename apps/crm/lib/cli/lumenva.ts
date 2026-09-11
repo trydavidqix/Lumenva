@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import { auditMcpToolCall } from "@/lib/mcp/audit";
 import { ensureRole, ensureScope, type McpAuthResult } from "@/lib/mcp/auth";
 import { allTools } from "@/lib/mcp/tools";
@@ -18,6 +19,15 @@ export function parseLumenvaArgs(argv: readonly string[]): LumenvaCommand {
   return { toolName, args: args as Record<string, unknown> };
 }
 
+export function validateLumenvaToolArgs(
+  toolName: string,
+  args: Record<string, unknown>,
+): Record<string, unknown> {
+  const tool = allTools.find((candidate) => candidate.name === toolName);
+  if (!tool) throw new Error("unknown_tool:" + toolName);
+  return z.object(tool.inputSchema).parse(args) as Record<string, unknown>;
+}
+
 /** CLI invokes the exact MCP tool definitions; it does not reimplement handlers. */
 export async function invokeLumenvaCommand(input: {
   command: LumenvaCommand;
@@ -27,8 +37,6 @@ export async function invokeLumenvaCommand(input: {
 }): Promise<unknown> {
   const tool = allTools.find((candidate) => candidate.name === input.command.toolName);
   if (!tool) throw new Error(`unknown_tool:${input.command.toolName}`);
-  ensureScope(input.auth.scopes, tool.requiresScope);
-  ensureRole(input.auth.role, tool.requiresRole);
   const ctx: McpContext = {
     organizationId: input.auth.organizationId,
     role: input.auth.role,
@@ -39,11 +47,21 @@ export async function invokeLumenvaCommand(input: {
   };
   const startedAt = Date.now();
   try {
-    const result = await tool.handler(input.command.args as never, ctx);
-    await auditMcpToolCall({ ctx, toolName: tool.name, args: input.command.args, durationMs: Date.now() - startedAt, success: true });
+    ensureScope(input.auth.scopes, tool.requiresScope);
+    ensureRole(input.auth.role, tool.requiresRole);
+    const args = validateLumenvaToolArgs(input.command.toolName, input.command.args);
+    const result = await tool.handler(args as never, ctx);
+    await auditMcpToolCall({ ctx, toolName: tool.name, args, durationMs: Date.now() - startedAt, success: true });
     return result;
   } catch (error) {
-    await auditMcpToolCall({ ctx, toolName: tool.name, args: input.command.args, durationMs: Date.now() - startedAt, success: false, errorMessage: error instanceof Error ? error.message : String(error) });
+    await auditMcpToolCall({
+      ctx,
+      toolName: tool.name,
+      args: input.command.args,
+      durationMs: Date.now() - startedAt,
+      success: false,
+      errorMessage: error instanceof Error ? error.message : String(error),
+    });
     throw error;
   }
 }
