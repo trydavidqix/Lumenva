@@ -25,10 +25,10 @@ function queryResult(rows: unknown[] = []) {
 }
 
 describe("Wave 1 MCP operating-core contract", () => {
-  it("exposes manager/read metadata for agents, jobs and approvals", () => {
+  it("exposes ai-operator/read metadata for agents, jobs and approvals", () => {
     for (const tool of [crmListAgents, crmListJobs, crmListApprovals]) {
       expect(tool.category).toBe("read");
-      expect(tool.requiresRole).toBe("manager");
+      expect(tool.requiresRole).toBe("ai_operator");
       expect(tool.requiresScope).toBe("mcp:read");
       expect(tool.name).toMatch(/^crm_list_(agents|jobs|approvals)$/);
     }
