@@ -17,8 +17,8 @@ describe("Agent Factory birth pipeline", () => {
 
     expect(first.map((entry) => entry.definition.id)).toEqual([
       "sales",
-      "support",
-      "claude_orchestrator",
+      "atendimento",
+      "supervisor",
     ]);
     expect(first.map((entry) => entry.contentHash)).toEqual(
       second.map((entry) => entry.contentHash),
@@ -52,5 +52,14 @@ describe("Agent Factory birth pipeline", () => {
         definition: { ...original.definition, objective: "different" },
       }),
     ).rejects.toThrow(new AgentBirthError("version_conflict", "agent_definition_version_conflict"));
+  });
+
+  it("keeps existing product IDs and hierarchy on factory-born definitions", async () => {
+    const { getProductAgentDefinition } = await import("./definitions");
+    for (const input of FIRST_BIRTH_CONTRACTS) {
+      expect(getProductAgentDefinition(input.definition.id)?.id).toBe(input.definition.id);
+    }
+    expect(getProductAgentDefinition("support")).toBeNull();
+    expect(getProductAgentDefinition("claude_orchestrator")).toBeNull();
   });
 });

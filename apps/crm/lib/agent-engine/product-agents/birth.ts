@@ -153,11 +153,11 @@ export const FIRST_BIRTH_CONTRACTS: readonly AgentBirthInput[] = [
     provenance: { source: "product-agent", sourceRef: "product-agents/sales.ts" },
   },
   {
-    definition: { ...ATENDIMENTO_AGENT_DEFINITION, id: "support" },
+    definition: { ...ATENDIMENTO_AGENT_DEFINITION, id: "atendimento" },
     provenance: { source: "product-agent", sourceRef: "product-agents/atendimento.ts" },
   },
   {
-    definition: { ...SUPERVISOR_AGENT_DEFINITION, id: "claude_orchestrator" },
+    definition: { ...SUPERVISOR_AGENT_DEFINITION, id: "supervisor" },
     provenance: { source: "product-agent", sourceRef: "product-agents/supervisor.ts" },
   },
 ];
