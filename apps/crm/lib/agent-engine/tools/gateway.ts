@@ -38,6 +38,8 @@ export interface ExecuteThroughToolGatewayInput {
   idempotencyKey: string;
   execute: () => Promise<unknown> | unknown;
   approvalStore: ApprovalStore | null;
+  /** Compatibility input: omission is fail-closed and never executes the tool. */
+  entitlement?: AuthorizeModuleInput;
 }
 
 function disabledReason(input: {
@@ -103,6 +105,32 @@ export async function executeThroughToolGateway(
       }),
     );
   };
+
+  if (!input.entitlement) {
+    const receipt: AuthorizationDecision = {
+      decision: 'DENY',
+      reason: 'authorization_contract_invalid',
+      policyVersion: 'entitlements.v1',
+      audit: {
+        requestId: input.idempotencyKey,
+        moduleId: input.tool.id,
+        moduleVersion: 'unknown',
+        organizationId: input.organizationId,
+        plan: 'unknown',
+        actorId: input.agentId,
+        policyVersion: 'entitlements.v1',
+        checks: [],
+      },
+    };
+    await emit({ policyOutcome: 'deny', executionOutcome: 'entitlement:authorization_contract_invalid' });
+    return { kind: 'denied', reason: 'entitlement:authorization_contract_invalid', receipt };
+  }
+
+  const entitlement = authorizeModule(input.entitlement);
+  if (entitlement.decision === 'DENY') {
+    await emit({ policyOutcome: 'deny', executionOutcome: `entitlement:${entitlement.reason}` });
+    return { kind: 'denied', reason: `entitlement:${entitlement.reason}`, receipt: entitlement };
+  }
 
   if (input.tool.idempotencyRequired && input.idempotencyKey.trim().length === 0) {
     await emit({ policyOutcome: 'deny', executionOutcome: 'idempotency_key_required' });
