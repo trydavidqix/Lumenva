@@ -2,14 +2,13 @@ import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
+import { isBaselineCovered } from "./migration-policy.mjs";
 
 const url = process.env.DATABASE_URL ?? process.env.SUPABASE_DB_URL;
 if (!url) throw new Error("DATABASE_URL ou SUPABASE_DB_URL é obrigatório");
 const root = fileURLToPath(new URL("..", import.meta.url));
 const dir = join(root, "supabase", "migrations");
 const baseline = join(root, "supabase", "baseline.sql");
-const BASELINE_APPLIED_THROUGH = 160; // Squash canónico: baseline contém migrations numeradas até 0160; não editar histórico.
-const BASELINE_APPLIED_THROUGH_TIMESTAMP = "20260907120000";
 const pool = new pg.Pool({ connectionString: url });
 try {
   // Supabase-compatible prelude for self-host PostgreSQL; baseline is canonical schema.
@@ -42,9 +41,7 @@ try {
     const version = file.replace(/\.sql$/, "");
     const { rowCount } = await pool.query("select 1 from public.schema_migrations where version = $1", [version]);
     if (rowCount) continue;
-    const numericMatch = file.match(/_(\d+)_/) ?? file.match(/^(\d+)_/);
-    const migrationNumber = numericMatch ? Number(numericMatch[1]) : null;
-    const baselineCoversMigration = migrationNumber !== null ? migrationNumber <= BASELINE_APPLIED_THROUGH : file.slice(0, 14) <= BASELINE_APPLIED_THROUGH_TIMESTAMP;
+    const baselineCoversMigration = isBaselineCovered(file);
     if (baselineCoversMigration) {
       await pool.query("insert into public.schema_migrations(version) values ($1) on conflict (version) do nothing", [version]);
       console.log(`baseline contains ${version}`);
