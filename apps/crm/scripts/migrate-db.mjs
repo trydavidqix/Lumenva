@@ -23,18 +23,28 @@ try {
   const baselineVersion = "00000_baseline";
   const { rowCount: baselineApplied } = await pool.query("select 1 from public.schema_migrations where version = $1", [baselineVersion]);
   if (!baselineApplied) {
-    const sql = await readFile(baseline, "utf8");
-    const client = await pool.connect();
-    try {
-      await client.query("begin");
-      await client.query(sql);
-      await client.query("insert into public.schema_migrations(version) values ($1)", [baselineVersion]);
-      await client.query("commit");
-      console.log(`applied ${baselineVersion}`);
-    } catch (error) {
-      await client.query("rollback");
-      throw error;
-    } finally { client.release(); }
+    const baselineSql = await readFile(baseline, "utf8");
+    const baselineTables = [...baselineSql.matchAll(/CREATE TABLE(?: IF NOT EXISTS)? "public"\."([^"]+)"/g)].map((match) => match[1]);
+    const { rows: existingTables } = await pool.query("select table_name from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE' and table_name = any($1::text[])", [baselineTables]);
+    const { rowCount: sentinel } = await pool.query("select 1 from pg_constraint where conname = $1 and conrelid = 'public.ai_agent_versions'::regclass", ["ai_agent_versions_unique_number"]);
+    const managedBaselinePresent = existingTables.length === baselineTables.length && sentinel === 1;
+    if (managedBaselinePresent) {
+      await pool.query("insert into public.schema_migrations(version) values ($1)", [baselineVersion]);
+      console.log("existing baseline verified (" + baselineTables.length + " tables + sentinel), marked " + baselineVersion);
+    } else {
+      const sql = baselineSql;
+      const client = await pool.connect();
+      try {
+        await client.query("begin");
+        await client.query(sql);
+        await client.query("insert into public.schema_migrations(version) values ($1)", [baselineVersion]);
+        await client.query("commit");
+        console.log("applied " + baselineVersion);
+      } catch (error) {
+        await client.query("rollback");
+        throw error;
+      } finally { client.release(); }
+    }
   }
   const files = (await readdir(dir)).filter((f) => f.endsWith(".sql")).sort();
   for (const file of files) {
