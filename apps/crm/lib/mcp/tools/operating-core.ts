@@ -18,7 +18,7 @@ export const crmListAgents: McpToolDefinition<typeof listInputShape> = {
   description: "Lista agentes configurados na organização do token.",
   inputSchema: listInputShape,
   category: "read",
-  requiresRole: "manager",
+  requiresRole: "ai_operator",
   requiresScope: "mcp:read",
   handler: async (input, ctx) => {
     let query = ctx.supabase
@@ -47,7 +47,7 @@ export const crmListJobs: McpToolDefinition<typeof jobsInputShape> = {
     "Lista jobs do Agent OS da organização, sem devolver payload ou conteúdo potencialmente sensível.",
   inputSchema: jobsInputShape,
   category: "read",
-  requiresRole: "manager",
+  requiresRole: "ai_operator",
   requiresScope: "mcp:read",
   handler: async (input, ctx) => {
     let query = ctx.supabase
@@ -80,7 +80,7 @@ export const crmListApprovals: McpToolDefinition<typeof approvalsInputShape> = {
     "Lista pedidos de aprovação do Agent OS da organização, sem devolver argumentos ou resultados de execução.",
   inputSchema: approvalsInputShape,
   category: "read",
-  requiresRole: "manager",
+  requiresRole: "ai_operator",
   requiresScope: "mcp:read",
   handler: async (input, ctx) => {
     let query = ctx.supabase
