@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { authorizeModule, type ModuleContract } from "@/lib/entitlements/authorize-module";
-import { buildEntitlementInput, entitlementRequestSchema } from "@/app/api/v1/entitlements/check/route";
+import { buildEntitlementInput, entitlementRequestSchema, evaluateEntitlementRequest } from "@/app/api/v1/entitlements/check/route";
 import { toEntitlementReceiptView } from "@/lib/entitlements/receipt";
 
 const moduleContract: ModuleContract = {
@@ -75,4 +75,16 @@ describe("entitlement boundary", () => {
     expect(input.actor.organizationId).toBe("org-a");
     expect(authorizeModule(input).decision).toBe("ALLOW");
   });
+
+  it("route decision uses catalog context for ALLOW and DENY", () => {
+    const input = {
+      requestId: "req-route", module: moduleContract, organizationId: "org-a", actorId: "user-a",
+      role: "agent", enabledModules: [], maxRisk: "P4" as const,
+      approval: { required: false, approved: false },
+    };
+    expect(evaluateEntitlementRequest(input, { plan: "premium", entitledModules: ["inbox"] }).decision).toBe("ALLOW");
+    expect(evaluateEntitlementRequest(input, { plan: "standard", entitledModules: [] })).toMatchObject({ decision: "DENY", reason: "module_not_entitled" });
+    expect(entitlementRequestSchema.safeParse({ module: { id: "", version: "1", risk: "P1" } }).success).toBe(false);
+  });
+
 });
