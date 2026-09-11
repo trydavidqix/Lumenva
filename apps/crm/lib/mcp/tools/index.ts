@@ -48,6 +48,7 @@ import {
 } from "./evolucao";
 import { crmListContactOrders, crmSearchProducts } from "./comercio";
 import { crmListPrivacyRequests } from "./privacidade";
+import { crmListAgents, crmListJobs, crmListApprovals } from "./operating-core";
 import {
   crmArchiveStage,
   crmCreateStage,
@@ -98,6 +99,9 @@ export const allTools: ReadonlyArray<McpToolDefinition> = [
   crmListContactOrders,
   crmSearchProducts,
   crmListPrivacyRequests,
+  crmListAgents,
+  crmListJobs,
+  crmListApprovals,
   // read — organizar a operação (W4)
   crmListStages,
   crmListTags,
