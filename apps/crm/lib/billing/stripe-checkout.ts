@@ -1,7 +1,7 @@
 import { getStripeCatalogEntry, STRIPE_CHECKOUT_DEFAULTS, type StripeCatalogEntry } from "./stripe-catalog";
 
 export class StripeCheckoutError extends Error {
-  constructor(readonly code: "unknown_plan" | "price_mismatch" | "adapter_unavailable", message: string) {
+  constructor(readonly code: "unknown_plan" | "invalid_tenant" | "price_mismatch" | "adapter_unavailable", message: string) {
     super(message);
     this.name = "StripeCheckoutError";
   }
@@ -17,22 +17,33 @@ type Adapter = {
 export function createStripeCheckoutBoundary(adapter: Adapter) {
   return {
     async createCheckout(input: { planSlug: string; organizationId: string; successUrl: string; cancelUrl: string }) {
+      if (!input.organizationId.trim()) throw new StripeCheckoutError("invalid_tenant", "Organization is required for Stripe checkout");
       const entry = getStripeCatalogEntry(input.planSlug);
       if (!entry) throw new StripeCheckoutError("unknown_plan", `Unknown Stripe plan: ${input.planSlug}`);
-      const result = await adapter.createCheckoutSession({
-        organizationId: input.organizationId,
-        priceLookupKey: entry.monthlyPriceLookupKey,
-        successUrl: input.successUrl,
-        cancelUrl: input.cancelUrl,
-        ...STRIPE_CHECKOUT_DEFAULTS,
-        metadata: { organization_id: input.organizationId, plan_slug: entry.planSlug },
-      });
+      let result: Awaited<ReturnType<Adapter["createCheckoutSession"]>>;
+      try {
+        result = await adapter.createCheckoutSession({
+          organizationId: input.organizationId,
+          priceLookupKey: entry.monthlyPriceLookupKey,
+          successUrl: input.successUrl,
+          cancelUrl: input.cancelUrl,
+          ...STRIPE_CHECKOUT_DEFAULTS,
+          metadata: { organization_id: input.organizationId, plan_slug: entry.planSlug },
+        });
+      } catch {
+        throw new StripeCheckoutError("adapter_unavailable", "Stripe checkout adapter is unavailable");
+      }
       assertCanonicalPrice(entry, result.price);
+      if (!result.sessionId || !result.url) throw new StripeCheckoutError("adapter_unavailable", "Stripe checkout adapter returned an incomplete session");
       return { sessionId: result.sessionId, url: result.url };
     },
     async cancelSubscription(input: { organizationId: string; subscriptionId: string }) {
       if (!adapter.cancelSubscription) throw new StripeCheckoutError("adapter_unavailable", "Stripe subscription adapter is not configured");
-      return adapter.cancelSubscription({ ...input, cancelAtPeriodEnd: true, applyCancellationFee: false });
+      try {
+        return await adapter.cancelSubscription({ ...input, cancelAtPeriodEnd: true, applyCancellationFee: false });
+      } catch {
+        throw new StripeCheckoutError("adapter_unavailable", "Stripe subscription adapter is unavailable");
+      }
     },
   };
 }
