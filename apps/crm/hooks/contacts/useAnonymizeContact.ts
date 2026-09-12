@@ -16,7 +16,7 @@ export function useAnonymizeContact() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: LgpdAnonymizeInput) =>
-      apiClient.post<AnonymizeResponse>("/api/v1/privacy/anonymize", input),
+      apiClient.post<AnonymizeResponse>("/api/v1/lgpd/anonymize", input),
     onError: showApiError,
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ["contact", vars.contact_id] });

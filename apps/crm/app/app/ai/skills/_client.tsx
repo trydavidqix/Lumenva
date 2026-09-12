@@ -119,7 +119,7 @@ export function SkillsClient({ initialState }: Props) {
           {installed.length === 0 ? (
             <p className="rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground">
               Nenhuma skill instalada ainda. Instale uma pronta do catálogo abaixo ou envie a
-              sua em "Enviar skill (.zip)".
+              sua em &quot;Enviar skill (.zip)&quot;.
             </p>
           ) : (
             <ul className="flex flex-col gap-2">

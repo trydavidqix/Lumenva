@@ -42,9 +42,11 @@ interface Props {
   onResolved?: () => void;
 }
 
-export function MergeDialog({ queueItemId, open, onOpenChange }: Props) {
+export function MergeDialog({ queueItemId, open, onOpenChange, onResolved }: Props) {
   const [item, setItem] = useState<MergeQueueRow | null>(null);
   const [loading, setLoading] = useState(false);
+  const [primaryId, setPrimaryId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!open || !queueItemId) return;
@@ -59,6 +61,7 @@ export function MergeDialog({ queueItemId, open, onOpenChange }: Props) {
       .then(({ data }: { data: unknown }) => {
         if (!cancelled) {
           setItem(data as MergeQueueRow | null);
+          setPrimaryId((data as MergeQueueRow | null)?.candidates?.[0]?.id ?? null);
           setLoading(false);
         }
       });
@@ -77,7 +80,7 @@ export function MergeDialog({ queueItemId, open, onOpenChange }: Props) {
           <DialogDescription>
             Comparação dos candidatos detectados. A resolução automática via API
             ainda não está disponível neste MVP — entre em contato com o admin para
-            mesclar via SQL.
+            mesclar via a API após duas confirmações.
           </DialogDescription>
         </DialogHeader>
 
@@ -95,6 +98,9 @@ export function MergeDialog({ queueItemId, open, onOpenChange }: Props) {
                 <div className="font-medium">{c.name ?? "—"}</div>
                 <div className="text-muted-foreground">{c.email ?? "—"}</div>
                 <div className="text-muted-foreground">{c.phone_number ?? "—"}</div>
+                <Button type="button" variant={primaryId === c.id ? "default" : "outline"} onClick={() => setPrimaryId(c.id ?? null)}>
+                  {primaryId === c.id ? "Primary selecionado" : "Escolher primary"}
+                </Button>
               </div>
             ))}
           </div>
@@ -104,8 +110,16 @@ export function MergeDialog({ queueItemId, open, onOpenChange }: Props) {
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Fechar
           </Button>
-          <Button disabled title="Endpoint de resolução não implementado neste MVP">
-            Resolver via SQL (em breve)
+          <Button disabled={!primaryId || submitting} onClick={async () => {
+            if (!primaryId || !window.confirm("Confirma a mesclagem? Esta ação é irreversível.")) return;
+            if (!window.confirm("Confirma novamente: os contactos perdedores serão tombstoned?")) return;
+            setSubmitting(true);
+            const losers = candidates.flatMap((c) => c.id && c.id !== primaryId ? [c.id] : []);
+            const response = await fetch(`/api/v1/merge_queue/${queueItemId}/resolve`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "merge", primary_id: primaryId, loser_ids: losers }) });
+            setSubmitting(false);
+            if (response.ok) { onResolved?.(); onOpenChange(false); }
+          }}>
+            {submitting ? "A resolver…" : "Confirmar mesclagem"}
           </Button>
         </DialogFooter>
       </DialogContent>
