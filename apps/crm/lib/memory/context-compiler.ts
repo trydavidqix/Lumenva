@@ -26,6 +26,7 @@ export interface MemoryEvent {
   lifecycle: MemoryLifecycle;
   content: string;
   supersedes?: string | null;
+  piiHashes?: { type: "email" | "phone" | "cpf"; hash: string }[];
 }
 
 export type ContextSection = Record<string, unknown> | string | null;
