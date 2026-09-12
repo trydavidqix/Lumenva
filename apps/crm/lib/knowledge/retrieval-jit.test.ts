@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { retrieveJit, type KnowledgeCard } from './retrieval-jit';
+import { redactKnowledgeCard, retrieveJit, type KnowledgeCard } from './retrieval-jit';
 
 const card = (id: string, precedence: KnowledgeCard['precedence'], claim: string): KnowledgeCard => ({
   cardId: id,
@@ -30,5 +30,20 @@ describe('retrieveJit', () => {
     expect(retrieveJit('frete', cards, 1)).toHaveLength(3);
     expect(retrieveJit('frete', cards, 20)).toHaveLength(8);
     expect(() => retrieveJit('frete', cards, 0)).toThrow('limit must be between 3 and 8');
+  });
+});
+
+describe('redactKnowledgeCard', () => {
+  it('masks email, phone and CPF before the card reaches the consumer', () => {
+    const sensitive = 'Contacte ana.silva@example.com ou +351 912 345 678; CPF 123.456.789-09.';
+    const result = redactKnowledgeCard(card('sensitive', 'PROJECT_CANONICAL', sensitive));
+
+    expect(result.claim).toContain('[EMAIL_REDACTED]');
+    expect(result.claim).toContain('[PHONE_REDACTED]');
+    expect(result.claim).toContain('[CPF_REDACTED]');
+    expect(result.claim).not.toContain('ana.silva@example.com');
+    expect(result.claim).not.toContain('+351 912 345 678');
+    expect(result.claim).not.toContain('123.456.789-09');
+    expect(result.cardId).toBe('sensitive');
   });
 });

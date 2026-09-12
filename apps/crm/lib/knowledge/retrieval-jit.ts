@@ -45,5 +45,18 @@ export function retrieveJit(query: string, cards: KnowledgeCard[], limit = 8): K
       || a.index - b.index,
     )
     .slice(0, boundedLimit)
-    .map(({ card }) => card);
+    .map(({ card }) => redactKnowledgeCard(card));
+}
+
+const EMAIL_PATTERN = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+const CPF_PATTERN = /\b\d{3}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d{2}\b/g;
+const PHONE_PATTERN = /(?<!\d)(?:\+\d{1,3}[\s.-]?)?(?:\d[\s.-]?){8,14}\d(?!\d)/g;
+
+/** Redacts obvious PII while preserving the card's identity and provenance fields. */
+export function redactKnowledgeCard(card: KnowledgeCard): KnowledgeCard {
+  const claim = card.claim
+    .replace(EMAIL_PATTERN, '[EMAIL_REDACTED]')
+    .replace(CPF_PATTERN, '[CPF_REDACTED]')
+    .replace(PHONE_PATTERN, '[PHONE_REDACTED]');
+  return claim === card.claim ? card : { ...card, claim };
 }
