@@ -27,4 +27,25 @@ describe('ComponentRegistry', () => {
       'component name already registered: shared-name',
     );
   });
+
+  it('normalizes case and surrounding whitespace for register and get', () => {
+    const registry = new ComponentRegistry();
+    registry.register(definition('  Timao  '));
+
+    expect(registry.get('timao')).toEqual(definition('Timao'));
+    expect(registry.get('  TIMAO ')).toEqual(definition('Timao'));
+    expect(() => registry.register(definition('timao'))).toThrow(
+      'component name already registered: timao',
+    );
+  });
+
+  it('uses Unicode NFKC before lowercasing the registry key', () => {
+    const registry = new ComponentRegistry();
+    registry.register(definition('Ｔimao'));
+
+    expect(registry.get('timao')).toEqual(definition('Ｔimao'));
+    expect(() => registry.register(definition('Timao'))).toThrow(
+      'component name already registered: Timao',
+    );
+  });
 });
