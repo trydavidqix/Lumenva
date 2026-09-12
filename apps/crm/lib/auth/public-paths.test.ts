@@ -13,6 +13,11 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/api/v1/system/agent")).toBe(true);
   });
 
+  it("libera apenas o webhook Stripe exato para validação por assinatura", () => {
+    expect(isPublicPath("/api/v1/stripe/webhook")).toBe(true);
+    expect(isPublicPath("/api/v1/stripe/webhook/extra")).toBe(false);
+  });
+
   it("a âncora `$` impede que um sub-path passe de carona", () => {
     expect(isPublicPath("/api/v1/system/agent/qualquer")).toBe(false);
   });
