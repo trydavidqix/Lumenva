@@ -5,7 +5,7 @@
  *  - contactCreateSchema    → POST /api/v1/contacts
  *  - contactPatchSchema     → PATCH /api/v1/contacts/[id]
  *  - contactListQuerySchema → GET /api/v1/contacts (search/tag/source/cursor)
- *  - lgpdAnonymizeSchema    → POST /api/v1/privacy/anonymize (irreversible)
+ *  - lgpdAnonymizeSchema    → POST /api/v1/lgpd/anonymize (irreversible)
  */
 import { z } from "zod";
 

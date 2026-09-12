@@ -265,6 +265,9 @@ importers:
       '@axe-core/playwright':
         specifier: ^4.12.1
         version: 4.12.1(playwright-core@1.62.1)
+      '@next/eslint-plugin-next':
+        specifier: 16.3.0
+        version: 16.3.0
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.62.1
@@ -316,6 +319,9 @@ importers:
       eslint-config-next:
         specifier: 'catalog:'
         version: 16.3.0(@typescript-eslint/parser@8.66.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)
+      eslint-plugin-react-hooks:
+        specifier: 7.1.1
+        version: 7.1.1
       jsdom:
         specifier: 'catalog:'
         version: 30.0.1(@noble/hashes@1.8.0)

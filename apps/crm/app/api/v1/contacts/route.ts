@@ -103,7 +103,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       },
       input as ContactCreate,
     );
-    return ok(result, { status: 201, requestId });
+    return ok(result, { status: result.action === "matched" ? 200 : 201, requestId });
   } catch (err) {
     if (err instanceof ApiError) {
       return fail(err.code, err.message, err.status, { requestId });

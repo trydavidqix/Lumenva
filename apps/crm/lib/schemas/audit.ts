@@ -22,6 +22,11 @@ export interface AuditCursor {
   id: string;
 }
 
+const auditCursorSchema = z.object({
+  created_at: z.string().datetime(),
+  id: z.string().uuid(),
+});
+
 export function encodeAuditCursor(c: AuditCursor): string {
   return Buffer.from(`${c.created_at}|${c.id}`, "utf8").toString("base64url");
 }
@@ -29,9 +34,10 @@ export function encodeAuditCursor(c: AuditCursor): string {
 export function decodeAuditCursor(raw: string): AuditCursor | null {
   try {
     const decoded = Buffer.from(raw, "base64url").toString("utf8");
-    const [created_at, id] = decoded.split("|");
-    if (!created_at || !id) return null;
-    return { created_at, id };
+    const parts = decoded.split("|");
+    if (parts.length !== 2) return null;
+    const parsed = auditCursorSchema.safeParse({ created_at: parts[0], id: parts[1] });
+    return parsed.success ? parsed.data : null;
   } catch {
     return null;
   }

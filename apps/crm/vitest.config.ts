@@ -52,6 +52,7 @@ export default defineConfig({
       "workers/voice-worker/**",
       "apps/site/**",
       "workers/voice-worker/**",
+      "apps/crm/scripts/*.test.mjs",
     ],
   },
   resolve: { alias: { "@": path.resolve(__dirname, ".") } },
