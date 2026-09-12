@@ -9,12 +9,12 @@ export class StripeCheckoutError extends Error {
 
 type RuntimePrice = { lookupKey: string; unitAmountCents: number; currency: string; interval: string };
 type CreateInput = { organizationId: string; priceLookupKey: string; successUrl: string; cancelUrl: string; trialDays: number; trialRequiresPaymentMethod: boolean; metadata: { organization_id: string; plan_slug: string } };
-type Adapter = {
+export type StripeCheckoutAdapter = {
   createCheckoutSession(input: CreateInput): Promise<{ sessionId: string; url: string; price: RuntimePrice }>;
   cancelSubscription?(input: { organizationId: string; subscriptionId: string; cancelAtPeriodEnd: true; applyCancellationFee: false }): Promise<{ subscriptionId: string }>;
 };
 
-export function createStripeCheckoutBoundary(adapter: Adapter) {
+export function createStripeCheckoutBoundary(adapter: StripeCheckoutAdapter) {
   return {
     async createCheckout(input: { planSlug: string; organizationId: string; successUrl: string; cancelUrl: string }) {
       const entry = getStripeCatalogEntry(input.planSlug);
