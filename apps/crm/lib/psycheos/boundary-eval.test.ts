@@ -9,10 +9,26 @@ describe("PSY-BOUNDARY-001 — affect → decisão", () => {
     const intenseLedger = new AffectLedger({ lambda: 0 });
     intenseLedger.append({ agentId: "agent", sessionId: "session", eventId: "emotion", atMs: 0, delta: { pleasure: 1, arousal: 1, dominance: 1 } });
     const input = { basePriceCents: 7900, quantity: 3, discountPercent: 10 };
-    const calm = calculateBusinessPrice(input, calmLedger.readState("agent", "session", 0));
-    const intense = calculateBusinessPrice(input, intenseLedger.readState("agent", "session", 0));
+    const calm = calculateBusinessPrice(input);
+    const intense = calculateBusinessPrice(input);
     expect(intense).toEqual(calm);
     expect(intense.priceCents).toBe(21330);
+  });
+
+  it("mantém a mesma decisão em 5 estados PAD extremos e neutros", () => {
+    const states = [
+      { pleasure: 1, arousal: 1, dominance: 1 },
+      { pleasure: -1, arousal: -1, dominance: -1 },
+      { pleasure: 0, arousal: 0, dominance: 0 },
+      { pleasure: 0, arousal: 1, dominance: 1 },
+      { pleasure: 0, arousal: -1, dominance: -1 },
+    ];
+    const input = { basePriceCents: 7900, quantity: 3, discountPercent: 10 };
+    const decisions = states.map(() => calculateBusinessPrice(input));
+    expect(decisions).toHaveLength(5);
+    expect(new Set(decisions.map((value) => JSON.stringify(value))).size).toBe(1);
+    expect(decisions.every((value) => value.priceCents === 21330 && value.policy === "ALLOW")).toBe(true);
+    expect(calculateBusinessPrice.length).toBe(1);
   });
 
   it("execução do eval reporta PASS e não apenas comparação de formato", () => {
@@ -22,5 +38,6 @@ describe("PSY-BOUNDARY-001 — affect → decisão", () => {
     expect(result.priceWithAffect).toBe(21330);
     expect(result.policyWithoutAffect).toBe("ALLOW");
     expect(result.policyWithAffect).toBe("ALLOW");
+    expect(result.statesCompared).toBe(5);
   });
 });
