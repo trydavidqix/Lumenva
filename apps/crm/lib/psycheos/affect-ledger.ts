@@ -28,6 +28,27 @@ export type AffectEvent = Readonly<{
   decayLambda: number;
 }>;
 
+export type TrustInteraction = Readonly<{
+  kind: "POSITIVE" | "BREACH" | "REPAIR";
+  confidence: number;
+}>;
+
+export type TrustInteractionInput = TrustInteraction & Readonly<{
+  subjectId: string;
+  targetId: string;
+  interactionId: string;
+}>;
+
+export type TrustEvent = Readonly<{
+  subjectId: string;
+  targetId: string;
+  interactionId: string;
+  kind: TrustInteraction["kind"];
+  confidence: number;
+  before: number;
+  after: number;
+}>;
+
 type Key = string;
 
 const ZERO: PadState = Object.freeze({ pleasure: 0, arousal: 0, dominance: 0 });
@@ -53,6 +74,67 @@ const copyPad = (pad: PadState): PadState => Object.freeze({ ...pad });
 
 const keyFor = (agentId: string, sessionId: string, eventId: string): Key => `${agentId}\u0000${sessionId}\u0000${eventId}`;
 const streamKey = (agentId: string, sessionId: string): string => `${agentId}\u0000${sessionId}`;
+
+const trustKey = (subjectId: string, targetId: string, interactionId: string): string => `${subjectId}\u0000${targetId}\u0000${interactionId}`;
+const trustStreamKey = (subjectId: string, targetId: string): string => `${subjectId}\u0000${targetId}`;
+
+const TRUST_RATES = Object.freeze({ positive: 0.1, breach: 0.5, repair: 0.05 });
+
+export const applyTrustInteraction = (
+  current: number,
+  interaction: TrustInteraction,
+  rates: Readonly<{ positive: number; breach: number; repair: number }> = TRUST_RATES,
+): number => {
+  if (!Number.isFinite(current) || current < -1 || current > 1) throw new RangeError("trust must be within [-1, 1]");
+  if (!Number.isFinite(interaction.confidence) || interaction.confidence < 0 || interaction.confidence > 1) {
+    throw new RangeError("trust confidence must be within [0, 1]");
+  }
+  const magnitude = interaction.confidence * rates[interaction.kind === "POSITIVE" ? "positive" : interaction.kind === "BREACH" ? "breach" : "repair"];
+  return clamp(current + (interaction.kind === "POSITIVE" || interaction.kind === "REPAIR" ? magnitude : -magnitude));
+};
+
+export class DirectionalTrustLedger {
+  private readonly eventLog: TrustEvent[] = [];
+  private readonly byKey = new Map<string, TrustEvent>();
+  private readonly latest = new Map<string, number>();
+  private readonly rates: Readonly<{ positive: number; breach: number; repair: number }>;
+
+  constructor(rates: Readonly<{ positive: number; breach: number; repair: number }> = TRUST_RATES) {
+    for (const value of Object.values(rates)) if (!Number.isFinite(value) || value < 0) throw new RangeError("trust rates must be finite and >= 0");
+    this.rates = Object.freeze({ ...rates });
+  }
+
+  append(input: TrustInteractionInput): TrustEvent {
+    if (!input.subjectId || !input.targetId || !input.interactionId) throw new TypeError("subjectId, targetId and interactionId are required");
+    const key = trustKey(input.subjectId, input.targetId, input.interactionId);
+    const replay = this.byKey.get(key);
+    if (replay) return { ...replay };
+    const stream = trustStreamKey(input.subjectId, input.targetId);
+    const before = this.latest.get(stream) ?? 0;
+    const after = applyTrustInteraction(before, input, this.rates);
+    const event: TrustEvent = Object.freeze({
+      subjectId: input.subjectId,
+      targetId: input.targetId,
+      interactionId: input.interactionId,
+      kind: input.kind,
+      confidence: input.confidence,
+      before,
+      after,
+    });
+    this.eventLog.push(event);
+    this.byKey.set(key, event);
+    this.latest.set(stream, after);
+    return { ...event };
+  }
+
+  read(subjectId: string, targetId: string): number {
+    return this.latest.get(trustStreamKey(subjectId, targetId)) ?? 0;
+  }
+
+  events(): readonly TrustEvent[] {
+    return this.eventLog.map((event) => ({ ...event }));
+  }
+}
 
 export class AffectLedger {
   private readonly eventLog: AffectEvent[] = [];

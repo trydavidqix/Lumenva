@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AffectLedger, decayPad, type PadDelta } from "./affect-ledger";
+import { AffectLedger, applyTrustInteraction, decayPad, DirectionalTrustLedger, type PadDelta } from "./affect-ledger";
 
 const delta = (pleasure: number, arousal: number, dominance: number): PadDelta => ({ pleasure, arousal, dominance });
 
@@ -69,5 +69,31 @@ describe("AffectLedger append-only", () => {
     ledger.append({ agentId: "agent-1", sessionId: "session-1", eventId: "evt-zero-decay", atMs: 0, delta: delta(1, -1, 1) });
     const after = decide(ledger.readState("agent-1", "session-1", 86_400_000));
     expect({ priceCents: before.priceCents, policy: before.policy }).toEqual({ priceCents: after.priceCents, policy: after.policy });
+  });
+
+  it("trust direcional sobe devagar e cai mais rápido numa quebra", () => {
+    const positive = applyTrustInteraction(0, { kind: "POSITIVE", confidence: 1 });
+    const breach = applyTrustInteraction(0, { kind: "BREACH", confidence: 1 });
+    expect(positive).toBeCloseTo(0.1);
+    expect(breach).toBeCloseTo(-0.5);
+    expect(Math.abs(breach)).toBeGreaterThan(Math.abs(positive));
+  });
+
+  it("repair/forgiveness recupera gradualmente, sem apagar a quebra", () => {
+    const ledger = new DirectionalTrustLedger();
+    ledger.append({ subjectId: "agent-1", targetId: "customer-1", interactionId: "i-1", kind: "BREACH", confidence: 1 });
+    const firstRepair = ledger.append({ subjectId: "agent-1", targetId: "customer-1", interactionId: "i-2", kind: "REPAIR", confidence: 1 });
+    const secondRepair = ledger.append({ subjectId: "agent-1", targetId: "customer-1", interactionId: "i-3", kind: "REPAIR", confidence: 1 });
+    expect(firstRepair.after).toBeCloseTo(-0.45);
+    expect(secondRepair.after).toBeCloseTo(-0.4);
+    expect(secondRepair.after).toBeLessThan(0);
+    expect(ledger.events()).toHaveLength(3);
+  });
+
+  it("mantém trust direcional: A→B não altera B→A", () => {
+    const ledger = new DirectionalTrustLedger();
+    ledger.append({ subjectId: "agent-a", targetId: "customer-b", interactionId: "i-1", kind: "POSITIVE", confidence: 1 });
+    expect(ledger.read("agent-a", "customer-b")).toBeCloseTo(0.1);
+    expect(ledger.read("customer-b", "agent-a")).toBeCloseTo(0);
   });
 });
