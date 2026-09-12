@@ -3,6 +3,7 @@ import {
   claimToolLoopLock,
   completeToolLoopLock,
   ToolLoopLockError,
+  ToolLoopLockStore,
   type ToolLoopLock,
 } from "./session-service";
 
@@ -27,6 +28,21 @@ describe("ToolLoopLock", () => {
     const released = completeToolLoopLock(claimed, "tool-call-1", 7, NOW);
     expect(released).toMatchObject({ iteration: 1 });
     expect(released).not.toHaveProperty("active_tool_call_id");
+  });
+
+  it("allows only one winner for two concurrent claims", async () => {
+    const store = new ToolLoopLockStore(baseLock);
+    const results = await Promise.allSettled([
+      Promise.resolve().then(() => store.claim("tool-call-1", 7, NOW)),
+      Promise.resolve().then(() => store.claim("tool-call-2", 7, NOW)),
+    ]);
+
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+    const rejected = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
+    expect(rejected?.reason).toBeInstanceOf(ToolLoopLockError);
+    expect(rejected?.reason.code).toBe("TOOL_LOOP_BUSY");
+    expect(store.get("lock-1")).toMatchObject({ iteration: 1 });
   });
 
   it("rejects a second worker and a stale execution epoch", () => {

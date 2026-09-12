@@ -210,3 +210,65 @@ export function completeToolLoopLock(
   const { active_tool_call_id: _activeToolCallId, ...released } = lock;
   return released;
 }
+
+/**
+ * In-memory lock store whose claim/release operations use compare-and-swap.
+ * The critical section is synchronous, so no await can interleave the read and
+ * CAS on the JavaScript event loop.
+ */
+export class ToolLoopLockStore {
+  private readonly locks = new Map<string, ToolLoopLock>();
+
+  constructor(lock: ToolLoopLock) {
+    this.locks.set(lock.lock_id, { ...lock });
+  }
+
+  get(lockId: string): ToolLoopLock | undefined {
+    const lock = this.locks.get(lockId);
+    return lock ? { ...lock } : undefined;
+  }
+
+  private compareAndSwap(
+    lockId: string,
+    expected: ToolLoopLock,
+    replacement: ToolLoopLock,
+  ): boolean {
+    if (this.locks.get(lockId) !== expected) return false;
+    this.locks.set(lockId, replacement);
+    return true;
+  }
+
+  claim(
+    toolCallId: string,
+    executionEpochOrNow?: number | Date,
+    now?: Date,
+  ): ToolLoopLock {
+    const current = this.locks.get(this.lockId());
+    if (!current) throw new ToolLoopLockError("TOOL_LOOP_BUSY", "tool_loop_lock_missing");
+    const replacement = claimToolLoopLock(current, toolCallId, executionEpochOrNow, now);
+    if (!this.compareAndSwap(current.lock_id, current, replacement)) {
+      throw new ToolLoopLockError("TOOL_LOOP_BUSY", "tool_loop_claim_race_lost");
+    }
+    return { ...replacement };
+  }
+
+  complete(
+    toolCallId: string,
+    executionEpochOrNow?: number | Date,
+    now?: Date,
+  ): ToolLoopLock {
+    const current = this.locks.get(this.lockId());
+    if (!current) throw new ToolLoopLockError("TOOL_CALL_MISMATCH", "tool_loop_lock_missing");
+    const replacement = completeToolLoopLock(current, toolCallId, executionEpochOrNow, now);
+    if (!this.compareAndSwap(current.lock_id, current, replacement)) {
+      throw new ToolLoopLockError("TOOL_LOOP_BUSY", "tool_loop_release_race_lost");
+    }
+    return { ...replacement };
+  }
+
+  private lockId(): string {
+    const first = this.locks.keys().next();
+    if (first.done) throw new ToolLoopLockError("TOOL_LOOP_BUSY", "tool_loop_lock_missing");
+    return first.value;
+  }
+}
