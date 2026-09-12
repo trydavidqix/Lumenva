@@ -21,6 +21,7 @@ export interface MemoryEvent {
   authority: number;
   confidence: number;
   observedAt: string;
+  createdAt?: string;
   validUntil: string | null;
   lifecycle: MemoryLifecycle;
   content: string;
