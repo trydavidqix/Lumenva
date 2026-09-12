@@ -14,6 +14,8 @@ export const PUBLIC_PATHS: RegExp[] = [
   /^\/503$/,
   /^\/api\/v1\/health$/,
   /^\/api\/v1\/webhooks\//,
+  // Stripe verifies authenticity with the provider signature, not a user session.
+  /^\/api\/v1\/stripe\/webhook$/,
   /^\/api\/v1\/cron\//,
   // Inngest serve endpoint performs its own protocol/signature checks and must
   // be reachable without a Deskcomm browser session for local/cloud sync.
