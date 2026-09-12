@@ -96,4 +96,18 @@ describe("AffectLedger append-only", () => {
     expect(ledger.read("agent-a", "customer-b")).toBeCloseTo(0.1);
     expect(ledger.read("customer-b", "agent-a")).toBeCloseTo(0);
   });
+
+  it("impõe teto aos rates customizados: positive=100 continua subida lenta", () => {
+    const ledger = new DirectionalTrustLedger({ positive: 100, breach: 100, repair: 100 });
+    const event = ledger.append({ subjectId: "agent-1", targetId: "customer-1", interactionId: "i-cap", kind: "POSITIVE", confidence: 1 });
+    expect(event.after).toBeCloseTo(0.1);
+    expect(event.after).toBeLessThan(1);
+  });
+
+  it("rejeita kind desconhecido em vez de o tratar silenciosamente como REPAIR", () => {
+    expect(() => applyTrustInteraction(0, { kind: "UNKNOWN" as never, confidence: 1 })).toThrow(/kind/i);
+    const ledger = new DirectionalTrustLedger();
+    expect(() => ledger.append({ subjectId: "agent-1", targetId: "customer-1", interactionId: "i-kind", kind: "UNKNOWN" as never, confidence: 1 })).toThrow(/kind/i);
+    expect(ledger.events()).toHaveLength(0);
+  });
 });

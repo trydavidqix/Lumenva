@@ -79,6 +79,7 @@ const trustKey = (subjectId: string, targetId: string, interactionId: string): s
 const trustStreamKey = (subjectId: string, targetId: string): string => `${subjectId}\u0000${targetId}`;
 
 const TRUST_RATES = Object.freeze({ positive: 0.1, breach: 0.5, repair: 0.05 });
+const TRUST_RATE_CAPS = Object.freeze({ positive: 0.1, breach: 0.5, repair: 0.05 });
 
 export const applyTrustInteraction = (
   current: number,
@@ -89,7 +90,13 @@ export const applyTrustInteraction = (
   if (!Number.isFinite(interaction.confidence) || interaction.confidence < 0 || interaction.confidence > 1) {
     throw new RangeError("trust confidence must be within [0, 1]");
   }
-  const magnitude = interaction.confidence * rates[interaction.kind === "POSITIVE" ? "positive" : interaction.kind === "BREACH" ? "breach" : "repair"];
+  if (interaction.kind !== "POSITIVE" && interaction.kind !== "BREACH" && interaction.kind !== "REPAIR") {
+    throw new TypeError(`unknown trust interaction kind: ${String(interaction.kind)}`);
+  }
+  const rateKey = interaction.kind === "POSITIVE" ? "positive" : interaction.kind === "BREACH" ? "breach" : "repair";
+  const rate = rates[rateKey];
+  if (!Number.isFinite(rate) || rate < 0) throw new RangeError("trust rates must be finite and >= 0");
+  const magnitude = interaction.confidence * Math.min(rate, TRUST_RATE_CAPS[rateKey]);
   return clamp(current + (interaction.kind === "POSITIVE" || interaction.kind === "REPAIR" ? magnitude : -magnitude));
 };
 
@@ -101,7 +108,11 @@ export class DirectionalTrustLedger {
 
   constructor(rates: Readonly<{ positive: number; breach: number; repair: number }> = TRUST_RATES) {
     for (const value of Object.values(rates)) if (!Number.isFinite(value) || value < 0) throw new RangeError("trust rates must be finite and >= 0");
-    this.rates = Object.freeze({ ...rates });
+    this.rates = Object.freeze({
+      positive: Math.min(rates.positive, TRUST_RATE_CAPS.positive),
+      breach: Math.min(rates.breach, TRUST_RATE_CAPS.breach),
+      repair: Math.min(rates.repair, TRUST_RATE_CAPS.repair),
+    });
   }
 
   append(input: TrustInteractionInput): TrustEvent {
