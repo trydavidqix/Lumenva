@@ -34,4 +34,11 @@ describe('FreshnessEngine', () => {
       'maxAgeDays must be a non-negative finite number',
     );
   });
+
+  it('marks content with a future generatedAt timestamp stale', () => {
+    const tracker = new ContentProvenanceTracker();
+    tracker.record(piece('future', '2026-09-14T12:00:00.000Z'));
+
+    expect(new FreshnessEngine(tracker).run(new Date('2026-09-13T12:00:00.000Z'), 7)[0]?.freshness).toBe('stale');
+  });
 });

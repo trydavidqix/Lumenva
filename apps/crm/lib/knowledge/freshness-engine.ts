@@ -19,6 +19,7 @@ export class FreshnessEngine {
       const generatedMs = Date.parse(record.generatedAt);
       const freshness: ContentFreshness = Number.isFinite(nowMs)
         && Number.isFinite(generatedMs)
+        && generatedMs <= nowMs
         && nowMs - generatedMs < maxAgeDays * DAY_MS
         ? 'current'
         : 'stale';
