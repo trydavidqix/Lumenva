@@ -10,7 +10,11 @@ const ids = [
 ] as const;
 
 const pad = (pleasure: number, arousal: number, dominance: number): PadState => ({ pleasure, arousal, dominance });
-const decision = () => ({ priceCents: 7900, policy: "REQUIRES_APPROVAL", tool: "none" });
+const decision = (padState: PadState, input: { entitlement: "free" | "pro"; requestedTool: string; budget: number }) => {
+  void padState;
+  const allowed = input.entitlement === "pro" && input.requestedTool === "calendar.write" && input.budget >= 10;
+  return { priceCents: 7900, policy: allowed ? "ALLOW" : "DENY", tool: allowed ? input.requestedTool : "none" };
+};
 const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
 
 type CaseFn = (profile: PsycheProfile) => string;
@@ -30,11 +34,12 @@ const cases: Record<(typeof ids)[number], CaseFn> = {
   },
   "PSY-BOUNDARY-001": () => {
     const ledger = new AffectLedger({ lambda: 0 });
-    const before = decision();
+    const before = decision(ledger.readState("agent", "session", 0), { entitlement: "free", requestedTool: "billing.charge", budget: 1 });
     ledger.append({ agentId: "agent", sessionId: "session", eventId: "e1", atMs: 0, delta: pad(1, 1, 1) });
-    const after = decision();
+    const after = decision(ledger.readState("agent", "session", 0), { entitlement: "free", requestedTool: "billing.charge", budget: 1 });
     if (!same(before, after)) throw new Error("business decision changed with affect");
-    return "price/policy/tool unchanged";
+    if (after.policy !== "DENY" || after.tool !== "none") throw new Error("policy gate was bypassed");
+    return "policy decision compared with real ledger state";
   },
   "PSY-DECAY-001": (profile) => {
     const ledger = new AffectLedger({ lambda: profile.decayLambda });
@@ -45,12 +50,13 @@ const cases: Record<(typeof ids)[number], CaseFn> = {
     return "exponential decay matches expected value";
   },
   "PSY-PERSIST-001": () => {
-    const ledger = new AffectLedger({ lambda: 0 });
+    const ledger = new AffectLedger({ lambda: 0.5 });
     ledger.append({ agentId: "agent", sessionId: "session", eventId: "e1", atMs: 0, delta: pad(0.4, -0.2, 0.1) });
-    const beforeModelSwap = ledger.readState("agent", "session", 1000);
-    const afterModelSwap = ledger.readState("agent", "session", 1000);
-    if (!same(beforeModelSwap, afterModelSwap)) throw new Error("snapshot lost across model swap");
-    return "identity/state snapshot persists";
+    ledger.append({ agentId: "agent", sessionId: "session", eventId: "e2", atMs: 2000, delta: pad(0, 0, 0) });
+    const events = ledger.events();
+    const expected = 0.4 * Math.exp(-1);
+    if (events.length !== 2 || Math.abs((events[1]?.before.pleasure ?? 0) - expected) > 1e-10) throw new Error("ledger state was not persisted through decay");
+    return `ledger events=${events.length}; persisted decay state verified`;
   },
   "PSY-REPAIR-001": () => {
     const trust = new DirectionalTrustLedger();
@@ -68,11 +74,12 @@ const cases: Record<(typeof ids)[number], CaseFn> = {
     return "replay is idempotent";
   },
   "PSY-HANDOFF-001": () => {
-    const ledger = new AffectLedger({ lambda: 0 });
+    const ledger = new AffectLedger({ lambda: 0.5 });
     ledger.append({ agentId: "agent", sessionId: "session", eventId: "e1", atMs: 0, delta: pad(0.3, 0.2, -0.1) });
-    const handoffSnapshot = ledger.readState("agent", "session", 500);
-    if (!same(handoffSnapshot, ledger.readState("agent", "session", 500))) throw new Error("handoff changed affect state");
-    return "handoff snapshot preserved";
+    const handoffSnapshot = ledger.readState("agent", "session", 1000);
+    const next = ledger.append({ agentId: "agent", sessionId: "session", eventId: "e2", atMs: 1000, delta: pad(0, 0, 0) });
+    if (!same(handoffSnapshot, next.before)) throw new Error("handoff snapshot was not used as next event state");
+    return "handoff became next event before state";
   },
   "PSY-ISOLATION-001": () => {
     const ledger = new AffectLedger({ lambda: 0 });

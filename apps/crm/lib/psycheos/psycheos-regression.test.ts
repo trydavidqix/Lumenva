@@ -22,5 +22,8 @@ describe("PsycheOS regression suite", () => {
     ]);
     expect(report.every((result) => result.status === "PASS")).toBe(true);
     expect(report.every((result) => result.profileVersion === profile.profileVersion)).toBe(true);
+    expect(report.find((result) => result.caseId === "PSY-PERSIST-001")?.detail).toContain("ledger events=2");
+    expect(report.find((result) => result.caseId === "PSY-HANDOFF-001")?.detail).toContain("handoff became next event before");
+    expect(report.find((result) => result.caseId === "PSY-BOUNDARY-001")?.detail).toContain("policy decision compared");
   });
 });
