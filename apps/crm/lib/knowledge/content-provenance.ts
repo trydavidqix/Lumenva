@@ -37,4 +37,10 @@ export class ContentProvenanceTracker {
   list(): ContentProvenanceInput[] {
     return [...this.records.values()].map((record) => ({ ...record }));
   }
+
+  updateFreshness(contentId: string, freshness: ContentFreshness): void {
+    const record = this.records.get(contentId);
+    if (record === undefined) throw new Error(`content provenance not found: ${contentId}`);
+    this.records.set(contentId, { ...record, freshness });
+  }
 }
