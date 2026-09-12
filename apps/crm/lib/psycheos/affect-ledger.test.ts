@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AffectLedger, type PadDelta } from "./affect-ledger";
+import { AffectLedger, decayPad, type PadDelta } from "./affect-ledger";
 
 const delta = (pleasure: number, arousal: number, dominance: number): PadDelta => ({ pleasure, arousal, dominance });
 
@@ -52,5 +52,22 @@ describe("AffectLedger append-only", () => {
     expect(replay).toEqual(first);
     expect(ledger.events()).toHaveLength(1);
     expect(ledger.readState("agent-1", "session-1", 0).pleasure).toBeCloseTo(0.4);
+  });
+
+  it("aplica decay exponencial matematicamente correto por eixo", () => {
+    const result = decayPad({ pleasure: 0.8, arousal: -0.4, dominance: 1 }, 2, 0.5);
+    const factor = Math.exp(-1);
+    expect(result.pleasure).toBeCloseTo(0.8 * factor, 10);
+    expect(result.arousal).toBeCloseTo(-0.4 * factor, 10);
+    expect(result.dominance).toBeCloseTo(factor, 10);
+  });
+
+  it("com decay=0 (esquecimento zero), affect não altera preço nem policy", () => {
+    const ledger = new AffectLedger({ lambda: 0 });
+    const decide = (pad: ReturnType<typeof ledger.readState>) => ({ priceCents: 7900, policy: "REQUIRES_APPROVAL", pad });
+    const before = decide(ledger.readState("agent-1", "session-1", 0));
+    ledger.append({ agentId: "agent-1", sessionId: "session-1", eventId: "evt-zero-decay", atMs: 0, delta: delta(1, -1, 1) });
+    const after = decide(ledger.readState("agent-1", "session-1", 86_400_000));
+    expect({ priceCents: before.priceCents, policy: before.policy }).toEqual({ priceCents: after.priceCents, policy: after.policy });
   });
 });

@@ -34,6 +34,18 @@ const ZERO: PadState = Object.freeze({ pleasure: 0, arousal: 0, dominance: 0 });
 
 const clamp = (value: number): number => Math.max(-1, Math.min(1, value));
 
+/** Pure exponential decay from the last event; input and output are immutable snapshots. */
+export const decayPad = (pad: PadState, elapsedSeconds: number, lambda: number, baseline: PadState = ZERO): PadState => {
+  if (!Number.isFinite(elapsedSeconds) || elapsedSeconds < 0) throw new RangeError("elapsedSeconds must be finite and >= 0");
+  if (!Number.isFinite(lambda) || lambda < 0) throw new RangeError("lambda must be finite and >= 0");
+  const factor = Math.exp(-lambda * elapsedSeconds);
+  return Object.freeze({
+    pleasure: clamp(baseline.pleasure + (pad.pleasure - baseline.pleasure) * factor),
+    arousal: clamp(baseline.arousal + (pad.arousal - baseline.arousal) * factor),
+    dominance: clamp(baseline.dominance + (pad.dominance - baseline.dominance) * factor),
+  });
+};
+
 const freezePad = (pad: PadDelta): PadState =>
   Object.freeze({ pleasure: clamp(pad.pleasure), arousal: clamp(pad.arousal), dominance: clamp(pad.dominance) });
 
@@ -90,11 +102,7 @@ export class AffectLedger {
     const latest = events.at(-1);
     if (!latest) return copyPad(ZERO);
     const elapsedSeconds = (atMs - latest.atMs) / 1000;
-    return freezePad({
-      pleasure: latest.after.pleasure * Math.exp(-this.lambda * elapsedSeconds),
-      arousal: latest.after.arousal * Math.exp(-this.lambda * elapsedSeconds),
-      dominance: latest.after.dominance * Math.exp(-this.lambda * elapsedSeconds),
-    });
+    return decayPad(latest.after, elapsedSeconds, this.lambda);
   }
 
   events(): readonly AffectEvent[] {
