@@ -3,6 +3,8 @@
 export type DispatchTask = {
   task_id: string;
   organization_id: string;
+  actor_id: string;
+  actor_capabilities: string[];
   required_capability: string;
 };
 
@@ -11,19 +13,21 @@ export type DispatchWorker = {
   agent_id: string;
   organization_id: string;
   capabilities: string[];
-  available?: boolean;
+  available: boolean;
 };
 
 export type DispatchPolicy = {
   organization_id: string;
+  actor_id: string;
+  allowed_actor_capabilities: string[];
   allowed_worker_ids?: string[];
 };
 
 export type DispatchDecision =
   | { decision: "ALLOW"; worker_id: string; agent_id: string }
-  | { decision: "DENY"; reason: "NO_CAPABLE_WORKER" | "NO_POLICY_MATCH" };
+  | { decision: "DENY"; reason: "ACTOR_UNAUTHORIZED" | "NO_CAPABLE_WORKER" | "NO_POLICY_MATCH" };
 
-/** Routes only to an available, tenant-scoped, policy-allowed capable worker. */
+/** Routes only after actor authority, tenant, capability and worker availability checks. */
 export function dispatchRoute(
   task: DispatchTask,
   workers: readonly DispatchWorker[],
@@ -33,17 +37,26 @@ export function dispatchRoute(
     return { decision: "DENY", reason: "NO_POLICY_MATCH" };
   }
   if (
+    typeof task.actor_id !== "string" ||
+    task.actor_id.length === 0 ||
+    task.actor_id !== policy.actor_id ||
+    !Array.isArray(task.actor_capabilities) ||
+    !Array.isArray(policy.allowed_actor_capabilities) ||
     typeof task.required_capability !== "string" ||
     task.required_capability.length === 0 ||
-    !Array.isArray(workers)
+    !task.actor_capabilities.includes(task.required_capability) ||
+    !policy.allowed_actor_capabilities.includes(task.required_capability)
   ) {
+    return { decision: "DENY", reason: "ACTOR_UNAUTHORIZED" };
+  }
+  if (!Array.isArray(workers)) {
     return { decision: "DENY", reason: "NO_CAPABLE_WORKER" };
   }
 
   const capable = workers.filter((worker) =>
     worker &&
     worker.organization_id === task.organization_id &&
-    worker.available !== false &&
+    worker.available === true &&
     Array.isArray(worker.capabilities) &&
     worker.capabilities.includes(task.required_capability),
   );
