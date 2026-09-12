@@ -24,7 +24,7 @@ const precedenceRank: Record<KnowledgePrecedence, number> = {
 const tokenize = (value: string): Set<string> =>
   new Set(value.toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').match(/[\p{L}\p{N}]+/gu) ?? []);
 
-export function retrieveJit(query: string, cards: KnowledgeCard[], limit = 8): KnowledgeCard[] {
+export function retrieveJit(query: string, cards: readonly KnowledgeCard[], limit = 8): KnowledgeCard[] {
   if (!Number.isInteger(limit) || limit < 1) throw new Error('limit must be between 3 and 8');
   const boundedLimit = Math.min(8, Math.max(3, limit));
   const queryTokens = tokenize(query);
