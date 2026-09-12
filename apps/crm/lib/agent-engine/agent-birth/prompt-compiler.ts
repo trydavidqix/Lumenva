@@ -1,6 +1,15 @@
 import type { AgentDefinition } from "./agent-definition";
 
-const section = (heading: string, body: string): string => `# ${heading}\n\n${body}`;
+function escapeDelimitedText(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
+}
+
+const section = (tag: string, body: string): string => `<${tag}>\n${body}\n</${tag}>`;
 
 export function compileSystemPrompt(definition: AgentDefinition): string {
   if (definition.status !== "CERTIFIED") {
@@ -8,10 +17,15 @@ export function compileSystemPrompt(definition: AgentDefinition): string {
   }
 
   return [
-    section("IDENTITY", definition.identity.trim()),
-    section("MISSION", definition.mission.trim()),
-    section("BOUNDARIES", definition.boundaries.map((boundary) => `- ${boundary.trim()}`).join("\n")),
-    section("AUTHORITY", definition.authority.trim()),
-    section("ESCALATION", definition.escalation.trim()),
-  ].join("\n\n");
+    section("agent_identity", escapeDelimitedText(definition.identity.trim())),
+    section("agent_mission", escapeDelimitedText(definition.mission.trim())),
+    section(
+      "agent_boundaries",
+      definition.boundaries
+        .map((boundary) => section("boundary", escapeDelimitedText(boundary.trim())))
+        .join("\n"),
+    ),
+    section("agent_authority", escapeDelimitedText(definition.authority.trim())),
+    section("agent_escalation", escapeDelimitedText(definition.escalation.trim())),
+  ].join("\n");
 }
