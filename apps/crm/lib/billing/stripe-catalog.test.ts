@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   STRIPE_CATALOG,
@@ -6,6 +8,12 @@ import {
 } from "./stripe-catalog";
 
 describe("Stripe catalog mapping", () => {
+  it("contains no custom Stripe API client or network side effect", () => {
+    const source = readFileSync(join(process.cwd(), "apps/crm/lib/billing/stripe-catalog.ts"), "utf8");
+    expect(source).toContain("official Stripe CLI/MCP boundary");
+    expect(source).not.toMatch(/\b(fetch|axios|stripe-node|Stripe\.)\b/);
+  });
+
   it("maps canonical plan slugs to EUR monthly Product/Price lookup keys", () => {
     expect(STRIPE_CATALOG).toEqual([
       expect.objectContaining({

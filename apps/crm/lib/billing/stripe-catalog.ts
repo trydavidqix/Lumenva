@@ -5,6 +5,8 @@
  * plan identity. This file only maps those canonical slugs to Stripe
  * lookup keys and checkout-safe commercial parameters; it never creates
  * products/prices or stores provider credentials.
+ * Products, Prices, webhooks and Checkout are operated only through the
+ * official Stripe CLI/MCP boundary in a separately authorized operation.
  */
 export type StripeCatalogEntry = {
   readonly planSlug: string;
