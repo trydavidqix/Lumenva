@@ -1,0 +1,44 @@
+import { getStripeCatalogEntry, STRIPE_CHECKOUT_DEFAULTS, type StripeCatalogEntry } from "./stripe-catalog";
+
+export class StripeCheckoutError extends Error {
+  constructor(readonly code: "unknown_plan" | "price_mismatch" | "adapter_unavailable", message: string) {
+    super(message);
+    this.name = "StripeCheckoutError";
+  }
+}
+
+type RuntimePrice = { lookupKey: string; unitAmountCents: number; currency: string; interval: string };
+type CreateInput = { organizationId: string; priceLookupKey: string; successUrl: string; cancelUrl: string; trialDays: number; trialRequiresPaymentMethod: boolean; metadata: { organization_id: string; plan_slug: string } };
+type Adapter = {
+  createCheckoutSession(input: CreateInput): Promise<{ sessionId: string; url: string; price: RuntimePrice }>;
+  cancelSubscription?(input: { organizationId: string; subscriptionId: string; cancelAtPeriodEnd: true; applyCancellationFee: false }): Promise<{ subscriptionId: string }>;
+};
+
+export function createStripeCheckoutBoundary(adapter: Adapter) {
+  return {
+    async createCheckout(input: { planSlug: string; organizationId: string; successUrl: string; cancelUrl: string }) {
+      const entry = getStripeCatalogEntry(input.planSlug);
+      if (!entry) throw new StripeCheckoutError("unknown_plan", `Unknown Stripe plan: ${input.planSlug}`);
+      const result = await adapter.createCheckoutSession({
+        organizationId: input.organizationId,
+        priceLookupKey: entry.monthlyPriceLookupKey,
+        successUrl: input.successUrl,
+        cancelUrl: input.cancelUrl,
+        ...STRIPE_CHECKOUT_DEFAULTS,
+        metadata: { organization_id: input.organizationId, plan_slug: entry.planSlug },
+      });
+      assertCanonicalPrice(entry, result.price);
+      return { sessionId: result.sessionId, url: result.url };
+    },
+    async cancelSubscription(input: { organizationId: string; subscriptionId: string }) {
+      if (!adapter.cancelSubscription) throw new StripeCheckoutError("adapter_unavailable", "Stripe subscription adapter is not configured");
+      return adapter.cancelSubscription({ ...input, cancelAtPeriodEnd: true, applyCancellationFee: false });
+    },
+  };
+}
+
+function assertCanonicalPrice(entry: StripeCatalogEntry, price: RuntimePrice): void {
+  if (price.lookupKey !== entry.monthlyPriceLookupKey || price.unitAmountCents !== entry.monthlyAmountCents || price.currency !== entry.currency || price.interval !== entry.interval) {
+    throw new StripeCheckoutError("price_mismatch", `Stripe price does not match canonical plan: ${entry.planSlug}`);
+  }
+}
