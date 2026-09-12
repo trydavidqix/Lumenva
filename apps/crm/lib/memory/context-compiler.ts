@@ -27,12 +27,18 @@ export interface MemoryEvent {
   supersedes?: string | null;
 }
 
+export type ContextSection = Record<string, unknown> | string | null;
+
 export interface ContextCompilerInput {
   organizationId: string;
   subject: string;
   scope: string;
   budgetTokens: number;
   now?: string;
+  identity?: ContextSection;
+  goal?: ContextSection;
+  session?: ContextSection;
+  toolState?: ContextSection;
 }
 
 export interface ContextPackage {
@@ -44,11 +50,20 @@ export interface ContextPackage {
   knowledge: MemoryEvent[];
   budget: { maxTokens: number; usedTokens: number };
   trustMetadata: {
+    organizationId: string;
+    scope: string;
     omittedRecordIds: string[];
+    selectedRecordIds: string[];
   };
   generatedAt: string;
   expiresAt: string;
+  identity: ContextSection;
+  goal: ContextSection;
+  session: ContextSection;
+  toolState: ContextSection;
 }
+
+const sectionTokenCount = (section: ContextSection): number => section === null ? 0 : (typeof section === "string" ? section : JSON.stringify(section)).match(/\S+/g)?.length ?? 0;
 
 const TOKEN_PATTERN = /\S+/g;
 
@@ -87,11 +102,12 @@ export function compileContextPackage(
 
   eligible.sort(rank);
   const selected: MemoryEvent[] = [];
-  let usedTokens = 0;
+  const maxTokens = Math.max(0, input.budgetTokens);
+  let usedTokens = sectionTokenCount(input.identity ?? null) + sectionTokenCount(input.goal ?? null) + sectionTokenCount(input.session ?? null) + sectionTokenCount(input.toolState ?? null);
 
   for (const event of eligible) {
     const tokens = tokenCount(event.content);
-    if (usedTokens + tokens <= Math.max(0, input.budgetTokens)) {
+    if (usedTokens + tokens <= maxTokens) {
       selected.push(event);
       usedTokens += tokens;
     } else {
@@ -105,10 +121,14 @@ export function compileContextPackage(
     organizationId: input.organizationId,
     subject: input.subject,
     scope: input.scope,
+    identity: input.identity ?? null,
+    goal: input.goal ?? null,
     memory: selected,
     knowledge: selected.filter((event) => event.kind === "KNOWLEDGE"),
+    session: input.session ?? null,
+    toolState: input.toolState ?? null,
     budget: { maxTokens: Math.max(0, input.budgetTokens), usedTokens },
-    trustMetadata: { omittedRecordIds },
+    trustMetadata: { organizationId: input.organizationId, scope: input.scope, omittedRecordIds, selectedRecordIds: selected.map((event) => event.recordId) },
     generatedAt: now,
     expiresAt,
   };
