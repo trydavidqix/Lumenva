@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { signWebhook } from "@/lib/nuvemshop/oauth";
 import { NuvemshopAdapter } from "@/lib/ecommerce/nuvemshop-adapter";
-import type { EcommerceProvider } from "@/lib/ecommerce/types";
+import { NuvemshopApiClient } from "@/lib/nuvemshop/api-client";
+import { NuvemshopCircuitBreaker } from "@/lib/ecommerce/nuvemshop-circuit";
+import { NUVEMSHOP_SECURITY_HEADERS, NuvemshopRateLimiter, safeNuvemshopError, validateNuvemshopWebhookInput } from "@/lib/ecommerce/nuvemshop-hardening";
 
 const SECRET = "contract-secret";
 
-function makeProvider(): EcommerceProvider {
+function makeProvider(): NuvemshopAdapter {
   const client = { get: vi.fn(async () => []) };
   return new NuvemshopAdapter({ storeId: "42", accessToken: "token", clientSecret: SECRET, client: client as never });
 }
@@ -45,4 +47,68 @@ describe("EcommerceProvider contract — NuvemshopAdapter", () => {
     await expect(provider.listOrdersSince("2026-01-01T00:00:00Z")).resolves.toEqual([{ externalId: "1", currency: "EUR", totalCents: 1234, createdAt: "2026-01-01T00:00:00Z", raw: expect.any(Object) }]);
     expect(client.get).toHaveBeenCalledWith(expect.stringContaining("created_at_min="));
   });
+
+  it("repete falhas transitórias sem repetir erros permanentes", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("upstream", { status: 503 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ id: 2 }]), { status: 200 }));
+    const sleeps: number[] = [];
+    const client = new NuvemshopApiClient({ storeId: "42", accessToken: "token", retryDelaysMs: [0], sleep: async (ms) => { sleeps.push(ms); } });
+    await expect(client.listWebhooks()).resolves.toEqual([{ id: 2 }]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(sleeps).toEqual([0]);
+    fetchMock.mockRestore();
+  });
+
+  it("mantém idempotência determinística em reentrega do webhook", () => {
+    const provider = makeProvider();
+    const raw = JSON.stringify({ store_id: 42, id: 7 });
+    const first = provider.parseOrderEvent({ eventType: "order/created", rawBody: raw });
+    const redelivery = provider.parseOrderEvent({ eventType: "order/created", rawBody: raw });
+    expect(redelivery.idempotencyKey).toBe(first.idempotencyKey);
+    expect(redelivery.idempotencyKey).toBe("nuvemshop:order/created:42:7");
+  });
+
+
+  it("abre o circuito após falhas, bloqueia chamadas e permite rollback", async () => {
+    let now = 0;
+    const circuit = new NuvemshopCircuitBreaker({ failureThreshold: 2, cooldownMs: 100, now: () => now });
+    const failure = async () => { throw new Error("upstream"); };
+    await expect(circuit.execute(failure)).rejects.toThrow("upstream");
+    await expect(circuit.execute(failure)).rejects.toThrow("upstream");
+    expect(circuit.health()).toMatchObject({ state: "open", healthy: false, failureCount: 2 });
+    await expect(circuit.execute(async () => "blocked")).rejects.toThrow("nuvemshop_circuit_open");
+    now = 100;
+    await expect(circuit.execute(async () => "recovered")).resolves.toBe("recovered");
+    expect(circuit.health()).toMatchObject({ state: "closed", healthy: true, failureCount: 0 });
+    await expect(circuit.execute(failure)).rejects.toThrow("upstream");
+    circuit.rollback();
+    expect(circuit.health()).toMatchObject({ state: "closed", healthy: true, failureCount: 0 });
+  });
+
+
+  it("valida entrada, limita tamanho e rejeita store_id inseguro", () => {
+    expect(validateNuvemshopWebhookInput(JSON.stringify({ store_id: 42, id: 7 })).ok).toBe(true);
+    expect(validateNuvemshopWebhookInput(JSON.stringify({ store_id: "x" })).ok).toBe(false);
+    expect(validateNuvemshopWebhookInput("[]").ok).toBe(false);
+    expect(validateNuvemshopWebhookInput("{}", 1)).toMatchObject({ ok: false, code: "payload_too_large" });
+  });
+
+  it("aplica rate-limit por chave e expõe headers seguros", () => {
+    let now = 0;
+    const limiter = new NuvemshopRateLimiter(2, 100, () => now);
+    expect(limiter.check("store:42").allowed).toBe(true);
+    expect(limiter.check("store:42").allowed).toBe(true);
+    expect(limiter.check("store:42").allowed).toBe(false);
+    now = 100;
+    expect(limiter.check("store:42").allowed).toBe(true);
+    expect(NUVEMSHOP_SECURITY_HEADERS["Cache-Control"]).toBe("no-store");
+    expect(makeProvider().securityHeaders()["X-Frame-Options"]).toBe("DENY");
+  });
+
+  it("normaliza erros sem expor detalhes e mantém contrato de boundary", async () => {
+    expect(safeNuvemshopError(new Error("token=secret email=a@example.com"))).toEqual({ code: "nuvemshop_unavailable", message: "Nuvemshop request failed" });
+    expect(await makeProvider().executeSafely(async () => { throw new Error("provider detail"); })).toEqual({ ok: false, error: { code: "nuvemshop_unavailable", message: "Nuvemshop request failed" } });
+  });
+
 });

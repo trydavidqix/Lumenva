@@ -36,6 +36,7 @@ import {
   UserCircle,
   Users,
   UsersThree,
+  GitBranch,
   WebhooksLogo,
 } from "@/lib/ui/icons";
 
@@ -187,6 +188,15 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     description: "As pessoas do outro lado da conversa e seu histórico.",
     icon: Users,
     group: "crm",
+    sidebar: true,
+  },
+  {
+    href: "/app/merge-queue",
+    label: "Fila de merges",
+    description: "Possíveis contactos duplicados que exigem revisão de um gerente.",
+    icon: GitBranch,
+    group: "crm",
+    minRole: "manager",
     sidebar: true,
   },
   {

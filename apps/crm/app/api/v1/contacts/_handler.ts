@@ -7,6 +7,7 @@
  * - Audit + emit_event são responsabilidade do handler (DRY entre REST e MCP).
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 import { ApiError } from "@/lib/api/types";
 import type { Actor, HandlerCtx } from "@/lib/api/handlers/types";
@@ -37,12 +38,23 @@ interface CursorPayload {
   id: string;
 }
 
-function encodeCursor(p: CursorPayload): string {
-  return Buffer.from(JSON.stringify(p), "utf8").toString("base64url");
+function cursorKey(): string {
+  return process.env.CURSOR_HMAC_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "development-cursor-key";
 }
-function decodeCursor(raw: string): CursorPayload | null {
+
+export function encodeContactsCursor(p: CursorPayload): string {
+  const payload = Buffer.from(JSON.stringify(p), "utf8").toString("base64url");
+  const signature = createHmac("sha256", cursorKey()).update(payload).digest("base64url");
+  return `${payload}.${signature}`;
+}
+export function decodeContactsCursor(raw: string): CursorPayload | null {
   try {
-    const json = Buffer.from(raw, "base64url").toString("utf8");
+    const [payload, signature] = raw.split(".");
+    if (!payload || !signature) return null;
+    const expected = createHmac("sha256", cursorKey()).update(payload).digest();
+    const supplied = Buffer.from(signature, "base64url");
+    if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) return null;
+    const json = Buffer.from(payload, "base64url").toString("utf8");
     const parsed = JSON.parse(json) as CursorPayload;
     if (typeof parsed.id !== "string" || typeof parsed.created_at !== "string") return null;
     return parsed;
@@ -127,7 +139,7 @@ export async function listContactsHandler(
   if (q.source) query = query.eq("source", q.source);
 
   if (q.cursor) {
-    const c = decodeCursor(q.cursor);
+    const c = decodeContactsCursor(q.cursor);
     if (!c) {
       throw new ApiError(400, "invalid_cursor", undefined, ctx.requestId, "Cursor inválido.");
     }
@@ -147,7 +159,7 @@ export async function listContactsHandler(
   const last = page[page.length - 1];
   const nextCursor =
     hasMore && last
-      ? encodeCursor({
+          ? encodeContactsCursor({
           last_activity_at: last.last_activity_at,
           created_at: last.created_at,
           id: last.id,
@@ -248,7 +260,7 @@ export async function getContactHandler(
 
 export interface CreateContactResult {
   contact: Contact;
-  action: "created";
+  action: "created" | "matched";
 }
 
 export async function createContactHandler(
@@ -275,6 +287,27 @@ export async function createContactHandler(
     insertRow.cpf_hash = hashCpf(input.cpf);
     const enc = await encryptCpfSql(supabase, input.cpf);
     if (enc) insertRow.cpf_encrypted = enc;
+  }
+
+  const identityFilters = [
+    input.phone_number ? `phone_number.eq.${input.phone_number}` : null,
+    input.email ? `email_normalized.eq.${input.email.trim().toLowerCase()}` : null,
+    input.cpf ? `cpf_hash.eq.${hashCpf(input.cpf)}` : null,
+  ].filter((value): value is string => value !== null);
+  if (identityFilters.length > 0) {
+    const { data: match, error: matchErr } = await supabase
+      .from("contacts")
+      .select(SELECT_COLS)
+      .eq("organization_id", ctx.organization_id)
+      .or(identityFilters.join(","))
+      .limit(1)
+      .maybeSingle();
+    if (matchErr) {
+      throw new ApiError(500, "internal_error", undefined, ctx.requestId, matchErr.message);
+    }
+    if (match) {
+      return { contact: match as Contact, action: "matched" } as CreateContactResult;
+    }
   }
 
   const { data: created, error: insErr } = await supabase

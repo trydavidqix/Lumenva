@@ -11,6 +11,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { Sidebar } from "@/components/shell/Sidebar";
 import type { ActiveOrg, AuthUser } from "@/lib/auth/types";
@@ -33,8 +34,6 @@ vi.mock("@/components/connections/ConnectionHealthDot", () => ({
 vi.mock("@/app/actions/shell/toggleSidebar", () => ({
   toggleSidebar: vi.fn(),
 }));
-// Busca a versão via react-query; sem QueryClientProvider ele lança, e o
-// rodapé de versão não é o que estes testes examinam.
 vi.mock("@/components/shell/VersionFooter", () => ({
   VersionFooter: () => null,
 }));
@@ -46,10 +45,19 @@ function comoPapel(role: ActiveOrg["role"]) {
 
 afterEach(cleanup);
 
+function renderSidebar(props: { collapsed?: boolean } = {}) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <Sidebar collapsed={props.collapsed ?? false} />
+    </QueryClientProvider>,
+  );
+}
+
 describe("Sidebar agrupado", () => {
   it("renderiza os títulos de grupo na ordem de uso", () => {
     comoPapel("admin");
-    render(<Sidebar collapsed={false} />);
+    renderSidebar();
     const titulos = screen
       .getAllByRole("heading")
       .map((el) => el.textContent?.trim())
@@ -61,14 +69,14 @@ describe("Sidebar agrupado", () => {
 
   it("leva a Funis sem passar por Configurações", () => {
     comoPapel("admin");
-    render(<Sidebar collapsed={false} />);
+    renderSidebar();
     const funis = screen.getByRole("link", { name: /Funis/ });
     expect(funis).toHaveAttribute("href", "/app/settings/tenant/pipelines");
   });
 
   it("desenterra Nuvemshop e Audit Log", () => {
     comoPapel("admin");
-    render(<Sidebar collapsed={false} />);
+    renderSidebar();
     // Nuvemshop não tinha link nenhum no app; Audit Log só existia via card em
     // Configurações. Canal oficial não está aqui de propósito: virou aba de
     // Conexões no PR #105, e Conexões é a porta.
@@ -78,7 +86,7 @@ describe("Sidebar agrupado", () => {
 
   it("Configurações fica no rodapé, nunca dependendo de scroll", () => {
     comoPapel("admin");
-    render(<Sidebar collapsed={false} />);
+    renderSidebar();
     const config = screen.getByRole("link", { name: /Configurações/ });
     expect(config).toHaveAttribute("href", "/app/settings");
     // Fora da <nav> que rola.
@@ -89,7 +97,7 @@ describe("Sidebar agrupado", () => {
   it("não deixa cabeçalho órfão quando a permissão esvazia o grupo", () => {
     // CANAIS é todo manager+/admin. Um agent não pode ver o título sozinho.
     comoPapel("agent");
-    render(<Sidebar collapsed={false} />);
+    renderSidebar();
     const titulos = screen.getAllByRole("heading").map((el) => el.textContent?.trim());
     expect(titulos).not.toContain("Canais");
     expect(titulos).toContain("Atendimento");
@@ -97,20 +105,20 @@ describe("Sidebar agrupado", () => {
 
   it("oferece o hub dos grupos que têm um", () => {
     comoPapel("admin");
-    render(<Sidebar collapsed={false} />);
+    renderSidebar();
     expect(screen.getByRole("link", { name: /Ver tudo em IA/ })).toHaveAttribute("href", "/app/ai");
   });
 
   it("colapsado esconde os títulos mas mantém os links", () => {
     comoPapel("admin");
-    render(<Sidebar collapsed />);
+    renderSidebar({ collapsed: true });
     expect(screen.queryAllByRole("heading")).toHaveLength(0);
     expect(screen.getByRole("link", { name: /Inbox/ })).toBeTruthy();
   });
 
   it("marca a rota atual com aria-current", () => {
     comoPapel("admin");
-    render(<Sidebar collapsed={false} />);
+    renderSidebar();
     expect(screen.getByRole("link", { name: /Inbox/ })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: /Kanban/ })).not.toHaveAttribute("aria-current");
   });
