@@ -198,6 +198,8 @@ aplica.
 | `20260907110000` | `0159_content_os_learning_idempotency` | Chave de idempotência tenant-aware para eventos de aprendizagem e detecção segura de content decay. |
 | `20260907120000` | `0160_ai_agent_command_approvals` | Nova Mode V1: aprovações duráveis de comandos do navegador, com idempotência por organização, expiração, estado de execução, RLS manager+ e guarda de coerência entre agente, versão e tenant. |
 
+| \`20260911100000\` | \`0161_entitlements_catalog\` | Entitlements plans/modules, tenant assignment and idempotent events; Premium seed provider-free. |
+
 ## Reproducibility
 
 Migrations were applied directly via the Supabase MCP `apply_migration` tool during the autonomous bootstrap session. The SQL of each migration is also embedded in the corresponding spec under `docs/specs/0X-spec-*.md` and the database keeps them in `supabase_migrations.schema_migrations`.
