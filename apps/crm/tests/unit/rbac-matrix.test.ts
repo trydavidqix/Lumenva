@@ -166,6 +166,14 @@ describe("grupo audit (manager+)", () => {
     expect(res.status).toBe(403);
     expect(await errorCode(res)).toBe("forbidden_role");
   });
+
+  it("GET /audit/export nega 403 para agent", async () => {
+    session("agent");
+    const { GET } = await import("@/app/api/v1/audit/export/route");
+    const res = await GET(req("/api/v1/audit/export"));
+    expect(res.status).toBe(403);
+    expect(await errorCode(res)).toBe("forbidden_role");
+  });
 });
 
 // ---------------------------------------------------------------------------

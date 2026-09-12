@@ -2,8 +2,7 @@
 // Next 16; o script `lint` chama o eslint CLI direto). Migração 1:1 do antigo
 // .eslintrc.json.
 import { defineConfig, globalIgnores } from "eslint/config";
-import nextPlugin from "@next/eslint-plugin-next";
-import reactHooks from "eslint-plugin-react-hooks";
+import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
 import tseslint from "typescript-eslint";
 
 export default defineConfig([
@@ -16,8 +15,7 @@ export default defineConfig([
   // de bug já corrigida em `vitest.config.ts` (exclude sem essas duas pastas). (Na CI,
   // checkout limpo, nenhum dos dois diretórios existe.)
   globalIgnores([".next/", "node_modules/", "dist/", "supabase/", "next-env.d.ts", ".worktrees/", ".claude/worktrees/"]),
-  nextPlugin.configs["core-web-vitals"],
-  reactHooks.configs.flat.recommended,
+  ...nextCoreWebVitals,
   ...tseslint.configs.recommended,
   {
     rules: {
