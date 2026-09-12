@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateBuildPlan, type BuildPlan } from "@/lib/product-factory/build-plan";
+import { repairFailedBuildPlan, validateBuildPlan, type BuildPlan } from "@/lib/product-factory/build-plan";
 
 const plan = (steps: BuildPlan["steps"]): BuildPlan => ({
   build_plan_id: "bp-1", organization_id: "org-1", project_id: "project-1",
@@ -41,5 +41,34 @@ describe("BuildPlan", () => {
     const unknown = validateBuildPlan(plan([{ step_id: "build", dependencies: ["missing"], status: "PENDING" }]));
     expect(unknown.valid).toBe(false);
     expect(unknown.errors[0]).toContain("unknown dependency");
+  });
+
+  it("retries a failed step until the executor succeeds", async () => {
+    let attempts = 0;
+    const result = await repairFailedBuildPlan(plan([
+      { step_id: "build", dependencies: [], status: "FAILED" },
+    ]), async () => {
+      attempts += 1;
+      return attempts === 3 ? "SUCCEEDED" : "FAILED";
+    }, { maxAttempts: 3 });
+
+    expect(attempts).toBe(3);
+    expect(result).toMatchObject({ status: "REPAIRED", attempts: 3 });
+    expect(result.plan.steps[0]?.status).toBe("SUCCEEDED");
+  });
+
+  it("marks the failed step and plan blocked when attempts are exhausted", async () => {
+    let attempts = 0;
+    const result = await repairFailedBuildPlan(plan([
+      { step_id: "build", dependencies: [], status: "FAILED" },
+    ]), async () => {
+      attempts += 1;
+      return "FAILED";
+    }, { maxAttempts: 2 });
+
+    expect(attempts).toBe(2);
+    expect(result.status).toBe("BLOCKED");
+    expect(result.plan.status).toBe("BLOCKED_EXTERNAL");
+    expect(result.plan.steps[0]?.status).toBe("BLOCKED");
   });
 });

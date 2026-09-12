@@ -33,6 +33,38 @@ export type BuildPlan = {
 
 export type BuildPlanValidation = { valid: boolean; errors: string[] };
 
+export type RepairExecutionResult = "SUCCEEDED" | "FAILED";
+export type RepairStepExecutor = (step: BuildPlanStep, plan: BuildPlan) => RepairExecutionResult | Promise<RepairExecutionResult>;
+export type RepairLoopResult = { plan: BuildPlan; attempts: number; status: "REPAIRED" | "BLOCKED" };
+
+export async function repairFailedBuildPlan(
+  buildPlan: BuildPlan,
+  executeStep: RepairStepExecutor,
+  options: { maxAttempts: number },
+): Promise<RepairLoopResult> {
+  if (!Number.isInteger(options.maxAttempts) || options.maxAttempts < 1) {
+    throw new RangeError("maxAttempts must be a positive integer");
+  }
+  const failedIndex = buildPlan.steps.findIndex((step) => step.status === "FAILED");
+  if (failedIndex === -1) throw new Error("BuildPlan has no FAILED step");
+
+  const steps = buildPlan.steps.map((step) => ({ ...step, dependencies: [...step.dependencies] }));
+  const plan = { ...buildPlan, steps };
+  const failedStep = steps[failedIndex]!;
+  let attempts = 0;
+  while (attempts < options.maxAttempts) {
+    attempts += 1;
+    const result = await executeStep(failedStep, plan).catch(() => "FAILED" as const);
+    if (result === "SUCCEEDED") {
+      failedStep.status = "SUCCEEDED";
+      return { plan, attempts, status: "REPAIRED" };
+    }
+  }
+  failedStep.status = "BLOCKED";
+  plan.status = "BLOCKED_EXTERNAL";
+  return { plan, attempts, status: "BLOCKED" };
+}
+
 export function validateBuildPlan(buildPlan: BuildPlan): BuildPlanValidation {
   const errors: string[] = [];
   const stepIds = new Set<string>();
