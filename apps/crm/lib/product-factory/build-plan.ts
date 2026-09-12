@@ -37,11 +37,22 @@ export type RepairExecutionResult = "SUCCEEDED" | "FAILED";
 export type RepairStepExecutor = (step: BuildPlanStep, plan: BuildPlan) => RepairExecutionResult | Promise<RepairExecutionResult>;
 export type RepairLoopResult = { plan: BuildPlan; attempts: number; status: "REPAIRED" | "BLOCKED" };
 
+const terminallyBlockedPlans = new Set<string>();
+
+const repairPlanKey = (buildPlan: BuildPlan): string =>
+  `${buildPlan.organization_id}:${buildPlan.build_plan_id}:${buildPlan.idempotency_key}`;
+
 export async function repairFailedBuildPlan(
   buildPlan: BuildPlan,
   executeStep: RepairStepExecutor,
   options: { maxAttempts: number },
 ): Promise<RepairLoopResult> {
+  const key = repairPlanKey(buildPlan);
+  if (buildPlan.status === "BLOCKED_EXTERNAL" ||
+      buildPlan.steps.some((step) => step.status === "BLOCKED") ||
+      terminallyBlockedPlans.has(key)) {
+    throw new Error("BuildPlan is terminally BLOCKED");
+  }
   if (!Number.isInteger(options.maxAttempts) || options.maxAttempts < 1) {
     throw new RangeError("maxAttempts must be a positive integer");
   }
@@ -62,6 +73,7 @@ export async function repairFailedBuildPlan(
   }
   failedStep.status = "BLOCKED";
   plan.status = "BLOCKED_EXTERNAL";
+  terminallyBlockedPlans.add(key);
   return { plan, attempts, status: "BLOCKED" };
 }
 

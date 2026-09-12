@@ -71,4 +71,21 @@ describe("BuildPlan", () => {
     expect(result.plan.status).toBe("BLOCKED_EXTERNAL");
     expect(result.plan.steps[0]?.status).toBe("BLOCKED");
   });
+
+  it("rejects re-entry after BLOCKED, even when the caller resends the original plan", async () => {
+    const blockedPlan = { ...plan([{ step_id: "terminal", dependencies: [], status: "FAILED" }]), build_plan_id: "bp-terminal" };
+    await repairFailedBuildPlan(blockedPlan, async () => "FAILED", { maxAttempts: 1 });
+
+    let executions = 0;
+    await expect(repairFailedBuildPlan(blockedPlan, async () => {
+      executions += 1;
+      return "SUCCEEDED";
+    }, { maxAttempts: 10 })).rejects.toThrow("BuildPlan is terminally BLOCKED");
+    expect(executions).toBe(0);
+
+    const replayed = { ...blockedPlan, status: "FAILED" as const,
+      steps: [{ step_id: "terminal", dependencies: [], status: "FAILED" as const }] };
+    await expect(repairFailedBuildPlan(replayed, async () => "SUCCEEDED", { maxAttempts: 10 }))
+      .rejects.toThrow("BuildPlan is terminally BLOCKED");
+  });
 });
