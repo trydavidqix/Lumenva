@@ -1,0 +1,56 @@
+import { describe, expect, it } from "vitest";
+
+import { AffectLedger, type PadDelta } from "./affect-ledger";
+
+const delta = (pleasure: number, arousal: number, dominance: number): PadDelta => ({ pleasure, arousal, dominance });
+
+describe("AffectLedger append-only", () => {
+  it("registra PAD por agente/sessão e aplica decay antes do novo delta", () => {
+    const ledger = new AffectLedger({ lambda: 0.5 });
+    ledger.append({ agentId: "agent-1", sessionId: "session-1", eventId: "evt-1", atMs: 0, delta: delta(1, 0, 0) });
+    const event = ledger.append({ agentId: "agent-1", sessionId: "session-1", eventId: "evt-2", atMs: 2000, delta: delta(0, 0, 0) });
+
+    expect(event.before.pleasure).toBeCloseTo(Math.exp(-1), 8);
+    expect(event.after).toEqual(event.before);
+    expect(ledger.events()).toHaveLength(2);
+  });
+
+  it("não permite mutar estado anterior devolvido nem reescrever o ledger", () => {
+    const ledger = new AffectLedger({ lambda: 0 });
+    ledger.append({ agentId: "agent-1", sessionId: "session-1", eventId: "evt-1", atMs: 0, delta: delta(0.3, 0.2, 0.1) });
+    const snapshot = ledger.readState("agent-1", "session-1", 0);
+
+    expect(() => {
+      (snapshot as { pleasure: number }).pleasure = -1;
+    }).toThrow(TypeError);
+    expect(ledger.readState("agent-1", "session-1", 0).pleasure).toBeCloseTo(0.3);
+    expect(ledger.events()[0]?.after.pleasure).toBeCloseTo(0.3);
+  });
+
+  it("isola agentes e sessões", () => {
+    const ledger = new AffectLedger({ lambda: 0 });
+    ledger.append({ agentId: "agent-1", sessionId: "session-1", eventId: "evt-1", atMs: 0, delta: delta(0.8, 0, 0) });
+    expect(ledger.readState("agent-1", "session-2", 0)).toEqual({ pleasure: 0, arousal: 0, dominance: 0 });
+    expect(ledger.readState("agent-2", "session-1", 0)).toEqual({ pleasure: 0, arousal: 0, dominance: 0 });
+  });
+
+  it("prova que decisão de negócio (preço) não é afetada pelo PAD", () => {
+    const ledger = new AffectLedger({ lambda: 0 });
+    const priceDecision = (pad: Readonly<ReturnType<typeof ledger.readState>>) => ({ priceCents: 7900, approval: "REQUIRED" as const, pad });
+    const calm = priceDecision(ledger.readState("agent-1", "session-1", 0));
+    ledger.append({ agentId: "agent-1", sessionId: "session-1", eventId: "evt-1", atMs: 0, delta: delta(-1, 1, 1) });
+    const intense = priceDecision(ledger.readState("agent-1", "session-1", 0));
+
+    expect({ priceCents: calm.priceCents, approval: calm.approval }).toEqual({ priceCents: intense.priceCents, approval: intense.approval });
+  });
+
+  it("rejeita replay do mesmo eventId sem duplicar ou somar duas vezes", () => {
+    const ledger = new AffectLedger({ lambda: 0 });
+    const input = { agentId: "agent-1", sessionId: "session-1", eventId: "evt-1", atMs: 0, delta: delta(0.4, 0, 0) };
+    const first = ledger.append(input);
+    const replay = ledger.append(input);
+    expect(replay).toEqual(first);
+    expect(ledger.events()).toHaveLength(1);
+    expect(ledger.readState("agent-1", "session-1", 0).pleasure).toBeCloseTo(0.4);
+  });
+});
