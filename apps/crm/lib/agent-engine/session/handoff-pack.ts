@@ -40,28 +40,40 @@ function clone<T>(value: T): T {
   return structuredClone(value);
 }
 
+function redact(value: string): string {
+  return value.replace(
+    /((?:api[_ -]?key|token|secret|password|credential|bearer)\s*[:=]\s*)[^\s,;]+/gi,
+    "$1[REDACTED]",
+  );
+}
+
+function redactList(values: string[], enabled: boolean): string[] {
+  return values.map((value) => (enabled ? redact(value) : value));
+}
+
 export function createHandoffPack(state: SessionState, input: HandoffInput): HandoffPack {
+  const redacted = input.redacted;
   return {
     handoff_id: input.handoff_id,
     session_id: state.session_id,
     from_execution_epoch: state.execution_epoch,
     ...(input.to_execution_epoch === undefined ? {} : { to_execution_epoch: input.to_execution_epoch }),
     reason: input.reason,
-    normalized_goal: state.goal,
-    constraints: clone(state.constraints),
-    facts: clone(state.facts),
-    decisions: clone(state.decisions),
-    promises: clone(state.promises),
-    completed: clone(state.completed),
-    pending: clone(state.pending),
-    artifacts: clone(state.artifacts),
-    errors: clone(state.errors),
-    blockers: clone(state.blockers),
-    verification: clone(state.verification),
-    ...(state.next_action === undefined ? {} : { next_action: state.next_action }),
-    source_refs: clone(input.source_refs),
-    evidence_refs: clone(input.evidence_refs),
-    redacted: input.redacted,
+    normalized_goal: redacted ? redact(state.goal) : state.goal,
+    constraints: redactList(clone(state.constraints), redacted),
+    facts: redactList(clone(state.facts), redacted),
+    decisions: redactList(clone(state.decisions), redacted),
+    promises: redactList(clone(state.promises), redacted),
+    completed: redactList(clone(state.completed), redacted),
+    pending: redactList(clone(state.pending), redacted),
+    artifacts: redactList(clone(state.artifacts), redacted),
+    errors: redactList(clone(state.errors), redacted),
+    blockers: redactList(clone(state.blockers), redacted),
+    verification: redactList(clone(state.verification), redacted),
+    ...(state.next_action === undefined ? {} : { next_action: redacted ? redact(state.next_action) : state.next_action }),
+    source_refs: redactList(clone(input.source_refs), redacted),
+    evidence_refs: redactList(clone(input.evidence_refs), redacted),
+    redacted,
   };
 }
 
@@ -72,6 +84,7 @@ export function reconstructSessionState(base: SessionState, pack: HandoffPack): 
   }
   return {
     ...clone(base),
+    execution_epoch: pack.to_execution_epoch ?? base.execution_epoch,
     goal: pack.normalized_goal,
     constraints: clone(pack.constraints),
     facts: clone(pack.facts),
