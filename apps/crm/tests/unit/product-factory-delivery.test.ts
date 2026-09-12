@@ -20,21 +20,27 @@ describe("Wave 10 delivery gates", () => {
   it("accepts a tenant-matched artifact with source, tests, policy and evidence", () => {
     expect(validateDeliveryPlan(deliveryPlan, artifact, evidence)).toEqual({ valid: true, errors: [] });
   });
-
-  it("rejects cross-tenant or cross-project delivery", () => {
+  it("applies the same gates to every declared delivery channel", () => {
+    for (const channel of ["WEB_PREVIEW", "MOBILE_PREVIEW", "APP_STORE", "PLAY_STORE", "MANAGED_SERVICE"] as const) {
+      const result = validateDeliveryPlan({ ...deliveryPlan, channels: [channel] }, artifact, { ...evidence, evidence_refs: [] });
+      expect(result.valid, channel).toBe(false);
+      expect(result.errors).toContain("build evidence_refs are required");
+    }
+  });
+  it("blocks unknown channels by default instead of bypassing delivery gates", () => {
+    const unknownPlan = { ...deliveryPlan, channels: ["FUTURE_CHANNEL"] as unknown as DeliveryPlan["channels"] };
+    const result = validateDeliveryPlan(unknownPlan, artifact, evidence);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain("unsupported delivery channel: FUTURE_CHANNEL");
+  });
+  it("rejects cross-tenant delivery", () => {
     const result = validateDeliveryPlan(deliveryPlan, artifact, { ...evidence, organization_id: "org-2" });
     expect(result.valid).toBe(false);
     expect(result.errors).toContain("organization_id mismatch between delivery plan and build evidence");
   });
-
-  it("rejects an artifact without verifiable hash, provenance, tests or evidence", () => {
+  it("rejects an artifact without verifiable evidence", () => {
     const result = validateDeliveryPlan(deliveryPlan, { ...artifact, content_hash: "", provenance_refs: [], test_refs: [] }, { ...evidence, evidence_refs: [] });
     expect(result.valid).toBe(false);
-    expect(result.errors).toEqual(expect.arrayContaining([
-      "delivery artifact content_hash is required",
-      "delivery artifact provenance_refs are required",
-      "delivery artifact test_refs are required",
-      "build evidence_refs are required",
-    ]));
+    expect(result.errors).toEqual(expect.arrayContaining(["delivery artifact content_hash is required", "delivery artifact provenance_refs are required", "delivery artifact test_refs are required", "build evidence_refs are required"]));
   });
 });

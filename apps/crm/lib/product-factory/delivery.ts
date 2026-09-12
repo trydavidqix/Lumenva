@@ -24,6 +24,10 @@ export type DeliveryBuildEvidence = {
 
 export type DeliveryValidation = { valid: boolean; errors: string[] };
 
+const DELIVERY_CHANNELS = new Set<DeliveryChannel>([
+  "WEB_PREVIEW", "MOBILE_PREVIEW", "APP_STORE", "PLAY_STORE", "MANAGED_SERVICE",
+]);
+
 export function validateDeliveryPlan(
   plan: DeliveryPlan,
   artifact: DeliveryArtifact,
@@ -31,6 +35,9 @@ export function validateDeliveryPlan(
 ): DeliveryValidation {
   const errors: string[] = [];
   if (!plan.channels.length) errors.push("delivery plan requires at least one channel");
+  for (const channel of plan.channels) {
+    if (!DELIVERY_CHANNELS.has(channel)) errors.push(`unsupported delivery channel: ${String(channel)}`);
+  }
   if (artifact.delivery_plan_id !== plan.delivery_plan_id) errors.push("delivery artifact does not belong to delivery plan");
   if (buildEvidence.organization_id !== plan.organization_id) errors.push("organization_id mismatch between delivery plan and build evidence");
   if (buildEvidence.project_id !== plan.project_id) errors.push("project_id mismatch between delivery plan and build evidence");
