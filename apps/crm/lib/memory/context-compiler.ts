@@ -24,6 +24,7 @@ export interface MemoryEvent {
   validUntil: string | null;
   lifecycle: MemoryLifecycle;
   content: string;
+  supersedes?: string | null;
 }
 
 export interface ContextCompilerInput {
