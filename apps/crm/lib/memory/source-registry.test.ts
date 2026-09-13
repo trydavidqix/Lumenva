@@ -51,6 +51,7 @@ describe("Hermes Source Registry", () => {
     const rebuilt = await a.list("org-a");
     expect(rebuilt).toHaveLength(1);
     expect(rebuilt[0]).toMatchObject({ organizationId: "org-a", uri: source.uri, state: "active" });
+    expect(await a.list("org-b")).toEqual([]);
     await pool.end();
   });
 });
