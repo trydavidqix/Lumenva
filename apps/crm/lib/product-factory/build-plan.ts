@@ -50,6 +50,7 @@ export async function repairFailedBuildPlan(
 ): Promise<RepairLoopResult> {
   const key = repairPlanKey(buildPlan);
   if (buildPlan.status === "BLOCKED_EXTERNAL" || buildPlan.steps.some((step) => step.status === "BLOCKED")) throw new Error("BuildPlan is terminally BLOCKED");
+  if (!options.stateStore && terminallyBlockedPlans.has(key)) throw new Error("BuildPlan is terminally BLOCKED");
   if (!Number.isInteger(options.maxAttempts) || options.maxAttempts < 1) throw new RangeError("maxAttempts must be a positive integer");
   const failedIndex = buildPlan.steps.findIndex((step) => step.status === "FAILED");
   if (failedIndex === -1) throw new Error("BuildPlan has no FAILED step");
@@ -69,6 +70,7 @@ export async function repairFailedBuildPlan(
   while (true) {
     const persisted = await options.stateStore.get(buildPlan.organization_id, buildPlan.build_plan_id, failedStep.step_id);
     if (persisted?.status === "BLOCKED") throw new Error("BuildPlan is terminally BLOCKED");
+    if (persisted?.status === "RUNNING") throw new Error("BuildPlan step already RUNNING");
     if ((persisted?.attempts ?? 0) >= options.maxAttempts) {
       failedStep.status = "BLOCKED"; plan.status = "BLOCKED_EXTERNAL";
       await options.stateStore.finish(buildPlan.organization_id, buildPlan.build_plan_id, failedStep.step_id, "BLOCKED");
