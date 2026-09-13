@@ -11,6 +11,7 @@ import { aiHandoffFromSentimentHandler } from "@/workers/ai-handoff-from-sentime
 import { ragIndexerHandler } from "@/workers/rag-indexer.handler";
 import { lgpdExportHandler } from "@/workers/lgpd-export-worker.handler";
 import { lgpdRedactHandler } from "@/workers/lgpd-redact-worker.handler";
+import { scenarioRunHandler } from "@/workers/scenario-run-worker.handler";
 import { automationRulesHandler } from "@/lib/automation/engine.handler";
 import { followupReactivityHandler } from "@/lib/followup/reactivity.handler";
 import { mediaPersistHandler } from "@/workers/media-persist-worker.handler";
@@ -39,5 +40,6 @@ export function ensureHandlersRegistered(): void {
   registerHandler(memoryLifecycleHandler);
   registerHandler(graphProjectionHandler);
   registerHandler(graphLifecycleHandler);
+  registerHandler(scenarioRunHandler);
   _registered = true;
 }
