@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { executeApprovedMobileStoreSubmission, type MobileStoreApproval } from "@/lib/product-factory/mobile-compliance/submit";
+import { executeApprovedMobileStoreSubmission, mobileStoreSubmissionPayloadHash, type MobileStoreApproval } from "@/lib/product-factory/mobile-compliance/submit";
 
 const base = {
   organizationId: "org-1",
@@ -21,7 +21,7 @@ function approval(overrides: Partial<MobileStoreApproval> = {}): MobileStoreAppr
     organizationId: "org-1",
     status: "approved",
     toolName: "mobile_store_submit",
-    payloadHash: "",
+    payloadHash: mobileStoreSubmissionPayloadHash(base),
     ...overrides,
   };
 }
@@ -42,6 +42,12 @@ describe("approved mobile store submission boundary", () => {
   it("rejects approvals issued for a different capability", async () => {
     const adapter = { submit: vi.fn() };
     await expect(executeApprovedMobileStoreSubmission(base, { getApproval: async () => approval({ toolName: "send_message" }) }, adapter)).rejects.toThrow("mobile_store_submit_approval_scope_mismatch");
+  });
+
+  it("rejects an approval bound to a different release payload", async () => {
+    const adapter = { submit: vi.fn() };
+    await expect(executeApprovedMobileStoreSubmission(base, { getApproval: async () => approval({ payloadHash: "0".repeat(64) }) }, adapter)).rejects.toThrow("mobile_store_submit_approval_payload_mismatch");
+    expect(adapter.submit).not.toHaveBeenCalled();
   });
 
   it("submits exactly once through the provider adapter after approval validation", async () => {
