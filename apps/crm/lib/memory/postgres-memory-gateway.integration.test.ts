@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { join } from "node:path";
 import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Pool } from "pg";
@@ -46,8 +47,8 @@ describe("Postgres Memory Gateway (real RLS)", () => {
     await admin.query("CREATE ROLE authenticated NOLOGIN");
     await admin.query("CREATE ROLE memory_gateway_test LOGIN PASSWORD 'memory-test' NOSUPERUSER NOBYPASSRLS IN ROLE authenticated");
     await admin.query("CREATE OR REPLACE FUNCTION public.fn_user_org_ids() RETURNS SETOF text LANGUAGE SQL STABLE AS $$ SELECT unnest(string_to_array(current_setting('app.org_ids', true), ',')) $$");
-    await admin.query(readFileSync("supabase/migrations/20260913020000_0165_hermes_memory_gateway.sql", "utf8"));
-  });
+    await admin.query(readFileSync(join("/home/claude/src/worktrees/wave13-hermes-source-registry-2026-09-12", "supabase/migrations/20260913020000_0165_hermes_memory_gateway.sql"), "utf8")); await admin.query(readFileSync(join("/home/claude/src/worktrees/wave13-hermes-source-registry-2026-09-12", "supabase/migrations/20260913170000_0166_hermes_memory_expiry.sql"), "utf8"));
+  }, 40_000);
 
   afterAll(async () => {
     await admin?.end();
