@@ -32,10 +32,19 @@ export async function POST(req: NextRequest): Promise<Response> {
   const supabase = await createClient();
   const { data: assignment, error } = await supabase.from("organization_plan").select("plan_id, plans!inner(slug)").eq("organization_id", authz.org.orgId).eq("status", "active").maybeSingle();
   if (error) return fail("internal_error", error.message, 500, { requestId });
-  const plans = (assignment as unknown as { plans?: { slug?: unknown } | { slug?: unknown }[] } | null)?.plans;
+  if (!assignment) return fail("forbidden", "Organization has no active plan.", 403, { requestId });
+  const plans = (assignment as unknown as { plan_id: string; plans?: { slug?: unknown } | { slug?: unknown }[] }).plans;
   const planValue = Array.isArray(plans) ? plans[0]?.slug : plans?.slug;
-  const plan = typeof planValue === "string" ? planValue : "standard";
-  const entitlement = authorizeModule({ requestId, policyVersion: "entitlements.v1", module: BILLING_MODULE, tenant: { organizationId: authz.org.orgId, rlsOrganizationId: authz.org.orgId, rlsAllowed: true, plan, entitledModules: ["billing_checkout"] }, actor: { actorId: authz.user.id, organizationId: authz.org.orgId, role: authz.org.role, capabilities: [] }, enabledModules: [], maxRisk: "P4", approval: { required: false, approved: false } });
+  const plan = typeof planValue === "string" ? planValue : "";
+  if (input.plan_slug !== plan) return fail("plan_mismatch", "Requested plan does not match the active organization plan.", 403, { requestId });
+
+  const { data: moduleRows, error: modulesError } = await supabase.from("plan_modules").select("modules!inner(slug)").eq("plan_id", assignment.plan_id);
+  if (modulesError) return fail("internal_error", modulesError.message, 500, { requestId });
+  const entitledModules = (moduleRows ?? []).map((row: unknown) => {
+    const modules = (row as unknown as { modules?: { slug?: unknown } | { slug?: unknown } }).modules;
+    return Array.isArray(modules) ? modules[0]?.slug : modules?.slug;
+  }).filter((slug): slug is string => typeof slug === "string");
+  const entitlement = authorizeModule({ requestId, policyVersion: "entitlements.v1", module: BILLING_MODULE, tenant: { organizationId: authz.org.orgId, rlsOrganizationId: authz.org.orgId, rlsAllowed: true, plan, entitledModules }, actor: { actorId: authz.user.id, organizationId: authz.org.orgId, role: authz.org.role, capabilities: [] }, enabledModules: [], maxRisk: "P4", approval: { required: false, approved: false } });
   if (entitlement.decision === "DENY") return fail("forbidden", "Billing checkout is not authorized.", 403, { requestId, details: { reason: entitlement.reason } });
   try {
     const result = await createStripeCheckoutBoundary(stripeCheckoutAdapter).createCheckout({ planSlug: input.plan_slug, organizationId: authz.org.orgId, successUrl: input.success_url, cancelUrl: input.cancel_url });
