@@ -10704,3 +10704,23 @@ create trigger content_revisions_item_tenant before insert or update on public.c
 drop trigger if exists content_revisions_run_tenant on public.content_revisions;
 create trigger content_revisions_run_tenant before insert or update on public.content_revisions for each row execute function public.content_os_enforce_tenant_fk('content_research_runs','research_run_id');
 notify pgrst, 'reload schema';
+
+-- ---- Wave 4 BrowserMesh: replay claims and tenant RLS ----
+create table if not exists public.browsermesh_event_idempotency (
+  id uuid primary key default gen_random_uuid(),
+  organization_id text not null,
+  event_id text not null,
+  idempotency_key text not null,
+  status text not null check (status in (CLAIMED)),
+  claimed_at timestamptz not null default now(),
+  constraint browsermesh_event_idempotency_org_key unique (organization_id, idempotency_key),
+  constraint browsermesh_event_idempotency_event_key unique (organization_id, event_id)
+);
+alter table public.browsermesh_event_idempotency enable row level security;
+drop policy if exists browsermesh_event_idempotency_tenant_all on public.browsermesh_event_idempotency;
+create policy browsermesh_event_idempotency_tenant_all on public.browsermesh_event_idempotency
+  for all to authenticated
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
+grant select, insert on public.browsermesh_event_idempotency to authenticated;
+grant all on public.browsermesh_event_idempotency to service_role;
