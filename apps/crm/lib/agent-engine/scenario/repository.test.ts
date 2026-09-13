@@ -46,4 +46,21 @@ describe("ScenarioRepository", () => {
     expect(sql).toMatch(/organization_id\s*=\s*\$2/i);
     expect(values).toEqual(["scenario-1", "org-a", "DRAFT", "EVIDENCE_READY"]);
   });
+
+  it("moves READY to RUNNING and emits one async run request in the same statement", async () => {
+    const query = vi.fn().mockResolvedValue({
+      rows: [{ id: "scenario-1", organization_id: "org-a", status: "RUNNING", run_request_event_id: "event-1" }],
+    });
+    const repo = createScenarioRepository({ query });
+
+    const result = await repo.requestRun("org-a", "scenario-1", "req-1");
+
+    const [sql, values] = query.mock.calls[0] as [string, unknown[]];
+    expect(sql).toMatch(/status\s*=\s*'RUNNING'/i);
+    expect(sql).toMatch(/status\s*=\s*'READY'/i);
+    expect(sql).toMatch(/'scenario\.run_requested'/i);
+    expect(sql).toMatch(/insert into event_log/i);
+    expect(values).toEqual(["scenario-1", "org-a", "req-1"]);
+    expect(result.run_request_event_id).toBe("event-1");
+  });
 });
