@@ -35,6 +35,19 @@ describe("ScenarioRepository", () => {
     expect(values[0]).toBe("org-a");
   });
 
+  it("edits mutable fields only while a scenario remains DRAFT", async () => {
+    const query = vi.fn().mockResolvedValue({ rows: [{ id: "scenario-1", status: "DRAFT", question: "updated" }] });
+    const repo = createScenarioRepository({ query });
+
+    await repo.updateDraft("org-a", "scenario-1", { question: "updated", constraints: { region: "PT" } });
+
+    const [sql, values] = query.mock.calls[0] as [string, unknown[]];
+    expect(sql).toMatch(/status\s*=\s*'DRAFT'/i);
+    expect(sql).toMatch(/'scenario\.updated'/i);
+    expect(values[0]).toBe("scenario-1");
+    expect(values[1]).toBe("org-a");
+  });
+
   it("uses expected status for optimistic lifecycle transitions", async () => {
     const query = vi.fn().mockResolvedValue({ rows: [{ id: "scenario-1", status: "EVIDENCE_READY" }] });
     const repo = createScenarioRepository({ query });
