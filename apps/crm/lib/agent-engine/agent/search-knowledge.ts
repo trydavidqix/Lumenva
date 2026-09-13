@@ -92,7 +92,7 @@ export async function searchKnowledge(
       [args.organizationId, args.kbVersionId, vec, args.topK, PISO_SIMILARIDADE],
     );
 
-    const results = rows.filter((r) => r.similarity >= args.threshold);
+    const results = rows.filter((r) => r.similarity >= args.threshold).map(redactKnowledgeHit);
     // Sem depender da ordem das linhas. O `filter` descarta o NaN que o pgvector
     // devolve para chunk de embedding zerado — ele contaminaria o `Math.max` e
     // anularia o top_score de linhas BOAS na mesma busca (numa KB com poucos
@@ -137,6 +137,19 @@ export async function searchKnowledge(
       },
     };
   }
+}
+
+const EMAIL_PATTERN = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+const CPF_PATTERN = /\b\d{3}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d{2}\b/g;
+const PHONE_PATTERN = /(?<!\d)(?:\+\d{1,3}[\s.-]?)?(?:\d[\s.-]?){8,14}\d(?!\d)/g;
+
+/** Mandatory consumer-boundary redaction; there is intentionally no opt-out. */
+export function redactKnowledgeHit(hit: KnowledgeHit): KnowledgeHit {
+  const content = hit.content
+    .replace(EMAIL_PATTERN, '[EMAIL_REDACTED]')
+    .replace(CPF_PATTERN, '[CPF_REDACTED]')
+    .replace(PHONE_PATTERN, '[PHONE_REDACTED]');
+  return content === hit.content ? hit : { ...hit, content };
 }
 
 async function endTraceSpan(
