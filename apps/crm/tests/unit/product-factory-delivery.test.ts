@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { validateDeliveryPlan, type DeliveryArtifact, type DeliveryPlan, type DeliveryBuildEvidence } from "@/lib/product-factory/delivery";
+import { validateDeliveryPlan, validateDeliveryPlanWithState, type DeliveryArtifact, type DeliveryPlan, type DeliveryBuildEvidence } from "@/lib/product-factory/delivery";
+import type { BuildPlanStateRow, BuildPlanStateStore } from "@/lib/product-factory/build-plan-state-store";
 
 const deliveryPlan: DeliveryPlan = {
   delivery_plan_id: "delivery-1", organization_id: "org-1", project_id: "project-1", build_ref: "build-1",
@@ -43,4 +44,31 @@ describe("Wave 10 delivery gates", () => {
     expect(result.valid).toBe(false);
     expect(result.errors).toEqual(expect.arrayContaining(["delivery artifact content_hash is required", "delivery artifact provenance_refs are required", "delivery artifact test_refs are required", "build evidence_refs are required"]));
   });
+  it("requires APPROVED or PACKAGED before stateful delivery", async () => {
+    const store = fakeStateStore();
+    const result = await validateDeliveryPlanWithState(deliveryPlan, artifact, evidence, store);
+    expect(result).toEqual({ valid: false, errors: ["delivery plan must be APPROVED or PACKAGED"] });
+  });
+  it("does not reopen a persisted BLOCKED or SUCCEEDED gate", async () => {
+    for (const status of ["BLOCKED", "SUCCEEDED"] as const) {
+      const store = fakeStateStore({ id: "state-1", status, attempts: 1, blocked_at: null });
+      const result = await validateDeliveryPlanWithState({ ...deliveryPlan, status: "APPROVED" }, artifact, evidence, store);
+      expect(result).toEqual({ valid: false, errors: [`delivery gate is terminally ${status}`] });
+    }
+  });
 });
+
+function fakeStateStore(row?: BuildPlanStateRow): BuildPlanStateStore {
+  let current = row;
+  return {
+    get: async () => current,
+    recordAttempt: async () => {
+      if (current?.status === "BLOCKED" || current?.status === "SUCCEEDED" || current?.status === "RUNNING") return undefined;
+      current = { id: "state-1", status: "RUNNING", attempts: 1, blocked_at: null };
+      return current;
+    },
+    finish: async (_tenant, _plan, _step, status) => {
+      if (current) current = { ...current, status };
+    },
+  } as unknown as BuildPlanStateStore;
+}

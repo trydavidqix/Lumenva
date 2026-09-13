@@ -62,13 +62,21 @@ export async function validateDeliveryPlanWithState(
   buildEvidence: DeliveryBuildEvidence,
   stateStore: BuildPlanStateStore,
 ): Promise<DeliveryValidation> {
-  const validation = validateDeliveryPlan(plan, artifact, buildEvidence);
   const stepId = "delivery-gate";
+  const persisted = await stateStore.get(plan.organization_id, plan.delivery_plan_id, stepId);
+  if (persisted?.status === "BLOCKED" || persisted?.status === "SUCCEEDED") {
+    return { valid: false, errors: [`delivery gate is terminally ${persisted.status}`] };
+  }
+  if (plan.status !== "APPROVED" && plan.status !== "PACKAGED") {
+    return { valid: false, errors: ["delivery plan must be APPROVED or PACKAGED"] };
+  }
+  const validation = validateDeliveryPlan(plan, artifact, buildEvidence);
   if (!validation.valid) {
-    await stateStore.finish(plan.organization_id, plan.delivery_plan_id, stepId, "BLOCKED");
+    const reserved = await stateStore.recordAttempt(plan.organization_id, plan.delivery_plan_id, stepId);
+    if (reserved) await stateStore.finish(plan.organization_id, plan.delivery_plan_id, stepId, "BLOCKED");
     return validation;
   }
-  if (!(await stateStore.claim(plan.organization_id, plan.delivery_plan_id, stepId))) {
+  if (!(await stateStore.recordAttempt(plan.organization_id, plan.delivery_plan_id, stepId))) {
     return { valid: false, errors: ["delivery gate already RUNNING"] };
   }
   await stateStore.finish(plan.organization_id, plan.delivery_plan_id, stepId, "SUCCEEDED");
