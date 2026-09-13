@@ -13,7 +13,7 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/entitlements/authorize-module", () => ({ authorizeModule: vi.fn() }));
 
 const exec = promisify(execFile);
-const ORG = "org-real-pg";
+const ORG = "00000000-0000-0000-0000-000000000001";
 const SECRET = "real-postgres-route-secret";
 let container = "";
 
@@ -30,7 +30,7 @@ function realDb(poolLabel: string) {
         try {
           const quote = (value: string) => value.replace(/'/g, "''");
           const sql = "INSERT INTO idempotency_keys (organization_id,key,endpoint,request_hash,response_body,status_code,expires_at) VALUES ('" +
-            quote(values.organization_id) + "','" + quote(values.key) + "','" + quote(values.endpoint) + "','" + quote(values.request_hash) + "','" +
+            quote(values.organization_id) + "','" + quote(values.key) + "','" + quote(values.endpoint) + "',decode('" + quote(values.request_hash) + "','hex'),'" +
             quote(JSON.stringify(values.response_body)) + "'::jsonb," + String(values.status_code) + ",'" + quote(values.expires_at) + "');";
           await exec("docker", ["exec", container, "psql", "-U", "postgres", "-d", "test", "-v", "ON_ERROR_STOP=1", "-c", sql]);
           return { error: null };
@@ -59,7 +59,7 @@ describe("POST /api/v1/billing/checkout with real PostgreSQL", () => {
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
     }
-    await exec("docker", ["exec", container, "psql", "-U", "postgres", "-d", "test", "-v", "ON_ERROR_STOP=1", "-c", "CREATE TABLE idempotency_keys (id bigserial primary key, organization_id text not null, key text not null, endpoint text not null, request_hash text not null, response_body jsonb not null, status_code integer not null, expires_at timestamptz not null, UNIQUE (organization_id,key,endpoint));"]);
+    await exec("docker", ["exec", container, "psql", "-U", "postgres", "-d", "test", "-v", "ON_ERROR_STOP=1", "-c", "CREATE TABLE idempotency_keys (id uuid primary key default gen_random_uuid(), organization_id uuid not null, key text not null, endpoint text not null, request_hash bytea not null, status_code integer not null, response_body jsonb not null, created_at timestamptz not null default now(), expires_at timestamptz not null, UNIQUE (organization_id,key,endpoint));"]);
   }, 120_000);
 
   afterAll(async () => {
@@ -77,7 +77,7 @@ describe("POST /api/v1/billing/checkout with real PostgreSQL", () => {
     const { POST } = await import("./route");
     const [first, second] = await Promise.all([POST(request(body)), POST(request(body))]);
     expect([first.status, second.status].sort()).toEqual([200, 403]);
-    const { stdout } = await exec("docker", ["exec", container, "psql", "-U", "postgres", "-d", "test", "-Atqc", "SELECT count(*) FROM idempotency_keys WHERE organization_id = 'org-real-pg' AND key = 'real-pg-replica-nonce' AND endpoint = 'stripe_checkout_state'"]);
+    const { stdout } = await exec("docker", ["exec", container, "psql", "-U", "postgres", "-d", "test", "-Atqc", "SELECT count(*) FROM idempotency_keys WHERE organization_id = '00000000-0000-0000-0000-000000000001' AND key = 'real-pg-replica-nonce' AND endpoint = 'stripe_checkout_state'"]);
     expect(stdout.trim()).toBe("1");
   }, 120_000);
 });
