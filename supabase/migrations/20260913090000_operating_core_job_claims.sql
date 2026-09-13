@@ -14,3 +14,14 @@ create table if not exists public.operating_core_job_claims (
 
 create index if not exists operating_core_job_claims_worker_idx
   on public.operating_core_job_claims (organization_id, worker_id, status);
+
+alter table public.operating_core_job_claims enable row level security;
+
+drop policy if exists operating_core_job_claims_tenant_isolation on public.operating_core_job_claims;
+create policy operating_core_job_claims_tenant_isolation
+  on public.operating_core_job_claims
+  for all to authenticated
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
+
+grant select, insert, update, delete on public.operating_core_job_claims to authenticated;
