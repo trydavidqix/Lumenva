@@ -1,4 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { Pool } from "pg";
 import { ensureResourceRouterStore, loadWorkers, persistWorker, routeResourcePersisted, routeResourcePersistedOnce } from "./resource-router-persistence";
 
@@ -20,6 +22,9 @@ describe("resource router postgres persistence", () => {
     const connectionString = `postgres://postgres:postgres@127.0.0.1:${port}/postgres`;
     await waitForPostgres(connectionString);
     pool = new Pool({ connectionString });
+    await pool.query("CREATE OR REPLACE FUNCTION public.fn_user_org_ids() RETURNS SETOF text LANGUAGE sql STABLE AS $fn$ SELECT unnest(string_to_array(current_setting($q$app.org_ids$q$, true), $q$,$q$)) $fn$;");
+    const migration = await readFile(join(process.cwd(), "supabase/migrations/20260913160000_resource_router_rls.sql"), "utf8");
+    await pool.query(migration);
     await ensureResourceRouterStore(pool);
   });
   afterAll(async () => { await pool?.end(); if (container) { const { execFileSync } = await import("node:child_process"); execFileSync("docker", ["rm", "-f", container]); } });
