@@ -14,10 +14,19 @@ export interface CreateScenarioInput {
   createdBy?: string;
 }
 
+export interface UpdateScenarioDraftInput {
+  title?: string;
+  question?: string;
+  decisionVariables?: Record<string, unknown>;
+  constraints?: Record<string, unknown>;
+  budget?: Record<string, unknown>;
+}
+
 export interface ScenarioRepository {
   createScenario(organizationId: string, input: CreateScenarioInput): Promise<Record<string, unknown>>;
   getScenario(organizationId: string, scenarioId: string): Promise<Record<string, unknown> | null>;
   listScenarios(organizationId: string, limit?: number): Promise<Array<Record<string, unknown>>>;
+  updateDraft(organizationId: string, scenarioId: string, input: UpdateScenarioDraftInput): Promise<Record<string, unknown>>;
   transitionScenario(
     organizationId: string,
     scenarioId: string,
@@ -89,6 +98,45 @@ export function createScenarioRepository(db: ScenarioRepositoryDb): ScenarioRepo
         [organizationId, safeLimit],
       );
       return rows;
+    },
+
+    async updateDraft(organizationId, scenarioId, input) {
+      const { rows } = await db.query(
+        `with changed as (
+           update scenario_definitions
+              set title = coalesce($3, title),
+                  question = coalesce($4, question),
+                  decision_variables = coalesce($5::jsonb, decision_variables),
+                  constraints = coalesce($6::jsonb, constraints),
+                  budget = coalesce($7::jsonb, budget),
+                  updated_at = now()
+            where id = $1
+              and organization_id = $2
+              and status = 'DRAFT'
+            returning *
+         ), logged as (
+           insert into event_log
+             (organization_id, event_type, entity_kind, entity_id, payload, metadata)
+           select organization_id, 'scenario.updated', 'scenario', id,
+                  jsonb_build_object('status', status),
+                  jsonb_build_object('synthetic', false, 'source', 'scenario_lab')
+             from changed
+           returning id
+         )
+         select changed.* from changed cross join logged`,
+        [
+          scenarioId,
+          organizationId,
+          input.title ?? null,
+          input.question ?? null,
+          input.decisionVariables === undefined ? null : JSON.stringify(input.decisionVariables),
+          input.constraints === undefined ? null : JSON.stringify(input.constraints),
+          input.budget === undefined ? null : JSON.stringify(input.budget),
+        ],
+      );
+      const row = first(rows);
+      if (!row) throw new Error(`Scenario update conflict for ${scenarioId}: expected DRAFT.`);
+      return row;
     },
 
     async transitionScenario(organizationId, scenarioId, expectedStatus, nextStatus) {
