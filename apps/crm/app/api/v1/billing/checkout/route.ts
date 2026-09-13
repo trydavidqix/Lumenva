@@ -5,7 +5,7 @@ import { fail, ok } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { authorizeModule } from "@/lib/entitlements/authorize-module";
 import { createClient } from "@/lib/supabase/server";
-import { consumeCheckoutState, type CheckoutStateStore } from "@/lib/billing/stripe-browser-state";
+import { consumeCheckoutState, createPostgresCheckoutStateStore } from "@/lib/billing/stripe-browser-state";
 import { createStripeCheckoutBoundary, StripeCheckoutError, type StripeCheckoutAdapter } from "@/lib/billing/stripe-checkout";
 
 const requestSchema = z.object({
@@ -17,8 +17,6 @@ const requestSchema = z.object({
 
 const BILLING_MODULE = { id: "billing_checkout", version: "1", dependencies: [], conflicts: [], requiredCapabilities: [], allowedRoles: ["admin"], risk: "P3" as const, requiresApproval: false };
 const CHECKOUT_STATE_MAX_AGE_SECONDS = 900;
-const usedCheckoutNonces = new Set<string>();
-export const checkoutStateStore: CheckoutStateStore = { has: (nonce) => usedCheckoutNonces.has(nonce), add: (nonce) => { usedCheckoutNonces.add(nonce); } };
 
 /** Runtime provider seam. Stripe CLI/MCP owns the real adapter; absent means fail-closed. */
 export const stripeCheckoutAdapter: StripeCheckoutAdapter = {
@@ -32,12 +30,22 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (!authz.ok) return authz.response;
   let input: z.infer<typeof requestSchema>;
   try { input = requestSchema.parse(await req.json()); } catch { return fail("validation_failed", "Invalid checkout request.", 422, { requestId }); }
-  const stateSecret = process.env.STRIPE_CHECKOUT_STATE_SECRET ?? "";
-  if (!consumeCheckoutState(input.checkout_state, { organizationId: authz.org.orgId, planSlug: input.plan_slug, nowUnix: Math.floor(Date.now() / 1000), maxAgeSeconds: CHECKOUT_STATE_MAX_AGE_SECONDS, secret: stateSecret, store: checkoutStateStore })) {
-    return fail("invalid_checkout_state", "Checkout state is invalid or expired.", 403, { requestId });
-  }
 
   const supabase = await createClient();
+  try {
+    const validState = await consumeCheckoutState(input.checkout_state, {
+      organizationId: authz.org.orgId,
+      planSlug: input.plan_slug,
+      nowUnix: Math.floor(Date.now() / 1000),
+      maxAgeSeconds: CHECKOUT_STATE_MAX_AGE_SECONDS,
+      secret: process.env.STRIPE_CHECKOUT_STATE_SECRET ?? "",
+      store: createPostgresCheckoutStateStore(supabase),
+    });
+    if (!validState) return fail("invalid_checkout_state", "Checkout state is invalid or expired.", 403, { requestId });
+  } catch {
+    return fail("internal_error", "Unable to reserve checkout state.", 500, { requestId });
+  }
+
   const { data: assignment, error } = await supabase.from("organization_plan").select("plan_id, plans!inner(slug)").eq("organization_id", authz.org.orgId).eq("status", "active").maybeSingle();
   if (error) return fail("internal_error", error.message, 500, { requestId });
   const plans = (assignment as unknown as { plans?: { slug?: unknown } | { slug?: unknown }[] } | null)?.plans;

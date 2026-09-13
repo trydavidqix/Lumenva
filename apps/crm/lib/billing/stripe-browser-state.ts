@@ -1,7 +1,14 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 export type CheckoutStatePayload = { readonly organizationId: string; readonly planSlug: string; readonly nonce: string; readonly issuedAtUnix: number };
-export type CheckoutStateStore = { has(nonce: string): boolean; add(nonce: string): void };
+export type CheckoutStateDb = {
+  from(table: "idempotency_keys"): {
+    insert(values: { organization_id: string; key: string; endpoint: string; request_hash: string; response_body: Record<string, never>; status_code: number; expires_at: string }): PromiseLike<{ error: { code?: string; message?: string } | null }>;
+  };
+};
+export type CheckoutStateStore = { claim(organizationId: string, nonce: string, nowUnix: number, ttlSeconds: number): Promise<boolean> };
+
+const ENDPOINT = "stripe_checkout_state";
 
 function encode(value: unknown): string {
   return Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
@@ -17,10 +24,29 @@ export function createCheckoutState(payload: CheckoutStatePayload, secret: strin
   return `${encoded}.${sign(encoded, secret)}`;
 }
 
-export function consumeCheckoutState(
+export function createPostgresCheckoutStateStore(db: CheckoutStateDb): CheckoutStateStore {
+  return {
+    async claim(organizationId, nonce, nowUnix, ttlSeconds) {
+      const { error } = await db.from("idempotency_keys").insert({
+        organization_id: organizationId,
+        key: nonce,
+        endpoint: ENDPOINT,
+        request_hash: createHash("sha256").update(`${organizationId}:${nonce}`).digest("hex"),
+        response_body: {},
+        status_code: 0,
+        expires_at: new Date((nowUnix + ttlSeconds) * 1000).toISOString(),
+      });
+      if (!error) return true;
+      if (error.code === "23505") return false;
+      throw new Error(error.message ?? "checkout state reservation failed");
+    },
+  };
+}
+
+export async function consumeCheckoutState(
   state: string | null | undefined,
   expected: { organizationId: string; planSlug: string; nowUnix: number; maxAgeSeconds: number; secret: string; store: CheckoutStateStore },
-): boolean {
+): Promise<boolean> {
   if (!state || !expected.secret) return false;
   const [encoded, signature, extra] = state.split(".");
   if (!encoded || !signature || extra) return false;
@@ -37,7 +63,5 @@ export function consumeCheckoutState(
   const issuedAtUnix = payload.issuedAtUnix;
   if (payload.organizationId !== expected.organizationId || payload.planSlug !== expected.planSlug || typeof payload.nonce !== "string" || typeof issuedAtUnix !== "number" || !Number.isSafeInteger(issuedAtUnix)) return false;
   if (expected.nowUnix < issuedAtUnix || expected.nowUnix - issuedAtUnix > expected.maxAgeSeconds) return false;
-  if (expected.store.has(payload.nonce)) return false;
-  expected.store.add(payload.nonce);
-  return true;
+  return expected.store.claim(expected.organizationId, payload.nonce, expected.nowUnix, expected.maxAgeSeconds);
 }

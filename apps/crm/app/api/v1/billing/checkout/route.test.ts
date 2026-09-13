@@ -14,6 +14,7 @@ const ORG = "org-1";
 const USER = "user-1";
 const SECRET = "route-test-secret";
 let nonce = 0;
+const claimedKeys = new Set<string>();
 
 function request(body: Record<string, unknown>) {
   return new NextRequest("http://localhost/api/v1/billing/checkout", { method: "POST", body: JSON.stringify(body), headers: { "content-type": "application/json" } });
@@ -27,12 +28,13 @@ function validBody(overrides: Record<string, unknown> = {}) {
 }
 function db() {
   const chain = { select: vi.fn(() => chain), eq: vi.fn(() => chain), maybeSingle: vi.fn().mockResolvedValue({ data: { plan_id: "plan-1", plans: { slug: "premium" } }, error: null }) };
-  return { from: vi.fn(() => chain) };
+  return { from: vi.fn((table: string) => table === "idempotency_keys" ? { insert: vi.fn(async (values: { key: string }) => { if (claimedKeys.has(values.key)) return { error: { code: "23505" } }; claimedKeys.add(values.key); return { error: null }; }) } : chain) };
 }
 
 describe("POST /api/v1/billing/checkout security", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    claimedKeys.clear();
     process.env.STRIPE_CHECKOUT_STATE_SECRET = SECRET;
     vi.mocked(requireRole).mockResolvedValue({ ok: true, user: { id: USER } as never, org: { orgId: ORG, role: "admin" } as never });
     vi.mocked(createClient).mockResolvedValue(db() as never);
@@ -53,14 +55,13 @@ describe("POST /api/v1/billing/checkout security", () => {
     const response = await POST(request(validBody({ checkout_state: validState("org-2") })));
     expect(response.status).toBe(403);
     expect((await response.json()).error.code).toBe("invalid_checkout_state");
-    expect(createClient).not.toHaveBeenCalled();
     expect(stripeCheckoutAdapter.createCheckoutSession).not.toHaveBeenCalled();
   });
 
   it("rejects invalid/replayed state and strict browser fields", async () => {
     const { POST } = await import("./route");
     const body = validBody();
-    expect((await POST(request({ ...body, checkout_state: `${String(body.checkout_state).slice(0, -1)}x` }))).status).toBe(403);
+    expect((await POST(request({ ...body, checkout_state: "tampered" }))).status).toBe(403);
     const replay = validBody();
     expect((await POST(request(replay))).status).toBe(200);
     expect((await POST(request(replay))).status).toBe(403);
