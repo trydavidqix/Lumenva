@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
+export { buildHermesCandidateManifest } from '../hermes/candidate-manifest';
+export type { HermesCandidateManifest } from '../hermes/candidate-manifest';
+
 export type LearningCandidate =
   | { kind: 'skill_change'; candidateId: string; baseVersionId: string; candidateVersionId: string; rollbackVersionId: string }
   | { kind: 'routing_change'; candidateId: string; provider: string; model: string; skillVersionId: string | null; certificationEvidenceRef: string }

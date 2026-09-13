@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  LEARNING_PROPOSAL_TYPES,
   parseLearningProposalStatus,
   parseLearningProposalType,
   type LearningProposalRecord,
@@ -8,11 +9,25 @@ import {
 import { buildPhase6ProposalPersistence, mapPhase6ProposalRow } from '../flywheel/store';
 
 describe('Phase 6 flywheel contracts', () => {
-  it('accepts only the closed proposal allowlist', () => {
-    expect(parseLearningProposalType('skill_change')).toBe('skill_change');
-    expect(parseLearningProposalType('routing_change')).toBe('routing_change');
-    expect(parseLearningProposalType('eval_case')).toBe('eval_case');
-    expect(parseLearningProposalType('operational_threshold')).toBe('operational_threshold');
+  it('accepts the governed proposal allowlist and rejects authority expansion', () => {
+    const expected = [
+      'skill_change',
+      'routing_change',
+      'eval_case',
+      'operational_threshold',
+      'prompt_change',
+      'workflow_change',
+      'agent_definition_change',
+      'model_policy_change',
+      'resource_route_change',
+      'memory_policy_change',
+      'context_policy_change',
+      'infra_change',
+      'strategy_change',
+    ] as const;
+
+    for (const value of expected) expect(parseLearningProposalType(value)).toBe(value);
+    expect(LEARNING_PROPOSAL_TYPES).toEqual(expected);
     expect(() => parseLearningProposalType('source_code_change')).toThrow(
       'flywheel_proposal_type_not_allowed',
     );

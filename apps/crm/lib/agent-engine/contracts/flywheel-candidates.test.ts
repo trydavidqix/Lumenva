@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildRoutingCandidate, buildSkillCandidate } from '../flywheel/candidates';
+import {
+  buildHermesCandidateManifest,
+  buildRoutingCandidate,
+  buildSkillCandidate,
+} from '../flywheel/candidates';
 
 describe('Phase 6 learning candidates', () => {
   it('keeps skill candidates immutable with an explicit rollback version', () => {
@@ -21,5 +25,29 @@ describe('Phase 6 learning candidates', () => {
 
   it('rejects candidate authority fields', () => {
     expect(() => buildSkillCandidate({ baseVersionId: 'v1', candidateVersionId: 'v2', autonomyLevel: 'autopilot' } as never)).toThrow('flywheel_candidate_forbidden_field');
+  });
+
+  it('exposes one generic Hermes manifest builder instead of per-kind builders', () => {
+    const manifest = buildHermesCandidateManifest({
+      id: 'candidate-1',
+      version: 1,
+      scope: { organizationId: 'org-a', agentId: 'agent-a', capabilityId: 'cap-a' },
+      type: 'workflow_change',
+      currentStateRef: 'workflow:v1',
+      proposedStateRef: 'workflow:v2',
+      hypothesis: 'reduce retries',
+      expectedBenefit: 'fewer failed runs',
+      knownRegressions: [],
+      riskClass: 'MEDIUM',
+      costEstimateCents: 10,
+      evidenceRefs: ['evidence:1'],
+      rollbackTargetRef: 'workflow:v1',
+      requiredEvalSuite: ['regression', 'safety'],
+      promotionPolicy: 'policy:human-review',
+    });
+
+    expect(manifest.type).toBe('workflow_change');
+    expect(manifest.rollbackTargetRef).toBe('workflow:v1');
+    expect(manifest.contentFingerprint).toHaveLength(64);
   });
 });
