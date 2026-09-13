@@ -35,6 +35,18 @@ describe("HandoffPack", () => {
     for (const value of [...pack.constraints, ...pack.source_refs, ...pack.evidence_refs]) expect(value).not.toContain("super-secret-value");
   });
 
+  it("redige email, telefone e CPF em todos os campos de handoff", () => {
+    const pii = "ana@example.com +351 912 345 678 CPF 123.456.789-09";
+    const pack = createHandoffPack({ ...state, goal: pii, constraints: [pii], facts: [pii] }, input);
+    const json = JSON.stringify(pack);
+    expect(json).not.toContain("ana@example.com");
+    expect(json).not.toContain("+351 912 345 678");
+    expect(json).not.toContain("123.456.789-09");
+    expect(pack.normalized_goal).toContain("[EMAIL_REDACTED]");
+    expect(pack.normalized_goal).toContain("[PHONE_REDACTED]");
+    expect(pack.normalized_goal).toContain("[CPF_REDACTED]");
+  });
+
   it("rejeita sessão ou epoch de origem incompatíveis", () => {
     const pack = createHandoffPack(state, input);
     expect(() => reconstructSessionState({ ...state, session_id: "other" }, pack)).toThrow("handoff_session_or_epoch_mismatch");
