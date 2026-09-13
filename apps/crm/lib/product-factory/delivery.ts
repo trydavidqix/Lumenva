@@ -97,5 +97,10 @@ export async function deliverBuild(plan: DeliveryPlan, artifact: DeliveryArtifac
 export async function executeDeliveryWithGate<T>(plan: DeliveryPlan, artifact: DeliveryArtifact, buildEvidence: DeliveryBuildEvidence, stateStore: BuildPlanStateStore, execute: () => Promise<T>): Promise<T> {
   const gate = await validateDeliveryPlanWithState(plan, artifact, buildEvidence, stateStore);
   if (!gate.valid) throw new Error(`delivery blocked: ${gate.errors.join(";")}`);
-  return execute();
+  try {
+    return await execute();
+  } catch (error) {
+    await stateStore.finish(plan.organization_id, plan.delivery_plan_id, "delivery-gate", "FAILED");
+    throw error;
+  }
 }
