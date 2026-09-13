@@ -60,7 +60,7 @@ describe("Content OS publication jobs", () => {
 
     await expect(publishContentItem(repository, {
       organizationId: "org-1", contentItemId: "item-1", connectionId: "connection-1",
-      idempotencyKey: "publish:item-1:v1", title: "Title", body: {},
+      idempotencyKey: "publish:item-1:v1", title: "Title", body: {}, provenance: { contentId: "item-1", skill: "SEO", content: "x", source: "brief", freshness: "current", confidence: 0.9, generatedAt: "2026-09-13T00:00:00Z" },
     })).rejects.toBeInstanceOf(PublicationQualityGateError);
   });
 
@@ -74,7 +74,7 @@ describe("Content OS publication jobs", () => {
     };
     const result = await publishContentItem(repository, {
       organizationId: "org-1", contentItemId: "item-1", connectionId: "connection-1",
-      idempotencyKey: "publish:item-1:v1", title: "Title", body: {},
+      idempotencyKey: "publish:item-1:v1", title: "Title", body: {}, provenance: { contentId: "item-1", skill: "SEO", content: "x", source: "brief", freshness: "current", confidence: 0.9, generatedAt: "2026-09-13T00:00:00Z" },
     });
     expect(result.reused).toBe(true);
     expect(calls).toEqual(["update:scheduled", "job"]);
@@ -90,7 +90,7 @@ describe("Content OS publication jobs", () => {
       createPublicationJob: async () => ({ job, reused: false }),
     };
     await expect(publishContentItem(repository, {
-      organizationId: "org-1", contentItemId: "item-1", connectionId: "connection-1", idempotencyKey: "publish:likeness:v1", title: "Title", body: {},
+      organizationId: "org-1", contentItemId: "item-1", connectionId: "connection-1", idempotencyKey: "publish:likeness:v1", title: "Title", body: {}, provenance: { contentId: "item-1", skill: "SEO", content: "x", source: "brief", freshness: "current", confidence: 0.9, generatedAt: "2026-09-13T00:00:00Z" },
       likenessRefs: ["person-1"], consentRequirements: [{ consent_id: "consent-1", subject_ref: "person-1", channel: "email", purpose: "marketing", likeness_ref: "person-1" }],
     })).rejects.toBeInstanceOf(PublicationConsentError);
     expect(calls).toEqual([]);
@@ -105,7 +105,7 @@ describe("Content OS publication jobs", () => {
     };
     await expect(publishContentItem(repository, {
       organizationId: "org-1", contentItemId: "item-1", connectionId: "connection-1",
-      idempotencyKey: "publish:item-1:v1", title: "Title", body: {},
+      idempotencyKey: "publish:item-1:v1", title: "Title", body: {}, provenance: { contentId: "item-1", skill: "SEO", content: "x", source: "brief", freshness: "current", confidence: 0.9, generatedAt: "2026-09-13T00:00:00Z" },
     })).rejects.toThrow("Content item not found");
   });
 });
