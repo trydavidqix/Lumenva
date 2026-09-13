@@ -24,6 +24,7 @@ export interface ScenarioRepository {
     expectedStatus: ScenarioStatus,
     nextStatus: ScenarioStatus,
   ): Promise<Record<string, unknown>>;
+  requestRun(organizationId: string, scenarioId: string, requestId: string): Promise<Record<string, unknown>>;
 }
 
 function first(rows: Array<Record<string, unknown>>): Record<string, unknown> | null {
@@ -121,6 +122,45 @@ export function createScenarioRepository(db: ScenarioRepositoryDb): ScenarioRepo
       const row = first(rows);
       if (!row) {
         throw new Error(`Scenario transition conflict for ${scenarioId}: expected ${expectedStatus}.`);
+      }
+      return row;
+    },
+
+    async requestRun(organizationId, scenarioId, requestId) {
+      const { rows } = await db.query(
+        `with changed as (
+           update scenario_definitions
+              set status = 'RUNNING',
+                  updated_at = now()
+            where id = $1
+              and organization_id = $2
+              and status = 'READY'
+            returning *
+         ), logged as (
+           insert into event_log
+             (organization_id, event_type, entity_kind, entity_id, payload, metadata)
+           select
+             organization_id,
+             'scenario.run_requested',
+             'scenario',
+             id,
+             jsonb_build_object('status', status),
+             jsonb_build_object(
+               'synthetic', false,
+               'source', 'scenario_lab',
+               'request_id', $3,
+               'idempotency_key', concat('scenario.run_requested:', id::text, ':', $3)
+             )
+           from changed
+           returning id as run_request_event_id
+         )
+         select changed.*, logged.run_request_event_id
+           from changed cross join logged`,
+        [scenarioId, organizationId, requestId],
+      );
+      const row = first(rows);
+      if (!row) {
+        throw new Error(`Scenario run request conflict for ${scenarioId}: expected READY.`);
       }
       return row;
     },
