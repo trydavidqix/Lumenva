@@ -17,7 +17,7 @@ describe("durable registry migration RLS", () => {
     await admin.query("CREATE TABLE user_organizations (user_id uuid, organization_id uuid)");
     await admin.query("CREATE OR REPLACE FUNCTION fn_user_org_ids() RETURNS SETOF uuid SECURITY DEFINER AS $$ SELECT organization_id FROM user_organizations WHERE user_id = current_setting('app.test_user')::uuid $$ LANGUAGE sql");
     await admin.query("CREATE ROLE service_role NOSUPERUSER NOBYPASSRLS");
-    await admin.query("CREATE ROLE authenticated NOSUPERUSER NOBYPASSRLS LOGIN PASSWORD 'postgres'");
+    await admin.query("CREATE ROLE authenticated NOSUPERUSER NOBYPASSRLS LOGIN PASSWORD 'test'");
     await admin.query("INSERT INTO organizations VALUES ($1),($2)", [tenantId, otherTenantId]);
     await admin.query("INSERT INTO user_organizations VALUES ($1,$2)", [userId, tenantId]);
     await admin.query(readFileSync("supabase/migrations/20260913170000_0168_agent_definition_registry.sql", "utf8"));
