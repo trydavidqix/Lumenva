@@ -44,7 +44,9 @@ function redact(value: string): string {
   return value.replace(
     /((?:api[_ -]?key|token|secret|password|credential|bearer)\s*[:=]\s*)[^\s,;]+/gi,
     "$1[REDACTED]",
-  );
+  ).replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[EMAIL_REDACTED]")
+    .replace(/\b\d{3}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d{2}\b/g, "[CPF_REDACTED]")
+    .replace(/(?<!\d)(?:\+\d{1,3}[\s.-]?)?(?:\d[\s.-]?){8,14}\d(?!\d)/g, "[PHONE_REDACTED]");
 }
 
 function redactList(values: string[]): string[] {
