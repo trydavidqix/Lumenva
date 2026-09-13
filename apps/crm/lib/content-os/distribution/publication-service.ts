@@ -88,7 +88,6 @@ export class PublicationConsentError extends Error {
 async function assertPublicationConsent(repository: PublishContentRepository, input: PublishContentInput): Promise<void> {
   const likenessRefs = input.likenessRefs ?? [];
   const requirements = input.consentRequirements ?? [];
-  if (input.provenance) assertPublishableContent(input.provenance);
   if (likenessRefs.length === 0 && requirements.length === 0) return;
   if (!repository.findConsent || requirements.length === 0) {
     throw new PublicationConsentError("Active consent is required for generated likeness publication.");
