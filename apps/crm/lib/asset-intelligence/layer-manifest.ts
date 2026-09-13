@@ -98,8 +98,14 @@ export async function assertLayerManifestLicensed(
     if (!license || license.license_ref !== provenance.license_ref || license.source_id !== provenance.source_id || license.owner_id !== provenance.owner_id || license.status !== "VERIFIED") {
       throw new LayerLicenseError("Asset license/provenance is not verified.");
     }
-    if (license.expires_at && Date.parse(license.expires_at) <= now.getTime()) {
-      throw new LayerLicenseError("Asset license is expired.");
+    if (license.expires_at) {
+      const expiresAt = Date.parse(license.expires_at);
+      if (!Number.isFinite(expiresAt)) {
+        throw new LayerLicenseError("Asset license expiry timestamp is invalid.");
+      }
+      if (expiresAt <= now.getTime()) {
+        throw new LayerLicenseError("Asset license is expired.");
+      }
     }
   }
 }

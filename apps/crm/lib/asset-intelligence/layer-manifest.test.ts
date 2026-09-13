@@ -54,4 +54,15 @@ describe("LayerManifest", () => {
     });
     await expect(assertLayerManifestLicensed(manifest, async () => ({ license_ref: "lic-revoked", source_id: "source-1", owner_id: "owner-1", status: "REVOKED", expires_at: null }))).rejects.toThrow("license");
   });
+
+  it("falha fechado quando expires_at tem timestamp inválido", async () => {
+    const manifest = createLayerManifest({
+      manifest_id: "manifest-invalid-expiry",
+      asset_id: "asset-1",
+      organization_id: "org-1",
+      version: "1",
+      layers: [{ layer_id: "layer-1", type: "IMAGE", bounds: { x: 0, y: 0, width: 10, height: 10 }, semantic_tag: "hero", provenance: { created_by: "human:owner-1", owner_id: "owner-1", source_id: "source-1", license_ref: "lic-1" } }],
+    });
+    await expect(assertLayerManifestLicensed(manifest, async () => ({ license_ref: "lic-1", source_id: "source-1", owner_id: "owner-1", status: "VERIFIED", expires_at: "not-a-timestamp" }))).rejects.toThrow("license");
+  });
 });
