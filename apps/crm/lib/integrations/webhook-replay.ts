@@ -1,0 +1,4 @@
+import type { Queryable } from "../agent-engine/queue/queue";
+export type WebhookReplayStore={claim(input:{organizationId:string;provider:string;eventId:string}):Promise<"claimed"|"duplicate">};
+export function createPostgresWebhookReplayStore(db:Queryable,table="integration_webhook_receipts"):WebhookReplayStore{if(!/^\w+$/.test(table))throw Error("webhook_table_invalid");return{async claim(i){const r=await db.query(`INSERT INTO ${table}(organization_id,provider,event_id) VALUES($1,$2,$3) ON CONFLICT(organization_id,provider,event_id) DO NOTHING RETURNING event_id`,[i.organizationId,i.provider,i.eventId]);return r.rows[0]?"claimed":"duplicate";}}}
+export async function processWebhookOnce(store:WebhookReplayStore,input:{organizationId:string;provider:string;eventId:string},handler:()=>Promise<void>):Promise<"processed"|"duplicate">{const claim=await store.claim(input);if(claim==="duplicate")return"duplicate";await handler();return"processed";}

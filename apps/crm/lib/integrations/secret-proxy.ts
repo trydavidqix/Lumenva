@@ -1,0 +1,4 @@
+import type { Queryable } from "../agent-engine/queue/queue";
+export type SecretRequester={organizationId:string;actorId:string};
+export type SecretProxy={withSecret<T>(requester:SecretRequester,secretRef:string,operation:string,fn:(secret:string)=>Promise<T>):Promise<T>};
+export function createPostgresSecretProxy(db:Queryable,table="integration_secrets"):SecretProxy{if(!/^\w+$/.test(table))throw Error("secret_table_invalid");return{async withSecret(r,ref,op,fn){if(!r.organizationId||!r.actorId||!ref||!op)throw Error("secret_proxy_invalid");const q=await db.query<{secret_value:string}>(`SELECT secret_value FROM ${table} WHERE organization_id=$1 AND secret_ref=$2 AND $3 = ANY(allowed_operations) AND $4 = ANY(allowed_actors) AND revoked_at IS NULL`,[r.organizationId,ref,op,r.actorId]);if(!q.rows[0])throw Error("secret_proxy_denied");return fn(q.rows[0].secret_value);}}}

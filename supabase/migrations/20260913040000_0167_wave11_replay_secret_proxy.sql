@@ -1,0 +1,2 @@
+CREATE TABLE IF NOT EXISTS integration_webhook_receipts (organization_id text NOT NULL, provider text NOT NULL, event_id text NOT NULL, received_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (organization_id,provider,event_id));
+CREATE TABLE IF NOT EXISTS integration_secrets (organization_id text NOT NULL, secret_ref text NOT NULL, secret_value text NOT NULL, allowed_operations text[] NOT NULL, allowed_actors text[] NOT NULL, revoked_at timestamptz, PRIMARY KEY (organization_id,secret_ref));
