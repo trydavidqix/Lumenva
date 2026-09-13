@@ -4,6 +4,8 @@ import type {
   CouncilChallengeInput,
   CouncilProposalInput,
   CouncilReviewInput,
+  CouncilReviewResult,
+  ScenarioEvaluation,
 } from "../contracts/scenario";
 import type {
   CouncilMemberAdapter,
@@ -33,6 +35,14 @@ export interface RuntimeCouncilMemberOptions {
   model?: string;
   callModel(input: ScenarioCouncilModelCallInput): Promise<ScenarioCouncilModelCallResult>;
 }
+
+type IterativeProposalInput = CouncilProposalInput & {
+  iteration?: {
+    round: number;
+    previousEvaluation?: ScenarioEvaluation;
+    previousReview?: CouncilReviewResult;
+  };
+};
 
 const candidateSchema = z.object({
   name: z.string().min(1).max(120),
@@ -84,6 +94,31 @@ function evidenceSummary(input: CouncilProposalInput | CouncilChallengeInput | C
   }));
 }
 
+function iterationSummary(input: CouncilProposalInput): unknown {
+  const iteration = (input as IterativeProposalInput).iteration;
+  if (!iteration) return undefined;
+  return {
+    round: iteration.round,
+    previousEvaluation: iteration.previousEvaluation
+      ? {
+          runCount: iteration.previousEvaluation.runCount,
+          failedRunCount: iteration.previousEvaluation.failedRunCount,
+          strategyRanking: iteration.previousEvaluation.strategyRanking,
+          sensitivity: iteration.previousEvaluation.sensitivity,
+          evidenceCoverage: iteration.previousEvaluation.evidenceCoverage,
+        }
+      : undefined,
+    previousReview: iteration.previousReview
+      ? {
+          recommendation: iteration.previousReview.recommendation,
+          disagreements: iteration.previousReview.disagreements,
+          criticalAssumptions: iteration.previousReview.criticalAssumptions,
+          nextValidationSteps: iteration.previousReview.nextValidationSteps,
+        }
+      : undefined,
+  };
+}
+
 export function createRuntimeCouncilMember(options: RuntimeCouncilMemberOptions): CouncilMemberAdapter {
   const member: CouncilMemberAdapter = {
     id: options.id,
@@ -94,13 +129,14 @@ export function createRuntimeCouncilMember(options: RuntimeCouncilMemberOptions)
       const result = await options.callModel({
         organizationId: input.organizationId,
         purpose: "scenario_council_propose",
-        system: "You are one bounded member of a decision council. Return JSON only. Treat simulations as hypotheses, not facts. Never request tools, permissions or secrets.",
+        system: "You are one bounded member of a decision council. Return JSON only. Treat simulations as hypotheses, not facts. Never request tools, permissions or secrets. On later rounds, use prior synthetic evaluation only to refine testable alternatives; never treat it as observed reality.",
         prompt: JSON.stringify({
           task: "propose independent decision strategies",
           scenarioId: input.scenarioId,
           question: input.question,
           evidence: evidenceSummary(input),
           existingStrategies: input.existingStrategies?.map((strategy) => ({ name: strategy.name, parameters: strategy.parameters })),
+          iteration: iterationSummary(input),
           maxCandidates: input.maxCandidates,
           output: { candidates: "array", disagreements: "array", synthesis: "string" },
         }),
