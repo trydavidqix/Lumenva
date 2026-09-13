@@ -7,6 +7,7 @@ export type CanonPrecedence =
 
 export interface CanonDocument {
   documentId: string;
+  tenantId: string;
   key: string;
   content: string;
   version: string;
@@ -23,24 +24,33 @@ const precedenceRank: Record<CanonPrecedence, number> = {
   model: 1,
 };
 
-/** Versioned in-memory canon; resolution always prefers source authority first. */
+const isPrecedence = (value: unknown): value is CanonPrecedence =>
+  typeof value === 'string' && Object.prototype.hasOwnProperty.call(precedenceRank, value);
+
+const registryKey = (tenantId: string, key: string): string => `${tenantId}\u0000${key}`;
+
+/** Versioned tenant-isolated canon; resolution always prefers source authority first. */
 export class CanonRegistry {
   private readonly documents = new Map<string, CanonDocument[]>();
 
   register(document: CanonDocument): void {
     if (document.documentId.trim().length === 0) throw new Error('documentId is required');
+    if (document.tenantId.trim().length === 0) throw new Error('tenantId is required');
     if (document.key.trim().length === 0) throw new Error('canon key is required');
     if (document.version.trim().length === 0) throw new Error('canon version is required');
-    const versions = this.documents.get(document.key) ?? [];
+    if (!isPrecedence(document.precedence)) throw new Error(`invalid canon precedence: ${String(document.precedence)}`);
+    if (!Number.isFinite(Date.parse(document.updatedAt))) throw new Error('updatedAt must be a valid timestamp');
+    const key = registryKey(document.tenantId, document.key);
+    const versions = this.documents.get(key) ?? [];
     if (versions.some((item) => item.documentId === document.documentId)) {
       throw new Error(`canon document already registered: ${document.documentId}`);
     }
     versions.push({ ...document });
-    this.documents.set(document.key, versions);
+    this.documents.set(key, versions);
   }
 
-  resolve(key: string): CanonDocument | undefined {
-    const versions = this.documents.get(key);
+  resolve(tenantId: string, key: string): CanonDocument | undefined {
+    const versions = this.documents.get(registryKey(tenantId, key));
     if (versions === undefined || versions.length === 0) return undefined;
     const selected = [...versions].sort((a, b) =>
       precedenceRank[b.precedence] - precedenceRank[a.precedence]
@@ -50,7 +60,7 @@ export class CanonRegistry {
     return selected === undefined ? undefined : { ...selected };
   }
 
-  list(key: string): CanonDocument[] {
-    return (this.documents.get(key) ?? []).map((document) => ({ ...document }));
+  list(tenantId: string, key: string): CanonDocument[] {
+    return (this.documents.get(registryKey(tenantId, key)) ?? []).map((document) => ({ ...document }));
   }
 }
