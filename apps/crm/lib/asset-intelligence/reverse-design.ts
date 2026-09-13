@@ -1,8 +1,22 @@
-import type { LayerManifest, SemanticLayer } from "./layer-manifest";
+import { assertLayerManifestLicensed, type LayerLicenseRecord, type LayerManifest, type SemanticLayer } from "./layer-manifest";
+
+export type LayerReuseAuthorization = "SUGGESTION_ONLY" | "APPROVED_FOR_REUSE";
 
 export type LayerReuseSuggestion = SemanticLayer & Readonly<{
   source_manifest_id: string;
+  authorization: LayerReuseAuthorization;
 }>;
+
+export type LayerReuseApproval = Readonly<{
+  approval_id: string;
+  organizationId: string;
+  status: "APPROVED" | "REVOKED" | "EXPIRED";
+  expires_at: string;
+}>;
+
+export class LayerReuseAuthorizationError extends Error {
+  readonly code = "layer_reuse_approval_required";
+}
 
 /**
  * Produces a deterministic structural hypothesis for a new design.
@@ -19,5 +33,28 @@ export function suggestLayerReuse(
     .map((layer) => ({
       ...layer,
       source_manifest_id: manifest.manifest_id,
+      authorization: "SUGGESTION_ONLY" as const,
     }));
+}
+
+/**
+ * Downstream authorization boundary. Suggestions never authorize reuse by
+ * themselves; this function requires a tenant-matched, unexpired approval and
+ * revalidates every layer's external license before returning executable use.
+ */
+export async function approveLayerReuse(
+  manifest: LayerManifest,
+  request: { organizationId: string; targetSemanticTags: readonly string[] },
+  approval: LayerReuseApproval | undefined,
+  findLicense: (licenseRef: string) => Promise<LayerLicenseRecord | null>,
+  now = new Date(),
+): Promise<readonly LayerReuseSuggestion[]> {
+  if (manifest.organization_id !== request.organizationId) {
+    throw new LayerReuseAuthorizationError("Layer reuse tenant mismatch.");
+  }
+  if (!approval || !approval.approval_id.trim() || approval.organizationId !== request.organizationId || approval.status !== "APPROVED" || Date.parse(approval.expires_at) <= now.getTime()) {
+    throw new LayerReuseAuthorizationError("Explicit layer reuse approval is required.");
+  }
+  await assertLayerManifestLicensed(manifest, findLicense, now);
+  return suggestLayerReuse(manifest, request.targetSemanticTags).map((suggestion) => ({ ...suggestion, authorization: "APPROVED_FOR_REUSE" as const }));
 }
