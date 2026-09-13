@@ -9031,6 +9031,19 @@ CREATE POLICY "transfer_inventories_write" ON "public"."transfer_inventories" FO
 
 notify pgrst, 'reload schema';
 
+-- Wave 5 Command Center overview persistence.
+create table if not exists public.command_center_overviews (
+  organization_id text primary key,
+  state jsonb not null,
+  updated_at timestamptz not null default now()
+);
+alter table public.command_center_overviews enable row level security;
+drop policy if exists command_center_overviews_tenant_all on public.command_center_overviews;
+create policy command_center_overviews_tenant_all on public.command_center_overviews for all
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
+grant select, insert, update, delete on public.command_center_overviews to authenticated;
+
 -- ---- Nova Mode V1: durable browser-command approvals (migration 0160) ----
 create table if not exists public.ai_agent_command_approvals (
   id uuid primary key default gen_random_uuid(),

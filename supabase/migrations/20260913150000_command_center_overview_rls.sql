@@ -10,3 +10,4 @@ CREATE POLICY command_center_overviews_tenant_all
   ON public.command_center_overviews FOR ALL
   USING (organization_id IN (SELECT public.fn_user_org_ids()))
   WITH CHECK (organization_id IN (SELECT public.fn_user_org_ids()));
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.command_center_overviews TO authenticated;
