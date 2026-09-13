@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AffectLedger, applyTrustInteraction, decayPad, DirectionalTrustLedger, type PadDelta } from "./affect-ledger";
+import { AffectLedger, applyTrustInteraction, decayPad, DirectionalTrustLedger, repairTrust, type PadDelta } from "./affect-ledger";
 
 const delta = (pleasure: number, arousal: number, dominance: number): PadDelta => ({ pleasure, arousal, dominance });
 
@@ -109,5 +109,17 @@ describe("AffectLedger append-only", () => {
     const ledger = new DirectionalTrustLedger();
     expect(() => ledger.append({ subjectId: "agent-1", targetId: "customer-1", interactionId: "i-kind", kind: "UNKNOWN" as never, confidence: 1 })).toThrow(/kind/i);
     expect(ledger.events()).toHaveLength(0);
+  });
+
+  it("recupera trust gradualmente após período sem novas quebras, com cap", () => {
+    const afterPeriod = repairTrust(-0.5, { elapsedSeconds: 100, breachesSinceLastRepair: 0 });
+    expect(afterPeriod).toBeCloseTo(-0.2);
+    expect(afterPeriod).toBeLessThan(1);
+    expect(repairTrust(-0.5, { elapsedSeconds: 1_000_000, breachesSinceLastRepair: 0 })).toBeLessThan(1);
+  });
+
+  it("não recupera quando houve nova quebra e rejeita tempo inválido", () => {
+    expect(repairTrust(-0.5, { elapsedSeconds: 100, breachesSinceLastRepair: 1 })).toBe(-0.5);
+    expect(() => repairTrust(-0.5, { elapsedSeconds: -1, breachesSinceLastRepair: 0 })).toThrow(RangeError);
   });
 });

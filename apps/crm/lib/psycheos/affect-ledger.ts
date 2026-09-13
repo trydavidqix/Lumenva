@@ -81,6 +81,21 @@ const trustStreamKey = (subjectId: string, targetId: string): string => `${subje
 const TRUST_RATES = Object.freeze({ positive: 0.1, breach: 0.5, repair: 0.05 });
 const TRUST_RATE_CAPS = Object.freeze({ positive: 0.1, breach: 0.5, repair: 0.05 });
 
+export const repairTrust = (
+  current: number,
+  input: Readonly<{ elapsedSeconds: number; breachesSinceLastRepair: number }>,
+  options: Readonly<{ recoveryPerSecond?: number; maxRecoveryFraction?: number }> = {},
+): number => {
+  if (!Number.isFinite(current) || current < -1 || current > 1) throw new RangeError("trust must be within [-1, 1]");
+  if (!Number.isFinite(input.elapsedSeconds) || input.elapsedSeconds < 0) throw new RangeError("elapsedSeconds must be finite and >= 0");
+  if (!Number.isInteger(input.breachesSinceLastRepair) || input.breachesSinceLastRepair < 0) throw new RangeError("breachesSinceLastRepair must be an integer >= 0");
+  const recoveryPerSecond = Math.min(Math.max(options.recoveryPerSecond ?? 0.002, 0), 0.002);
+  const maxRecoveryFraction = Math.min(Math.max(options.maxRecoveryFraction ?? 0.2, 0), 0.2);
+  if (input.breachesSinceLastRepair > 0) return current;
+  const fraction = Math.min(input.elapsedSeconds * recoveryPerSecond, maxRecoveryFraction);
+  return clamp(current + (1 - current) * fraction);
+};
+
 export const applyTrustInteraction = (
   current: number,
   interaction: TrustInteraction,
