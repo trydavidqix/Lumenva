@@ -40,7 +40,7 @@ export type PublishContentInput = CreatePublicationInput & {
   body: Record<string, unknown>;
   likenessRefs?: readonly string[];
   consentRequirements?: readonly PublicationConsentRequirement[];
-  provenance?: ContentProvenanceInput;
+  provenance: ContentProvenanceInput;
 };
 
 export type PublicationConsentRequirement = {
@@ -116,7 +116,7 @@ async function assertPublicationConsent(repository: PublishContentRepository, in
 /** Final local publisher. It never calls a CMS or provider directly. */
 export async function publishContentItem(repository: PublishContentRepository, input: PublishContentInput): Promise<{ job: PublicationJob; reused: boolean }> {
   const requirements = input.consentRequirements ?? [];
-  if (input.provenance) assertPublishableContent(input.provenance);
+  if (!input.provenance) throw new Error("content_publication_blocked"); assertPublishableContent(input.provenance);
   const item = await repository.findContentItem(input.organizationId, input.contentItemId);
   if (!item || item.organizationId !== input.organizationId) throw new PublicationValidationError("Content item not found for this organization.");
   const gate = await repository.findPublishGate(input.organizationId, input.contentItemId);
