@@ -1,5 +1,6 @@
 export type MemoryRecord = {
   recordId: string;
+  organizationId: string;
   subject: string;
   scope: string;
   namespace: `owner:${string}` | `home:${string}` | `company:${string}`;
@@ -9,7 +10,7 @@ export type MemoryRecord = {
   supersedes?: string;
 };
 
-export type ProjectionQuery = { subject: string; scope: string };
+export type ProjectionQuery = { organizationId: string; subject: string; scope: string; namespace: MemoryRecord["namespace"] };
 
 export type MemoryGateway = {
   listBackends(): readonly string[];
@@ -32,12 +33,12 @@ export async function rebuildProjectionViaGateway(
   gateway: MemoryGateway,
   query: ProjectionQuery,
 ): Promise<MemoryRecord[]> {
-  if (!query.subject.trim() || !query.scope.trim()) throw new Error("projection_query_invalid");
+  if (!query.organizationId.trim() || !query.subject.trim() || !query.scope.trim() || !validNamespace(query.namespace)) throw new Error("projection_query_invalid");
   const backends = [...new Set(gateway.listBackends())].sort();
   const batches = await Promise.all(backends.map((backend) => gateway.read(backend, query)));
   const byId = new Map<string, MemoryRecord>();
   for (const record of batches.flat()) {
-    if (record.subject !== query.subject || record.scope !== query.scope || !validNamespace(record.namespace)) continue;
+    if (record.organizationId !== query.organizationId || record.subject !== query.subject || record.scope !== query.scope || record.namespace !== query.namespace || !validNamespace(record.namespace)) continue;
     const previous = byId.get(record.recordId);
     byId.set(record.recordId, previous ? newer(previous, record) : { ...record });
   }
