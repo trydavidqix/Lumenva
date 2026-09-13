@@ -16,6 +16,7 @@ export function receiptStore(): DeliveryReceiptStore {
       tenant_id: String(values[0]), delivery_receipt_id: String(values[1]), delivery_plan_id: String(values[2]), organization_id: String(values[3]),
       artifact_refs: JSON.parse(String(values[4])), environment: String(values[5]), actor_id: String(values[6]), channel: values[7] as Row["channel"],
       result: values[9] as Row["result"], evidence_refs: JSON.parse(String(values[11])), created_at: String(values[12]), content_hash: String(values[13]),
+      ...(values[14] ? { compliance_report_ref: String(values[14]) } : {}), ...(values[15] ? { runtime_review_ref: String(values[15]) } : {}), ...(values[16] ? { policy_snapshot_ref: String(values[16]) } : {}),
     };
     const stored = rows.get(`${row.tenant_id}:${row.delivery_receipt_id}`) ?? row;
     rows.set(`${row.tenant_id}:${row.delivery_receipt_id}`, stored);

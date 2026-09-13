@@ -1,3 +1,5 @@
+import { BuildPlanStateStore } from "./build-plan-state-store";
+
 export type DeliveryChannel = "WEB_PREVIEW" | "MOBILE_PREVIEW" | "APP_STORE" | "PLAY_STORE" | "MANAGED_SERVICE";
 export type DeliveryEnvironment = "LOCAL" | "STAGING" | "PRODUCTION";
 export type DeliveryRollout = "NONE" | "INTERNAL" | "PERCENTAGE" | "FULL";
@@ -17,9 +19,26 @@ export type DeliveryArtifact = {
   status: "BUILT" | "VERIFIED" | "APPROVED" | "DELIVERED" | "REVOKED";
 };
 
+export type DeliveryMobileComplianceEvidence = {
+  report_ref: string;
+  organization_id: string;
+  project_id: string;
+  build_ref: string;
+  artifact_ref: string;
+  artifact_hash: string;
+  platform: "IOS" | "ANDROID";
+  store: "APP_STORE" | "PLAY_STORE";
+  policy_version: string;
+  policy_snapshot_ref: string;
+  runtime_review_ref: string;
+  verdict: "PASS" | "PASS_WITH_WARNINGS" | "NEEDS_REVIEW" | "BLOCK";
+  runtime_status: "PASS" | "FAIL" | "NOT_RUN" | "INFRA_FAILURE" | "NEEDS_REVIEW";
+};
+
 export type DeliveryBuildEvidence = {
   build_ref: string; organization_id: string; project_id: string; output_sha?: string;
   source_refs: string[]; test_refs: string[]; policy_version: string; evidence_refs: string[];
+  mobile_compliance?: DeliveryMobileComplianceEvidence;
 };
 
 export type DeliveryValidation = { valid: boolean; errors: string[] };
@@ -27,6 +46,43 @@ export type DeliveryValidation = { valid: boolean; errors: string[] };
 const DELIVERY_CHANNELS = new Set<DeliveryChannel>([
   "WEB_PREVIEW", "MOBILE_PREVIEW", "APP_STORE", "PLAY_STORE", "MANAGED_SERVICE",
 ]);
+
+function mobileChannels(plan: DeliveryPlan): Array<"APP_STORE" | "PLAY_STORE"> {
+  return plan.channels.filter((channel): channel is "APP_STORE" | "PLAY_STORE" => channel === "APP_STORE" || channel === "PLAY_STORE");
+}
+
+export function validateMobileComplianceEvidence(
+  plan: DeliveryPlan,
+  artifact: DeliveryArtifact,
+  buildEvidence: DeliveryBuildEvidence,
+): DeliveryValidation {
+  const errors: string[] = [];
+  const channels = mobileChannels(plan);
+  if (!channels.length) return { valid: true, errors };
+
+  const compliance = buildEvidence.mobile_compliance;
+  if (!compliance) return { valid: false, errors: ["mobile compliance evidence is required for store delivery"] };
+
+  if (compliance.organization_id !== plan.organization_id) errors.push("mobile compliance organization_id mismatch");
+  if (compliance.project_id !== plan.project_id) errors.push("mobile compliance project_id mismatch");
+  if (compliance.build_ref !== plan.build_ref) errors.push("mobile compliance build_ref mismatch");
+  if (compliance.artifact_ref !== artifact.artifact_ref) errors.push("mobile compliance artifact_ref mismatch");
+  if (compliance.artifact_hash !== artifact.content_hash) errors.push("mobile compliance artifact_hash mismatch");
+  if (!compliance.report_ref) errors.push("mobile compliance report_ref is required");
+  if (!compliance.policy_version) errors.push("mobile compliance policy_version is required");
+  if (!compliance.policy_snapshot_ref) errors.push("mobile compliance policy_snapshot_ref is required");
+  if (!compliance.runtime_review_ref) errors.push("mobile compliance runtime_review_ref is required");
+  if (compliance.verdict !== "PASS" && compliance.verdict !== "PASS_WITH_WARNINGS") errors.push("mobile compliance verdict must allow release");
+  if (compliance.runtime_status !== "PASS") errors.push("mobile runtime review must PASS before store delivery");
+
+  for (const channel of channels) {
+    const expectedPlatform = channel === "APP_STORE" ? "IOS" : "ANDROID";
+    if (artifact.platform !== expectedPlatform) errors.push(`delivery channel ${channel} requires ${expectedPlatform} artifact`);
+    if (compliance.platform !== expectedPlatform) errors.push(`mobile compliance platform must be ${expectedPlatform} for ${channel}`);
+    if (compliance.store !== channel) errors.push(`mobile compliance store must be ${channel}`);
+  }
+  return { valid: errors.length === 0, errors };
+}
 
 export function validateDeliveryPlan(
   plan: DeliveryPlan,
@@ -51,10 +107,36 @@ export function validateDeliveryPlan(
   if (!buildEvidence.test_refs.length) errors.push("build test_refs are required");
   if (!buildEvidence.evidence_refs.length) errors.push("build evidence_refs are required");
   if (artifact.status !== "VERIFIED" && artifact.status !== "APPROVED") errors.push("delivery artifact must be VERIFIED or APPROVED");
+  errors.push(...validateMobileComplianceEvidence(plan, artifact, buildEvidence).errors);
   return { valid: errors.length === 0, errors };
 }
 
-import { BuildPlanStateStore } from "./build-plan-state-store";
+async function persistGateResult(
+  plan: DeliveryPlan,
+  stepId: string,
+  validation: DeliveryValidation,
+  stateStore: BuildPlanStateStore,
+): Promise<DeliveryValidation> {
+  const persisted = await stateStore.get(plan.organization_id, plan.delivery_plan_id, stepId);
+  if (persisted?.status === "BLOCKED") return { valid: false, errors: [`${stepId} is terminally BLOCKED`] };
+  if (persisted?.status === "SUCCEEDED") return validation.valid ? { valid: true, errors: [] } : validation;
+  if (persisted?.status === "RUNNING") return { valid: false, errors: [`${stepId} already RUNNING`] };
+
+  const reserved = await stateStore.recordAttempt(plan.organization_id, plan.delivery_plan_id, stepId);
+  if (!reserved) return { valid: false, errors: [`${stepId} could not reserve execution`] };
+  await stateStore.finish(plan.organization_id, plan.delivery_plan_id, stepId, validation.valid ? "SUCCEEDED" : "BLOCKED");
+  return validation;
+}
+
+export async function validateMobileComplianceWithState(
+  plan: DeliveryPlan,
+  artifact: DeliveryArtifact,
+  buildEvidence: DeliveryBuildEvidence,
+  stateStore: BuildPlanStateStore,
+): Promise<DeliveryValidation> {
+  if (!mobileChannels(plan).length) return { valid: true, errors: [] };
+  return persistGateResult(plan, "mobile-compliance-gate", validateMobileComplianceEvidence(plan, artifact, buildEvidence), stateStore);
+}
 
 export async function validateDeliveryPlanWithState(
   plan: DeliveryPlan,
@@ -70,6 +152,14 @@ export async function validateDeliveryPlanWithState(
   if (plan.status !== "APPROVED" && plan.status !== "PACKAGED") {
     return { valid: false, errors: ["delivery plan must be APPROVED or PACKAGED"] };
   }
+
+  const mobileGate = await validateMobileComplianceWithState(plan, artifact, buildEvidence, stateStore);
+  if (!mobileGate.valid) {
+    const reserved = await stateStore.recordAttempt(plan.organization_id, plan.delivery_plan_id, stepId);
+    if (reserved) await stateStore.finish(plan.organization_id, plan.delivery_plan_id, stepId, "BLOCKED");
+    return mobileGate;
+  }
+
   const validation = validateDeliveryPlan(plan, artifact, buildEvidence);
   if (!validation.valid) {
     const reserved = await stateStore.recordAttempt(plan.organization_id, plan.delivery_plan_id, stepId);

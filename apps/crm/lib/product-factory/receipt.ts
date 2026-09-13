@@ -7,6 +7,7 @@ export type DeliveryReceipt = Readonly<{
   environment: string; actor_id: string; channel: DeliveryChannel; approval_id?: string;
   result: "HANDED_OFF" | "AVAILABLE" | "ROLLED_BACK" | "FAILED" | "NOT_PROVEN";
   support_ticket_ref?: string; evidence_refs: readonly string[]; created_at: string; content_hash: string;
+  compliance_report_ref?: string; runtime_review_ref?: string; policy_snapshot_ref?: string;
 }>;
 type ReceiptRow = Omit<DeliveryReceipt, "artifact_refs" | "evidence_refs"> & { tenant_id: string; artifact_refs: string[]; evidence_refs: string[] };
 const freeze = (values: string[]): readonly string[] => Object.freeze([...values]);
@@ -23,7 +24,7 @@ export class DeliveryReceiptStore {
     return result.rows[0]?.tenant_id;
   }
   async insertOrGet(receipt: DeliveryReceipt): Promise<DeliveryReceipt> {
-    const result = await this.db.query<ReceiptRow>("insert into public.delivery_receipts (tenant_id,delivery_receipt_id,delivery_plan_id,organization_id,artifact_refs,environment,actor_id,channel,approval_id,result,support_ticket_ref,evidence_refs,created_at,content_hash) values ($1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$14) on conflict (tenant_id,delivery_receipt_id) do update set delivery_receipt_id=public.delivery_receipts.delivery_receipt_id returning *", [receipt.organization_id, receipt.delivery_receipt_id, receipt.delivery_plan_id, receipt.organization_id, JSON.stringify(receipt.artifact_refs), receipt.environment, receipt.actor_id, receipt.channel, receipt.approval_id ?? null, receipt.result, receipt.support_ticket_ref ?? null, JSON.stringify(receipt.evidence_refs), receipt.created_at, receipt.content_hash]);
+    const result = await this.db.query<ReceiptRow>("insert into public.delivery_receipts (tenant_id,delivery_receipt_id,delivery_plan_id,organization_id,artifact_refs,environment,actor_id,channel,approval_id,result,support_ticket_ref,evidence_refs,created_at,content_hash,compliance_report_ref,runtime_review_ref,policy_snapshot_ref) values ($1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$14,$15,$16,$17) on conflict (tenant_id,delivery_receipt_id) do update set delivery_receipt_id=public.delivery_receipts.delivery_receipt_id returning *", [receipt.organization_id, receipt.delivery_receipt_id, receipt.delivery_plan_id, receipt.organization_id, JSON.stringify(receipt.artifact_refs), receipt.environment, receipt.actor_id, receipt.channel, receipt.approval_id ?? null, receipt.result, receipt.support_ticket_ref ?? null, JSON.stringify(receipt.evidence_refs), receipt.created_at, receipt.content_hash, receipt.compliance_report_ref ?? null, receipt.runtime_review_ref ?? null, receipt.policy_snapshot_ref ?? null]);
     if (!result.rows[0]) throw new Error("delivery receipt insert returned no row");
     return rowToReceipt(result.rows[0]);
   }
@@ -52,9 +53,11 @@ export async function createDeliveryReceipt(
   const gate = await validateDeliveryPlanWithState(plan, artifact, buildEvidence, stateStore);
   if (!gate.valid && !gate.errors.includes("delivery gate is terminally SUCCEEDED")) throw new Error(gate.errors.join("; "));
   if (!plan.channels.includes(options.channel)) throw new Error("receipt channel is not declared by delivery plan");
-  const hashInput = JSON.stringify({ plan_id: plan.delivery_plan_id, organization_id: plan.organization_id, channel: options.channel, artifact_hash: artifact.content_hash, created_at: options.created_at });
-  const candidate = Object.freeze({ delivery_receipt_id: options.delivery_receipt_id, delivery_plan_id: plan.delivery_plan_id, organization_id: plan.organization_id, artifact_refs: freeze([artifact.artifact_ref]), environment: plan.environment, actor_id: options.actor_id, channel: options.channel, ...(options.approval_id ? { approval_id: options.approval_id } : {}), result: "AVAILABLE" as const, ...(options.support_ticket_ref ? { support_ticket_ref: options.support_ticket_ref } : {}), evidence_refs: freeze(buildEvidence.evidence_refs), created_at: options.created_at, content_hash: createHash("sha256").update(hashInput).digest("hex") });
+  const compliance = buildEvidence.mobile_compliance;
+  const hashInput = JSON.stringify({ plan_id: plan.delivery_plan_id, organization_id: plan.organization_id, channel: options.channel, artifact_hash: artifact.content_hash, created_at: options.created_at, compliance_report_ref: compliance?.report_ref ?? null, runtime_review_ref: compliance?.runtime_review_ref ?? null, policy_snapshot_ref: compliance?.policy_snapshot_ref ?? null });
+  const candidate = Object.freeze({ delivery_receipt_id: options.delivery_receipt_id, delivery_plan_id: plan.delivery_plan_id, organization_id: plan.organization_id, artifact_refs: freeze([artifact.artifact_ref]), environment: plan.environment, actor_id: options.actor_id, channel: options.channel, ...(options.approval_id ? { approval_id: options.approval_id } : {}), result: "AVAILABLE" as const, ...(options.support_ticket_ref ? { support_ticket_ref: options.support_ticket_ref } : {}), evidence_refs: freeze(buildEvidence.evidence_refs), created_at: options.created_at, content_hash: createHash("sha256").update(hashInput).digest("hex"), ...(compliance ? { compliance_report_ref: compliance.report_ref, runtime_review_ref: compliance.runtime_review_ref, policy_snapshot_ref: compliance.policy_snapshot_ref } : {}) });
   const stored = await receiptStore.insertOrGet(candidate);
   if (stored.actor_id !== candidate.actor_id || stored.channel !== candidate.channel || stored.delivery_plan_id !== candidate.delivery_plan_id || stored.artifact_refs[0] !== candidate.artifact_refs[0]) throw new Error("receipt conflict does not match request");
+  if (candidate.compliance_report_ref && stored.compliance_report_ref !== candidate.compliance_report_ref) throw new Error("receipt compliance provenance conflict");
   return stored;
 }

@@ -17,7 +17,10 @@ suite("delivery receipt Postgres concurrency", () => {
   const pools: Pool[] = [];
   beforeAll(async () => {
     const pool = new Pool({ connectionString: url }); pools.push(pool);
-    await pool.query("create table if not exists public.delivery_receipts (tenant_id text not null, delivery_receipt_id text not null, delivery_plan_id text not null, organization_id text not null, artifact_refs jsonb not null, environment text not null, actor_id text not null, channel text not null, approval_id text, result text not null, support_ticket_ref text, evidence_refs jsonb not null, created_at timestamptz not null, content_hash text not null, primary key (tenant_id, delivery_receipt_id))");
+    await pool.query("create table if not exists public.delivery_receipts (tenant_id text not null, delivery_receipt_id text not null, delivery_plan_id text not null, organization_id text not null, artifact_refs jsonb not null, environment text not null, actor_id text not null, channel text not null, approval_id text, result text not null, support_ticket_ref text, evidence_refs jsonb not null, created_at timestamptz not null, content_hash text not null, compliance_report_ref text, runtime_review_ref text, policy_snapshot_ref text, primary key (tenant_id, delivery_receipt_id))");
+    await pool.query("alter table public.delivery_receipts add column if not exists compliance_report_ref text");
+    await pool.query("alter table public.delivery_receipts add column if not exists runtime_review_ref text");
+    await pool.query("alter table public.delivery_receipts add column if not exists policy_snapshot_ref text");
     await pool.query("delete from public.delivery_receipts where tenant_id=$1", [plan.organization_id]);
   });
   afterAll(async () => { await Promise.all(pools.map((pool) => pool.end())); });
