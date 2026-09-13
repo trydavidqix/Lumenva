@@ -27,7 +27,7 @@ describe("durable registry migration RLS", () => {
       auth.addActor({ actor_id: "author", tenant_id: tenantId, actor_type: "HUMAN", active: true });
       auth.addApproval({ ...input(auth).approval, definition_id: "sales", definition_version: "1.0.0", author_actor_id: "author" });
       const registry = new PostgresAgentDefinitionRegistry(tenant);
-      const results = await Promise.all([registry.register(input(auth)).then(() => true), registry.register(input(auth)).then(() => true)]);
+      const results = await Promise.all([registry.register(input(auth)).then(() => true).catch(() => false), registry.register(input(auth)).then(() => true).catch(() => false)]);
       expect(results.filter(Boolean)).toHaveLength(1);
       expect(await registry.get(tenantId, "sales", "1.0.0")).toMatchObject({ id: "sales" });
       expect(await registry.get(otherTenantId, "sales", "1.0.0")).toBeNull();
