@@ -36,7 +36,11 @@ describe('Hermes research memory', () => {
   it('supersedes by appending a new record instead of mutating history', async () => {
     const store = createInMemoryResearchMemoryStore();
     await store.append(record());
-    await store.supersede(record({ id: 'exp-2', supersedesId: 'exp-1', strategy: 'prompt-v3', createdAt: '2026-09-13T13:00:00.000Z' }));
+    const replacement = {
+      ...record({ id: 'exp-2', strategy: 'prompt-v3', createdAt: '2026-09-13T13:00:00.000Z' }),
+      supersedesId: 'exp-1',
+    };
+    await store.supersede(replacement);
 
     const rows = await store.listBySubject({ organizationId: 'org-a', subjectKind: 'agent', subjectId: 'sales-agent' });
     expect(rows).toHaveLength(2);
