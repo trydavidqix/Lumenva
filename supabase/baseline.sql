@@ -9054,6 +9054,7 @@ create index if not exists contact_consents_lookup_idx on public.contact_consent
 alter table public.contact_consents enable row level security;
 drop policy if exists contact_consents_tenant_all on public.contact_consents;
 create policy contact_consents_tenant_all on public.contact_consents for all to authenticated using (organization_id in (select public.fn_user_org_ids())) with check (organization_id in (select public.fn_user_org_ids()));
+grant select, insert, update on public.contact_consents to authenticated;
 
 -- ---- Nova Mode V1: durable browser-command approvals (migration 0160) ----
 create table if not exists public.ai_agent_command_approvals (

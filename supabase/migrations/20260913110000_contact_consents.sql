@@ -26,3 +26,4 @@ create policy contact_consents_tenant_all on public.contact_consents
   for all to authenticated
   using (organization_id in (select public.fn_user_org_ids()))
   with check (organization_id in (select public.fn_user_org_ids()));
+grant select, insert, update on public.contact_consents to authenticated;
