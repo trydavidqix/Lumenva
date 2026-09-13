@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Pool } from "pg";
-import { ensureResourceRouterStore, loadWorkers, persistWorker, routeResourcePersisted } from "./resource-router-persistence";
+import { ensureResourceRouterStore, loadWorkers, persistWorker, routeResourcePersisted, routeResourcePersistedOnce } from "./resource-router-persistence";
 
 let pool: Pool;
 let container = "";
@@ -34,5 +34,15 @@ describe("resource router postgres persistence", () => {
     const freshPool = new Pool({ connectionString: (pool as unknown as { options: { connectionString: string } }).options.connectionString });
     expect(await routeResourcePersisted(freshPool, "org-1", { taskId: "t2", requiredCapabilities: ["typescript"] })).toEqual(first);
     await freshPool.end();
+  });
+
+  it("claims the same reroute key only once across concurrent calls", async () => {
+    const task = { taskId: "t-idempotent", requiredCapabilities: ["typescript"] };
+    const [first, second] = await Promise.all([
+      routeResourcePersistedOnce(pool, "org-1", task, "reroute-1"),
+      routeResourcePersistedOnce(pool, "org-1", task, "reroute-1"),
+    ]);
+    expect([first, second].filter(Boolean)).toHaveLength(1);
+    expect([first, second].filter((result) => result === null)).toHaveLength(1);
   });
 });

@@ -9,6 +9,11 @@ export async function ensureResourceRouterStore(db: Queryable): Promise<void> {
     healthy boolean NOT NULL, updated_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (tenant_id, agent_id)
   )`);
+  await db.query(`CREATE TABLE IF NOT EXISTS resource_router_reroutes (
+    tenant_id text NOT NULL, task_id text NOT NULL, reroute_key text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (tenant_id, task_id, reroute_key)
+  )`);
 }
 
 export async function persistWorker(db: Queryable, tenantId: string, worker: Worker): Promise<void> {
@@ -31,4 +36,26 @@ export async function loadWorkers(db: Queryable, tenantId: string): Promise<Work
 
 export async function routeResourcePersisted(db: Queryable, tenantId: string, task: ResourceTask): Promise<ResourceRoute> {
   return routeResource(task, await loadWorkers(db, tenantId));
+}
+
+export async function claimReroute(db: Queryable, tenantId: string, taskId: string, rerouteKey: string): Promise<boolean> {
+  if (!tenantId.trim() || !taskId.trim() || !rerouteKey.trim()) throw new Error("resource_router_reroute_invalid");
+  const result = await db.query(
+    `INSERT INTO resource_router_reroutes (tenant_id, task_id, reroute_key)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (tenant_id, task_id, reroute_key) DO NOTHING
+     RETURNING tenant_id`,
+    [tenantId, taskId, rerouteKey],
+  );
+  return result.rows.length === 1;
+}
+
+export async function routeResourcePersistedOnce(
+  db: Queryable,
+  tenantId: string,
+  task: ResourceTask,
+  rerouteKey: string,
+): Promise<ResourceRoute | null> {
+  const route = await routeResourcePersisted(db, tenantId, task);
+  return (await claimReroute(db, tenantId, task.taskId, rerouteKey)) ? route : null;
 }
