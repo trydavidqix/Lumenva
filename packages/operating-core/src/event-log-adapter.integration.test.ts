@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import pg from "pg";
+import pg from "../../../../apps/crm/node_modules/pg";
 import { createPostgresJobEventLogAdapter } from "./event-log-adapter";
 describe("event_log adapter PostgreSQL real", () => {
   it("appends idempotently and replays only the tenant stream", async () => {
