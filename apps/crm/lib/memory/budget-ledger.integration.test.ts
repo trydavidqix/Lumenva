@@ -28,7 +28,15 @@ describe("budget_ledger real Postgres atomic debit", () => {
     }
     if (!port) throw new Error("postgres_container_not_ready");
     pool = new Pool({ host: "127.0.0.1", port: Number(port), user: "postgres", password: "postgres", database: "postgres", max: 20 });
-    await ensureBudgetLedger(pool);
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      try {
+        await ensureBudgetLedger(pool);
+        return;
+      } catch {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+    }
+    throw new Error("postgres_query_not_ready");
   }, 30_000);
 
   afterAll(async () => {
