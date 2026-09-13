@@ -3,11 +3,8 @@ import { buildOverviewState, type OverviewInput, type OverviewState } from "./ov
 type Queryable = { query<T = Record<string, unknown>>(text: string, values?: readonly unknown[]): Promise<{ rows: T[] }> };
 
 export async function ensureOverviewStore(db: Queryable): Promise<void> {
-  await db.query(`CREATE TABLE IF NOT EXISTS command_center_overviews (
-    organization_id text PRIMARY KEY,
-    state jsonb NOT NULL,
-    updated_at timestamptz NOT NULL DEFAULT now()
-  )`);
+  const result = await db.query<{ table_name: string | null }>("SELECT to_regclass('public.command_center_overviews') AS table_name");
+  if (!result.rows[0]?.table_name) throw new Error("command_center_overviews_migration_required");
 }
 
 export async function saveOverview(db: Queryable, input: OverviewInput): Promise<OverviewState> {
