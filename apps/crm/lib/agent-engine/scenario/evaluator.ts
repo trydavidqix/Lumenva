@@ -4,6 +4,7 @@ import type {
   ScenarioEvaluationMetric,
   ScenarioEvaluator,
 } from "../contracts/scenario";
+import { analyzeScenarioSensitivity } from "./sensitivity";
 
 export interface ScenarioEvaluatorConfig {
   metricDirections?: Record<string, "higher" | "lower">;
@@ -104,6 +105,7 @@ export function createScenarioEvaluator(config: ScenarioEvaluatorConfig = {}): S
       const evidenceCoverage = expectedEvidence === 0
         ? 1
         : Math.max(0, Math.min(1, input.evidenceCount / expectedEvidence));
+      const sensitivity = analyzeScenarioSensitivity({ strategies: input.strategies, metrics });
 
       return {
         scenarioId: input.scenarioId,
@@ -111,7 +113,7 @@ export function createScenarioEvaluator(config: ScenarioEvaluatorConfig = {}): S
         failedRunCount,
         strategyRanking: strategyScores,
         metrics,
-        sensitivity: [],
+        sensitivity,
         evidenceCoverage,
         generatedAt: config.now?.() ?? new Date().toISOString(),
       };
