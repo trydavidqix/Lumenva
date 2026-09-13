@@ -2,6 +2,7 @@ import { Pool } from "pg";
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import { BuildPlanStateStore } from "@/lib/product-factory/build-plan-state-store";
 import { DeliveryReceiptStore, createDeliveryReceipt } from "@/lib/product-factory/receipt";
+import { validateDeliveryPlanWithState } from "@/lib/product-factory/delivery";
 import type { DeliveryArtifact, DeliveryBuildEvidence, DeliveryPlan } from "@/lib/product-factory/delivery";
 
 const url = process.env.DELIVERY_RECEIPT_DATABASE_URL;
@@ -28,5 +29,19 @@ suite("delivery receipt Postgres concurrency", () => {
     ]);
     expect(first).toEqual(second);
     expect((await firstPool.query("select count(*)::int as count from public.delivery_receipts where tenant_id=$1 and delivery_receipt_id=$2", [plan.organization_id, options.delivery_receipt_id])).rows[0].count).toBe(1);
+  });
+  it("persists a BLOCKED delivery gate in Postgres and rejects replay", async () => {
+    const pool = new Pool({ connectionString: url }); pools.push(pool);
+    await pool.query("create table if not exists public.build_plan_state (id uuid primary key default gen_random_uuid(), plan_id text not null, step_id text not null, status text not null, attempts integer not null default 0, blocked_at timestamptz, tenant_id text not null, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), unique (tenant_id, plan_id, step_id))");
+    await pool.query("delete from public.build_plan_state where tenant_id=$1 and plan_id=$2", [plan.organization_id, plan.delivery_plan_id]);
+    const invalidArtifact = { ...artifact, content_hash: "" };
+    const persistedStore = new BuildPlanStateStore(pool);
+    const first = await validateDeliveryPlanWithState(plan, invalidArtifact, evidence, persistedStore);
+    expect(first.valid).toBe(false);
+    const row = await pool.query("select status, attempts, blocked_at from public.build_plan_state where tenant_id=$1 and plan_id=$2 and step_id='delivery-gate'", [plan.organization_id, plan.delivery_plan_id]);
+    expect(row.rows[0]).toMatchObject({ status: "BLOCKED", attempts: 1 });
+    expect(row.rows[0].blocked_at).toBeTruthy();
+    const replay = await validateDeliveryPlanWithState(plan, artifact, evidence, persistedStore);
+    expect(replay).toEqual({ valid: false, errors: ["delivery gate is terminally BLOCKED"] });
   });
 });
