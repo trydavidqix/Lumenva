@@ -13,5 +13,5 @@ export function assertHermesPromotionAuthority(actor: HermesPromotionActor): voi
 
 export function canHermesActivateCandidate(actor: HermesPromotionActor): boolean {
   assertHermesPromotionAuthority(actor);
-  return actor.kind === 'human' || actor.authority === 'promotion_engine';
+  return actor.kind === 'human' || actor.kind === 'system';
 }
