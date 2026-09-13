@@ -12,6 +12,11 @@ export type AgentDefinitionInput = {
   escalation: string;
 };
 
+export type AgentDefinitionOrigin = {
+  actor_id: string;
+  tenant_id: string;
+};
+
 export type AgentDefinition = AgentDefinitionInput & {
   status: AgentDefinitionStatus;
 };
@@ -47,7 +52,35 @@ function hasText(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-export function validateAgentDefinition(input: unknown): AgentDefinitionValidation {
+function validateOrigin(origin: unknown, expectedTenantId: unknown): string[] {
+  const errors: string[] = [];
+  if (!isRecord(origin)) {
+    return ["origin_required"];
+  }
+  if (!hasText(origin.actor_id)) errors.push("origin_actor_required");
+  if (!hasText(origin.tenant_id)) errors.push("origin_tenant_required");
+  if (errors.length === 0 && !hasText(expectedTenantId)) {
+    errors.push("context_tenant_required");
+  }
+  if (
+    errors.length === 0 &&
+    (origin.tenant_id as string).trim() !== (expectedTenantId as string).trim()
+  ) {
+    errors.push("origin_tenant_mismatch");
+  }
+  return errors;
+}
+
+export function validateAgentDefinition(
+  input: unknown,
+  origin: AgentDefinitionOrigin,
+  expectedTenantId: string,
+): AgentDefinitionValidation {
+  const originErrors = validateOrigin(origin, expectedTenantId);
+  if (originErrors.length > 0) {
+    return { ok: false, status: "SHADOW", definition: null, errors: originErrors };
+  }
+
   if (!isRecord(input)) {
     return { ok: false, status: "SHADOW", definition: null, errors: ["definition_required"] };
   }
