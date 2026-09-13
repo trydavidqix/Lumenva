@@ -13,6 +13,19 @@ export type WatchdogSignal = Readonly<{
   processAction: "CONTINUE";
 }>;
 
+export type RerouteRequest = Readonly<{
+  requesterId: string;
+  permissionLevel: "P0" | "P1" | "P2" | "P3" | "P4";
+  capabilities: readonly string[];
+}>;
+
+export type RerouteResult = Readonly<{
+  signal: WatchdogSignal;
+  decision: "ALLOW" | "DENY";
+  reason: "AUTHORIZED" | "INSUFFICIENT_PERMISSION" | "MISSING_CAPABILITY" | "P4_REQUIRES_APPROVAL";
+  processAction: "CONTINUE";
+}>;
+
 type JobState = {
   lastCycle: number;
   noProgressCycles: number;
@@ -48,5 +61,18 @@ export class NoProgressWatchdog {
     state.byCycle.set(observation.cycle, signal);
     this.jobs.set(observation.jobId, state);
     return { ...signal };
+  }
+
+  requestReroute(observation: WatchdogObservation, request: RerouteRequest): RerouteResult {
+    const signal = this.observe(observation);
+    if (!request.requesterId) throw new TypeError("requesterId is required");
+    if (request.permissionLevel === "P4") return { signal, decision: "DENY", reason: "P4_REQUIRES_APPROVAL", processAction: "CONTINUE" };
+    if (request.permissionLevel !== "P2" && request.permissionLevel !== "P3") {
+      return { signal, decision: "DENY", reason: "INSUFFICIENT_PERMISSION", processAction: "CONTINUE" };
+    }
+    if (!request.capabilities.includes("workforce.reroute")) {
+      return { signal, decision: "DENY", reason: "MISSING_CAPABILITY", processAction: "CONTINUE" };
+    }
+    return { signal, decision: "ALLOW", reason: "AUTHORIZED", processAction: "CONTINUE" };
   }
 }
