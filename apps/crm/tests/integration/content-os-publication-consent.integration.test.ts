@@ -25,6 +25,7 @@ describeIfDatabase("publication consent TOCTOU enforcement against Postgres", ()
     const revocationLocked = deferred();
     const releaseRevocation = deferred();
     const client = await pool.connect();
+    await client.query("SET lock_timeout = 5000");
     const repository = {
       findContentItem: async () => ({ id: "item-1", organizationId: "org-1", status: "approved" }),
       findPublishGate: async () => ({ status: "passed" }),
@@ -45,11 +46,12 @@ describeIfDatabase("publication consent TOCTOU enforcement against Postgres", ()
       updateContentItem: async () => { updates += 1; },
       createPublicationJob: async () => { jobs += 1; throw new Error("must not create a job"); },
     };
-    const input = { organizationId: "org-1", contentItemId: "item-1", connectionId: "connection-1", idempotencyKey: "toctou", title: "Title", body: {}, likenessRefs: ["person-1"], consentRequirements: [{ consent_id: "consent-1", subject_ref: "person-1", channel: "email" as const, purpose: "marketing", likeness_ref: "person-1" }] };
+    const input = { provenance: { contentId: "item-1", skill: "marketing", content: "Title", source: "briefing", freshness: "current", confidence: 0.95, generatedAt: "2026-09-13T00:00:00Z" }, organizationId: "org-1", contentItemId: "item-1", connectionId: "connection-1", idempotencyKey: "toctou", title: "Title", body: {}, likenessRefs: ["person-1"], consentRequirements: [{ consent_id: "consent-1", subject_ref: "person-1", channel: "email" as const, purpose: "marketing", likeness_ref: "person-1" }] };
     const publication = publishContentItem(repository, input);
     await readDone.promise;
     const revocation = (async () => {
       const revoker = await pool.connect();
+      await revoker.query("SET lock_timeout = 5000");
       try {
         await revoker.query("begin");
         await revoker.query("update public.contact_consents set status='REVOKED', revoked_at=now() where organization_id='org-1' and consent_id='consent-1'");
