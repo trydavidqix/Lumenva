@@ -23,6 +23,15 @@ export function routeResource(
   task: ResourceTask,
   workers: readonly Worker[],
 ): ResourceRoute {
+  if (
+    !task ||
+    typeof task.taskId !== "string" ||
+    task.taskId.trim().length === 0 ||
+    !Array.isArray(task.requiredCapabilities) ||
+    task.requiredCapabilities.some((capability) => typeof capability !== "string" || capability.trim().length === 0)
+  ) {
+    throw new Error("resource_router_invalid_task");
+  }
   const required = [...new Set(task.requiredCapabilities)];
   const candidates = workers.filter((worker) =>
     worker.healthy &&

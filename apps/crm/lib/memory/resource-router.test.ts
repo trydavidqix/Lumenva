@@ -37,4 +37,10 @@ describe("Resource Router mínimo", () => {
     );
     expect(result).toEqual({ agentId: "alpha", surface: "Cloud" });
   });
+
+  it("falha fechado para task sem identidade ou capabilities válidas", () => {
+    expect(() => routeResource({ taskId: " ", requiredCapabilities: ["browser"] }, workers)).toThrow("resource_router_invalid_task");
+    expect(() => routeResource({ taskId: "task-3", requiredCapabilities: [" "] }, workers)).toThrow("resource_router_invalid_task");
+    expect(() => routeResource({ taskId: "task-3", requiredCapabilities: undefined as unknown as string[] }, workers)).toThrow("resource_router_invalid_task");
+  });
 });
