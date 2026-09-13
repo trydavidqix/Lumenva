@@ -143,13 +143,33 @@ const EMAIL_PATTERN = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const CPF_PATTERN = /\b\d{3}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d{2}\b/g;
 const PHONE_PATTERN = /(?<!\d)(?:\+\d{1,3}[\s.-]?)?(?:\d[\s.-]?){8,14}\d(?!\d)/g;
 
-/** Mandatory consumer-boundary redaction; there is intentionally no opt-out. */
-export function redactKnowledgeHit(hit: KnowledgeHit): KnowledgeHit {
-  const content = hit.content
+function redactText(value: string): string {
+  return value
     .replace(EMAIL_PATTERN, '[EMAIL_REDACTED]')
     .replace(CPF_PATTERN, '[CPF_REDACTED]')
     .replace(PHONE_PATTERN, '[PHONE_REDACTED]');
-  return content === hit.content ? hit : { ...hit, content };
+}
+
+function redactValue(value: unknown): unknown {
+  if (typeof value === 'string') return redactText(value);
+  if (Array.isArray(value)) return value.map(redactValue);
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, child]) => [key, redactValue(child)]),
+    );
+  }
+  return value;
+}
+
+/** Mandatory consumer-boundary redaction; there is intentionally no opt-out. */
+export function redactKnowledgeHit(hit: KnowledgeHit): KnowledgeHit {
+  const content = redactText(hit.content);
+  const metadata = hit.metadata === null
+    ? null
+    : redactValue(hit.metadata) as Record<string, unknown>;
+  return content === hit.content && metadata === hit.metadata
+    ? hit
+    : { ...hit, content, metadata };
 }
 
 async function endTraceSpan(
@@ -166,11 +186,14 @@ async function endTraceSpan(
 
 /** Shape que a UI do inbox já renderiza (CitationsPanel — lib/ai/citations/types). */
 export function citationsFromHits(hits: KnowledgeHit[]): Citation[] {
-  return hits.map((h) => ({
-    chunk_id: h.chunk_id,
-    knowledge_source_id: h.knowledge_source_id,
-    score: h.similarity,
-    snippet: h.content.slice(0, 240),
-    ...(h.metadata !== null ? { metadata: h.metadata } : {}),
-  }));
+  return hits.map((h) => {
+    const redacted = redactKnowledgeHit(h);
+    return {
+      chunk_id: redacted.chunk_id,
+      knowledge_source_id: redacted.knowledge_source_id,
+      score: redacted.similarity,
+      snippet: redacted.content.slice(0, 240),
+      ...(redacted.metadata !== null ? { metadata: redacted.metadata } : {}),
+    };
+  });
 }
