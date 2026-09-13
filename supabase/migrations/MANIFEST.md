@@ -198,6 +198,7 @@ aplica.
 | `20260907110000` | `0159_content_os_learning_idempotency` | Chave de idempotência tenant-aware para eventos de aprendizagem e detecção segura de content decay. |
 | `20260907120000` | `0160_ai_agent_command_approvals` | Nova Mode V1: aprovações duráveis de comandos do navegador, com idempotência por organização, expiração, estado de execução, RLS manager+ e guarda de coerência entre agente, versão e tenant. |
 | `20260913140000` | `0161_layer_reuse_approvals` | Wave 8 Asset Intelligence: approvals duráveis para reutilização de camadas, idempotentes por organização+approval_id, expiração e RLS tenant-scoped. |
+| `20260913170000` | `0164_asset_license_records` | Wave 8 Asset Intelligence: registry persistente de licenças/proveniência por tenant, com estados e expiração. |
 
 ## Reproducibility
 
