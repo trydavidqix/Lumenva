@@ -10,6 +10,7 @@ export interface SourceRecord {
   version: string;
   sourceType: SourceType;
   createdAt: string;
+  lastVerifiedAt?: string;
 }
 
 export type SourceInput = Omit<SourceRecord, "sourceId" | "createdAt">;
