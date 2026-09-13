@@ -6,7 +6,8 @@ import { validateDeliveryPlanWithState } from "@/lib/product-factory/delivery";
 import type { DeliveryArtifact, DeliveryBuildEvidence, DeliveryPlan } from "@/lib/product-factory/delivery";
 
 const url = process.env.DELIVERY_RECEIPT_DATABASE_URL;
-const suite = url ? describe : describe.skip;
+if (!url) throw new Error("DELIVERY_RECEIPT_DATABASE_URL required for PostgreSQL proof");
+const suite = describe;
 const plan: DeliveryPlan = { delivery_plan_id: "pg-concurrent-plan", organization_id: "pg-org", project_id: "pg-project", build_ref: "pg-build", channels: ["MANAGED_SERVICE"], environment: "LOCAL", release_policy_version: "policy-1", rollout: "NONE", support_owner: "owner", acceptance_criteria: ["handoff"], status: "PACKAGED" };
 const artifact: DeliveryArtifact = { delivery_artifact_id: "pg-artifact", delivery_plan_id: plan.delivery_plan_id, artifact_ref: "artifact://pg-build", content_hash: "a".repeat(64), platform: "WEB", version: "1", provenance_refs: ["source"], security_scan_refs: ["security"], test_refs: ["test"], status: "VERIFIED" };
 const evidence: DeliveryBuildEvidence = { build_ref: plan.build_ref, organization_id: plan.organization_id, project_id: plan.project_id, source_refs: ["source"], test_refs: ["test"], policy_version: "policy-1", evidence_refs: ["evidence"] };
@@ -32,7 +33,6 @@ suite("delivery receipt Postgres concurrency", () => {
   });
   it("persists a BLOCKED delivery gate in Postgres and rejects replay", async () => {
     const pool = new Pool({ connectionString: url }); pools.push(pool);
-    await pool.query("create table if not exists public.build_plan_state (id uuid primary key default gen_random_uuid(), plan_id text not null, step_id text not null, status text not null, attempts integer not null default 0, blocked_at timestamptz, tenant_id text not null, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), unique (tenant_id, plan_id, step_id))");
     await pool.query("delete from public.build_plan_state where tenant_id=$1 and plan_id=$2", [plan.organization_id, plan.delivery_plan_id]);
     const invalidArtifact = { ...artifact, content_hash: "" };
     const persistedStore = new BuildPlanStateStore(pool);
