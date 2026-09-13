@@ -111,7 +111,10 @@ function fakePool() {
     }] };
     throw new Error(`unexpected root query: ${sql} ${JSON.stringify(values)}`);
   });
-  const txQuery = vi.fn(async () => ({ rows: [] }));
+  const txQuery = vi.fn(async (sql: string) => {
+    if (/update\s+scenario_definitions/i.test(sql)) return { rows: [{ id: SCENARIO }] };
+    return { rows: [] };
+  });
   const connect = vi.fn(async () => ({ query: txQuery, release: vi.fn() }));
   return { pool: { query: rootQuery, connect } as unknown as pg.Pool, rootQuery, txQuery };
 }
@@ -137,8 +140,9 @@ describe("executePersistedScenario", () => {
     expect(sql).toMatch(/insert into scenario_metrics/i);
     expect(sql).toMatch(/insert into scenario_comparisons/i);
     expect(sql).toMatch(/insert into scenario_reports/i);
-    expect(sql).toMatch(/status\s*=\s*'ANALYZING'/i);
-    expect(sql).toMatch(/status\s*=\s*'COMPLETED'/i);
+    expect(sql).toMatch(/status\s*=\s*\$4/i);
+    expect(txQuery.mock.calls.some((call) => Array.isArray(call[1]) && call[1]?.[3] === "ANALYZING")).toBe(true);
+    expect(txQuery.mock.calls.some((call) => Array.isArray(call[1]) && call[1]?.[3] === "COMPLETED")).toBe(true);
     expect(sql).toMatch(/insert into event_log/i);
   });
 
