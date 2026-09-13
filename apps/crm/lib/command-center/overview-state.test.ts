@@ -21,6 +21,33 @@ const input: OverviewInput = {
     { id: "job-1", name: "sync contacts", status: "PENDING", organizationId: "org-a" },
     { id: "job-2", name: "finished", status: "COMPLETED", organizationId: "org-a" },
   ],
+  approvals: [
+    {
+      id: "approval-1",
+      action: "send campaign",
+      requestedBy: "agent-sales",
+      status: "PENDING",
+      organizationId: "org-a",
+    },
+    {
+      id: "approval-2",
+      action: "publish landing page",
+      requestedBy: "agent-marketing",
+      status: "APPROVED",
+      decidedBy: "owner-1",
+      decidedAt: "2026-09-12T19:00:00.000Z",
+      organizationId: "org-a",
+    },
+    {
+      id: "approval-3",
+      action: "delete campaign",
+      requestedBy: "agent-marketing",
+      status: "DENIED",
+      decidedBy: "owner-2",
+      decidedAt: "2026-09-12T19:30:00.000Z",
+      organizationId: "org-a",
+    },
+  ],
 };
 
 describe("Command Center overview state", () => {
@@ -31,6 +58,32 @@ describe("Command Center overview state", () => {
       activeAgents: [{ id: "sales", version: "1.0.0", status: "ACTIVE" }],
       accumulatedCost: { amount: 20, currency: "EUR" },
       pendingJobs: [{ id: "job-1", name: "sync contacts", status: "PENDING" }],
+      pendingApprovals: [
+        {
+          id: "approval-1",
+          action: "send campaign",
+          requestedBy: "agent-sales",
+          status: "PENDING",
+        },
+      ],
+      resolvedApprovals: [
+        {
+          id: "approval-2",
+          action: "publish landing page",
+          requestedBy: "agent-marketing",
+          status: "APPROVED",
+          decidedBy: "owner-1",
+          decidedAt: "2026-09-12T19:00:00.000Z",
+        },
+        {
+          id: "approval-3",
+          action: "delete campaign",
+          requestedBy: "agent-marketing",
+          status: "DENIED",
+          decidedBy: "owner-2",
+          decidedAt: "2026-09-12T19:30:00.000Z",
+        },
+      ],
     });
   });
 
@@ -39,6 +92,13 @@ describe("Command Center overview state", () => {
       buildOverviewState({
         ...input,
         jobs: [{ ...input.jobs[0], organizationId: "org-b" }],
+      }),
+    ).toThrow("overview_tenant_mismatch");
+
+    expect(() =>
+      buildOverviewState({
+        ...input,
+        approvals: [{ ...input.approvals[0], organizationId: "org-b" }],
       }),
     ).toThrow("overview_tenant_mismatch");
   });
@@ -66,6 +126,38 @@ describe("Command Center overview state", () => {
       activeAgents: [{ id: "sales", version: "1.0.0", status: "ACTIVE" }],
       accumulatedCost: { amount: 15, currency: "EUR" },
       pendingJobs: [{ id: "job-1", name: "qualify leads", status: "PENDING" }],
+      pendingApprovals: [
+        {
+          id: "approval-1",
+          action: "qualify leads",
+          requestedBy: "sales",
+          status: "PENDING",
+        },
+      ],
+      resolvedApprovals: [
+        {
+          id: "approval-2",
+          action: "publish summary",
+          requestedBy: "sales",
+          status: "APPROVED",
+          decidedBy: "owner",
+          decidedAt: "2026-09-12T00:05:00.000Z",
+        },
+      ],
     });
+  });
+
+  it("rejects resolved approvals without a decider or timestamp", () => {
+    expect(() =>
+      buildOverviewState({
+        ...input,
+        approvals: [
+          {
+            ...input.approvals[1],
+            decidedBy: "",
+          },
+        ],
+      }),
+    ).toThrow("overview_approval_decision_invalid");
   });
 });

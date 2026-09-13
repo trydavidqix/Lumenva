@@ -1,5 +1,6 @@
 export type OverviewAgentStatus = "ACTIVE" | "SHADOW" | "SUSPENDED";
 export type OverviewJobStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
+export type OverviewApprovalStatus = "PENDING" | "APPROVED" | "DENIED";
 
 export type OverviewAgentInput = {
   id: string;
@@ -22,12 +23,23 @@ export type OverviewJobInput = {
   organizationId: string;
 };
 
+export type OverviewApprovalInput = {
+  id: string;
+  action: string;
+  requestedBy: string;
+  status: OverviewApprovalStatus;
+  decidedBy?: string;
+  decidedAt?: string;
+  organizationId: string;
+};
+
 export type OverviewInput = {
   organizationId: string;
   generatedAt: string;
   agents: readonly OverviewAgentInput[];
   costs: readonly OverviewCostInput[];
   jobs: readonly OverviewJobInput[];
+  approvals: readonly OverviewApprovalInput[];
 };
 
 export type OverviewState = {
@@ -44,6 +56,20 @@ export type OverviewState = {
     name: string;
     status: "PENDING";
   }[];
+  pendingApprovals: readonly {
+    id: string;
+    action: string;
+    requestedBy: string;
+    status: "PENDING";
+  }[];
+  resolvedApprovals: readonly {
+    id: string;
+    action: string;
+    requestedBy: string;
+    status: "APPROVED" | "DENIED";
+    decidedBy: string;
+    decidedAt: string;
+  }[];
 };
 
 function assertTenant(organizationId: string, records: readonly { organizationId: string }[]): void {
@@ -56,6 +82,7 @@ export function buildOverviewState(input: OverviewInput): OverviewState {
   assertTenant(input.organizationId, input.agents);
   assertTenant(input.organizationId, input.costs);
   assertTenant(input.organizationId, input.jobs);
+  assertTenant(input.organizationId, input.approvals);
 
   const currency = input.costs[0]?.currency ?? "EUR";
   let amount = 0;
@@ -69,6 +96,24 @@ export function buildOverviewState(input: OverviewInput): OverviewState {
     amount += cost.amount;
   }
 
+  for (const approval of input.approvals) {
+    if (
+      approval.id.trim() === "" ||
+      approval.action.trim() === "" ||
+      approval.requestedBy.trim() === ""
+    ) {
+      throw new Error("overview_approval_invalid");
+    }
+    if (approval.status !== "PENDING" && approval.status !== "APPROVED" && approval.status !== "DENIED") {
+      throw new Error("overview_approval_invalid");
+    }
+    if (approval.status !== "PENDING") {
+      if (!approval.decidedBy?.trim() || !approval.decidedAt || !Number.isFinite(Date.parse(approval.decidedAt))) {
+        throw new Error("overview_approval_decision_invalid");
+      }
+    }
+  }
+
   return {
     organizationId: input.organizationId,
     generatedAt: input.generatedAt,
@@ -80,6 +125,21 @@ export function buildOverviewState(input: OverviewInput): OverviewState {
     pendingJobs: input.jobs
       .filter((job) => job.status === "PENDING")
       .map(({ id, name, status }) => ({ id, name, status }))
+      .sort((left, right) => left.id.localeCompare(right.id)),
+    pendingApprovals: input.approvals
+      .filter((approval) => approval.status === "PENDING")
+      .map(({ id, action, requestedBy, status }) => ({ id, action, requestedBy, status }))
+      .sort((left, right) => left.id.localeCompare(right.id)),
+    resolvedApprovals: input.approvals
+      .filter((approval) => approval.status !== "PENDING")
+      .map(({ id, action, requestedBy, status, decidedBy, decidedAt }) => ({
+        id,
+        action,
+        requestedBy,
+        status,
+        decidedBy: decidedBy as string,
+        decidedAt: decidedAt as string,
+      }))
       .sort((left, right) => left.id.localeCompare(right.id)),
   };
 }
@@ -99,6 +159,24 @@ export function createMockOverviewState(): OverviewState {
     jobs: [
       { id: "job-1", name: "qualify leads", status: "PENDING", organizationId: "mock-org" },
       { id: "job-2", name: "completed sync", status: "COMPLETED", organizationId: "mock-org" },
+    ],
+    approvals: [
+      {
+        id: "approval-1",
+        action: "qualify leads",
+        requestedBy: "sales",
+        status: "PENDING",
+        organizationId: "mock-org",
+      },
+      {
+        id: "approval-2",
+        action: "publish summary",
+        requestedBy: "sales",
+        status: "APPROVED",
+        decidedBy: "owner",
+        decidedAt: "2026-09-12T00:05:00.000Z",
+        organizationId: "mock-org",
+      },
     ],
   });
 }
