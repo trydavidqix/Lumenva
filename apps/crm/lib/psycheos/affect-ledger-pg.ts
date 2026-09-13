@@ -62,6 +62,7 @@ export class PostgresAffectLedger {
   }
 
   async append(event: PersistedAffectEvent): Promise<PersistedAffectEvent> {
+    if (event.organizationId !== this.organizationId) throw new Error("organizationId does not match ledger tenant");
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN");

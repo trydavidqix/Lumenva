@@ -53,4 +53,9 @@ describeDb("PostgresAffectLedger — persistência append-only real", () => {
     const otherLedger = new PostgresAffectLedger(appPool, "org-b");
     expect(await otherLedger.read("agent-pg", "session-pg")).toHaveLength(0);
   });
+
+  it("rejeita evento cujo organizationId diverge do ledger", async () => {
+    const ledger = new PostgresAffectLedger(appPool, "org-a");
+    await expect(ledger.append({ organizationId: "org-b", agentId: "agent-pg", sessionId: "session-pg", eventId: "evt-cross-org", atMs: 3_000, pleasure: 0, arousal: 0, dominance: 0 })).rejects.toThrow(/organizationId/i);
+  });
 });

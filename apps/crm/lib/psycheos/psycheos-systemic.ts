@@ -1,7 +1,8 @@
 import { AffectLedger, applyTrustInteraction, decayPad, DirectionalTrustLedger } from "./affect-ledger";
 import { runBoundaryEval } from "./boundary-eval";
+import { runPsycheRegression } from "./psycheos-regression";
 
-export type SystemicCaseResult = Readonly<{ caseId: "AFFECT_LEDGER" | "DECAY" | "TRUST" | "BOUNDARY"; status: "PASS" | "FAIL"; detail: string }>;
+export type SystemicCaseResult = Readonly<{ caseId: "AFFECT_LEDGER" | "DECAY" | "TRUST" | "BOUNDARY" | "REGRESSION"; status: "PASS" | "FAIL"; detail: string }>;
 export type SystemicGateResult = Readonly<{ status: "PASS" | "FAIL"; cases: readonly SystemicCaseResult[]; failedCases: readonly string[] }>;
 
 const runCase = (caseId: SystemicCaseResult["caseId"], check: () => string): SystemicCaseResult => {
@@ -37,6 +38,12 @@ export function runPsycheSystemicGate(): SystemicGateResult {
       const result = runBoundaryEval();
       if (result.status !== "PASS" || result.statesCompared !== 5 || result.priceWithoutAffect !== result.priceWithAffect || result.policyWithoutAffect !== result.policyWithAffect) throw new Error("affect changed business decision");
       return `five affect states produce identical price=${result.priceWithoutAffect} and policy=${result.policyWithoutAffect}`;
+    }),
+    runCase("REGRESSION", () => {
+      const results = runPsycheRegression({ profileId: "systemic", profileVersion: "v1", decayLambda: 0.5 });
+      const failed = results.filter((result) => result.status !== "PASS");
+      if (failed.length > 0) throw new Error(`psyche regression failed: ${failed.map((result) => result.caseId).join(",")}`);
+      return `all ${results.length} regression cases passed`;
     }),
   ];
   const failedCases = cases.filter((result) => result.status === "FAIL").map((result) => result.caseId);

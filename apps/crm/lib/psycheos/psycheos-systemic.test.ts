@@ -11,6 +11,7 @@ describe("PsycheOS systemic gate — Wave 16", () => {
       "DECAY",
       "TRUST",
       "BOUNDARY",
+      "REGRESSION",
     ]);
     expect(gate.cases.every((result) => result.status === "PASS")).toBe(true);
     expect(gate.failedCases).toEqual([]);
