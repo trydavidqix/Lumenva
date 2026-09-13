@@ -20,4 +20,10 @@ describe("delivery receipt security", () => {
     await expect(createDeliveryReceipt(otherTenant, { ...artifact, delivery_plan_id: otherTenant.delivery_plan_id }, otherEvidence, store(), { delivery_receipt_id: "receipt-sec-1", actor_id: "actor-2", channel: "MANAGED_SERVICE", created_at: "2026-09-13T00:00:00.000Z" })).rejects.toThrow("receipt ID belongs to another tenant");
     expect(getDeliveryReceipt("org-2", "receipt-sec-1")).toBeUndefined();
   });
+
+  it("rejects receipt reuse when the plan was reverted from PACKAGED to DRAFT", async () => {
+    const receipt = await createDeliveryReceipt({ ...plan, delivery_plan_id: "receipt-plan-status" }, { ...artifact, delivery_plan_id: "receipt-plan-status" }, evidence, store(), { delivery_receipt_id: "receipt-status", actor_id: "actor-1", channel: "MANAGED_SERVICE", created_at: "2026-09-13T00:00:00.000Z" });
+    expect(receipt.result).toBe("AVAILABLE");
+    await expect(createDeliveryReceipt({ ...plan, delivery_plan_id: "receipt-plan-status", status: "DRAFT" }, { ...artifact, delivery_plan_id: "receipt-plan-status" }, evidence, store(), { delivery_receipt_id: "receipt-status", actor_id: "actor-1", channel: "MANAGED_SERVICE", created_at: "2026-09-13T00:00:00.000Z" })).rejects.toThrow("delivery plan must be APPROVED or PACKAGED");
+  });
 });
