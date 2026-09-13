@@ -76,4 +76,22 @@ describe("ScenarioRepository", () => {
     expect(values).toEqual(["scenario-1", "org-a", "req-1"]);
     expect(result.run_request_event_id).toBe("event-1");
   });
+
+  it("loads the latest decision report only inside the trusted organization scope", async () => {
+    const query = vi.fn().mockResolvedValue({
+      rows: [{ id: "report-2", scenario_id: "scenario-1", organization_id: "org-a" }],
+    });
+    const repo = createScenarioRepository({ query });
+
+    const report = await repo.getLatestReport("org-a", "scenario-1");
+
+    const [sql, values] = query.mock.calls[0] as [string, unknown[]];
+    expect(sql).toMatch(/from\s+scenario_reports/i);
+    expect(sql).toMatch(/organization_id\s*=\s*\$1/i);
+    expect(sql).toMatch(/scenario_id\s*=\s*\$2/i);
+    expect(sql).toMatch(/order by\s+created_at\s+desc/i);
+    expect(sql).toMatch(/limit\s+1/i);
+    expect(values).toEqual(["org-a", "scenario-1"]);
+    expect(report?.id).toBe("report-2");
+  });
 });
