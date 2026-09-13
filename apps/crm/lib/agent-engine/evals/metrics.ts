@@ -1,4 +1,5 @@
 import type { ProductAgentId } from '../product-agents/contracts';
+import { PRODUCT_AGENT_IDS } from '../product-agents/contracts';
 import type { AgentEvalResult, EvalAssertionKind } from './contracts';
 
 export interface AgentEvalMetrics {
@@ -103,6 +104,14 @@ export function decidePhase4Gate(input: {
   const reasons: string[] = [];
   let incomplete = false;
   let failed = false;
+
+  const evaluatedAgents = new Set(perAgent.map((metric) => metric.agentId));
+  for (const agentId of PRODUCT_AGENT_IDS) {
+    if (!evaluatedAgents.has(agentId)) {
+      incomplete = true;
+      reasons.push(`${agentId}: no eval results supplied`);
+    }
+  }
 
   for (const metric of perAgent) {
     if (metric.hardGatePassRate !== 1) {
