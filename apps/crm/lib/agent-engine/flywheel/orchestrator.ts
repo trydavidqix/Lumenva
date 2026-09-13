@@ -11,6 +11,34 @@ export interface FlywheelLoopBudget {
   maxCostCents: number;
   maxRuntimeMs: number;
   noProgressLimit: number;
+  /** Hermes-only outer-loop budget. Existing Phase 6 callers may omit it safely. */
+  maxRetrievals?: number;
+  /** Hermes-only fresh evaluation-case budget. Existing Phase 6 callers may omit it safely. */
+  maxEvalCases?: number;
+}
+
+export interface ResolvedHermesLoopBudget {
+  maxRetrievals: number;
+  maxEvalCases: number;
+}
+
+const DEFAULT_MAX_RETRIEVALS = 20;
+const DEFAULT_MAX_EVAL_CASES = 50;
+
+export function resolveHermesLoopBudget(budget: FlywheelLoopBudget): ResolvedHermesLoopBudget {
+  const maxRetrievals = budget.maxRetrievals ?? DEFAULT_MAX_RETRIEVALS;
+  const maxEvalCases = budget.maxEvalCases ?? DEFAULT_MAX_EVAL_CASES;
+  if (
+    !Number.isFinite(maxRetrievals) ||
+    maxRetrievals < 0 ||
+    !Number.isInteger(maxRetrievals) ||
+    !Number.isFinite(maxEvalCases) ||
+    maxEvalCases < 0 ||
+    !Number.isInteger(maxEvalCases)
+  ) {
+    throw new Error('flywheel_budget_invalid');
+  }
+  return { maxRetrievals, maxEvalCases };
 }
 
 export interface Phase6IterationResult {
@@ -39,14 +67,23 @@ export interface RunLearningFlywheelInput {
 }
 
 function assertBudget(budget: FlywheelLoopBudget): void {
-  const values = Object.values(budget);
+  const required = [
+    budget.maxSignals,
+    budget.maxClusters,
+    budget.maxCandidates,
+    budget.maxModelTokens,
+    budget.maxCostCents,
+    budget.maxRuntimeMs,
+    budget.noProgressLimit,
+  ];
   if (
-    values.some((value) => !Number.isFinite(value) || value < 0) ||
+    required.some((value) => !Number.isFinite(value) || value < 0) ||
     budget.noProgressLimit < 1 ||
     budget.maxRuntimeMs < 1
   ) {
     throw new Error('flywheel_budget_invalid');
   }
+  resolveHermesLoopBudget(budget);
 }
 
 function isSynthesisResult(
