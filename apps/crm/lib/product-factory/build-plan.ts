@@ -1,3 +1,4 @@
+import { BuildPlanStateStore } from "./build-plan-state-store";
 export type BuildPlanStatus =
   | "DRAFT" | "VALIDATED" | "AUTHORIZED" | "QUEUED" | "RUNNING" | "PREVIEW"
   | "TESTING" | "RELEASE_CANDIDATE" | "RELEASED" | "FAILED" | "CANCELLED" | "BLOCKED_EXTERNAL";
@@ -45,7 +46,7 @@ const repairPlanKey = (buildPlan: BuildPlan): string =>
 export async function repairFailedBuildPlan(
   buildPlan: BuildPlan,
   executeStep: RepairStepExecutor,
-  options: { maxAttempts: number },
+  options: { maxAttempts: number; stateStore?: BuildPlanStateStore },
 ): Promise<RepairLoopResult> {
   const key = repairPlanKey(buildPlan);
   if (buildPlan.status === "BLOCKED_EXTERNAL" ||
@@ -63,17 +64,20 @@ export async function repairFailedBuildPlan(
   const plan = { ...buildPlan, steps };
   const failedStep = steps[failedIndex]!;
   let attempts = 0;
+  if (options.stateStore && !(await options.stateStore.claim(buildPlan.organization_id, buildPlan.build_plan_id, failedStep.step_id))) throw new Error("BuildPlan step already RUNNING");
   while (attempts < options.maxAttempts) {
     attempts += 1;
     const result = await executeStep(failedStep, plan).catch(() => "FAILED" as const);
     if (result === "SUCCEEDED") {
       failedStep.status = "SUCCEEDED";
+      if (options.stateStore) await options.stateStore.finish(buildPlan.organization_id, buildPlan.build_plan_id, failedStep.step_id, "SUCCEEDED");
       return { plan, attempts, status: "REPAIRED" };
     }
   }
   failedStep.status = "BLOCKED";
   plan.status = "BLOCKED_EXTERNAL";
   terminallyBlockedPlans.add(key);
+  if (options.stateStore) await options.stateStore.finish(buildPlan.organization_id, buildPlan.build_plan_id, failedStep.step_id, "BLOCKED");
   return { plan, attempts, status: "BLOCKED" };
 }
 
