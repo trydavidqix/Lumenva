@@ -36,6 +36,34 @@ export type AIEditRequest = {
   eval_refs: string[];
 };
 
+export type AIEditProposal = {
+  edit_id: string;
+  organization_id: string;
+  project_id: string;
+  canvas_id: string;
+  base_version: number;
+  context_pack_id: string;
+  instruction: string;
+  target_layer_ids: string[];
+  operation: "UPDATE_LAYER";
+  permission_level: PermissionLevel;
+  risk_level: RiskLevel;
+  idempotency_key: string;
+  authority_envelope_ref: string;
+  status: "PENDING_REVIEW";
+  eval_refs: string[];
+};
+
+export type AIEditProposalOptions = {
+  editId: string;
+  canvasId: string;
+  baseVersion: number;
+  targetLayerIds: string[];
+  idempotencyKey: string;
+  permissionLevel?: PermissionLevel;
+  riskLevel?: RiskLevel;
+};
+
 export type ContextPackInput = {
   contextPackId: string;
   organizationId: string;
@@ -84,4 +112,50 @@ export function validateAIEditRequest(pack: ContextPack, request: AIEditRequest)
     return { allowed: false, reason: "TARGET_OUTSIDE_AUTHORITY_SCOPE" };
   }
   return { allowed: true };
+}
+
+export function proposeAIEdit(
+  pack: ContextPack,
+  instruction: string,
+  options: AIEditProposalOptions,
+): AIEditProposal {
+  if (
+    !pack.context_pack_id.trim() ||
+    !pack.organization_id.trim() ||
+    !pack.project_id.trim() ||
+    !pack.project_spec_version.trim() ||
+    !pack.redacted ||
+    !pack.authority_envelope_ref.trim() ||
+    !pack.allowed_operations.includes("UPDATE_LAYER")
+  ) {
+    throw new Error("context_pack_invalid");
+  }
+  if (!instruction.trim()) throw new Error("edit_instruction_invalid");
+  if (!options.editId.trim() || !options.canvasId.trim() || !options.idempotencyKey.trim() || options.baseVersion < 0) {
+    throw new Error("edit_proposal_invalid");
+  }
+  if (
+    options.targetLayerIds.length === 0 ||
+    options.targetLayerIds.some((layerId) => !pack.allowed_layer_ids.includes(layerId))
+  ) {
+    throw new Error("TARGET_OUTSIDE_AUTHORITY_SCOPE");
+  }
+
+  return {
+    edit_id: options.editId,
+    organization_id: pack.organization_id,
+    project_id: pack.project_id,
+    canvas_id: options.canvasId,
+    base_version: options.baseVersion,
+    context_pack_id: pack.context_pack_id,
+    instruction,
+    target_layer_ids: [...options.targetLayerIds],
+    operation: "UPDATE_LAYER",
+    permission_level: options.permissionLevel ?? "P1",
+    risk_level: options.riskLevel ?? "R1",
+    idempotency_key: options.idempotencyKey,
+    authority_envelope_ref: pack.authority_envelope_ref,
+    status: "PENDING_REVIEW",
+    eval_refs: [],
+  };
 }
