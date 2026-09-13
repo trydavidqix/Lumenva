@@ -9,9 +9,11 @@ const ecommerce = {
 } as unknown as EcommerceProvider;
 
 describe("Nuvemshop through Connect", () => {
-  it("declares only the capabilities proven by the existing adapter", async () => {
+  it("declares only capabilities proven by the existing provider-neutral seam", async () => {
     const adapter = createNuvemshopConnectAdapter(ecommerce);
-    expect(adapter.descriptor.capabilities).toEqual(expect.arrayContaining(["healthCheck", "getOrders", "getSales", "getRefunds"]));
+    expect(adapter.descriptor.capabilities).toEqual(expect.arrayContaining(["getOrders", "getSales"]));
+    expect(adapter.descriptor.capabilities).not.toContain("getRefunds");
+    expect(adapter.descriptor.capabilities).not.toContain("getProducts");
     expect(adapter.descriptor.capabilities).not.toContain("getPayouts");
     expect(await adapter.getOrders({ since: "2026-09-12T00:00:00Z" })).toEqual([
       expect.objectContaining({ provider: "nuvemshop", externalId: "o-1", occurredAt: "2026-09-13T00:00:00Z" }),
