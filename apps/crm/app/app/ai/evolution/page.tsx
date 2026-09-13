@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { HermesLearningPanel } from "@/components/ai/HermesLearningPanel";
 import { Phase6LearningQueue } from "@/components/ai/Phase6LearningQueue";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
@@ -32,6 +33,7 @@ export default async function EvolutionPage() {
           resultado — e o que ainda está travando.
         </p>
       </header>
+      <HermesLearningPanel />
       <Phase6LearningQueue />
       <EvolutionClient defaultRange={ultimosTrintaDiasUtc()} />
     </div>
