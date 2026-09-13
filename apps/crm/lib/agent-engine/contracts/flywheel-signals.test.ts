@@ -20,6 +20,11 @@ const ALL_KINDS: LearningSignalKind[] = [
   'latency_regression',
   'verification_failure',
   'post_promotion_regression',
+  'run_success',
+  'business_outcome',
+  'reviewer_finding',
+  'capability_changed',
+  'resource_regression',
 ];
 
 function input(overrides: Record<string, unknown> = {}) {
@@ -80,5 +85,31 @@ describe('Phase 6 learning signal normalization', () => {
     expect(normalized.redactedSummary).toBe('tool timeout after retry budget');
     expect(normalized.transcript).toBeUndefined();
     expect(normalized.body).toBeUndefined();
+  });
+
+  it('keeps optional trace provenance separate from trusted tenant scope', () => {
+    const normalized = normalizeLearningSignal(
+      input({
+        provenance: {
+          missionId: 'mission-1',
+          runId: 'run-1',
+          workflowId: 'workflow-1',
+          sessionId: 'session-1',
+          traceId: 'trace-1',
+          agentVersion: 'v2',
+          organizationId: 'org-b',
+        },
+      }),
+    );
+
+    expect(normalized.scope.organizationId).toBe('org-a');
+    expect(normalized.provenance).toEqual({
+      missionId: 'mission-1',
+      runId: 'run-1',
+      workflowId: 'workflow-1',
+      sessionId: 'session-1',
+      traceId: 'trace-1',
+      agentVersion: 'v2',
+    });
   });
 });
