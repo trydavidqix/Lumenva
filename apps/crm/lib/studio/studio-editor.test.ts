@@ -14,7 +14,7 @@ const layer: LayerRef = {
 };
 
 function setup() {
-  const store = new StudioEditorStore();
+  const store = new StudioEditorStore(async () => undefined);
   const pack = createContextPack({
     contextPackId: "ctx-1",
     organizationId: "org-1",
@@ -69,18 +69,18 @@ describe("Studio Editor provider-free state", () => {
     expect(() => store.proposeEdit({ ...input, idempotencyKey: "idem-2", baseVersion: 0 })).toThrow("stale_version");
   });
 
-  it("requires a passing eval before approval and applies a new version", () => {
+  it("requires a passing eval before approval and applies a new version", async () => {
     const store = setup();
     store.proposeEdit({
       organizationId: "org-1", sessionId: "session-1", projectId: "project-1", canvasId: "canvas-1",
       baseVersion: 1, contextPackId: "ctx-1", editId: "edit-1", instruction: "Adjust spacing",
       targetLayerIds: ["layer-1"], idempotencyKey: "idem-1", patch: { margin: 8 },
     });
-    expect(() => store.approveEdit({ editId: "edit-1", reviewerId: "owner-1" })).toThrow("edit_eval_required");
+    await expect(store.approveEdit({ editId: "edit-1", reviewerId: "owner-1" })).rejects.toThrow("edit_eval_required");
     const evalRun = store.runEval({ evalId: "eval-1", organizationId: "org-1", sessionId: "session-1", canvasId: "canvas-1", inputVersion: 1 });
     expect(evalRun.status).toBe("PASS");
     store.attachEval("edit-1", "eval-1");
-    const applied = store.approveEdit({ editId: "edit-1", reviewerId: "owner-1" });
+    const applied = await store.approveEdit({ editId: "edit-1", reviewerId: "owner-1" });
     expect(applied.version).toBe(2);
     expect(applied.parent_version).toBe(1);
     expect(applied.layers[0].properties).toMatchObject({ color: "black", margin: 8 });

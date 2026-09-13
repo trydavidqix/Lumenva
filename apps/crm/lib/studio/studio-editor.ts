@@ -96,6 +96,8 @@ export class StudioEditorStore {
   private readonly evals = new Map<string, EditorEvalRun>();
   private readonly mixes = new Map<string, VariantMix>();
 
+  constructor(private readonly authorizeReviewer: (organizationId: string, reviewerId: string) => Promise<void>) {}
+
   registerContextPack(pack: ContextPack): void {
     required(pack.organization_id, "tenant_required");
     required(pack.project_id, "project_required");
@@ -212,10 +214,11 @@ export class StudioEditorStore {
     return clone(result);
   }
 
-  approveEdit(input: { editId: string; reviewerId: string; now?: string }): CanvasDocument {
+  async approveEdit(input: { editId: string; reviewerId: string; now?: string }): Promise<CanvasDocument> {
     required(input.reviewerId, "reviewer_required");
     const proposal = this.edits.get(input.editId);
     if (!proposal) throw new Error("edit_not_found");
+    await this.authorizeReviewer(proposal.organization_id, input.reviewerId);
     if (proposal.status !== "PENDING_REVIEW") throw new Error("edit_not_pending");
     const evalPassed = proposal.eval_refs.length > 0 && proposal.eval_refs.every((id) => this.evals.get(id)?.status === "PASS");
     if (!evalPassed) throw new Error("edit_eval_required");
