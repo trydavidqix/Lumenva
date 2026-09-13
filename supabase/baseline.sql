@@ -9031,6 +9031,24 @@ CREATE POLICY "transfer_inventories_write" ON "public"."transfer_inventories" FO
 
 notify pgrst, 'reload schema';
 
+-- Wave 14 server-side requester authorization for watchdog reroute.
+create table if not exists public.psyche_watchdog_requesters (
+  organization_id text not null,
+  requester_id text not null,
+  permission_level text not null check (permission_level in ('P0', 'P1', 'P2', 'P3', 'P4')),
+  capabilities jsonb not null,
+  enabled boolean not null default true,
+  updated_at timestamptz not null default now(),
+  primary key (organization_id, requester_id)
+);
+alter table public.psyche_watchdog_requesters enable row level security;
+drop policy if exists psyche_watchdog_requesters_tenant_all on public.psyche_watchdog_requesters;
+create policy psyche_watchdog_requesters_tenant_all on public.psyche_watchdog_requesters
+  for all to authenticated
+  using (organization_id in (select public.fn_user_org_ids()::text))
+  with check (organization_id in (select public.fn_user_org_ids()::text));
+grant select, insert, update on public.psyche_watchdog_requesters to authenticated;
+
 -- Wave 14 persistent No-Progress Watchdog state.
 create table if not exists public.psyche_watchdog_observations (
   organization_id text not null,

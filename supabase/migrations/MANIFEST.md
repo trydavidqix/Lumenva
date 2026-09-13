@@ -43,6 +43,8 @@ aplica.
 
 ## Applied
 
+| `20260913030200` | `0168_psyche_watchdog_requesters` | Wave 14: registry persistente de requester/capability para reroute do Watchdog, tenant-scoped e RLS. |
+
 | `20260913030100` | `0167_psyche_watchdog_observations` | Wave 14: estado persistente do No-Progress Watchdog, replay por ciclo, serialização transacional e RLS tenant-scoped. |
 
 | `20260905170000` | `0155_rgpd_transfer_inventory` | J5 provider/subprocessor transfer inventory with unknown initial status, SCC/BCR/TIA fields and OFF-by-default observe/block gate. |
