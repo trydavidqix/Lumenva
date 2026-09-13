@@ -11,10 +11,13 @@ export interface ConnectCommerceRecord {
 }
 
 export function createNuvemshopConnectAdapter(ecommerce: EcommerceProvider) {
+  // Fail closed: advertise only the verbs the existing provider-neutral adapter
+  // can execute today. OAuth/webhook/product support elsewhere in the Nuvemshop
+  // integration does not become a Connect capability until it has this contract.
   const descriptor: ConnectProvider = {
     id: "nuvemshop",
     families: ["commerce"],
-    capabilities: ["connect", "disconnect", "healthCheck", "initialSync", "incrementalSync", "registerWebhooks", "handleWebhook", "getProducts", "getOrders", "getSales", "getRefunds"],
+    capabilities: ["getOrders", "getSales"],
   };
 
   return {
@@ -32,12 +35,6 @@ export function createNuvemshopConnectAdapter(ecommerce: EcommerceProvider) {
     },
     async getSales(input: { since: string }): Promise<ConnectCommerceRecord[]> {
       return this.getOrders(input);
-    },
-    async getRefunds(): Promise<ConnectCommerceRecord[]> {
-      // Existing Nuvemshop seam does not expose a dedicated refunds reader yet.
-      // Capability remains declared for webhook-normalized refund support; pull sync
-      // intentionally returns no fabricated facts until that reader is available.
-      return [];
     },
   };
 }
