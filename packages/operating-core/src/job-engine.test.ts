@@ -29,4 +29,9 @@ describe("Wave 1 Job Engine + Event Contracts", () => {
     await engine.claimPersisted(job.id, "worker-a", "org-a", store);
     await expect(engine.claimPersisted(job.id, "worker-b", "org-a", store)).rejects.toThrow("job_already_claimed");
   });
+  it("rejeita enqueue sem tenant ou tipo de job", () => {
+    const engine = new InMemoryJobEngine({ id: () => "job-invalid" });
+    expect(() => engine.enqueue({ organizationId: " ", kind: "sync", payload: null })).toThrow("job_input_invalid");
+    expect(() => engine.enqueue({ organizationId: "org-a", kind: " ", payload: null })).toThrow("job_input_invalid");
+  });
 });
