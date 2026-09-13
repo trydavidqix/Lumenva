@@ -9031,6 +9031,29 @@ CREATE POLICY "transfer_inventories_write" ON "public"."transfer_inventories" FO
 
 notify pgrst, 'reload schema';
 
+-- Wave 13 Hermes Memory Gateway (tenant-scoped persistent projection backend).
+create table if not exists public.hermes_memory_records (
+  organization_id text not null,
+  record_id text not null,
+  backend text not null,
+  subject text not null,
+  scope text not null,
+  namespace text not null check (namespace ~ '^(owner|home|company):[^:]+$'),
+  content jsonb not null,
+  observed_at timestamptz not null,
+  confidence double precision not null check (confidence between 0 and 1),
+  supersedes text,
+  created_at timestamptz not null default now(),
+  primary key (organization_id, record_id, backend)
+);
+alter table public.hermes_memory_records enable row level security;
+drop policy if exists hermes_memory_records_tenant_all on public.hermes_memory_records;
+create policy hermes_memory_records_tenant_all on public.hermes_memory_records
+  for all to authenticated
+  using (organization_id in (select public.fn_user_org_ids()::text))
+  with check (organization_id in (select public.fn_user_org_ids()::text));
+grant select, insert, update on public.hermes_memory_records to authenticated;
+
 -- ---- Nova Mode V1: durable browser-command approvals (migration 0160) ----
 create table if not exists public.ai_agent_command_approvals (
   id uuid primary key default gen_random_uuid(),

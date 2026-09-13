@@ -43,6 +43,8 @@ aplica.
 
 ## Applied
 
+| `20260913020000` | `0165_hermes_memory_gateway` | Wave 13: persistência tenant-scoped do Memory Gateway com chave idempotente por organização/record/backend e RLS via fn_user_org_ids(). |
+
 | `20260905170000` | `0155_rgpd_transfer_inventory` | J5 provider/subprocessor transfer inventory with unknown initial status, SCC/BCR/TIA fields and OFF-by-default observe/block gate. |
 
 | `20260905160000` | `0154_rgpd_breach_incidents` | J3 additive breach register with UTC 72-hour deadline, notification decision, CNPD evidence and tenant RLS; workflow remains feature-flagged OFF. |
