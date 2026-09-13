@@ -78,6 +78,7 @@ export async function repairFailedBuildPlan(
     if (!attempt) throw new Error("BuildPlan step already BLOCKED");
     const result = await executeStep(failedStep, plan).catch(() => "FAILED" as const);
     if (result === "SUCCEEDED") { failedStep.status = "SUCCEEDED"; await options.stateStore.finish(buildPlan.organization_id, buildPlan.build_plan_id, failedStep.step_id, "SUCCEEDED"); return { plan, attempts: attempt.attempts, status: "REPAIRED" }; }
+    await options.stateStore.finish(buildPlan.organization_id, buildPlan.build_plan_id, failedStep.step_id, "FAILED");
   }
 }
 
