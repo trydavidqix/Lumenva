@@ -1,0 +1,37 @@
+name: mobile-compliance
+
+on:
+  push:
+    branches:
+      - wave10/mobile-compliance-guardian-2026-09-13
+  pull_request:
+    paths:
+      - 'apps/crm/lib/product-factory/mobile-compliance/**'
+      - 'apps/crm/lib/product-factory/delivery.ts'
+      - 'apps/crm/lib/product-factory/receipt.ts'
+      - 'apps/crm/lib/agent-engine/tools/**'
+      - 'apps/crm/tests/unit/mobile-compliance-*.test.ts'
+      - 'supabase/migrations/*mobile_compliance*'
+      - '.github/workflows/mobile-compliance.yml'
+  workflow_dispatch:
+
+jobs:
+  verify-mobile-guardian:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.3.4
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Mobile guardian targeted tests
+        run: pnpm --dir apps/crm exec vitest run tests/unit/mobile-compliance-guardian.test.ts tests/unit/mobile-compliance-delivery-gate.test.ts tests/unit/mobile-compliance-runtime-autofix.test.ts tests/unit/mobile-compliance-rejection.test.ts tests/unit/mobile-release-tool-policy.test.ts
+      - name: Typecheck
+        run: pnpm --dir apps/crm typecheck
+      - name: Lint changed mobile surface
+        run: pnpm --dir apps/crm exec eslint lib/product-factory/mobile-compliance lib/product-factory/delivery.ts lib/product-factory/receipt.ts lib/agent-engine/tools/mobile-release.ts tests/unit/mobile-compliance-guardian.test.ts tests/unit/mobile-compliance-delivery-gate.test.ts tests/unit/mobile-compliance-runtime-autofix.test.ts tests/unit/mobile-compliance-rejection.test.ts tests/unit/mobile-release-tool-policy.test.ts
