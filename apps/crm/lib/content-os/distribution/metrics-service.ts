@@ -24,11 +24,31 @@ export function normalizeMetrics(raw: Record<string, number>): NormalizedMetrics
   return result;
 }
 
-export async function collectPublicationMetrics(repository: MetricsRepository, provider: MetricsProvider, input: { organizationId: string; publicationJobId: string; capturedAt?: string; sourceVersion?: string | null }): Promise<PublicationMetricSnapshot> {
+export async function collectPublicationMetrics(
+  repository: MetricsRepository,
+  provider: MetricsProvider,
+  input: {
+    organizationId: string;
+    publicationJobId: string;
+    capturedAt?: string;
+    sourceVersion?: string | null;
+    /** Called only after the canonical snapshot has been persisted. */
+    onPersisted?: (snapshot: PublicationMetricSnapshot) => Promise<void> | void;
+  },
+): Promise<PublicationMetricSnapshot> {
   if (!input.organizationId.trim() || !input.publicationJobId.trim()) throw new MetricsValidationError("Organization and publication job are required.");
   const publication = await repository.findPublication(input.organizationId, input.publicationJobId);
   if (!publication) throw new MetricsValidationError("Publication job not found.");
   if (!publication.providerPublicationId || publication.state !== "succeeded") throw new MetricsValidationError("Publication has no confirmed provider reference.");
   const metrics = normalizeMetrics(await provider.metrics(publication.providerPublicationId));
-  return repository.upsertSnapshot({ organization_id: input.organizationId, publication_job_id: input.publicationJobId, provider_ref: publication.providerPublicationId, captured_at: input.capturedAt ?? new Date().toISOString(), metrics, source_version: input.sourceVersion ?? null });
+  const snapshot = await repository.upsertSnapshot({
+    organization_id: input.organizationId,
+    publication_job_id: input.publicationJobId,
+    provider_ref: publication.providerPublicationId,
+    captured_at: input.capturedAt ?? new Date().toISOString(),
+    metrics,
+    source_version: input.sourceVersion ?? null,
+  });
+  await input.onPersisted?.(snapshot);
+  return snapshot;
 }
