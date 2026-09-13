@@ -7,8 +7,13 @@ export async function runAndPersistMobileComplianceAudit(input: MobileCompliance
   const result = await runMobileComplianceAudit(input);
   const policy = createPolicySnapshot(result.report.store);
   await store.insertPolicySnapshot(input.organizationId, policy);
-  await store.insertRuntimeReview(input.organizationId, result.report.reportId, result.report.runtimeReview!);
-  await store.insertEvidence(input.organizationId, result.report.reportId, result.evidence);
+
+  // Child evidence/runtime/finding rows carry a composite tenant/report FK, so the
+  // immutable parent report must exist first. Upserts are idempotent for retries.
   const report = await store.insertReport(result.report);
-  return { ...result, report };
+  if (result.report.runtimeReview) await store.insertRuntimeReview(input.organizationId, report.reportId, result.report.runtimeReview);
+  await store.insertEvidence(input.organizationId, report.reportId, result.evidence);
+  await store.insertFindings(input.organizationId, report.reportId, result.report.findings);
+
+  return { ...result, report: { ...report, runtimeReview: result.report.runtimeReview } };
 }
