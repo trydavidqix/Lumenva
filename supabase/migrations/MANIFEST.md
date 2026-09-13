@@ -197,6 +197,7 @@ aplica.
 | `20260907100000` | `0158_content_os_editorial_persistence` | Content OS V1: research runs retomáveis, evidências com hash e estado de verificação, claims ligados a evidências, quality gates e revisões versionadas; todas tenant-aware, com RLS, índices de reconciliação, idempotência e triggers de coerência entre organizações. |
 | `20260907110000` | `0159_content_os_learning_idempotency` | Chave de idempotência tenant-aware para eventos de aprendizagem e detecção segura de content decay. |
 | `20260907120000` | `0160_ai_agent_command_approvals` | Nova Mode V1: aprovações duráveis de comandos do navegador, com idempotência por organização, expiração, estado de execução, RLS manager+ e guarda de coerência entre agente, versão e tenant. |
+| `20260913180000` | `operating_core_http_execution_receipts` | Wave 1: receipts/evidence de execução HTTP MCP, chave idempotente por tenant/request/tool e RLS via fn_user_org_ids(). |
 
 ## Reproducibility
 

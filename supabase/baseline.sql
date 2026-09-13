@@ -9031,6 +9031,27 @@ CREATE POLICY "transfer_inventories_write" ON "public"."transfer_inventories" FO
 
 notify pgrst, 'reload schema';
 
+-- Wave 1 HTTP execution receipts (idempotent tenant-aware evidence store).
+create table if not exists public.operating_core_http_execution_receipts (
+  organization_id uuid not null,
+  request_id text not null,
+  tool_name text not null,
+  actor_id text not null,
+  outcome text not null check (outcome in ('SUCCEEDED','FAILED')),
+  result jsonb not null,
+  evidence jsonb not null,
+  created_at timestamptz not null default now(),
+  primary key (organization_id, request_id, tool_name)
+);
+alter table public.operating_core_http_execution_receipts enable row level security;
+drop policy if exists operating_core_http_execution_receipts_tenant_all on public.operating_core_http_execution_receipts;
+create policy operating_core_http_execution_receipts_tenant_all on public.operating_core_http_execution_receipts
+  for all to authenticated
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
+grant select, insert, update on public.operating_core_http_execution_receipts to authenticated;
+grant select, insert, update on public.operating_core_http_execution_receipts to service_role;
+
 -- ---- Nova Mode V1: durable browser-command approvals (migration 0160) ----
 create table if not exists public.ai_agent_command_approvals (
   id uuid primary key default gen_random_uuid(),
