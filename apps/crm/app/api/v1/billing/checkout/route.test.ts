@@ -68,6 +68,19 @@ describe("POST /api/v1/billing/checkout security", () => {
     expect((await POST(request({ ...validBody(), organization_id: ORG }))).status).toBe(422);
   });
 
+  it("enforces one-time nonce through two endpoint requests and independent pools", async () => {
+    const { POST } = await import("./route");
+    const body = validBody();
+    const poolA = db();
+    const poolB = db();
+    vi.mocked(createClient).mockReset();
+    vi.mocked(createClient).mockResolvedValueOnce(poolA as never).mockResolvedValueOnce(poolB as never);
+
+    const [first, second] = await Promise.all([POST(request(body)), POST(request(body))]);
+    expect([first.status, second.status].sort()).toEqual([200, 403]);
+    expect(stripeCheckoutAdapter.createCheckoutSession).toHaveBeenCalledTimes(1);
+  });
+
   it("returns 503 and never succeeds when the adapter is unavailable", async () => {
     vi.spyOn(stripeCheckoutAdapter, "resolvePrice").mockRejectedValue(new Error("provider down"));
     const { POST } = await import("./route");
