@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateComplianceVerdict, createFinding, detectMobileFramework, runMobileComplianceAudit, validateMobileComplianceReport, type MobileComplianceReport, type MobileProjectSnapshot } from "@/lib/product-factory/mobile-compliance";
+import { calculateComplianceVerdict, createFinding, detectMobileFramework, runMobileComplianceAudit, validateMobileComplianceReport, type MobileComplianceReport, type MobileProjectSnapshot, type RuntimeReviewReport } from "@/lib/product-factory/mobile-compliance";
 
 const iosSnapshot: MobileProjectSnapshot = {
   files: {
@@ -38,6 +38,21 @@ describe("Mobile Compliance Guardian", () => {
     const manual = { ...verified, verification: "MANUAL_REVIEW" as const };
     expect(calculateComplianceVerdict([verified])).toBe("BLOCK");
     expect(calculateComplianceVerdict([manual])).toBe("NEEDS_REVIEW");
+  });
+
+  it("does not allow an AI auditor to forge an evidence reference into a hard block", async () => {
+    const aiFinding = createFinding({ ruleId: "AI.FORGED", platform: "IOS", store: "APP_STORE", severity: "CRITICAL", source: "AI", title: "forged", description: "untrusted evidence", resource: "src/app.ts", evidenceRefs: ["evidence:forged"] });
+    const { report } = await runMobileComplianceAudit({ organizationId: "org-1", projectId: "project-1", buildRef: "build-ai", artifactRef: "artifact://ios-ai", artifactHash: "d".repeat(64), platform: "IOS", snapshot: iosSnapshot, aiAuditor: { audit: async () => [aiFinding] } });
+    const stored = report.findings.find((finding) => finding.ruleId === "AI.FORGED");
+    expect(stored?.verification).toBe("MANUAL_REVIEW");
+    expect(report.verdict).toBe("NEEDS_REVIEW");
+  });
+
+  it("requires evidence before a runtime failure becomes a hard block", () => {
+    const withoutEvidence: RuntimeReviewReport = { runtimeReviewId: "runtime-1", platform: "IOS", status: "FAIL", evidenceRefs: [], steps: [{ name: "launch", status: "FAIL", evidenceRefs: [] }], createdAt: new Date(0).toISOString() };
+    const withEvidence: RuntimeReviewReport = { ...withoutEvidence, runtimeReviewId: "runtime-2", evidenceRefs: ["runtime:evidence:launch"] };
+    expect(calculateComplianceVerdict([], withoutEvidence, true)).toBe("NEEDS_REVIEW");
+    expect(calculateComplianceVerdict([], withEvidence, true)).toBe("BLOCK");
   });
 
   it("produces a passing iOS report for a compliant supplied snapshot", async () => {
