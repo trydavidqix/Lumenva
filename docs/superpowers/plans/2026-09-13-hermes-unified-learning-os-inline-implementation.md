@@ -1,39 +1,41 @@
 # Hermes Unified Learning OS — Inline Implementation Plan
 
-> **For agentic execution:** REQUIRED SUB-SKILL: use `superpowers:executing-plans` only. **Subagents, agent teams and delegated implementation are forbidden for this plan.** The owner selected single-session inline execution by one implementer.
+> **For agentic execution:** REQUIRED SUB-SKILL: use `superpowers:executing-plans` only. **Subagents, agent teams and delegated implementation are forbidden.** The owner selected single-implementer inline execution.
 
-**Goal:** Consolidate Lumenva's existing Phase 6 Learning Flywheel with the best proven patterns from Helixforge V3, Adaptive Expert, EINVIRKI and Alfred into one tenant-safe, evidence-driven Hermes Learning OS without creating a second source of truth or allowing self-promotion.
+**Goal:** Consolidate Lumenva's existing Phase 6 Learning Flywheel with the useful learning patterns already built in Helixforge V3, Adaptive Expert, EINVIRKI and Alfred into one tenant-safe, evidence-driven Hermes Learning OS.
 
-**Architecture:** The existing `apps/crm/lib/agent-engine/flywheel/` remains the behavioral nucleus. New Hermes modules wrap and extend it through focused contracts for research memory, fingerprints/retrieval, outcomes, capability trust, meta-research and candidate manifests. Postgres/Supabase remains authoritative; Hermes learns and proposes, while Lumenva policy/approval/autonomy gates remain the only authority that can activate changes.
+**Architecture:** `apps/crm/lib/agent-engine/flywheel/` remains the canonical low-level learning mechanism. New `hermes/` modules add scientific memory, controlled retrieval, capability trust, routing metrics, generic outcomes, meta-research and a stable runtime-observation boundary. Lumenva/Postgres remains authoritative; Hermes learns, evaluates and proposes but never activates itself.
 
-**Tech Stack:** Next.js 16, React 19, TypeScript 6 strict, Node >=22, Supabase/Postgres/RLS, Zod, Vitest, existing `event_log`/workers, existing Agent OS/Flywheel contracts.
+**Tech Stack:** Next.js 16, React 19, TypeScript strict, Node >=22, Supabase/Postgres/RLS, Zod, Vitest, existing `event_log`/workers and Agent OS/Flywheel contracts.
 
 **Spec:** `docs/superpowers/specs/2026-09-13-hermes-unified-learning-os-design.md`
 
 ## Global Constraints
 
-- Work **only** on branch `design/hermes-unified-learning-os-2026-09-13`; never commit, merge, rebase, fast-forward or update `main`.
-- Before every write batch, verify the current branch. If it is not exactly `design/hermes-unified-learning-os-2026-09-13`, stop before writing.
-- Implementation is inline only: no subagents, no teams, no delegated coding/review.
-- The owner authorizes implementation decisions, refactors required by this plan, dependency changes if strictly necessary, test execution and commits **inside this branch** without per-task confirmation.
-- This authorization does **not** authorize production deploys, applying migrations to remote/production databases, modifying real credentials/secrets, destructive external operations, or merging to `main`; those are outside the branch-only boundary.
-- `CLAUDE.md` remains repository doctrine. `.claude/rules/*`, specs, PRDs and business rules remain subordinate in the documented precedence order.
-- Postgres/Supabase remains business/governance source of truth. JSONL/SQLite/local files must not become production learning authority.
-- Every tenant-aware durable entity includes trusted `organization_id`, RLS and explicit service-role tenant filters.
-- No model can promote itself, broaden its autonomy, bypass policy, broaden its capability set or activate a learning candidate directly.
-- Existing Phase 6 proposal records remain readable. New code is additive/backward-compatible first; destructive migrations are forbidden.
-- Existing proposal states are preserved. `NOT_EXECUTED`, `NOT_PROVEN` and `BLOCKED` never become PASS by inference.
-- Schema changes ship as the canonical triplet: new migration + idempotent `supabase/baseline.sql` append + `supabase/migrations/MANIFEST.md` row; generated DB types are regenerated through the canonical project flow, never hand-edited.
-- No raw secrets/tokens/cookies/customer transcripts in learning artifacts, logs, fixtures or docs. Prefer evidence references, hashes, sanitized summaries and synthetic fixtures.
-- TDD for every behavior change: failing test → prove failure → minimal implementation → prove pass → relevant regression suite → commit.
-- GitHub Actions is not a release gate. Primary evidence is local `typecheck`, `lint`, `lint:channels`, `lint:tenant-filter`, `test:unit`, `test:db`, `build`, plus targeted tests and final Preview only if the implementation changes a visible UI path and a Preview can be created without violating the branch-only boundary.
-- Do not apply migration `0163` remotely while executing this plan. Test it only through the repository's disposable/local DB harness.
+- Work only on `design/hermes-unified-learning-os-2026-09-13`.
+- Never commit, merge, rebase, fast-forward, force-push or update `main`.
+- Before each write batch, verify `git branch --show-current` equals the authorized branch.
+- Inline implementation only: no subagents, teams, delegated coding or delegated review.
+- The owner authorizes branch-local implementation decisions, required refactors, tests, docs and commits without per-task confirmation.
+- Branch-local authorization does not include production deploys, remote/production migration application, real-secret mutation, destructive external operations or merging to `main`.
+- `CLAUDE.md` remains sovereign repository doctrine.
+- Postgres/Supabase remains the business/governance source of truth. No JSONL/SQLite parallel production authority.
+- Every new tenant-aware durable entity has trusted `organization_id`, RLS and explicit tenant filtering for service-role access.
+- Models/Hermes cannot self-promote, broaden autonomy/capabilities, bypass policy or activate candidates.
+- Existing Phase 6 records and states remain readable and backward compatible.
+- `NOT_EXECUTED`, `NOT_PROVEN` and `BLOCKED` never become PASS by inference.
+- Schema changes ship as migration + idempotent baseline append + manifest row; generated DB types are never hand-edited.
+- No raw secret/token/cookie/customer transcript in learning artifacts, fixtures, logs or docs.
+- TDD for every behavior change: RED → minimal GREEN → regression → commit.
+- GitHub Actions is not a release gate. Use repository-local verification.
+- Migration `0163` is tested locally/disposably only; never applied remotely in this plan.
+- All shell commands below assume repository root unless the command itself uses `pnpm --dir apps/crm`.
 
 ---
 
-## File/Module Map Locked by This Plan
+## Locked File Map
 
-Existing files to extend rather than replace:
+Extend, do not replace:
 
 ```text
 apps/crm/lib/agent-engine/flywheel/
@@ -54,97 +56,84 @@ apps/crm/lib/agent-engine/flywheel/
 └── validator.ts
 ```
 
-New canonical Hermes modules:
+Create:
 
 ```text
 apps/crm/lib/agent-engine/hermes/
-├── index.ts                 # public facade, no business logic
-├── contracts.ts             # shared Hermes-only types
-├── service.ts               # bounded orchestration over existing Flywheel primitives
-├── research-memory.ts       # experiment append/read/supersede contract
-├── fingerprint.ts           # deterministic non-secret identity/context fingerprints
-├── retrieval.ts             # same-tenant prior-evidence ranking with mustRetest
-├── meta-research.ts         # aggregate strategy/provider/routing/failure performance
-├── capability-trust.ts      # immutable capability identity + stale-trust invalidation
-├── routing-metrics.ts       # Adaptive Expert routing/context/reviewer outcome metrics
-├── outcome-ledger.ts        # generic technical/business outcome records
-├── candidate-manifest.ts    # immutable/versioned improvement candidate manifest
-├── runtime-events.ts        # stable input adapter for native runtime and future Mastra traces
-└── sanitization.ts          # learning-artifact redaction/size/fingerprint guard
+├── index.ts
+├── contracts.ts
+├── service.ts
+├── sanitization.ts
+├── research-memory.ts
+├── fingerprint.ts
+├── retrieval.ts
+├── capability-trust.ts
+├── routing-metrics.ts
+├── outcome-ledger.ts
+├── candidate-manifest.ts
+├── meta-research.ts
+└── runtime-events.ts
 ```
 
-New/extended contract tests:
-
-```text
-apps/crm/lib/agent-engine/contracts/
-├── hermes-facade.test.ts
-├── hermes-sanitization.test.ts
-├── hermes-research-memory.test.ts
-├── hermes-fingerprint-retrieval.test.ts
-├── hermes-capability-trust.test.ts
-├── hermes-routing-metrics.test.ts
-├── hermes-outcome-ledger.test.ts
-├── hermes-candidate-manifest.test.ts
-├── hermes-meta-research.test.ts
-├── hermes-runtime-events.test.ts
-├── hermes-end-to-end.test.ts
-└── hermes-cross-tenant.test.ts
-```
-
-Schema addition:
+Schema:
 
 ```text
 supabase/migrations/20260913130000_0163_hermes_learning_os.sql
 supabase/baseline.sql
 supabase/migrations/MANIFEST.md
-apps/crm/lib/database.types.ts   # regenerate only through canonical generator
+apps/crm/lib/database.types.ts
+apps/crm/tests/invariants/rls-isolation.test.ts
+apps/crm/tests/unit/hermes-learning-migration-contract.test.ts
 ```
 
-Command Center/API additions only after the core is proven:
+Core contract tests:
 
 ```text
-apps/crm/app/api/v1/ai/hermes/summary/route.ts
-apps/crm/app/api/v1/ai/hermes/candidates/route.ts
-apps/crm/app/api/v1/ai/hermes/experiments/route.ts
-apps/crm/app/api/v1/ai/hermes/outcomes/route.ts
-apps/crm/app/api/v1/ai/hermes/meta/route.ts
-apps/crm/components/ai/HermesLearningPanel.tsx
+apps/crm/lib/agent-engine/contracts/hermes-facade.test.ts
+apps/crm/lib/agent-engine/contracts/hermes-sanitization.test.ts
+apps/crm/lib/agent-engine/contracts/hermes-research-memory.test.ts
+apps/crm/lib/agent-engine/contracts/hermes-fingerprint-retrieval.test.ts
+apps/crm/lib/agent-engine/contracts/hermes-capability-trust.test.ts
+apps/crm/lib/agent-engine/contracts/hermes-routing-metrics.test.ts
+apps/crm/lib/agent-engine/contracts/hermes-outcome-ledger.test.ts
+apps/crm/lib/agent-engine/contracts/hermes-candidate-manifest.test.ts
+apps/crm/lib/agent-engine/contracts/hermes-evidence-states.test.ts
+apps/crm/lib/agent-engine/contracts/hermes-meta-research.test.ts
+apps/crm/lib/agent-engine/contracts/hermes-runtime-events.test.ts
+apps/crm/lib/agent-engine/contracts/hermes-promotion-safety.test.ts
+apps/crm/lib/agent-engine/contracts/hermes-end-to-end.test.ts
+apps/crm/lib/agent-engine/contracts/hermes-cross-tenant.test.ts
 ```
 
 ---
 
-### Task 0: Branch Guard and Baseline Evidence
+### Task 0: Branch Lock and Baseline
 
-**Files:**
-- Read: `CLAUDE.md`
-- Read: `.claude/rules/git-workflow.md`
-- Read: `.claude/rules/testing-verification.md`
-- Read: `.claude/rules/multi-tenancy.md`
-- Read: `.claude/rules/database-migrations.md`
-- Read: `docs/superpowers/specs/2026-09-13-hermes-unified-learning-os-design.md`
-- No source write in this task.
+**Files:** read only.
 
-**Interfaces:**
-- Consumes: current repository state.
-- Produces: baseline test evidence and branch lock for every later task.
+**Consumes:** current branch, existing Flywheel behavior.  
+**Produces:** baseline evidence.
 
-- [ ] **Step 1: Verify branch and working tree**
+- [ ] Verify branch/worktrees:
 
 ```bash
+test "$(git branch --show-current)" = "design/hermes-unified-learning-os-2026-09-13"
 git status --short --branch
-git branch --show-current
 git worktree list
 ```
 
-Expected branch exactly:
+- [ ] Read current doctrine before editing:
 
 ```text
-design/hermes-unified-learning-os-2026-09-13
+CLAUDE.md
+.claude/rules/git-workflow.md
+.claude/rules/testing-verification.md
+.claude/rules/multi-tenancy.md
+.claude/rules/database-migrations.md
+docs/superpowers/specs/2026-09-13-hermes-unified-learning-os-design.md
 ```
 
-If not exact, do not write.
-
-- [ ] **Step 2: Record base relation to main without changing either ref**
+- [ ] Record relation to `origin/main` without changing `main`:
 
 ```bash
 git fetch origin main
@@ -152,74 +141,57 @@ git merge-base HEAD origin/main
 git rev-list --left-right --count origin/main...HEAD
 ```
 
-Expected at plan creation: branch contains the Hermes design/plan commits and no missing `main` commit. If `main` advanced, do **not** merge/rebase automatically during this task; first inspect whether the implementation branch can continue safely. The invariant is “never update main,” not “ignore upstream changes.”
-
-- [ ] **Step 3: Run targeted existing Flywheel suite before modifications**
+- [ ] Run existing Flywheel tests:
 
 ```bash
-cd apps/crm
-pnpm exec vitest run lib/agent-engine/contracts/flywheel-*.test.ts
+pnpm --dir apps/crm exec vitest run lib/agent-engine/contracts/flywheel-*.test.ts
 ```
 
-Expected: current Flywheel tests PASS. Any pre-existing failure is recorded before implementation rather than silently attributed to Hermes.
-
-- [ ] **Step 4: Run baseline static gates**
+- [ ] Run baseline static gates:
 
 ```bash
-pnpm typecheck
-pnpm lint
+pnpm --dir apps/crm typecheck
+pnpm --dir apps/crm lint
 ```
 
-Record exact results in the execution log/commit notes. Do not “fix” unrelated baseline failures in the Hermes commits.
+Any pre-existing failure is recorded, not silently repaired as Hermes scope.
 
 ---
 
-### Task 1: Introduce the Hermes Facade Without Changing Behavior
+### Task 1: Hermes Facade Over the Existing Flywheel
 
 **Files:**
-- Create: `apps/crm/lib/agent-engine/hermes/index.ts`
-- Create: `apps/crm/lib/agent-engine/hermes/contracts.ts`
-- Create: `apps/crm/lib/agent-engine/hermes/service.ts`
-- Create: `apps/crm/lib/agent-engine/contracts/hermes-facade.test.ts`
+- Create `apps/crm/lib/agent-engine/hermes/index.ts`
+- Create `apps/crm/lib/agent-engine/hermes/contracts.ts`
+- Create `apps/crm/lib/agent-engine/hermes/service.ts`
+- Create `apps/crm/lib/agent-engine/contracts/hermes-facade.test.ts`
 
-**Interfaces:**
-- Consumes: `LearningSignal`, `LearningScope`, `FlywheelLoopBudget`, `runLearningFlywheelIteration`, `LearningProposalStore`.
-- Produces: `HermesLearningService`, `HermesLearningRunInput`, `HermesLearningRunResult`.
+**Produces:** `HermesLearningService` delegating to the existing Flywheel.
 
-- [ ] **Step 1: Write the failing facade test**
+- [ ] RED test:
 
 ```ts
 import { describe, expect, it, vi } from 'vitest';
 import { createHermesLearningService } from '../hermes/service';
 
-it('delegates one bounded learning iteration to the canonical flywheel', async () => {
-  const runIteration = vi.fn().mockResolvedValue({
-    processedSignals: 1,
-    clusters: 1,
-    createdProposals: 1,
-    enrichedProposals: 0,
-    modelTokensUsed: 0,
-    costCentsUsed: 0,
-    stoppedReason: 'completed',
+describe('Hermes facade', () => {
+  it('delegates to the canonical flywheel iteration', async () => {
+    const runIteration = vi.fn().mockResolvedValue({ createdProposals: 1 });
+    const service = createHermesLearningService({ runIteration: runIteration as never });
+    const result = await service.runIteration({ rawSignals: [] } as never);
+    expect(runIteration).toHaveBeenCalledOnce();
+    expect(result.createdProposals).toBe(1);
   });
-  const service = createHermesLearningService({ runIteration });
-  const result = await service.runIteration({ rawSignals: [{}] } as never);
-  expect(runIteration).toHaveBeenCalledOnce();
-  expect(result.createdProposals).toBe(1);
 });
 ```
 
-- [ ] **Step 2: Prove RED**
+- [ ] Prove RED:
 
 ```bash
-pnpm exec vitest run lib/agent-engine/contracts/hermes-facade.test.ts
+pnpm --dir apps/crm exec vitest run lib/agent-engine/contracts/hermes-facade.test.ts
 ```
 
-Expected: FAIL because `../hermes/service` does not exist.
-
-- [ ] **Step 3: Implement a thin service only**
-
-`service.ts` must inject the existing iteration function rather than duplicate its algorithm:
+- [ ] Minimal implementation in `service.ts`:
 
 ```ts
 import type { Phase6IterationResult, RunLearningFlywheelInput } from '../flywheel/orchestrator';
@@ -237,60 +209,42 @@ export function createHermesLearningService(deps: {
 }
 ```
 
-`index.ts` exports only the intended public facade/types; no wildcard export of internal stores.
+`index.ts` exports only the public facade/contracts; no wildcard export of stores.
 
-- [ ] **Step 4: Prove GREEN + legacy compatibility**
+- [ ] GREEN + legacy regression:
 
 ```bash
-pnpm exec vitest run lib/agent-engine/contracts/hermes-facade.test.ts lib/agent-engine/contracts/flywheel-*.test.ts
+pnpm --dir apps/crm exec vitest run lib/agent-engine/contracts/hermes-facade.test.ts lib/agent-engine/contracts/flywheel-*.test.ts
 ```
 
-- [ ] **Step 5: Commit**
+- [ ] Commit:
 
 ```bash
-git add apps/crm/lib/agent-engine/hermes apps/crm/lib/agent-engine/contracts/hermes-facade.test.ts
+git add apps/crm/lib/agent-engine/hermes/index.ts apps/crm/lib/agent-engine/hermes/contracts.ts apps/crm/lib/agent-engine/hermes/service.ts apps/crm/lib/agent-engine/contracts/hermes-facade.test.ts
 git commit -m "feat(ai): add Hermes facade over learning flywheel"
 ```
 
 ---
 
-### Task 2: Learning Artifact Sanitization and Provenance
+### Task 2: Sanitized Learning Signals and Provenance
 
 **Files:**
-- Create: `apps/crm/lib/agent-engine/hermes/sanitization.ts`
-- Modify: `apps/crm/lib/agent-engine/flywheel/signals.ts`
-- Create: `apps/crm/lib/agent-engine/contracts/hermes-sanitization.test.ts`
-- Modify: `apps/crm/lib/agent-engine/contracts/flywheel-signals.test.ts`
+- Create `apps/crm/lib/agent-engine/hermes/sanitization.ts`
+- Modify `apps/crm/lib/agent-engine/flywheel/signals.ts`
+- Create `apps/crm/lib/agent-engine/contracts/hermes-sanitization.test.ts`
+- Modify `apps/crm/lib/agent-engine/contracts/flywheel-signals.test.ts`
 
-**Interfaces:**
-- Consumes: trusted `LearningScope` from current Flywheel.
-- Produces: `HermesProvenance`, `sanitizeLearningSummary()`, extended signal kinds/source refs.
+**Produces:** safe summaries, extra signal kinds, optional trace provenance.
 
-- [ ] **Step 1: Add RED tests for secret/PII-shaped summaries and provenance limits**
-
-Tests must prove:
+- [ ] RED tests must prove:
 
 ```ts
 expect(sanitizeLearningSummary('Authorization: Bearer abc.def.ghi')).not.toContain('abc.def.ghi');
 expect(sanitizeLearningSummary('alice@example.com +351 912 345 678')).not.toContain('alice@example.com');
-expect(sanitizeLearningSummary('x'.repeat(2000)).length).toBeLessThanOrEqual(500);
+expect(sanitizeLearningSummary('x'.repeat(2000))?.length).toBeLessThanOrEqual(500);
 ```
 
-Also prove that optional provenance identifiers are strings only and do not replace the trusted `scope.organizationId`.
-
-- [ ] **Step 2: Prove RED**
-
-```bash
-pnpm exec vitest run lib/agent-engine/contracts/hermes-sanitization.test.ts lib/agent-engine/contracts/flywheel-signals.test.ts
-```
-
-- [ ] **Step 3: Implement bounded sanitizer**
-
-Create an explicit sanitizer that redacts bearer/API-key-like assignments, obvious email/phone forms and truncates to 500 chars. It must return `null` for empty content. Do not build a generic DLP platform.
-
-- [ ] **Step 4: Extend `LEARNING_SIGNAL_KINDS` additively**
-
-Add:
+- [ ] Add these signal kinds only:
 
 ```ts
 'run_success'
@@ -300,64 +254,54 @@ Add:
 'resource_regression'
 ```
 
-Extend `LearningSignal` with optional provenance:
+- [ ] Add optional provenance:
 
 ```ts
-provenance?: {
+export interface HermesProvenance {
   missionId?: string;
   runId?: string;
   workflowId?: string;
   sessionId?: string;
   traceId?: string;
   agentVersion?: string;
-};
+}
 ```
 
-Fingerprint remains tenant/agent/capability/kind/failure-class scoped and must not ingest raw transcript text.
+Tenant identity remains exclusively `LearningScope.organizationId`; provenance can never override it.
 
-- [ ] **Step 5: Run tests**
+- [ ] Run:
 
 ```bash
-pnpm exec vitest run lib/agent-engine/contracts/hermes-sanitization.test.ts lib/agent-engine/contracts/flywheel-signals.test.ts lib/agent-engine/contracts/flywheel-clustering.test.ts
+pnpm --dir apps/crm exec vitest run lib/agent-engine/contracts/hermes-sanitization.test.ts lib/agent-engine/contracts/flywheel-signals.test.ts lib/agent-engine/contracts/flywheel-clustering.test.ts
 ```
 
-- [ ] **Step 6: Commit**
-
-```bash
-git add apps/crm/lib/agent-engine/hermes/sanitization.ts apps/crm/lib/agent-engine/flywheel/signals.ts apps/crm/lib/agent-engine/contracts/hermes-sanitization.test.ts apps/crm/lib/agent-engine/contracts/flywheel-signals.test.ts
-git commit -m "feat(ai): add safe Hermes learning signals"
-```
+- [ ] Commit exact four files.
 
 ---
 
-### Task 3: Add the Durable Hermes Schema (`0163`)
+### Task 3: Migration 0163 — Durable Hermes Stores
 
 **Files:**
-- Create: `supabase/migrations/20260913130000_0163_hermes_learning_os.sql`
-- Modify: `supabase/baseline.sql`
-- Modify: `supabase/migrations/MANIFEST.md`
-- Regenerate: `apps/crm/lib/database.types.ts`
-- Create: `apps/crm/tests/invariants/hermes-learning-rls.test.ts` if DB invariants live there; otherwise place beside the repository's current RLS invariant tests after inspecting the existing pattern.
+- Create `supabase/migrations/20260913130000_0163_hermes_learning_os.sql`
+- Modify `supabase/baseline.sql`
+- Modify `supabase/migrations/MANIFEST.md`
+- Regenerate `apps/crm/lib/database.types.ts`
+- Modify `apps/crm/tests/invariants/rls-isolation.test.ts`
+- Create `apps/crm/tests/unit/hermes-learning-migration-contract.test.ts`
 
-**Interfaces:**
-- Consumes: `organizations(id)`, existing Flywheel proposal store.
-- Produces: durable experiment, outcome and capability-identity stores. Existing `flywheel_distiller_proposals` remains the proposal compatibility store.
+**Produces:** tenant-aware research experiments, generic outcomes and capability identities; expanded proposal allowlist.
 
-- [ ] **Step 1: Write the DB isolation test first**
+- [ ] RED migration-contract test reads `0163` and asserts the three tables, RLS enablement, `organization_id`, required checks, and all old/new proposal types.
 
-The test must exercise two organizations and prove org B cannot select org A rows from all new tenant tables. It also proves service-role repository code includes `.eq('organization_id', organizationId)` for tenant-aware operations.
+- [ ] Extend the existing `TABLES` list in `apps/crm/tests/invariants/rls-isolation.test.ts` with:
 
-- [ ] **Step 2: Prove RED via DB gate**
-
-```bash
-pnpm test:db
+```ts
+'hermes_research_experiments',
+'hermes_outcomes',
+'hermes_capability_identities',
 ```
 
-Expected targeted Hermes invariant failure because tables do not exist.
-
-- [ ] **Step 3: Create migration `0163` with three bounded tables**
-
-Use these canonical shapes:
+- [ ] Create `0163` with these table contracts:
 
 ```sql
 create table if not exists public.hermes_research_experiments (
@@ -388,7 +332,7 @@ create table if not exists public.hermes_outcomes (
   candidate_id uuid,
   subject_kind text not null,
   subject_id text not null,
-  technical_quality double precision,
+  technical_quality double precision check (technical_quality is null or (technical_quality >= 0 and technical_quality <= 1)),
   cost_cents integer check (cost_cents is null or cost_cents >= 0),
   latency_ms integer check (latency_ms is null or latency_ms >= 0),
   kpi_name text,
@@ -415,13 +359,21 @@ create table if not exists public.hermes_capability_identities (
 );
 ```
 
-Create composite indexes starting with `organization_id` for lookup paths. Enable RLS on all three and use the repository's current canonical `fn_user_org_ids()` policy pattern after inspecting a recent tenant-aware migration. Do not invent a new auth helper.
+- [ ] Add composite indexes beginning with `organization_id` for subject/run/identity lookup paths.
 
-- [ ] **Step 4: Add proposal-type compatibility extension in the same forward migration**
+- [ ] Enable RLS and use the repository's existing `fn_user_org_ids()` pattern; do not create a new tenancy helper.
 
-Replace the closed type constraint additively so it retains **all legacy + Phase 6 values** and adds:
+- [ ] Replace the `flywheel_distiller_proposals_type_check` allowlist while retaining every historical value:
 
 ```text
+playbook_bullet
+golden_case
+reentry_trigger
+org_memory_entry
+skill_change
+routing_change
+eval_case
+operational_threshold
 prompt_change
 workflow_change
 agent_definition_change
@@ -433,45 +385,48 @@ infra_change
 strategy_change
 ```
 
-Never remove `playbook_bullet`, `golden_case`, `reentry_trigger`, `org_memory_entry`, `skill_change`, `routing_change`, `eval_case`, or `operational_threshold`.
+- [ ] Append the same idempotent schema to `supabase/baseline.sql`.
 
-- [ ] **Step 5: Append equivalent idempotent DDL to `supabase/baseline.sql` and add manifest row**
-
-Manifest row:
+- [ ] Add manifest row:
 
 ```text
-| `20260913130000` | `0163_hermes_learning_os` | Additive Hermes research experiments, generic outcome ledger, capability identity/trust records, RLS and expanded governed learning proposal types. |
+| `20260913130000` | `0163_hermes_learning_os` | Additive Hermes research experiments, generic outcomes, capability identity/trust records, tenant RLS and expanded governed learning proposal types. |
 ```
 
-- [ ] **Step 6: Regenerate DB types with the repository's canonical generator**
-
-First inspect `apps/crm/package.json`/scripts for the current generation command. Use that command; do not manually insert table types.
-
-- [ ] **Step 7: Run DB gates**
+- [ ] Validate locally:
 
 ```bash
-pnpm test:db
-pnpm lint:tenant-filter
+pnpm --dir apps/crm test:db
 ```
 
-- [ ] **Step 8: Commit schema triplet + generated types + DB test together**
+- [ ] Generate types from a local Supabase database containing the new baseline/schema, never from production:
 
 ```bash
-git add supabase/migrations/20260913130000_0163_hermes_learning_os.sql supabase/baseline.sql supabase/migrations/MANIFEST.md apps/crm/lib/database.types.ts apps/crm/tests/invariants/hermes-learning-rls.test.ts
-git commit -m "feat(db): add tenant-safe Hermes learning stores"
+pnpm --dir apps/crm db:reset
+cd apps/crm && supabase gen types typescript --local > lib/database.types.ts
 ```
+
+If the local Supabase CLI/runtime itself is unavailable, record `database.types.ts` generation as a precise blocker; do not hand-edit generated types and do not apply the migration remotely merely to generate them.
+
+- [ ] Re-run:
+
+```bash
+pnpm --dir apps/crm test:db
+pnpm --dir apps/crm lint:tenant-filter
+```
+
+- [ ] Commit schema triplet, generated types and the two DB tests together.
 
 ---
 
-### Task 4: Scientific Research Memory Store
+### Task 4: Scientific Research Memory
 
 **Files:**
-- Create: `apps/crm/lib/agent-engine/hermes/research-memory.ts`
-- Extend: `apps/crm/lib/agent-engine/hermes/contracts.ts`
-- Create: `apps/crm/lib/agent-engine/contracts/hermes-research-memory.test.ts`
+- Create `apps/crm/lib/agent-engine/hermes/research-memory.ts`
+- Extend `apps/crm/lib/agent-engine/hermes/contracts.ts`
+- Create `apps/crm/lib/agent-engine/contracts/hermes-research-memory.test.ts`
 
-**Interfaces:**
-- Produces:
+**Produces:**
 
 ```ts
 export type HermesExperimentStatus = 'keep' | 'discard' | 'crash' | 'inconclusive';
@@ -494,47 +449,26 @@ export interface HermesResearchExperiment {
   supersedesId: string | null;
   createdAt: string;
 }
-
-export interface HermesResearchMemory {
-  append(experiment: HermesResearchExperiment): Promise<void>;
-  listForOrganization(organizationId: string): Promise<HermesResearchExperiment[]>;
-  listBySubject(input: { organizationId: string; subjectKind: string; subjectId: string }): Promise<HermesResearchExperiment[]>;
-}
 ```
 
-- [ ] **Step 1: RED tests** prove append-only history, exact tenant filter and supersede-with-reference rather than mutation/deletion.
-- [ ] **Step 2: Run** `pnpm exec vitest run lib/agent-engine/contracts/hermes-research-memory.test.ts` and observe failure.
-- [ ] **Step 3: Implement Supabase-backed store** using injected client; every query includes trusted `organization_id` filter even for admin clients.
-- [ ] **Step 4: Add duplicate protection at application level using experiment `id`; database remains authoritative.**
-- [ ] **Step 5: GREEN + targeted DB test.**
-- [ ] **Step 6: Commit** `feat(ai): add Hermes scientific research memory`.
+- [ ] RED tests: append-only behavior, supersede-by-reference, exact `organization_id` filter, duplicate ID rejection.
+- [ ] Implement injected Supabase repository methods `append`, `listForOrganization`, `listBySubject`.
+- [ ] Every admin-client query explicitly filters trusted organization ID.
+- [ ] GREEN + `test:db` targeted proof.
+- [ ] Commit `feat(ai): add Hermes scientific research memory`.
 
 ---
 
-### Task 5: Deterministic Fingerprints and Controlled Retrieval
+### Task 5: Fingerprints and Controlled Knowledge Transfer
 
 **Files:**
-- Create: `apps/crm/lib/agent-engine/hermes/fingerprint.ts`
-- Create: `apps/crm/lib/agent-engine/hermes/retrieval.ts`
-- Create: `apps/crm/lib/agent-engine/contracts/hermes-fingerprint-retrieval.test.ts`
+- Create `apps/crm/lib/agent-engine/hermes/fingerprint.ts`
+- Create `apps/crm/lib/agent-engine/hermes/retrieval.ts`
+- Create `apps/crm/lib/agent-engine/contracts/hermes-fingerprint-retrieval.test.ts`
 
-**Interfaces:**
-- Produces:
+**Produces:** deterministic non-secret fingerprint and `PriorHermesEvidence` with `mustRetest: true`.
 
 ```ts
-export interface HermesContextFingerprintInput {
-  domainTags: string[];
-  languageHints: string[];
-  runtimeHints: string[];
-  packageManager: string | null;
-  dependencies: string[];
-  agentDefinitionId: string | null;
-  agentVersion: string | null;
-  capabilities: string[];
-  workflowFamily: string | null;
-  modelPolicyClass: string | null;
-}
-
 export interface PriorHermesEvidence {
   experiment: HermesResearchExperiment;
   score: number;
@@ -543,10 +477,9 @@ export interface PriorHermesEvidence {
 }
 ```
 
-- [ ] **Step 1: RED tests** for deterministic ordering-insensitive SHA-256 fingerprints; no secret values; same tenant only; fresh successful evidence ranks above stale/failed evidence when other dimensions are equal; every retrieval result has `mustRetest: true`.
-- [ ] **Step 2: Prove RED.**
-- [ ] **Step 3: Implement normalized fingerprint** by lowercase/sort/dedupe of non-secret identity fields and SHA-256 of canonical JSON.
-- [ ] **Step 4: Implement bounded retrieval score** with weights fixed in code and tests:
+- [ ] RED tests prove ordering-insensitive SHA-256, same-tenant-only retrieval, freshness ranking and unconditional `mustRetest: true`.
+- [ ] Normalize arrays by trim/lowercase/dedupe/sort; hash canonical JSON only.
+- [ ] V1 retrieval weights:
 
 ```text
 0.40 context similarity
@@ -556,21 +489,19 @@ export interface PriorHermesEvidence {
 0.10 freshness
 ```
 
-Use deterministic token/Jaccard-style overlap for V1; do not add embeddings/vector DB.
-- [ ] **Step 5: Reject cross-tenant records before scoring.**
-- [ ] **Step 6: GREEN.**
-- [ ] **Step 7: Commit** `feat(ai): add Hermes controlled knowledge retrieval`.
+- [ ] Use deterministic token/Jaccard overlap; no embeddings/vector DB.
+- [ ] Filter tenant before scoring.
+- [ ] GREEN and commit.
 
 ---
 
-### Task 6: Capability Identity and Trust Invalidation
+### Task 6: Identity-Bound Capability Trust
 
 **Files:**
-- Create: `apps/crm/lib/agent-engine/hermes/capability-trust.ts`
-- Create: `apps/crm/lib/agent-engine/contracts/hermes-capability-trust.test.ts`
+- Create `apps/crm/lib/agent-engine/hermes/capability-trust.ts`
+- Create `apps/crm/lib/agent-engine/contracts/hermes-capability-trust.test.ts`
 
-**Interfaces:**
-- Produces:
+**Produces:**
 
 ```ts
 export interface CapabilityIdentity {
@@ -586,23 +517,20 @@ export type CapabilityTrustDecision =
   | { kind: 'reinspect'; reason: 'identity_changed' | 'permissions_changed' | 'revision_unknown' | 'not_trusted' };
 ```
 
-- [ ] **Step 1: RED tests** prove changed content, scripts/permissions/network declaration fingerprint or immutable revision invalidates prior trust.
-- [ ] **Step 2: Prove RED.**
-- [ ] **Step 3: Implement deterministic identity comparison**; if immutable revision is missing, cached trust is advisory and cannot bypass inspection.
-- [ ] **Step 4: Persist inspected identities through `hermes_capability_identities` with explicit org filter.**
-- [ ] **Step 5: GREEN + cross-tenant test.**
-- [ ] **Step 6: Commit** `feat(ai): add identity-bound Hermes capability trust`.
+- [ ] RED tests: content/revision/permissions change invalidates reuse; unknown immutable revision cannot bypass inspection; cross-tenant identity cannot be reused.
+- [ ] Implement deterministic comparison and persistence in `hermes_capability_identities`.
+- [ ] GREEN + tenant test.
+- [ ] Commit.
 
 ---
 
-### Task 7: Adaptive Expert Routing Metrics
+### Task 7: Adaptive Expert Routing/Context Metrics
 
 **Files:**
-- Create: `apps/crm/lib/agent-engine/hermes/routing-metrics.ts`
-- Create: `apps/crm/lib/agent-engine/contracts/hermes-routing-metrics.test.ts`
+- Create `apps/crm/lib/agent-engine/hermes/routing-metrics.ts`
+- Create `apps/crm/lib/agent-engine/contracts/hermes-routing-metrics.test.ts`
 
-**Interfaces:**
-- Produces the closed classifications:
+**Produces:** closed classification types:
 
 ```ts
 export type HermesDomain = 'software' | 'security' | 'database' | 'infrastructure' | 'AI' | 'research' | 'product' | 'data' | 'business' | 'general';
@@ -611,36 +539,22 @@ export type HermesRisk = 'LOW' | 'MEDIUM' | 'HIGH';
 export type HermesExecutionShape = 'MAIN' | 'SKILL' | 'SUBAGENT' | 'TEAM' | 'WORKFLOW';
 ```
 
-Metrics record:
+Metrics include route correctness, worker count, unnecessary workers, missing specialist, context words, token overhead when known, reviewer findings and false PASS count.
 
-```ts
-routeCorrect: boolean
-workerCount: number
-unnecessaryWorkerCount: number
-missingSpecialist: boolean
-contextWordsLoaded: number
-estimatedTokenOverhead: number | null
-reviewerFindingCount: number
-falsePassCount: number
-```
-
-- [ ] **Step 1: RED tests** for QUICK trivial work remaining MAIN, TEAM requiring two independent workstreams/collaboration, HIGH risk not implying TEAM, and `falsePassCount` never being hidden by an aggregate quality score.
-- [ ] **Step 2: Implement pure metric/classification helpers only.** Do not create a new workflow engine or permanent fleet.
-- [ ] **Step 3: GREEN.**
-- [ ] **Step 4: Commit** `feat(ai): add Hermes routing efficiency metrics`.
+- [ ] RED tests: trivial QUICK remains MAIN; TEAM requires at least two independent workstreams/collaboration; HIGH risk does not automatically mean TEAM; false PASS cannot be hidden by aggregate score.
+- [ ] Implement pure deterministic metric helpers only; no new orchestration engine.
+- [ ] GREEN and commit.
 
 ---
 
 ### Task 8: Generic Outcome Ledger
 
 **Files:**
-- Create: `apps/crm/lib/agent-engine/hermes/outcome-ledger.ts`
-- Modify: `apps/crm/lib/agent-engine/flywheel/outcome-collector.ts`
-- Create: `apps/crm/lib/agent-engine/contracts/hermes-outcome-ledger.test.ts`
+- Create `apps/crm/lib/agent-engine/hermes/outcome-ledger.ts`
+- Modify `apps/crm/lib/agent-engine/flywheel/outcome-collector.ts`
+- Create `apps/crm/lib/agent-engine/contracts/hermes-outcome-ledger.test.ts`
 
-**Interfaces:**
-- Existing `flywheel_followup_outcomes` remains compatible for current follow-up dashboards.
-- New generic output:
+**Produces:**
 
 ```ts
 export interface HermesOutcomeRecord {
@@ -662,27 +576,25 @@ export interface HermesOutcomeRecord {
 }
 ```
 
-- [ ] **Step 1: RED tests** prove non-negative cost/latency, technical quality bounded 0..1 when present, org filtering, no KPI-only auto-promotion signal, and conversion outcome can be mirrored from the old follow-up collector without deleting old records.
-- [ ] **Step 2: Implement ledger repository against `hermes_outcomes`.**
-- [ ] **Step 3: Add a compatibility adapter in `outcome-collector.ts`** that can optionally write a generic Hermes outcome after the legacy `flywheel_followup_outcomes` write succeeds. Failure of the new optional mirror must be visible but must not corrupt the legacy record.
-- [ ] **Step 4: GREEN.**
-- [ ] **Step 5: Commit** `feat(ai): add generic Hermes outcome ledger`.
+- [ ] RED tests: quality 0..1, non-negative cost/latency, explicit tenant filter, KPI gain cannot itself produce promotion approval.
+- [ ] Implement Supabase-backed generic ledger.
+- [ ] Keep `flywheel_followup_outcomes` unchanged for compatibility; add an optional adapter that mirrors successful legacy outcomes into `hermes_outcomes` after the legacy write succeeds.
+- [ ] New mirror failure must be visible but cannot corrupt the already-written legacy record.
+- [ ] GREEN and commit.
 
 ---
 
-### Task 9: Expand Governed Candidate Types and Immutable Candidate Manifest
+### Task 9: Expanded Candidate Registry
 
 **Files:**
-- Modify: `apps/crm/lib/agent-engine/flywheel/contracts.ts`
-- Modify: `apps/crm/lib/agent-engine/flywheel/candidates.ts`
-- Create: `apps/crm/lib/agent-engine/hermes/candidate-manifest.ts`
-- Modify: `apps/crm/lib/agent-engine/contracts/flywheel-contracts.test.ts`
-- Modify: `apps/crm/lib/agent-engine/contracts/flywheel-candidates.test.ts`
-- Create: `apps/crm/lib/agent-engine/contracts/hermes-candidate-manifest.test.ts`
+- Modify `apps/crm/lib/agent-engine/flywheel/contracts.ts`
+- Modify `apps/crm/lib/agent-engine/flywheel/candidates.ts`
+- Create `apps/crm/lib/agent-engine/hermes/candidate-manifest.ts`
+- Modify `apps/crm/lib/agent-engine/contracts/flywheel-contracts.test.ts`
+- Modify `apps/crm/lib/agent-engine/contracts/flywheel-candidates.test.ts`
+- Create `apps/crm/lib/agent-engine/contracts/hermes-candidate-manifest.test.ts`
 
-**Interfaces:**
-- Preserve old proposal kinds and add the nine kinds from migration `0163`.
-- Produce immutable candidate metadata:
+**Produces:** old proposal kinds plus nine new kinds and one immutable generic manifest.
 
 ```ts
 export interface HermesCandidateManifest {
@@ -705,24 +617,22 @@ export interface HermesCandidateManifest {
 }
 ```
 
-- [ ] **Step 1: RED tests** prove old records still parse; forbidden authority fields remain rejected; candidate manifest requires rollback target and promotion policy; changing the bounded patch/reference yields a new fingerprint.
-- [ ] **Step 2: Extend `LEARNING_PROPOSAL_TYPES` additively.**
-- [ ] **Step 3: Keep specialized builders for skill/routing/threshold and add one generic `buildHermesCandidateManifest()` rather than nine copy-pasted builders.**
-- [ ] **Step 4: GREEN legacy + new tests.**
-- [ ] **Step 5: Commit** `feat(ai): expand governed Hermes improvement candidates`.
+- [ ] RED tests: legacy parse remains valid, authority/security fields are forbidden, rollback/promotion policy required, manifest fingerprint changes when candidate/base bounded refs change.
+- [ ] Extend `LEARNING_PROPOSAL_TYPES` with the nine `0163` values.
+- [ ] Keep existing specialized builders; add one generic `buildHermesCandidateManifest()` instead of nine duplicated builders.
+- [ ] GREEN legacy + Hermes tests and commit.
 
 ---
 
-### Task 10: Explicit Evaluation Evidence States
+### Task 10: Explicit Evidence States and Candidate Validation
 
 **Files:**
-- Modify: `apps/crm/lib/agent-engine/flywheel/contracts.ts`
-- Modify: `apps/crm/lib/agent-engine/flywheel/validator.ts`
-- Modify: `apps/crm/lib/agent-engine/contracts/flywheel-validator.test.ts`
-- Create: `apps/crm/lib/agent-engine/contracts/hermes-evidence-states.test.ts`
+- Modify `apps/crm/lib/agent-engine/flywheel/contracts.ts`
+- Modify `apps/crm/lib/agent-engine/flywheel/validator.ts`
+- Modify `apps/crm/lib/agent-engine/contracts/flywheel-validator.test.ts`
+- Create `apps/crm/lib/agent-engine/contracts/hermes-evidence-states.test.ts`
 
-**Interfaces:**
-- Produces:
+**Produces:**
 
 ```ts
 export type HermesEvidenceState = 'PASS' | 'FAIL' | 'NOT_EXECUTED' | 'NOT_PROVEN' | 'BLOCKED';
@@ -735,23 +645,20 @@ export interface HermesEvalEvidence {
 }
 ```
 
-- [ ] **Step 1: RED tests** prove no evidence ref cannot be PASS; NOT_EXECUTED and BLOCKED remain distinct; previous-project PASS supplied through retrieved research is `NOT_PROVEN` for the current candidate until re-executed.
-- [ ] **Step 2: Introduce the explicit evidence state model without breaking the existing `CandidateValidationReport` callers.** Use an adapter/derived boolean during migration instead of changing every caller at once.
-- [ ] **Step 3: Extend validation ordering:** regression → golden → safety → shadow; business and cost/latency run only when requested by the candidate manifest and can veto promotion but cannot bypass safety.
-- [ ] **Step 4: GREEN.**
-- [ ] **Step 5: Commit** `feat(ai): make Hermes eval evidence states explicit`.
+- [ ] RED tests: PASS requires current evidence ref; transferred old PASS is NOT_PROVEN for the new candidate; BLOCKED/NOT_EXECUTED remain distinct; business/KPI evidence cannot bypass safety.
+- [ ] Add evidence states through a backward-compatible adapter around current `CandidateValidationReport` rather than breaking all Phase 6 callers at once.
+- [ ] Validation order: regression → golden → safety → shadow; business/cost-latency suites run only when required by the candidate manifest.
+- [ ] GREEN and commit.
 
 ---
 
-### Task 11: Meta-Research Aggregation
+### Task 11: Meta-Research
 
 **Files:**
-- Create: `apps/crm/lib/agent-engine/hermes/meta-research.ts`
-- Create: `apps/crm/lib/agent-engine/contracts/hermes-meta-research.test.ts`
+- Create `apps/crm/lib/agent-engine/hermes/meta-research.ts`
+- Create `apps/crm/lib/agent-engine/contracts/hermes-meta-research.test.ts`
 
-**Interfaces:**
-- Consumes: `HermesResearchExperiment[]`, `HermesOutcomeRecord[]`, routing metric records.
-- Produces recommendation-only report:
+**Produces recommendation-only aggregates:**
 
 ```ts
 export interface HermesPerformanceStats {
@@ -763,33 +670,25 @@ export interface HermesPerformanceStats {
   meanCostDeltaCents: number;
   meanLatencyDeltaMs: number;
 }
-
-export interface HermesMetaResearchReport {
-  byStrategy: Record<string, HermesPerformanceStats>;
-  byProvider: Record<string, HermesPerformanceStats>;
-  byExecutionShape: Record<string, HermesPerformanceStats>;
-  repeatedFailures: Array<{ signature: string; count: number }>;
-  recommendations: string[];
-}
 ```
 
-- [ ] **Step 1: RED tests** with deterministic fixtures comparing two strategies/providers and repeated failures.
-- [ ] **Step 2: Implement pure aggregation**; no direct config mutation, no model call required for V1.
-- [ ] **Step 3: Prove recommendations contain evidence-derived comparisons, not activation instructions.**
-- [ ] **Step 4: GREEN.**
-- [ ] **Step 5: Commit** `feat(ai): add Hermes meta research`.
+Report groups by strategy/provider/execution shape and lists repeated failure signatures.
+
+- [ ] RED fixtures compare at least two strategies/providers and repeated failures.
+- [ ] Implement pure deterministic aggregation; no model call and no config mutation.
+- [ ] Recommendations may say “route X outperformed route Y by measured metrics”; they may never apply route X.
+- [ ] GREEN and commit.
 
 ---
 
-### Task 12: Runtime Event Adapter for Native Runtime and Future Mastra
+### Task 12: Provider-Neutral Runtime Observation Boundary
 
 **Files:**
-- Create: `apps/crm/lib/agent-engine/hermes/runtime-events.ts`
-- Create: `apps/crm/lib/agent-engine/contracts/hermes-runtime-events.test.ts`
-- Modify only the smallest current Agent OS completion/error hook after locating the canonical run-completion boundary; do not scatter Hermes calls across providers.
+- Create `apps/crm/lib/agent-engine/hermes/runtime-events.ts`
+- Create `apps/crm/lib/agent-engine/contracts/hermes-runtime-events.test.ts`
+- Modify exactly one canonical native run-completion/error boundary after locating it in current code.
 
-**Interfaces:**
-- Produces provider-neutral event:
+**Produces:**
 
 ```ts
 export interface HermesRuntimeObservation {
@@ -811,336 +710,280 @@ export interface HermesRuntimeObservation {
 }
 ```
 
-- [ ] **Step 1: Search and document the single canonical native run completion/error boundary before editing.**
-- [ ] **Step 2: RED tests** prove native and future Mastra-shaped events normalize to the same contract and that no provider payload becomes authoritative tenant identity.
-- [ ] **Step 3: Implement pure adapter + one integration call at the canonical boundary.** The adapter may emit a learning signal/outcome input; it does not run the whole learning loop synchronously inside a customer request.
-- [ ] **Step 4: GREEN + existing Agent OS runtime tests.**
-- [ ] **Step 5: Commit** `feat(ai): feed runtime evidence into Hermes`.
+- [ ] Search current Agent OS for the single completion/error boundary and record the chosen file in the execution log before editing it.
+- [ ] RED tests normalize native and Mastra-shaped fixtures to the same contract and reject payload-derived tenant authority.
+- [ ] Implement pure adapter and one integration call at the canonical boundary.
+- [ ] Never run the whole Hermes learning cycle synchronously inside a customer request; emit/store bounded observation input instead.
+- [ ] GREEN plus affected existing runtime tests; commit.
 
 ---
 
-### Task 13: Unified Hermes Learning Cycle
+### Task 13: Unified Hermes Cycle
 
 **Files:**
-- Modify: `apps/crm/lib/agent-engine/hermes/service.ts`
-- Modify: `apps/crm/lib/agent-engine/hermes/index.ts`
-- Create: `apps/crm/lib/agent-engine/contracts/hermes-end-to-end.test.ts`
+- Modify `apps/crm/lib/agent-engine/hermes/service.ts`
+- Modify `apps/crm/lib/agent-engine/hermes/index.ts`
+- Create `apps/crm/lib/agent-engine/contracts/hermes-end-to-end.test.ts`
 
-**Interfaces:**
-- `HermesLearningService.runCycle()` performs bounded orchestration only:
+**Produces:** `HermesLearningService.runCycle()`.
+
+Canonical flow:
 
 ```text
-sanitize/normalize signals
-→ cluster via existing Flywheel
-→ retrieve prior research evidence
-→ mark transferred evidence mustRetest
-→ synthesize/enrich candidate
-→ validate requested suites
-→ enqueue existing approval/promotion path
-→ persist experiment/outcome evidence
-→ update meta-research read model
+normalize/sanitize signals
+→ existing clustering
+→ same-tenant research retrieval
+→ transferred evidence marked mustRetest
+→ bounded candidate synthesis/enrichment
+→ requested eval suites
+→ existing approval/promotion queue
+→ experiment/outcome persistence
+→ meta-research read model
 ```
 
-- [ ] **Step 1: RED end-to-end test** using in-memory/fake ports: a tool failure creates a cluster, retrieves similar prior evidence, refuses direct reuse, creates a candidate, records NOT_PROVEN until fresh eval, then after fresh PASS becomes ready for existing human/system approval path.
-- [ ] **Step 2: Implement `runCycle` through injected ports.** Do not directly import admin Supabase client in orchestration logic; inject stores/ports.
-- [ ] **Step 3: Add budget accounting by extending the existing `FlywheelLoopBudget`, not a second budget model.** Extend with optional `maxRetrievals` and `maxEvalCases`; defaults preserve current behavior.
-- [ ] **Step 4: Add no-progress termination when retrieval/candidate synthesis repeatedly yields no admissible candidate.**
-- [ ] **Step 5: GREEN including all `flywheel-*` and `hermes-*` tests.**
-- [ ] **Step 6: Commit** `feat(ai): unify Hermes learning cycle`.
-
----
-
-### Task 14: Preserve Promotion Authority and Rollback Semantics
-
-**Files:**
-- Modify only if required: `apps/crm/lib/agent-engine/flywheel/promotion-queue.ts`
-- Modify only if required: `apps/crm/lib/agent-engine/flywheel/rollout.ts`
-- Modify only if required: `apps/crm/lib/agent-engine/flywheel/monitoring.ts`
-- Modify: `apps/crm/lib/agent-engine/autonomy/promotion.ts` only if an integration assertion is required; never weaken its model denial.
-- Create: `apps/crm/lib/agent-engine/contracts/hermes-promotion-safety.test.ts`
-
-**Interfaces:**
-- Existing authority remains: models cannot promote; approved candidate begins at SHADOW/DRAFT path; critical safety regression triggers safe rollback.
-
-- [ ] **Step 1: RED adversarial tests** attempt self-promotion, skipped eval, stale evidence, direct ACTIVE jump, cross-candidate rollback target and safety regression continuation.
-- [ ] **Step 2: Apply only minimal hardening found necessary.** If current code already passes a case, keep the test and avoid gratuitous refactor.
-- [ ] **Step 3: Run**
+- [ ] RED end-to-end fake-port test: tool failure → cluster → retrieve prior evidence → no direct reuse → candidate → NOT_PROVEN → fresh eval PASS → ready for existing approval path.
+- [ ] Implement orchestration entirely through injected stores/ports; no admin client inside orchestration logic.
+- [ ] Extend `FlywheelLoopBudget` additively with `maxRetrievals` and `maxEvalCases`; current callers get safe defaults.
+- [ ] Preserve token/cost/runtime/no-progress enforcement from existing orchestrator.
+- [ ] GREEN:
 
 ```bash
-pnpm exec vitest run lib/agent-engine/contracts/flywheel-adversarial.test.ts lib/agent-engine/contracts/flywheel-promotion-queue.test.ts lib/agent-engine/contracts/flywheel-rollout.test.ts lib/agent-engine/contracts/flywheel-monitoring*.test.ts lib/agent-engine/contracts/hermes-promotion-safety.test.ts
+pnpm --dir apps/crm exec vitest run lib/agent-engine/contracts/flywheel-*.test.ts lib/agent-engine/contracts/hermes-*.test.ts
 ```
 
-- [ ] **Step 4: Commit** only if code/tests changed: `test(ai): harden Hermes promotion and rollback boundaries`.
+- [ ] Commit.
 
 ---
 
-### Task 15: Cross-Tenant Integration Proof
+### Task 14: Promotion/Autonomy Adversarial Gate
 
 **Files:**
-- Create/extend: `apps/crm/lib/agent-engine/contracts/hermes-cross-tenant.test.ts`
-- Use DB invariant test from Task 3.
+- Create `apps/crm/lib/agent-engine/contracts/hermes-promotion-safety.test.ts`
+- Modify `apps/crm/lib/agent-engine/flywheel/promotion-queue.ts`, `rollout.ts`, `monitoring.ts` or `apps/crm/lib/agent-engine/autonomy/promotion.ts` only if a new adversarial test reveals a genuine gap.
 
-**Interfaces:**
-- Proves isolation for research, outcomes, capability trust, candidate retrieval and meta-read paths.
+- [ ] RED/adversarial cases attempt: model self-promotion, skipped eval, stale evidence, direct ACTIVE jump, foreign rollback target, safety-regressed continuation and KPI-only promotion.
+- [ ] Preserve `model_cannot_promote`; never weaken it.
+- [ ] Critical safety regression must still choose immediate safe rollback.
+- [ ] If existing code already passes a case, keep the test and make no gratuitous production change.
+- [ ] Run:
 
-- [ ] **Step 1: Construct org A and org B fixtures with deliberately colliding subject IDs/fingerprints.**
-- [ ] **Step 2: Prove org B cannot retrieve org A prior evidence even when similarity score would otherwise be maximal.**
-- [ ] **Step 3: Prove admin/service-role repository methods issue explicit organization filters.**
-- [ ] **Step 4: Run targeted unit + `pnpm test:db`.**
-- [ ] **Step 5: Commit** `test(ai): prove Hermes tenant isolation`.
+```bash
+pnpm --dir apps/crm exec vitest run lib/agent-engine/contracts/flywheel-adversarial.test.ts lib/agent-engine/contracts/flywheel-promotion-queue.test.ts lib/agent-engine/contracts/flywheel-rollout.test.ts lib/agent-engine/contracts/flywheel-monitoring.test.ts lib/agent-engine/contracts/flywheel-monitoring-lifecycle.test.ts lib/agent-engine/contracts/hermes-promotion-safety.test.ts
+```
+
+- [ ] Commit tests/hardening.
 
 ---
 
-### Task 16: Read-Only Hermes API Surface
+### Task 15: Cross-Tenant Proof
 
 **Files:**
-- Create: `apps/crm/app/api/v1/ai/hermes/summary/route.ts`
-- Create: `apps/crm/app/api/v1/ai/hermes/candidates/route.ts`
-- Create: `apps/crm/app/api/v1/ai/hermes/experiments/route.ts`
-- Create: `apps/crm/app/api/v1/ai/hermes/outcomes/route.ts`
-- Create: `apps/crm/app/api/v1/ai/hermes/meta/route.ts`
-- Create targeted route tests following the existing `/api/v1/ai/evolution` test pattern.
+- Create `apps/crm/lib/agent-engine/contracts/hermes-cross-tenant.test.ts`
+- Use/extend `apps/crm/tests/invariants/rls-isolation.test.ts` from Task 3.
 
-**Interfaces:**
-- Read-only V1 API. No “activate candidate” endpoint is introduced here; existing approval/promotion surfaces remain canonical.
-
-- [ ] **Step 1: Inspect `/api/v1/ai/evolution/route.ts`, auth wrappers and canonical `ok()/fail()` API helpers before writing.**
-- [ ] **Step 2: RED route tests** prove server-derived tenant, RBAC, no body-supplied tenancy, pagination/limits where lists can grow, and snake_case JSON.
-- [ ] **Step 3: Implement read-only routes through Hermes repositories/services.** No direct unbounded admin-client query in route handlers.
-- [ ] **Step 4: Run targeted route tests + `pnpm lint:tenant-filter`.**
-- [ ] **Step 5: Commit** `feat(api): expose read-only Hermes learning data`.
+- [ ] Build org A/org B fixtures with intentionally identical subject IDs and context fingerprints.
+- [ ] Prove org B cannot retrieve org A research/outcomes/capability trust even when similarity is maximal.
+- [ ] Prove admin/service-role repositories include explicit `organization_id` filtering.
+- [ ] Run unit tenant tests and `pnpm --dir apps/crm test:db`.
+- [ ] Commit.
 
 ---
 
-### Task 17: Night/Periodic Learning Trigger Using Existing Worker/Event Patterns
+### Task 16: Read-Only Hermes API
 
 **Files:**
-- Inspect current Flywheel cron/worker path first, especially `apps/crm/app/api/v1/cron/flywheel-judge-loop/route.ts` and its service/worker dependencies.
-- Modify the existing scheduled learning boundary rather than adding a competing scheduler when possible.
-- Add a targeted Hermes scheduling/budget test in `apps/crm/lib/agent-engine/contracts/`.
+- Create `apps/crm/app/api/v1/ai/hermes/summary/route.ts`
+- Create `apps/crm/app/api/v1/ai/hermes/candidates/route.ts`
+- Create `apps/crm/app/api/v1/ai/hermes/experiments/route.ts`
+- Create `apps/crm/app/api/v1/ai/hermes/outcomes/route.ts`
+- Create `apps/crm/app/api/v1/ai/hermes/meta/route.ts`
+- Create `apps/crm/tests/unit/hermes-api.test.ts`
 
-**Interfaces:**
-- The periodic trigger invokes `HermesLearningService.runCycle()` asynchronously/boundedly; schedule remains deployment policy, not a hard-coded “22:30” rule.
+- [ ] Inspect `/api/v1/ai/evolution/route.ts`, auth wrappers and `ok()/fail()` helpers first.
+- [ ] RED tests prove server-derived tenant, RBAC, snake_case API JSON, bounded list limits and no body/query tenancy authority.
+- [ ] Implement read-only routes through Hermes repositories/services. Do not add an activation endpoint.
+- [ ] Run:
 
-- [ ] **Step 1: RED test** proves max signals/clusters/candidates/tokens/cost/runtime/no-progress plus new retrieval/eval limits are enforced.
-- [ ] **Step 2: Wire Hermes into the existing Flywheel scheduled path behind an explicit feature/capability gate if the current path has one.** Preserve the current max-duration ceiling and do not raise Vercel `maxDuration` above the repository's documented plan limit.
-- [ ] **Step 3: Prove idempotent replay does not duplicate open candidates for the same fingerprint/scope.**
-- [ ] **Step 4: Run targeted cron/service tests.**
-- [ ] **Step 5: Commit** `feat(ai): run Hermes through the governed learning schedule`.
+```bash
+pnpm --dir apps/crm exec vitest run tests/unit/hermes-api.test.ts
+pnpm --dir apps/crm lint:tenant-filter
+```
+
+- [ ] Commit.
 
 ---
 
-### Task 18: Command Center Hermes Learning Panel
+### Task 17: Scheduled Learning Through the Existing Flywheel Boundary
 
 **Files:**
-- Create: `apps/crm/components/ai/HermesLearningPanel.tsx`
-- Integrate into the existing AI evolution/command surface after inspecting current component ownership; do not invent a parallel navigation tree if an existing evolution page already owns this information.
-- Add component test and, only if existing E2E structure supports it, one focused Playwright path.
+- Inspect and then modify the existing Flywheel scheduled path centered on `apps/crm/app/api/v1/cron/flywheel-judge-loop/route.ts` rather than adding a second scheduler.
+- Create `apps/crm/lib/agent-engine/contracts/hermes-scheduled-cycle.test.ts`.
 
-**Interfaces:**
-- Reads the five read-only Hermes API endpoints.
-- Shows metrics only; activation continues through existing review/approval controls.
-
-- [ ] **Step 1: RED component test** for loading/error/empty/populated states.
-- [ ] **Step 2: Implement compact sections:** signals/candidates summary, experiments, outcomes/KPI, repeated failure patterns, rollback/policy warning counts.
-- [ ] **Step 3: Ensure no raw evidence payload/transcript is rendered by default; show references/IDs/sanitized summaries.**
-- [ ] **Step 4: Run component tests + typecheck.**
-- [ ] **Step 5: If visible route changed, run one real browser journey and record screenshot/trace according to current repo convention.**
-- [ ] **Step 6: Commit** `feat(ui): add Hermes learning observability panel`.
+- [ ] RED tests prove all budgets: signals, clusters, candidates, tokens, cost, runtime, no-progress, retrievals and eval cases.
+- [ ] Wire `HermesLearningService.runCycle()` into the existing scheduled learning path behind the current feature/capability boundary.
+- [ ] Preserve the documented `maxDuration <= 300` constraint; do not raise it.
+- [ ] Replay of the same scope/fingerprint must enrich/reuse an open candidate rather than create uncontrolled duplicates.
+- [ ] Run targeted cron/Flywheel/Hermes tests; commit.
 
 ---
 
-### Task 19: Compatibility, Documentation and Legacy Naming
+### Task 18: Command Center Learning Observability
 
 **Files:**
-- Modify: `docs/architecture/agent-os/README.md`
-- Modify: `docs/index.md` if needed to index the Hermes design.
-- Create: `docs/architecture/agent-os/hermes-learning-os.md`
-- Modify current-state/handoff docs only if their precedence rules require a new snapshot; do not duplicate doctrine.
-- Do **not** rename `flywheel/` wholesale in this implementation.
+- Create `apps/crm/components/ai/HermesLearningPanel.tsx`
+- Create `apps/crm/tests/unit/hermes-learning-panel.test.tsx`
+- Integrate the panel into the existing AI evolution/Command surface only after inspecting that surface; use its existing navigation/ownership rather than creating a parallel app section.
 
-**Interfaces:**
-- Documents `Flywheel = canonical low-level learning mechanism inside Hermes`, not two systems.
+- [ ] RED component tests for loading, error, empty and populated states.
+- [ ] Render summary metrics, candidate queue, experiments, generic outcomes/KPI, repeated failures and rollback/safety counts.
+- [ ] Never render raw transcript/evidence payload by default; render refs and sanitized summaries.
+- [ ] Run component tests + `pnpm --dir apps/crm typecheck`.
+- [ ] If a visible route changed, run one focused Playwright/browser journey according to the current repository convention; Preview is optional and only at the final UI task, never per subtask.
+- [ ] Commit.
 
-- [ ] **Step 1: Document ownership sentence exactly:**
+---
+
+### Task 19: Architecture Documentation
+
+**Files:**
+- Create `docs/architecture/agent-os/hermes-learning-os.md`
+- Modify `docs/architecture/agent-os/README.md`
+- Modify `docs/index.md` only to add the canonical Hermes architecture entry if it is not already indexed.
+
+- [ ] Document exactly:
 
 ```text
 Maestri orchestrates; Lumenva governs; the execution runtime executes; Hermes learns and proposes.
 ```
 
-- [ ] **Step 2: Document source-of-truth and promotion rule:** Postgres/Lumenva authoritative; Hermes cannot activate its own candidate.
-- [ ] **Step 3: Mark external Helixforge/Adaptive Expert/EINVIRKI/Alfred implementations as source patterns/reference lineage, not runtime dependencies required by Lumenva.
-- [ ] **Step 4: Run `pnpm harness:check` because agent/harness architecture documentation changed.**
-- [ ] **Step 5: Commit** `docs(ai): document Hermes Learning OS architecture`.
+- [ ] Document Postgres authority, `mustRetest`, candidate gates, explicit evidence states and rollback.
+- [ ] Record Helixforge/Adaptive Expert/EINVIRKI/Alfred as design lineage/reference patterns, not production runtime dependencies.
+- [ ] Do not rename the existing `flywheel/` directory in this implementation.
+- [ ] Run:
+
+```bash
+pnpm --dir apps/crm harness:check
+```
+
+- [ ] Commit documentation.
 
 ---
 
-### Task 20: Full Verification and Adversarial Completion Gate
+### Task 20: Full Verification — Branch Only
 
-**Files:**
-- No new production file unless a failing gate exposes a Hermes-scoped bug.
-- Update plan checkboxes/execution evidence only if the repository workflow preserves plan execution state.
+**Files:** no new production file unless a failing gate identifies a Hermes-scoped defect.
 
-**Interfaces:**
-- Produces final branch evidence; does not merge/deploy/apply remote migrations.
-
-- [ ] **Step 1: Verify branch again**
+- [ ] Verify branch:
 
 ```bash
 test "$(git branch --show-current)" = "design/hermes-unified-learning-os-2026-09-13"
 git status --short --branch
 ```
 
-- [ ] **Step 2: Run all Hermes/Flywheel unit tests**
+- [ ] Flywheel + Hermes tests:
 
 ```bash
-cd apps/crm
-pnpm exec vitest run lib/agent-engine/contracts/flywheel-*.test.ts lib/agent-engine/contracts/hermes-*.test.ts
+pnpm --dir apps/crm exec vitest run lib/agent-engine/contracts/flywheel-*.test.ts lib/agent-engine/contracts/hermes-*.test.ts tests/unit/hermes-*.test.ts tests/unit/hermes-*.test.tsx
 ```
 
-- [ ] **Step 3: Run canonical static/unit gates**
+- [ ] Canonical gates:
 
 ```bash
-pnpm typecheck
-pnpm lint
-pnpm lint:channels
-pnpm lint:tenant-filter
-pnpm test:unit
+pnpm --dir apps/crm typecheck
+pnpm --dir apps/crm lint
+pnpm --dir apps/crm lint:channels
+pnpm --dir apps/crm lint:tenant-filter
+pnpm --dir apps/crm test:unit
+pnpm --dir apps/crm test:db
+pnpm --dir apps/crm build
+pnpm --dir apps/crm harness:check
+pnpm --dir apps/crm gov:verify
 ```
 
-- [ ] **Step 4: Run schema/RLS gate**
-
-```bash
-pnpm test:db
-```
-
-This must exercise fresh baseline install plus relevant update/idempotence invariants; migration is not applied to any remote database.
-
-- [ ] **Step 5: Build**
-
-```bash
-pnpm build
-```
-
-- [ ] **Step 6: Harness/governance verification**
-
-```bash
-pnpm harness:check
-pnpm gov:verify
-```
-
-`gov:verify` is supplementary and never substitutes for `test:db`.
-
-- [ ] **Step 7: Adversarial invariants review**
-
-Manually verify against current diff that:
+- [ ] Adversarial manual diff review must confirm:
 
 ```text
-model cannot promote itself
+model cannot self-promote
 retrieved evidence always requires retest
 no cross-tenant retrieval
-no raw secret/PII artifact path
+no raw secret/PII learning artifact path
 no unrestricted service_role path
-no candidate can bypass policy/approval
+no candidate bypasses policy/approval
 legacy Phase 6 records still parse
 critical safety regression still rolls back
 NOT_PROVEN/BLOCKED are not PASS
 KPI gain cannot bypass safety
 ```
 
-- [ ] **Step 8: Inspect exact branch diff against main**
+- [ ] Inspect branch diff only:
 
 ```bash
 git diff --stat origin/main...HEAD
-git diff origin/main...HEAD -- apps/crm/lib/agent-engine supabase docs/architecture docs/superpowers
+git diff origin/main...HEAD -- apps/crm/lib/agent-engine apps/crm/app/api/v1/ai/hermes apps/crm/components/ai supabase docs/architecture docs/superpowers
 ```
 
-No merge/rebase/update to `main`.
-
-- [ ] **Step 9: Final branch-only commit if evidence/docs changed**
-
-```bash
-git status --short
-git add <explicit-hermes-paths-only>
-git commit -m "test(ai): verify Hermes unified learning OS"
-```
-
-- [ ] **Step 10: Completion report**
-
-Report:
+- [ ] If verification required a Hermes-scoped correction, commit only the exact corrected files plus their tests with message:
 
 ```text
-branch
-HEAD SHA
-commits created
-files changed
-tests executed and exact results
-DB/RLS proof
-build result
-what was not executed (production deploy, remote migration, main merge)
-remaining risks
+test(ai): verify Hermes unified learning OS
 ```
 
-Do not call the work production-ready unless the evidence from this task supports that exact claim.
+- [ ] Final report must include branch, HEAD SHA, commits, changed files, exact tests/results, DB/RLS proof, build result, genuine blockers and explicit confirmation that production deploy, remote migration and `main` mutation were not performed.
 
 ---
 
-## Execution Order and Checkpoints
-
-Execute strictly inline in this order:
+## Execution Order
 
 ```text
 0 baseline
 → 1 facade
-→ 2 safe signals
-→ 3 schema
-→ 4 research memory
-→ 5 fingerprints/retrieval
+→ 2 sanitized signals
+→ 3 schema/RLS
+→ 4 scientific memory
+→ 5 controlled retrieval
 → 6 capability trust
 → 7 routing metrics
 → 8 outcome ledger
-→ 9 candidate manifests
+→ 9 candidate registry
 → 10 evidence states
 → 11 meta-research
 → 12 runtime observations
 → 13 unified cycle
-→ 14 promotion hardening
+→ 14 promotion safety
 → 15 tenant proof
 → 16 read APIs
-→ 17 scheduled loop
+→ 17 governed schedule
 → 18 Command Center
 → 19 docs
 → 20 full verification
 ```
 
-The implementer may make a small corrective commit between tasks when a prior change breaks a later gate, but must not skip backwards verification or expand scope into unrelated cleanup.
-
 ## Commit Policy
 
-One coherent commit per task where possible. Every commit remains on `design/hermes-unified-learning-os-2026-09-13`. Use explicit `git add <paths>`; never `git add -A` when unrelated work exists. Never force-push. Never merge `main` into this branch automatically once execution starts; if upstream drift becomes material, record it and resolve deliberately without modifying `main`.
+Use one coherent commit per task whenever code changed. Use only the exact file paths listed in that task's **Files** section when staging. If a task discovers that one additional file is strictly required, document why in the execution log before staging it. Never use `git add -A`, never force-push, and never merge/rebase `main` as an automatic cleanup step.
 
 ## Definition of Done
 
-Hermes Unified Learning OS is complete on this branch only when current evidence proves:
+Hermes is complete on this branch only when current evidence proves all of the following:
 
-1. Existing Flywheel behavior is backward-compatible.
-2. Runtime outcomes can become sanitized tenant-scoped learning signals.
-3. Research experiments persist with controlled same-tenant retrieval.
-4. Transferred knowledge is always `mustRetest` and cannot directly promote.
-5. Capability identity changes invalidate stale trust.
-6. Routing/context/reviewer efficiency can be measured without spawning permanent specialist fleets.
-7. Technical and business outcomes can be linked without KPI gains bypassing safety.
-8. Expanded candidate types are immutable/versioned and retain rollback target/evidence requirements.
+1. Existing Flywheel behavior remains backward compatible.
+2. Runtime outcomes become sanitized tenant-scoped learning signals.
+3. Scientific research persists and retrieves only within the same tenant.
+4. Transferred evidence is always `mustRetest` and cannot directly promote.
+5. Capability identity/permission/revision changes invalidate stale trust.
+6. Routing/context/reviewer efficiency is measurable without permanent specialist fleets.
+7. Technical + business outcomes are linked while KPI gains remain subordinate to safety/policy.
+8. Expanded candidates are immutable/versioned and retain rollback/eval/promotion requirements.
 9. Eval evidence distinguishes PASS/FAIL/NOT_EXECUTED/NOT_PROVEN/BLOCKED.
 10. Critical safety regressions still trigger safe rollback.
-11. A model cannot self-promote or broaden authority.
-12. Two-tenant DB/unit tests prove no research/outcome/trust retrieval leakage.
-13. Meta-research compares strategies/routes/providers but only recommends.
-14. Read-only API/UI surfaces expose learning state without leaking raw evidence/secrets.
+11. Models/Hermes cannot self-promote or broaden authority.
+12. Unit + real disposable DB tests prove no cross-tenant learning leakage.
+13. Meta-research compares strategies/routes/providers and only recommends.
+14. Read-only API/UI expose learning state without leaking raw evidence/secrets.
 15. Periodic learning obeys explicit budgets and no-progress limits.
-16. `typecheck`, lint gates, relevant unit tests, `test:db`, build and harness verification pass or any genuine external blocker is reported precisely.
-17. No production deploy, remote migration application or `main` mutation occurred.
+16. Typecheck, lint gates, unit tests, DB/RLS tests, build and harness verification pass, or any genuine environmental blocker is reported precisely rather than converted into PASS.
+17. No production deployment, remote migration application or mutation of `main` occurred.
 
 ## Selected Execution Mode
 
-**INLINE EXECUTION is already selected by the owner.** Do not ask again between tasks. Use `superpowers:executing-plans` and continue task-by-task on the authorized branch, stopping only for a genuine blocker that cannot be resolved within the branch, an irreversible/external action outside the authorization boundary, or a contradiction with canonical repository doctrine.
+**INLINE EXECUTION is already selected and authorized.** Do not ask again between tasks. When implementation begins, use `superpowers:executing-plans` and proceed task-by-task on `design/hermes-unified-learning-os-2026-09-13`, stopping only for a genuine blocker that cannot be resolved within the branch, an irreversible/external action outside the authorization boundary, or a contradiction with canonical repository doctrine.
