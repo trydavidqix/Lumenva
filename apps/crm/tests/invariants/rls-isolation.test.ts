@@ -6,13 +6,10 @@ import { sql } from "./pg-exec";
  *
  * Runs against the ephemeral Postgres container started by scripts/test-db.sh
  * (baseline.sql already applied). Seeds 2 orgs + 1 user each, then proves that
- * a user of org A sees ZERO rows of org B in conversations / messages /
- * contacts / crm_leads under RLS, with JWT claims simulated via
- * set_config('request.jwt.claims', ...) — the same auth.uid() /
- * fn_user_org_ids() path production policies use.
+ * a user of org A sees ZERO rows of org B in tenant-aware tables under RLS,
+ * with JWT claims simulated via set_config('request.jwt.claims', ...).
  */
 
-// Fixed UUIDs make the seed idempotent (on conflict do nothing).
 const ORG_A = "aaaaaaaa-0000-4000-8000-000000000001";
 const ORG_B = "bbbbbbbb-0000-4000-8000-000000000002";
 const USER_A = "aaaaaaaa-1111-4000-8000-000000000001";
@@ -20,17 +17,12 @@ const USER_B = "bbbbbbbb-1111-4000-8000-000000000002";
 const SESS_A = "aaaaaaaa-2222-4000-8000-000000000001";
 const SESS_B = "bbbbbbbb-2222-4000-8000-000000000002";
 
-/**
- * Runs SELECTs as the `authenticated` role with the given user's JWT claims,
- * exactly how PostgREST/Supabase set them: session role + request.jwt.claims.
- */
 function countAs(userId: string, countQuery: string): number {
   const out = sql(`
     set role authenticated;
     select set_config('request.jwt.claims', '{"sub":"${userId}"}', false);
     ${countQuery}
   `);
-  // Output lines: set_config echo, then the count (last line).
   const lines = out.split("\n");
   const last = lines[lines.length - 1];
   if (last === undefined || !/^\d+$/.test(last)) {
@@ -40,7 +32,6 @@ function countAs(userId: string, countQuery: string): number {
 }
 
 function seedOrg(org: string, user: string, sess: string, tag: string): string {
-  // No real PII: synthetic emails/names only (LGPD).
   return `
     insert into auth.users (id, email) values ('${user}', 'rls-${tag}@invariant.test')
       on conflict (id) do nothing;
@@ -58,7 +49,6 @@ function seedOrg(org: string, user: string, sess: string, tag: string): string {
 
 beforeAll(() => {
   sql(seedOrg(ORG_A, USER_A, SESS_A, "a") + seedOrg(ORG_B, USER_B, SESS_B, "b"));
-  // Contact → conversation → message + pipeline → stage → lead, per org.
   sql(`
     do $seed$
     declare
@@ -139,6 +129,30 @@ beforeAll(() => {
           insert into public.knowledge_searches (organization_id, hits, top_score, threshold)
             values (v_org, 1, 0.81, 0.72);
         end if;
+
+        if not exists (select 1 from public.hermes_research_experiments where organization_id = v_org) then
+          insert into public.hermes_research_experiments (
+            organization_id, subject_kind, subject_id, context_fingerprint, goal, strategy, status, evidence_refs
+          ) values (
+            v_org, 'agent', 'rls-agent', 'rls-fingerprint', 'prove tenant isolation', 'baseline', 'keep', '["evidence:synthetic"]'::jsonb
+          );
+        end if;
+
+        if not exists (select 1 from public.hermes_outcomes where organization_id = v_org) then
+          insert into public.hermes_outcomes (
+            organization_id, run_id, subject_kind, subject_id, technical_quality, evidence_refs, observed_at
+          ) values (
+            v_org, 'rls-run', 'agent', 'rls-agent', 1, '["evidence:synthetic"]'::jsonb, now()
+          );
+        end if;
+
+        if not exists (select 1 from public.hermes_capability_identities where organization_id = v_org) then
+          insert into public.hermes_capability_identities (
+            organization_id, capability_kind, canonical_identity, content_fingerprint, permission_fingerprint, trust_status, evidence_refs
+          ) values (
+            v_org, 'tool', 'rls.tool', 'content-fingerprint', 'permission-fingerprint', 'trusted', '["evidence:synthetic"]'::jsonb
+          );
+        end if;
       end loop;
     end
     $seed$;
@@ -156,6 +170,9 @@ const TABLES = [
   "ai_routers",
   "ai_router_decisions",
   "knowledge_searches",
+  "hermes_research_experiments",
+  "hermes_outcomes",
+  "hermes_capability_identities",
 ] as const;
 
 describe("RLS tenant isolation (fn_user_org_ids pattern)", () => {
