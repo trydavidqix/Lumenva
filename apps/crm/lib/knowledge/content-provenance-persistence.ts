@@ -3,17 +3,14 @@ import type { ContentProvenanceInput } from "./content-provenance";
 type Queryable = { query<T = Record<string, unknown>>(text: string, values?: readonly unknown[]): Promise<{ rows: T[] }> };
 
 export async function ensureContentProvenanceStore(db: Queryable): Promise<void> {
-  await db.query(`CREATE TABLE IF NOT EXISTS content_provenance (
-    content_id text PRIMARY KEY, skill text NOT NULL, content text NOT NULL,
-    source text NOT NULL, freshness text NOT NULL, confidence double precision NOT NULL,
-    generated_at timestamptz NOT NULL, organization_id text NOT NULL
-  )`);
+  const result = await db.query<{ table_name: string | null}>("SELECT to_regclass('public.content_provenance') AS table_name");
+  if (!result.rows[0]?.table_name) throw new Error("content_provenance_migration_required");
 }
 
 export async function persistContentProvenance(db: Queryable, organizationId: string, input: ContentProvenanceInput): Promise<void> {
   if (!organizationId.trim()) throw new Error("content_provenance_tenant_required");
   await db.query(`INSERT INTO content_provenance (content_id, skill, content, source, freshness, confidence, generated_at, organization_id)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (content_id) DO NOTHING`,
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (organization_id, content_id) DO NOTHING`,
     [input.contentId, input.skill, input.content, input.source, input.freshness, input.confidence, input.generatedAt, organizationId]);
 }
 
