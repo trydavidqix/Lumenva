@@ -29,10 +29,21 @@ export class PostgresNoProgressWatchdog {
       if (latest.rows[0] && observation.cycle <= latest.rows[0].cycle) throw new RangeError("cycle must increase monotonically");
       const noProgressCycles = observation.progressed ? 0 : (latest.rows[0]?.no_progress_cycles ?? 0) + 1;
       const status = noProgressCycles >= 3 ? "AT_RISK" : "ON_TRACK";
-      await this.db.query(
-        `INSERT INTO ${this.table} (organization_id, job_id, cycle, progressed, no_progress_cycles, status) VALUES ($1,$2,$3,$4,$5,$6)`,
-        [this.organizationId, observation.jobId, observation.cycle, observation.progressed, noProgressCycles, status],
-      );
+      try {
+        await this.db.query(
+          `INSERT INTO ${this.table} (organization_id, job_id, cycle, progressed, no_progress_cycles, status) VALUES ($1,$2,$3,$4,$5,$6)`,
+          [this.organizationId, observation.jobId, observation.cycle, observation.progressed, noProgressCycles, status],
+        );
+      } catch (error) {
+        if ((error as { code?: string }).code !== "23505") throw error;
+        await this.db.query("ROLLBACK");
+        const concurrent = await this.db.query<Row>(
+          `SELECT cycle, progressed, no_progress_cycles, status FROM ${this.table} WHERE organization_id=$1 AND job_id=$2 AND cycle=$3`,
+          [this.organizationId, observation.jobId, observation.cycle],
+        );
+        if (!concurrent.rows[0]) throw new Error("watchdog_observation_missing_after_conflict");
+        return this.signal(observation.jobId, concurrent.rows[0]);
+      }
       await this.db.query("COMMIT");
       return this.signal(observation.jobId, { cycle: observation.cycle, progressed: observation.progressed, no_progress_cycles: noProgressCycles, status });
     } catch (error) {

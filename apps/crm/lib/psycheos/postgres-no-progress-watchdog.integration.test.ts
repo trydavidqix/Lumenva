@@ -60,8 +60,8 @@ describe("Postgres No-Progress Watchdog (real RLS)", () => {
         new PostgresNoProgressWatchdog(a, "org-a").observe({ jobId: "job-concurrent", cycle: 1, progressed: false }),
         new PostgresNoProgressWatchdog(b, "org-a").observe({ jobId: "job-concurrent", cycle: 1, progressed: false }),
       ]);
-      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
-      expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(2);
+      expect(results[0]).toEqual(results[1]);
     } finally { a.release(); b.release(); await concurrentPool.end(); }
 
     const crossPool = new Pool({ connectionString: tenantUrl });
