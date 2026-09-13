@@ -1,3 +1,4 @@
+import { assertPublishableContent, type ContentProvenanceInput } from "@/lib/knowledge/content-provenance";
 import { createHash } from "node:crypto";
 
 import type { DistributionProvider } from "@/lib/content-os/providers/distribution";
@@ -39,6 +40,7 @@ export type PublishContentInput = CreatePublicationInput & {
   body: Record<string, unknown>;
   likenessRefs?: readonly string[];
   consentRequirements?: readonly PublicationConsentRequirement[];
+  provenance?: ContentProvenanceInput;
 };
 
 export type PublicationConsentRequirement = {
@@ -86,6 +88,7 @@ export class PublicationConsentError extends Error {
 async function assertPublicationConsent(repository: PublishContentRepository, input: PublishContentInput): Promise<void> {
   const likenessRefs = input.likenessRefs ?? [];
   const requirements = input.consentRequirements ?? [];
+  if (input.provenance) assertPublishableContent(input.provenance);
   if (likenessRefs.length === 0 && requirements.length === 0) return;
   if (!repository.findConsent || requirements.length === 0) {
     throw new PublicationConsentError("Active consent is required for generated likeness publication.");
@@ -114,6 +117,7 @@ async function assertPublicationConsent(repository: PublishContentRepository, in
 /** Final local publisher. It never calls a CMS or provider directly. */
 export async function publishContentItem(repository: PublishContentRepository, input: PublishContentInput): Promise<{ job: PublicationJob; reused: boolean }> {
   const requirements = input.consentRequirements ?? [];
+  if (input.provenance) assertPublishableContent(input.provenance);
   const item = await repository.findContentItem(input.organizationId, input.contentItemId);
   if (!item || item.organizationId !== input.organizationId) throw new PublicationValidationError("Content item not found for this organization.");
   const gate = await repository.findPublishGate(input.organizationId, input.contentItemId);
