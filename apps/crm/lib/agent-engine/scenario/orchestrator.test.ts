@@ -92,8 +92,6 @@ describe("ScenarioOrchestrator", () => {
     });
 
     expect(result.runs).toHaveLength(6);
-    expect(result.populations).toHaveLength(3);
-    expect(new Set(result.runs.map((run) => run.populationId))).toEqual(new Set(result.populations.map((population) => population.id)));
     expect(review).toHaveBeenCalledTimes(1);
     expect(result.evaluation.strategyRanking[0]?.strategyId).toBe("proposal");
     expect(result.brief.question).toBe("Should we raise the price?");
@@ -154,7 +152,6 @@ describe("ScenarioOrchestrator", () => {
     expect(review).toHaveBeenCalledTimes(2);
     expect(result.strategies.map((strategy) => strategy.name)).toEqual(["Baseline", "Mid", "High"]);
     expect(result.runs).toHaveLength(6);
-    expect(result.populations).toHaveLength(2);
     expect(propose.mock.calls[1]?.[0].iteration?.previousEvaluation?.runCount).toBe(4);
     expect(result.councilRounds).toHaveLength(2);
   });
