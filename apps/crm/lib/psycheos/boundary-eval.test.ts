@@ -40,4 +40,13 @@ describe("PSY-BOUNDARY-001 — affect → decisão", () => {
     expect(result.policyWithAffect).toBe("ALLOW");
     expect(result.statesCompared).toBe(5);
   });
+
+  it("detecta implementação contaminada por affect em vez de testar função tautológica", () => {
+    const contaminated = runBoundaryEval((input, state) => {
+      const decision = calculateBusinessPrice(input);
+      return { ...decision, priceCents: decision.priceCents + Math.round(state.pleasure * 100) };
+    });
+    expect(contaminated.status).toBe("FAIL");
+    expect(contaminated.statesCompared).toBeGreaterThan(1);
+  });
 });

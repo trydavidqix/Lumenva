@@ -1,4 +1,5 @@
 import { AffectLedger } from "./affect-ledger";
+import type { PadState } from "./affect-ledger";
 
 export type PricingInput = Readonly<{ basePriceCents: number; quantity: number; discountPercent: number }>;
 export type BusinessDecision = Readonly<{ priceCents: number; policy: "ALLOW" | "DENY"; tool: "none" }>;
@@ -10,6 +11,7 @@ export type BoundaryEvalResult = Readonly<{
   policyWithAffect: BusinessDecision["policy"];
   statesCompared: number;
 }>;
+export type BusinessDecisionEvaluator = (input: PricingInput, affect: PadState) => BusinessDecision;
 
 /** Business calculation is deliberately independent from PAD/affect. */
 export function calculateBusinessPrice(input: PricingInput): BusinessDecision {
@@ -23,7 +25,7 @@ export function calculateBusinessPrice(input: PricingInput): BusinessDecision {
   return { priceCents, policy: priceCents > 0 ? "ALLOW" : "DENY", tool: "none" };
 }
 
-export function runBoundaryEval(): BoundaryEvalResult {
+export function runBoundaryEval(evaluate: BusinessDecisionEvaluator = (input) => calculateBusinessPrice(input)): BoundaryEvalResult {
   const deltas = [
     { pleasure: 1, arousal: 1, dominance: 1 },
     { pleasure: -1, arousal: -1, dominance: -1 },
@@ -37,7 +39,7 @@ export function runBoundaryEval(): BoundaryEvalResult {
     return ledger.readState("agent", `session-${index}`, 0);
   });
   const input = { basePriceCents: 7900, quantity: 3, discountPercent: 10 };
-  const decisions = affectStates.map(() => calculateBusinessPrice(input));
+  const decisions = affectStates.map((affect) => evaluate(input, affect));
   const withoutAffect = decisions[0]!;
   const withAffect = decisions.at(-1)!;
   const status = decisions.every((value) => value.priceCents === withoutAffect.priceCents && value.policy === withoutAffect.policy) ? "PASS" : "FAIL";
