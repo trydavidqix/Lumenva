@@ -28,12 +28,12 @@ export type HandoffPack = {
   next_action?: string;
   source_refs: string[];
   evidence_refs: string[];
-  redacted: boolean;
+  redacted: true;
 };
 
 export type HandoffInput = Pick<
   HandoffPack,
-  "handoff_id" | "reason" | "source_refs" | "evidence_refs" | "redacted"
+  "handoff_id" | "reason" | "source_refs" | "evidence_refs"
 > & { to_execution_epoch?: number };
 
 function clone<T>(value: T): T {
@@ -47,33 +47,32 @@ function redact(value: string): string {
   );
 }
 
-function redactList(values: string[], enabled: boolean): string[] {
-  return values.map((value) => (enabled ? redact(value) : value));
+function redactList(values: string[]): string[] {
+  return values.map(redact);
 }
 
 export function createHandoffPack(state: SessionState, input: HandoffInput): HandoffPack {
-  const redacted = input.redacted;
   return {
     handoff_id: input.handoff_id,
     session_id: state.session_id,
     from_execution_epoch: state.execution_epoch,
     ...(input.to_execution_epoch === undefined ? {} : { to_execution_epoch: input.to_execution_epoch }),
     reason: input.reason,
-    normalized_goal: redacted ? redact(state.goal) : state.goal,
-    constraints: redactList(clone(state.constraints), redacted),
-    facts: redactList(clone(state.facts), redacted),
-    decisions: redactList(clone(state.decisions), redacted),
-    promises: redactList(clone(state.promises), redacted),
-    completed: redactList(clone(state.completed), redacted),
-    pending: redactList(clone(state.pending), redacted),
-    artifacts: redactList(clone(state.artifacts), redacted),
-    errors: redactList(clone(state.errors), redacted),
-    blockers: redactList(clone(state.blockers), redacted),
-    verification: redactList(clone(state.verification), redacted),
-    ...(state.next_action === undefined ? {} : { next_action: redacted ? redact(state.next_action) : state.next_action }),
-    source_refs: redactList(clone(input.source_refs), redacted),
-    evidence_refs: redactList(clone(input.evidence_refs), redacted),
-    redacted,
+    normalized_goal: redact(state.goal),
+    constraints: redactList(clone(state.constraints)),
+    facts: redactList(clone(state.facts)),
+    decisions: redactList(clone(state.decisions)),
+    promises: redactList(clone(state.promises)),
+    completed: redactList(clone(state.completed)),
+    pending: redactList(clone(state.pending)),
+    artifacts: redactList(clone(state.artifacts)),
+    errors: redactList(clone(state.errors)),
+    blockers: redactList(clone(state.blockers)),
+    verification: redactList(clone(state.verification)),
+    ...(state.next_action === undefined ? {} : { next_action: redact(state.next_action) }),
+    source_refs: redactList(clone(input.source_refs)),
+    evidence_refs: redactList(clone(input.evidence_refs)),
+    redacted: true,
   };
 }
 
