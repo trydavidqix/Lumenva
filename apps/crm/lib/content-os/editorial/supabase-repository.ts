@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { Evidence } from "./contracts";
 import type { EditorialRun, ProductionEditorialRepository } from "../orchestrator";
 import type { EditorialPersistenceDb } from "../orchestrator-persistence";
-import { createPublicationJob, publishContentItem, type CreatePublicationInput, type PublishContentRepository } from "../distribution/publication-service";
+import { createPublicationJob, publishContentItem, type CreatePublicationInput, type PublishContentRepository, type PublicationConsentRecord } from "../distribution/publication-service";
 
 type Row = Record<string, unknown>;
 type Query = {
@@ -150,7 +150,9 @@ export class SupabaseEditorialRepository implements ProductionEditorialRepositor
     const connectionId = connections.data?.[0]?.id ? String(connections.data[0].id) : null;
     if (!connectionId) return { published: false, dryRun: true, reason: "distribution_connection_not_configured", contentItemId: input.contentItemId, idempotencyKey: input.idempotencyKey };
     const title = typeof input.body.title === "string" ? input.body.title : "";
-    return publishContentItem(this, { organizationId: input.organizationId, contentItemId: input.contentItemId, connectionId, idempotencyKey: input.idempotencyKey, title, body: input.body });
+    const likenessRefs = Array.isArray(input.body.likeness_refs) ? input.body.likeness_refs.filter((value): value is string => typeof value === "string") : [];
+    const consentRequirements = Array.isArray(input.body.consent_requirements) ? input.body.consent_requirements.filter((value): value is Record<string, unknown> => Boolean(value && typeof value === "object")).map((value) => ({ consent_id: String(value.consent_id ?? ""), subject_ref: String(value.subject_ref ?? ""), channel: value.channel === "whatsapp" || value.channel === "voice" ? value.channel : "email", purpose: String(value.purpose ?? ""), likeness_ref: typeof value.likeness_ref === "string" ? value.likeness_ref : undefined })) : [];
+    return publishContentItem(this, { organizationId: input.organizationId, contentItemId: input.contentItemId, connectionId, idempotencyKey: input.idempotencyKey, title, body: input.body, likenessRefs, consentRequirements });
   }
 
   async findContentItem(organizationId: string, contentItemId: string) {
@@ -163,6 +165,14 @@ export class SupabaseEditorialRepository implements ProductionEditorialRepositor
     const result = await this.db.from("content_quality_gates").select("status").eq("organization_id", organizationId).eq("content_item_id", contentItemId).eq("gate_type", "publish").maybeSingle();
     if (result.error) throw new Error(result.error.message);
     return result.data ? { status: String(result.data.status) } : null;
+  }
+
+  async findConsent(organizationId: string, consentId: string): Promise<PublicationConsentRecord | null> {
+    const result = await this.db.from("contact_consents").select("consent_id,organization_id,status,granted_at,revoked_at,retention_until").eq("organization_id", organizationId).eq("consent_id", consentId).maybeSingle();
+    if (result.error) throw new Error(result.error.message);
+    if (!result.data) return null;
+    const status = String(result.data.status);
+    return { consent_id: String(result.data.consent_id), organization_id: String(result.data.organization_id), status: status === "GRANTED" || status === "REVOKED" || status === "EXPIRED" ? status : "UNKNOWN", granted_at: typeof result.data.granted_at === "string" ? result.data.granted_at : null, revoked_at: typeof result.data.revoked_at === "string" ? result.data.revoked_at : null, retention_until: typeof result.data.retention_until === "string" ? result.data.retention_until : null };
   }
 
   async updateContentItem(input: { organizationId: string; contentItemId: string; title: string; body: Record<string, unknown>; status: "scheduled" | "published" }): Promise<void> {

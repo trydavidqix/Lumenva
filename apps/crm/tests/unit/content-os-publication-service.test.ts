@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   PublicationIdempotencyConflict,
   PublicationQualityGateError,
+  PublicationConsentError,
   applyProviderResult,
   publishContentItem,
 } from "@/lib/content-os/distribution/publication-service";
@@ -77,6 +78,22 @@ describe("Content OS publication jobs", () => {
     });
     expect(result.reused).toBe(true);
     expect(calls).toEqual(["update:scheduled", "job"]);
+  });
+
+  it("fails closed when generated likeness consent is revoked", async () => {
+    const calls: string[] = [];
+    const repository = {
+      findContentItem: async () => ({ id: "item-1", organizationId: "org-1", status: "approved" }),
+      findPublishGate: async () => ({ status: "passed" }),
+      findConsent: async () => ({ consent_id: "consent-1", organization_id: "org-1", status: "REVOKED", granted_at: "2026-01-01T00:00:00.000Z", revoked_at: "2026-02-01T00:00:00.000Z", retention_until: null }),
+      updateContentItem: async () => { calls.push("update"); },
+      createPublicationJob: async () => ({ job, reused: false }),
+    };
+    await expect(publishContentItem(repository, {
+      organizationId: "org-1", contentItemId: "item-1", connectionId: "connection-1", idempotencyKey: "publish:likeness:v1", title: "Title", body: {},
+      likenessRefs: ["person-1"], consentRequirements: [{ consent_id: "consent-1", subject_ref: "person-1", channel: "email", purpose: "marketing", likeness_ref: "person-1" }],
+    })).rejects.toBeInstanceOf(PublicationConsentError);
+    expect(calls).toEqual([]);
   });
 
   it("rejects a content item from another organization", async () => {
