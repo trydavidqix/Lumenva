@@ -8,7 +8,7 @@ let pool: Pool;
 let container = "";
 
 async function waitForPostgres(connectionString: string) {
-  for (let attempt = 0; attempt < 30; attempt++) {
+  for (let attempt = 0; attempt < 120; attempt++) {
     try { const probe = new Pool({ connectionString }); await probe.query("select 1"); await probe.end(); return; } catch { await new Promise((resolve) => setTimeout(resolve, 200)); }
   }
   throw new Error("postgres_query_not_ready");
@@ -17,7 +17,7 @@ async function waitForPostgres(connectionString: string) {
 describe("resource router postgres persistence", () => {
   beforeAll(async () => {
     const { execFileSync } = await import("node:child_process");
-    container = execFileSync("docker", ["run", "-d", "--rm", "-e", "POSTGRES_PASSWORD=postgres", "-p", "0:5432", "postgres:16"], { encoding: "utf8" }).trim();
+    container = execFileSync("docker", ["run", "-d", "--rm", "-e", "POSTGRES_PASSWORD=postgres", "-p", "127.0.0.1::5432", "postgres:16"], { encoding: "utf8" }).trim();
     const port = execFileSync("docker", ["port", container, "5432/tcp"], { encoding: "utf8" }).trim().split(":").pop();
     const connectionString = `postgres://postgres:postgres@127.0.0.1:${port}/postgres`;
     await waitForPostgres(connectionString);
