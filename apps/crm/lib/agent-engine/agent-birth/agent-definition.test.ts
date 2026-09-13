@@ -1,10 +1,20 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  certifyAgentDefinition,
   validateAgentDefinition,
   type AgentDefinitionOrigin,
   type AgentDefinitionInput,
 } from "./agent-definition";
+
+const validApproval = {
+  approval_id: "approval-1",
+  approver_id: "reviewer-1",
+  tenant_id: "tenant-a",
+  status: "APPROVED" as const,
+  approved_at: "2026-09-13T00:00:00.000Z",
+  policy_version: "policy-v1",
+};
 
 const validDefinition: AgentDefinitionInput = {
   id: "sales",
@@ -116,5 +126,36 @@ describe("AgentDefinition validation", () => {
       definition: null,
       errors: ["origin_actor_required", "origin_tenant_required"],
     });
+  });
+
+  it("certifies only at the trusted caller boundary with independent tenant approval", () => {
+    const result = certifyAgentDefinition(validDefinition, {
+      origin: validOrigin,
+      expected_tenant_id: expectedTenantId,
+      approval: validApproval,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      status: "CERTIFIED",
+      definition: { ...validDefinition, status: "CERTIFIED" },
+      errors: [],
+    });
+  });
+
+  it.each([
+    ["missing approval", undefined, "approval_required"],
+    ["denied approval", { ...validApproval, status: "DENIED" }, "approval_not_granted"],
+    ["wrong approval tenant", { ...validApproval, tenant_id: "tenant-b" }, "approval_tenant_mismatch"],
+    ["self approval", { ...validApproval, approver_id: validOrigin.actor_id }, "approval_independence_required"],
+  ] as const)("keeps the caller result in SHADOW for %s", (_label, approval, error) => {
+    const result = certifyAgentDefinition(validDefinition, {
+      origin: validOrigin,
+      expected_tenant_id: expectedTenantId,
+      approval,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe("SHADOW");
+    expect(result.errors).toContain(error);
   });
 });

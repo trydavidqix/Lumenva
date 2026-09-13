@@ -17,6 +17,21 @@ export type AgentDefinitionOrigin = {
   tenant_id: string;
 };
 
+export type AgentDefinitionApproval = {
+  approval_id: string;
+  approver_id: string;
+  tenant_id: string;
+  status: "APPROVED" | "DENIED";
+  approved_at: string;
+  policy_version: string;
+};
+
+export type AgentBirthContext = {
+  origin: AgentDefinitionOrigin;
+  expected_tenant_id: string;
+  approval?: AgentDefinitionApproval;
+};
+
 export type AgentDefinition = AgentDefinitionInput & {
   status: AgentDefinitionStatus;
 };
@@ -26,6 +41,20 @@ export type AgentDefinitionValidation =
       ok: true;
       status: "CERTIFIED";
       definition: AgentDefinitionInput;
+      errors: [];
+    }
+  | {
+      ok: false;
+      status: "SHADOW";
+      definition: null;
+      errors: string[];
+    };
+
+export type AgentCertification =
+  | {
+      ok: true;
+      status: "CERTIFIED";
+      definition: AgentDefinition;
       errors: [];
     }
   | {
@@ -114,4 +143,51 @@ export function validateAgentDefinition(
   };
 
   return { ok: true, status: "CERTIFIED", definition, errors: [] };
+}
+
+function validateApproval(
+  approval: AgentDefinitionApproval | undefined,
+  origin: AgentDefinitionOrigin,
+  expectedTenantId: string,
+): string[] {
+  if (!approval) return ["approval_required"];
+  const errors: string[] = [];
+  if (!hasText(approval.approval_id)) errors.push("approval_id_required");
+  if (!hasText(approval.approver_id)) errors.push("approver_required");
+  if (!hasText(approval.policy_version)) errors.push("approval_policy_required");
+  if (!hasText(approval.approved_at) || !Number.isFinite(Date.parse(approval.approved_at))) {
+    errors.push("approval_timestamp_invalid");
+  }
+  if (approval.status !== "APPROVED") errors.push("approval_not_granted");
+  if (!hasText(approval.tenant_id)) errors.push("approval_tenant_required");
+  else if (approval.tenant_id.trim() !== expectedTenantId.trim()) errors.push("approval_tenant_mismatch");
+  if (hasText(approval.approver_id) && approval.approver_id.trim() === origin.actor_id.trim()) {
+    errors.push("approval_independence_required");
+  }
+  return errors;
+}
+
+/** Trusted caller boundary: only this function may turn a validated birth into CERTIFIED. */
+export function certifyAgentDefinition(
+  input: unknown,
+  context: AgentBirthContext,
+): AgentCertification {
+  if (!isRecord(context)) {
+    return { ok: false, status: "SHADOW", definition: null, errors: ["birth_context_required"] };
+  }
+  if (isRecord(input) && "status" in input && input.status !== "CERTIFIED") {
+    return { ok: false, status: "SHADOW", definition: null, errors: ["agent_definition_not_certified"] };
+  }
+  const validation = validateAgentDefinition(input, context.origin, context.expected_tenant_id);
+  if (!validation.ok) return validation;
+  const approvalErrors = validateApproval(context.approval, context.origin, context.expected_tenant_id);
+  if (approvalErrors.length > 0) {
+    return { ok: false, status: "SHADOW", definition: null, errors: approvalErrors };
+  }
+  return {
+    ok: true,
+    status: "CERTIFIED",
+    definition: { ...validation.definition, status: "CERTIFIED" },
+    errors: [],
+  };
 }
