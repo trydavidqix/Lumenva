@@ -14,8 +14,22 @@ const input: OverviewInput = {
     { id: "support", version: "1.0.0", status: "SHADOW", organizationId: "org-a" },
   ],
   costs: [
-    { id: "cost-1", amount: 12.5, currency: "EUR", organizationId: "org-a" },
-    { id: "cost-2", amount: 7.5, currency: "EUR", organizationId: "org-a" },
+    {
+      id: "cost-1",
+      amount: 12.5,
+      currency: "EUR",
+      organizationId: "org-a",
+      tenantId: "org-a",
+      jobId: "job-1",
+    },
+    {
+      id: "cost-2",
+      amount: 7.5,
+      currency: "EUR",
+      organizationId: "org-a",
+      tenantId: "org-a",
+      agentId: "sales",
+    },
   ],
   jobs: [
     { id: "job-1", name: "sync contacts", status: "PENDING", organizationId: "org-a" },
@@ -57,6 +71,22 @@ describe("Command Center overview state", () => {
       generatedAt: "2026-09-12T20:00:00.000Z",
       activeAgents: [{ id: "sales", version: "1.0.0", status: "ACTIVE" }],
       accumulatedCost: { amount: 20, currency: "EUR" },
+      costEntries: [
+        {
+          id: "cost-1",
+          amount: 12.5,
+          currency: "EUR",
+          tenantId: "org-a",
+          jobId: "job-1",
+        },
+        {
+          id: "cost-2",
+          amount: 7.5,
+          currency: "EUR",
+          tenantId: "org-a",
+          agentId: "sales",
+        },
+      ],
       pendingJobs: [{ id: "job-1", name: "sync contacts", status: "PENDING" }],
       pendingApprovals: [
         {
@@ -101,13 +131,30 @@ describe("Command Center overview state", () => {
         approvals: [{ ...input.approvals[0], organizationId: "org-b" }],
       }),
     ).toThrow("overview_tenant_mismatch");
+
+    expect(() =>
+      buildOverviewState({
+        ...input,
+        costs: [{ ...input.costs[0], tenantId: "org-b" }],
+      }),
+    ).toThrow("overview_tenant_mismatch");
   });
 
   it("rejects mixed currencies and invalid cost amounts", () => {
     expect(() =>
       buildOverviewState({
         ...input,
-        costs: [...input.costs, { id: "cost-3", amount: 1, currency: "USD", organizationId: "org-a" }],
+        costs: [
+          ...input.costs,
+          {
+            id: "cost-3",
+            amount: 1,
+            currency: "USD",
+            organizationId: "org-a",
+            tenantId: "org-a",
+            jobId: "job-1",
+          },
+        ],
       }),
     ).toThrow("overview_cost_currency_mismatch");
 
@@ -117,6 +164,13 @@ describe("Command Center overview state", () => {
         costs: [{ ...input.costs[0], amount: Number.NaN }],
       }),
     ).toThrow("overview_cost_invalid");
+
+    expect(() =>
+      buildOverviewState({
+        ...input,
+        costs: [{ ...input.costs[0], jobId: undefined, agentId: undefined }],
+      }),
+    ).toThrow("overview_cost_owner_required");
   });
 
   it("provides a deterministic provider-free mock overview", () => {
@@ -125,6 +179,22 @@ describe("Command Center overview state", () => {
       generatedAt: "2026-09-12T00:00:00.000Z",
       activeAgents: [{ id: "sales", version: "1.0.0", status: "ACTIVE" }],
       accumulatedCost: { amount: 15, currency: "EUR" },
+      costEntries: [
+        {
+          id: "cost-1",
+          amount: 10,
+          currency: "EUR",
+          tenantId: "mock-org",
+          agentId: "sales",
+        },
+        {
+          id: "cost-2",
+          amount: 5,
+          currency: "EUR",
+          tenantId: "mock-org",
+          jobId: "job-1",
+        },
+      ],
       pendingJobs: [{ id: "job-1", name: "qualify leads", status: "PENDING" }],
       pendingApprovals: [
         {

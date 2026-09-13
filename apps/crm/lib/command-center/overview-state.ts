@@ -14,6 +14,9 @@ export type OverviewCostInput = {
   amount: number;
   currency: string;
   organizationId: string;
+  tenantId: string;
+  jobId?: string;
+  agentId?: string;
 };
 
 export type OverviewJobInput = {
@@ -51,6 +54,14 @@ export type OverviewState = {
     status: "ACTIVE";
   }[];
   accumulatedCost: { amount: number; currency: string };
+  costEntries: readonly {
+    id: string;
+    amount: number;
+    currency: string;
+    tenantId: string;
+    jobId?: string;
+    agentId?: string;
+  }[];
   pendingJobs: readonly {
     id: string;
     name: string;
@@ -87,8 +98,14 @@ export function buildOverviewState(input: OverviewInput): OverviewState {
   const currency = input.costs[0]?.currency ?? "EUR";
   let amount = 0;
   for (const cost of input.costs) {
+    if (cost.tenantId.trim() === "" || cost.tenantId !== input.organizationId) {
+      throw new Error("overview_tenant_mismatch");
+    }
     if (!Number.isFinite(cost.amount) || cost.amount < 0 || cost.currency.trim() === "") {
       throw new Error("overview_cost_invalid");
+    }
+    if ((!cost.jobId || cost.jobId.trim() === "") && (!cost.agentId || cost.agentId.trim() === "")) {
+      throw new Error("overview_cost_owner_required");
     }
     if (cost.currency !== currency) {
       throw new Error("overview_cost_currency_mismatch");
@@ -122,6 +139,16 @@ export function buildOverviewState(input: OverviewInput): OverviewState {
       .map(({ id, version, status }) => ({ id, version, status }))
       .sort((left, right) => left.id.localeCompare(right.id)),
     accumulatedCost: { amount, currency },
+    costEntries: input.costs
+      .map(({ id, amount, currency, tenantId, jobId, agentId }) => ({
+        id,
+        amount,
+        currency,
+        tenantId,
+        ...(jobId ? { jobId } : {}),
+        ...(agentId ? { agentId } : {}),
+      }))
+      .sort((left, right) => left.id.localeCompare(right.id)),
     pendingJobs: input.jobs
       .filter((job) => job.status === "PENDING")
       .map(({ id, name, status }) => ({ id, name, status }))
@@ -153,8 +180,22 @@ export function createMockOverviewState(): OverviewState {
       { id: "support", version: "1.0.0", status: "SHADOW", organizationId: "mock-org" },
     ],
     costs: [
-      { id: "cost-1", amount: 10, currency: "EUR", organizationId: "mock-org" },
-      { id: "cost-2", amount: 5, currency: "EUR", organizationId: "mock-org" },
+      {
+        id: "cost-1",
+        amount: 10,
+        currency: "EUR",
+        organizationId: "mock-org",
+        tenantId: "mock-org",
+        agentId: "sales",
+      },
+      {
+        id: "cost-2",
+        amount: 5,
+        currency: "EUR",
+        organizationId: "mock-org",
+        tenantId: "mock-org",
+        jobId: "job-1",
+      },
     ],
     jobs: [
       { id: "job-1", name: "qualify leads", status: "PENDING", organizationId: "mock-org" },
