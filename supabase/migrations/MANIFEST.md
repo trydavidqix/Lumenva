@@ -214,3 +214,4 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 - **Integrations**: tenant_integrations, orders, nuvemshop_products
 - **Compliance**: lgpd_requests
 - **Ops**: incidents
+| 20260913010000 | build_plan_state_rls | Wave 10 forward-fix: enable RLS and tenant-scoped policy for durable delivery gate state. |
