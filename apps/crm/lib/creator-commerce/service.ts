@@ -1,5 +1,12 @@
+export interface CreatorCommerceCapabilityQuery {
+  organizationId: string;
+  country: string;
+  provider: string;
+  capability: string;
+}
+
 export interface CreatorCommerceServiceDependencies {
-  getCapability(input: { organizationId: string; country: string; provider: string; capability: string } | string): Promise<{ organizationId: string; available: boolean; reasons: string[]; evidenceRefs: string[] }>;
+  getCapability(input: CreatorCommerceCapabilityQuery): Promise<{ organizationId: string; available: boolean; reasons: string[]; evidenceRefs: string[] }>;
   requestPublication(input: { organizationId: string; contentId: string }): Promise<{ publicationId: string; evidenceRefs: string[] }>;
   getPerformance(input: { organizationId: string; publicationId: string }): Promise<{ views: number; clicks: number; evidenceRefs: string[] }>;
   getRevenue(input: { organizationId: string; publicationId: string }): Promise<{ netRevenueMinor: number; evidenceRefs: string[] }>;
