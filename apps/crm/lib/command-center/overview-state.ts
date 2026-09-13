@@ -36,6 +36,13 @@ export type OverviewApprovalInput = {
   organizationId: string;
 };
 
+export type OverviewProjectionMetadata = {
+  sourceEventIds: readonly string[];
+  sourceEvidenceIds: readonly string[];
+  freshness: "FRESH" | "STALE" | "UNKNOWN";
+  redacted: boolean;
+};
+
 export type OverviewInput = {
   organizationId: string;
   generatedAt: string;
@@ -43,6 +50,7 @@ export type OverviewInput = {
   costs: readonly OverviewCostInput[];
   jobs: readonly OverviewJobInput[];
   approvals: readonly OverviewApprovalInput[];
+  projection?: OverviewProjectionMetadata;
 };
 
 export type OverviewState = {
@@ -81,12 +89,32 @@ export type OverviewState = {
     decidedBy: string;
     decidedAt: string;
   }[];
+  projection?: OverviewProjectionMetadata;
 };
 
 function assertTenant(organizationId: string, records: readonly { organizationId: string }[]): void {
   if (records.some((record) => record.organizationId !== organizationId)) {
     throw new Error("overview_tenant_mismatch");
   }
+}
+
+function validateProjectionMetadata(projection: OverviewProjectionMetadata): OverviewProjectionMetadata {
+  if (
+    !Array.isArray(projection.sourceEventIds) ||
+    !projection.sourceEventIds.every((id) => typeof id === "string" && id.trim() !== "") ||
+    !Array.isArray(projection.sourceEvidenceIds) ||
+    !projection.sourceEvidenceIds.every((id) => typeof id === "string" && id.trim() !== "") ||
+    !["FRESH", "STALE", "UNKNOWN"].includes(projection.freshness) ||
+    typeof projection.redacted !== "boolean"
+  ) {
+    throw new Error("overview_projection_metadata_invalid");
+  }
+  return {
+    sourceEventIds: [...projection.sourceEventIds],
+    sourceEvidenceIds: [...projection.sourceEvidenceIds],
+    freshness: projection.freshness,
+    redacted: projection.redacted,
+  };
 }
 
 export function buildOverviewState(input: OverviewInput): OverviewState {
@@ -168,6 +196,7 @@ export function buildOverviewState(input: OverviewInput): OverviewState {
         decidedAt: decidedAt as string,
       }))
       .sort((left, right) => left.id.localeCompare(right.id)),
+    ...(input.projection ? { projection: validateProjectionMetadata(input.projection) } : {}),
   };
 }
 

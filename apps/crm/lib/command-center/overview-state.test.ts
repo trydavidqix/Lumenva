@@ -230,4 +230,33 @@ describe("Command Center overview state", () => {
       }),
     ).toThrow("overview_approval_decision_invalid");
   });
+
+  it("preserves projection freshness, source events and evidence", () => {
+    expect(buildOverviewState({
+      ...input,
+      projection: {
+        sourceEventIds: ["event-1"],
+        sourceEvidenceIds: ["evidence-1"],
+        freshness: "FRESH",
+        redacted: false,
+      },
+    }).projection).toEqual({
+      sourceEventIds: ["event-1"],
+      sourceEvidenceIds: ["evidence-1"],
+      freshness: "FRESH",
+      redacted: false,
+    });
+  });
+
+  it("rejects projection metadata with an empty evidence reference", () => {
+    expect(() => buildOverviewState({
+      ...input,
+      projection: {
+        sourceEventIds: ["event-1"],
+        sourceEvidenceIds: [""],
+        freshness: "FRESH",
+        redacted: false,
+      },
+    })).toThrow("overview_projection_metadata_invalid");
+  });
 });
