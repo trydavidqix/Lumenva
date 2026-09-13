@@ -82,3 +82,20 @@ export async function validateDeliveryPlanWithState(
   await stateStore.finish(plan.organization_id, plan.delivery_plan_id, stepId, "SUCCEEDED");
   return validation;
 }
+
+/** Execution boundary: no channel can deliver without a persisted gate PASS. */
+export async function deliverBuild(plan: DeliveryPlan, artifact: DeliveryArtifact, buildEvidence: DeliveryBuildEvidence, stateStore: BuildPlanStateStore, execute: () => Promise<void>): Promise<{ delivered: true }> {
+  for (const channel of plan.channels) {
+    if ((channel === "WEB_PREVIEW" && artifact.platform && artifact.platform !== "WEB") || (channel === "MOBILE_PREVIEW" && artifact.platform && !["IOS", "ANDROID"].includes(artifact.platform)) || (channel === "APP_STORE" && artifact.platform !== "IOS") || (channel === "PLAY_STORE" && artifact.platform !== "ANDROID")) throw new Error("delivery_channel_platform_mismatch");
+  }
+  const gate = await validateDeliveryPlanWithState(plan, artifact, buildEvidence, stateStore);
+  if (!gate.valid) throw new Error(`delivery_blocked: ${gate.errors.join(";")}`);
+  await execute(); return { delivered: true };
+}
+
+/** Backwards-compatible execution seam used by delivery callers. */
+export async function executeDeliveryWithGate<T>(plan: DeliveryPlan, artifact: DeliveryArtifact, buildEvidence: DeliveryBuildEvidence, stateStore: BuildPlanStateStore, execute: () => Promise<T>): Promise<T> {
+  const gate = await validateDeliveryPlanWithState(plan, artifact, buildEvidence, stateStore);
+  if (!gate.valid) throw new Error(`delivery blocked: ${gate.errors.join(";")}`);
+  return execute();
+}

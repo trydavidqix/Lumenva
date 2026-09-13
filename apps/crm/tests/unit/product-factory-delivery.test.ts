@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateDeliveryPlan, validateDeliveryPlanWithState, type DeliveryArtifact, type DeliveryPlan, type DeliveryBuildEvidence } from "@/lib/product-factory/delivery";
+import { executeDeliveryWithGate, validateDeliveryPlan, validateDeliveryPlanWithState, type DeliveryArtifact, type DeliveryPlan, type DeliveryBuildEvidence } from "@/lib/product-factory/delivery";
 import type { BuildPlanStateRow, BuildPlanStateStore } from "@/lib/product-factory/build-plan-state-store";
 
 const deliveryPlan: DeliveryPlan = {
@@ -55,6 +55,16 @@ describe("Wave 10 delivery gates", () => {
       const result = await validateDeliveryPlanWithState({ ...deliveryPlan, status: "APPROVED" }, artifact, evidence, store);
       expect(result).toEqual({ valid: false, errors: [`delivery gate is terminally ${status}`] });
     }
+  });
+  it("never invokes the delivery action when the gate denies", async () => {
+    let invoked = false;
+    await expect(executeDeliveryWithGate(deliveryPlan, artifact, evidence, fakeStateStore(), async () => { invoked = true; return "sent"; })).rejects.toThrow("delivery plan must be APPROVED or PACKAGED");
+    expect(invoked).toBe(false);
+  });
+  it("invokes the delivery action only after an APPROVED gate succeeds", async () => {
+    let invoked = false;
+    await expect(executeDeliveryWithGate({ ...deliveryPlan, status: "APPROVED" }, artifact, evidence, fakeStateStore(), async () => { invoked = true; return "sent"; })).resolves.toBe("sent");
+    expect(invoked).toBe(true);
   });
 });
 
