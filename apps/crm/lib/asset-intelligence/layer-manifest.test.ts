@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { createLayerManifest, type LayerManifest } from "./layer-manifest";
+import { assertLayerManifestLicensed, createLayerManifest, type LayerManifest } from "./layer-manifest";
 
 describe("LayerManifest", () => {
   it("representa camadas com identidade, tipo, bounds, tag semântica e provenance do criador", () => {
     const manifest: LayerManifest = createLayerManifest({
       manifest_id: "manifest-1",
       asset_id: "asset-1",
+      organization_id: "org-1",
       version: "1",
       layers: [
         {
@@ -13,7 +14,7 @@ describe("LayerManifest", () => {
           type: "TEXT",
           bounds: { x: 12, y: 24, width: 320, height: 48 },
           semantic_tag: "headline",
-          provenance: { created_by: "human:owner-1", source_refs: ["upload:asset-1"] },
+          provenance: { created_by: "human:owner-1", owner_id: "owner-1", source_id: "source-1", license_ref: "lic-1", source_refs: ["upload:asset-1"] },
         },
       ],
     });
@@ -23,7 +24,7 @@ describe("LayerManifest", () => {
       type: "TEXT",
       bounds: { x: 12, y: 24, width: 320, height: 48 },
       semantic_tag: "headline",
-      provenance: { created_by: "human:owner-1", source_refs: ["upload:asset-1"] },
+      provenance: { created_by: "human:owner-1", owner_id: "owner-1", source_id: "source-1", license_ref: "lic-1", source_refs: ["upload:asset-1"] },
     });
   });
 
@@ -31,6 +32,7 @@ describe("LayerManifest", () => {
     expect(() => createLayerManifest({
       manifest_id: "manifest-1",
       asset_id: "asset-1",
+      organization_id: "org-1",
       version: "1",
       layers: [{
         layer_id: "",
@@ -40,5 +42,16 @@ describe("LayerManifest", () => {
         provenance: { created_by: "" },
       }],
     })).toThrow(/layer_id|bounds|created_by/);
+  });
+
+  it("nega uso quando a licença/proveniência não é verificada", async () => {
+    const manifest = createLayerManifest({
+      manifest_id: "manifest-licensed",
+      asset_id: "asset-1",
+      organization_id: "org-1",
+      version: "1",
+      layers: [{ layer_id: "layer-1", type: "IMAGE", bounds: { x: 0, y: 0, width: 10, height: 10 }, semantic_tag: "hero", provenance: { created_by: "human:owner-1", owner_id: "owner-1", source_id: "source-1", license_ref: "lic-revoked" } }],
+    });
+    await expect(assertLayerManifestLicensed(manifest, async () => ({ license_ref: "lic-revoked", source_id: "source-1", owner_id: "owner-1", status: "REVOKED", expires_at: null }))).rejects.toThrow("license");
   });
 });

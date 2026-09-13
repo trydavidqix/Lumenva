@@ -7,6 +7,7 @@ describe("Reverse Design", () => {
     const manifest = createLayerManifest({
       manifest_id: "manifest-source",
       asset_id: "asset-source",
+      organization_id: "org-1",
       version: "1",
       layers: [
         {
@@ -14,21 +15,21 @@ describe("Reverse Design", () => {
           type: "TEXT",
           bounds: { x: 0, y: 0, width: 300, height: 40 },
           semantic_tag: "headline",
-          provenance: { created_by: "human:owner-1" },
+          provenance: { created_by: "human:owner-1", owner_id: "owner-1", source_id: "source-1", license_ref: "lic-1" },
         },
         {
           layer_id: "layer-background",
           type: "IMAGE",
           bounds: { x: 0, y: 0, width: 800, height: 600 },
           semantic_tag: "background",
-          provenance: { created_by: "agent:extractor-1" },
+          provenance: { created_by: "agent:extractor-1", owner_id: "owner-1", source_id: "source-2", license_ref: "lic-2" },
         },
         {
           layer_id: "layer-logo",
           type: "IMAGE",
           bounds: { x: 12, y: 12, width: 80, height: 32 },
           semantic_tag: "logo",
-          provenance: { created_by: "human:owner-1" },
+          provenance: { created_by: "human:owner-1", owner_id: "owner-1", source_id: "source-3", license_ref: "lic-3" },
         },
       ],
     });
