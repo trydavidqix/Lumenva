@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { Evidence } from "./contracts";
 import type { EditorialRun, ProductionEditorialRepository } from "../orchestrator";
 import type { EditorialPersistenceDb } from "../orchestrator-persistence";
-import { createPublicationJob, publishContentItem, type CreatePublicationInput, type PublishContentRepository, type PublicationConsentRecord } from "../distribution/publication-service";
+import { createPublicationJob, publishContentItem, PublicationConsentError, type CreatePublicationInput, type PublishContentRepository, type PublicationConsentRecord } from "../distribution/publication-service";
 
 type Row = Record<string, unknown>;
 type Query = {
@@ -18,7 +18,7 @@ type Query = {
   single(): Promise<{ data: Row | null; error: { message: string } | null }>;
   then<TResult1 = { data: Row[] | null; error: { message: string } | null }, TResult2 = never>(onfulfilled?: ((value: { data: Row[] | null; error: { message: string } | null }) => TResult1 | PromiseLike<TResult1>) | null, onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null): Promise<TResult1 | TResult2>;
 };
-export type EditorialSupabaseClient = { from(table: string): Query };
+export type EditorialSupabaseClient = { from(table: string): Query; rpc?: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string; code?: string } | null }> };
 
 function asIso(value: unknown): string {
   return typeof value === "string" && value ? value : new Date().toISOString();
@@ -35,7 +35,10 @@ export class SupabaseEditorialRepository implements ProductionEditorialRepositor
     const query = this.db.from("content_signals").select("id,title,body,source_url,published_at,observed_at")
       .eq("organization_id", organizationId).or(`title.ilike.%${topic}%,body.ilike.%${topic}%`).order("observed_at", { ascending: false }).limit(50);
     const result = await query;
-    if (result.error) throw new Error(result.error.message);
+    if (result.error) {
+      if (result.error.code === "P0001" || result.error.message.includes("publication_consent_required")) throw new PublicationConsentError("Consent was revoked before publication commit.");
+      throw new Error(result.error.message);
+    }
     return (result.data ?? []).map((row) => ({ id: String(row.id), title: String(row.title), body: typeof row.body === "string" ? row.body : null, sourceUrl: typeof row.source_url === "string" ? row.source_url : null, publishedAt: typeof row.published_at === "string" ? row.published_at : null, observedAt: asIso(row.observed_at) }));
   }
 
@@ -173,6 +176,15 @@ export class SupabaseEditorialRepository implements ProductionEditorialRepositor
     if (!result.data) return null;
     const status = String(result.data.status);
     return { consent_id: String(result.data.consent_id), organization_id: String(result.data.organization_id), status: status === "GRANTED" || status === "REVOKED" || status === "EXPIRED" ? status : "UNKNOWN", granted_at: typeof result.data.granted_at === "string" ? result.data.granted_at : null, revoked_at: typeof result.data.revoked_at === "string" ? result.data.revoked_at : null, retention_until: typeof result.data.retention_until === "string" ? result.data.retention_until : null };
+  }
+
+  async publishWithConsent(input: { organizationId: string; contentItemId: string; title: string; body: Record<string, unknown>; consentIds: readonly string[] }): Promise<void> {
+    if (!this.db.rpc) throw new Error("Atomic consent publication RPC is unavailable.");
+    const result = await this.db.rpc("fn_publish_content_if_consent", { p_organization_id: input.organizationId, p_content_item_id: input.contentItemId, p_title: input.title, p_body: input.body, p_consent_ids: input.consentIds });
+    if (result.error) {
+      if (result.error.code === "P0001" || result.error.message.includes("publication_consent_required")) throw new PublicationConsentError("Consent was revoked before publication commit.");
+      throw new Error(result.error.message);
+    }
   }
 
   async updateContentItem(input: { organizationId: string; contentItemId: string; title: string; body: Record<string, unknown>; status: "scheduled" | "published" }): Promise<void> {

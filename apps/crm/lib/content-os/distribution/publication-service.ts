@@ -64,6 +64,7 @@ export type PublishContentRepository = {
   updateContentItem(input: { organizationId: string; contentItemId: string; title: string; body: Record<string, unknown>; status: "scheduled" | "published" }): Promise<void>;
   createPublicationJob(input: CreatePublicationInput): Promise<{ job: PublicationJob; reused: boolean }>;
   findConsent?: (organizationId: string, consentId: string) => Promise<PublicationConsentRecord | null>;
+  publishWithConsent?: (input: { organizationId: string; contentItemId: string; title: string; body: Record<string, unknown>; consentIds: readonly string[] }) => Promise<void>;
 };
 
 export class PublicationQualityGateError extends Error {
@@ -112,14 +113,22 @@ async function assertPublicationConsent(repository: PublishContentRepository, in
 
 /** Final local publisher. It never calls a CMS or provider directly. */
 export async function publishContentItem(repository: PublishContentRepository, input: PublishContentInput): Promise<{ job: PublicationJob; reused: boolean }> {
+  const requirements = input.consentRequirements ?? [];
   const item = await repository.findContentItem(input.organizationId, input.contentItemId);
   if (!item || item.organizationId !== input.organizationId) throw new PublicationValidationError("Content item not found for this organization.");
   const gate = await repository.findPublishGate(input.organizationId, input.contentItemId);
   if (!gate || gate.status !== "passed") throw new PublicationQualityGateError("Content item cannot be published without a passed publish quality gate.");
   await assertPublicationConsent(repository, input);
-  // The local item is scheduled until the worker confirms the remote side
-  // effect; never claim `published` before that confirmation.
-  await repository.updateContentItem({ organizationId: input.organizationId, contentItemId: input.contentItemId, title: input.title, body: input.body, status: "scheduled" });
+  // Consent-bearing publication must revalidate under the same database lock
+  // that schedules the content. The first read above is only preflight.
+  if (requirements.length > 0) {
+    if (!repository.publishWithConsent) throw new PublicationConsentError("Atomic consent publication is unavailable.");
+    await repository.publishWithConsent({ organizationId: input.organizationId, contentItemId: input.contentItemId, title: input.title, body: input.body, consentIds: requirements.map((requirement) => requirement.consent_id) });
+  } else {
+    // The local item is scheduled until the worker confirms the remote side
+    // effect; never claim `published` before that confirmation.
+    await repository.updateContentItem({ organizationId: input.organizationId, contentItemId: input.contentItemId, title: input.title, body: input.body, status: "scheduled" });
+  }
   return repository.createPublicationJob(input);
 }
 
