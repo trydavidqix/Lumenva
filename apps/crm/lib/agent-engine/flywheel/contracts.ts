@@ -3,6 +3,15 @@ export const LEARNING_PROPOSAL_TYPES = [
   'routing_change',
   'eval_case',
   'operational_threshold',
+  'prompt_change',
+  'workflow_change',
+  'agent_definition_change',
+  'model_policy_change',
+  'resource_route_change',
+  'memory_policy_change',
+  'context_policy_change',
+  'infra_change',
+  'strategy_change',
 ] as const;
 
 export type LearningProposalType = (typeof LEARNING_PROPOSAL_TYPES)[number];
