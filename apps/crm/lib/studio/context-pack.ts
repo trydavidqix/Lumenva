@@ -11,6 +11,7 @@ export type ContextPack = {
   project_spec_version: string;
   allowed_assets: string[];
   allowed_sources: string[];
+  allowed_variant_ids: string[];
   allowed_layer_ids: string[];
   allowed_operations: readonly ["UPDATE_LAYER"];
   constraints: string[];
@@ -72,6 +73,7 @@ export type ContextPackInput = {
   allowedLayerIds: string[];
   allowedAssets?: string[];
   allowedSources?: string[];
+  allowedVariantIds?: string[];
   constraints?: string[];
   authorityEnvelopeRef?: string;
   purpose?: ContextPackPurpose;
@@ -89,6 +91,7 @@ export function createContextPack(input: ContextPackInput): ContextPack {
     project_spec_version: input.projectSpecVersion,
     allowed_assets: [...(input.allowedAssets ?? [])],
     allowed_sources: [...(input.allowedSources ?? [])],
+    allowed_variant_ids: [...(input.allowedVariantIds ?? [])],
     allowed_layer_ids: [...input.allowedLayerIds],
     allowed_operations: ["UPDATE_LAYER"],
     constraints: [...(input.constraints ?? [])],
