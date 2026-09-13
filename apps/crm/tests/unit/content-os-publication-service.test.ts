@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  PublicationCommerceGateError,
   PublicationIdempotencyConflict,
   PublicationQualityGateError,
   applyProviderResult,
@@ -63,7 +64,50 @@ describe("Content OS publication jobs", () => {
     })).rejects.toBeInstanceOf(PublicationQualityGateError);
   });
 
-  it("updates content before creating the same idempotent publication job", async () => {
+  it.each(["BLOCK", "REVIEW_REQUIRED"] as const)("blocks commercial publication on %s commerce receipt", async (status) => {
+    const repository = {
+      findContentItem: async () => ({ id: "item-1", organizationId: "org-1", status: "approved" }),
+      findPublishGate: async () => ({ status: "passed" }),
+      updateContentItem: async () => undefined,
+      createPublicationJob: async () => ({ job, reused: false }),
+    };
+    await expect(publishContentItem(repository, {
+      organizationId: "org-1", contentItemId: "item-1", connectionId: "connection-1",
+      idempotencyKey: "publish:item-1:v1", title: "Title", body: {},
+      commercial: { required: true, compliance: { status, ruleIds: ["rule"], evidenceRefs: ["evidence"] } },
+    })).rejects.toBeInstanceOf(PublicationCommerceGateError);
+  });
+
+  it("requires a commerce receipt for commercial content", async () => {
+    const repository = {
+      findContentItem: async () => ({ id: "item-1", organizationId: "org-1", status: "approved" }),
+      findPublishGate: async () => ({ status: "passed" }),
+      updateContentItem: async () => undefined,
+      createPublicationJob: async () => ({ job, reused: false }),
+    };
+    await expect(publishContentItem(repository, {
+      organizationId: "org-1", contentItemId: "item-1", connectionId: "connection-1",
+      idempotencyKey: "publish:item-1:v1", title: "Title", body: {}, commercial: { required: true },
+    })).rejects.toBeInstanceOf(PublicationCommerceGateError);
+  });
+
+  it("allows commercial content only with PASS receipt and preserves evidence in job payload", async () => {
+    let received: unknown;
+    const repository = {
+      findContentItem: async () => ({ id: "item-1", organizationId: "org-1", status: "approved" }),
+      findPublishGate: async () => ({ status: "passed" }),
+      updateContentItem: async () => undefined,
+      createPublicationJob: async (input: unknown) => { received = input; return { job, reused: false }; },
+    };
+    await publishContentItem(repository, {
+      organizationId: "org-1", contentItemId: "item-1", connectionId: "connection-1",
+      idempotencyKey: "publish:item-1:v1", title: "Title", body: {},
+      commercial: { required: true, compliance: { status: "PASS", ruleIds: ["commerce_compliance.passed"], evidenceRefs: ["receipt-1"] } },
+    });
+    expect(received).toMatchObject({ payload: { commerceCompliance: { status: "PASS", evidenceRefs: ["receipt-1"] } } });
+  });
+
+  it("keeps non-commercial content working without Creator Commerce metadata", async () => {
     const calls: string[] = [];
     const repository = {
       findContentItem: async () => ({ id: "item-1", organizationId: "org-1", status: "approved" }),
