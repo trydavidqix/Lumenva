@@ -43,6 +43,8 @@ aplica.
 
 ## Applied
 
+| `20260913030000` | `0166_psyche_watchdog_observations` | Wave 14: estado persistente do No-Progress Watchdog, replay por ciclo, serialização transacional e RLS tenant-scoped. |
+
 | `20260905170000` | `0155_rgpd_transfer_inventory` | J5 provider/subprocessor transfer inventory with unknown initial status, SCC/BCR/TIA fields and OFF-by-default observe/block gate. |
 
 | `20260905160000` | `0154_rgpd_breach_incidents` | J3 additive breach register with UTC 72-hour deadline, notification decision, CNPD evidence and tenant RLS; workflow remains feature-flagged OFF. |

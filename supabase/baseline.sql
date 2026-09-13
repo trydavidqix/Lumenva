@@ -9031,6 +9031,25 @@ CREATE POLICY "transfer_inventories_write" ON "public"."transfer_inventories" FO
 
 notify pgrst, 'reload schema';
 
+-- Wave 14 persistent No-Progress Watchdog state.
+create table if not exists public.psyche_watchdog_observations (
+  organization_id text not null,
+  job_id text not null,
+  cycle integer not null check (cycle >= 1),
+  progressed boolean not null,
+  no_progress_cycles integer not null check (no_progress_cycles >= 0),
+  status text not null check (status in ('ON_TRACK', 'AT_RISK')),
+  created_at timestamptz not null default now(),
+  primary key (organization_id, job_id, cycle)
+);
+alter table public.psyche_watchdog_observations enable row level security;
+drop policy if exists psyche_watchdog_observations_tenant_all on public.psyche_watchdog_observations;
+create policy psyche_watchdog_observations_tenant_all on public.psyche_watchdog_observations
+  for all to authenticated
+  using (organization_id in (select public.fn_user_org_ids()::text))
+  with check (organization_id in (select public.fn_user_org_ids()::text));
+grant select, insert, update on public.psyche_watchdog_observations to authenticated;
+
 -- ---- Nova Mode V1: durable browser-command approvals (migration 0160) ----
 create table if not exists public.ai_agent_command_approvals (
   id uuid primary key default gen_random_uuid(),
