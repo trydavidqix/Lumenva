@@ -84,7 +84,7 @@ export function createScenarioEvaluator(config: ScenarioEvaluatorConfig = {}): S
       const strategyScores = input.strategies.map((strategy) => {
         const strategyMetrics = metrics.filter((metric) => metric.strategyId === strategy.id && metric.mean !== undefined);
         const score = strategyMetrics.length === 0
-          ? Number.NEGATIVE_INFINITY
+          ? 0
           : mean(
               strategyMetrics.map((metric) => {
                 const direction = config.metricDirections?.[metric.key] ?? "higher";
