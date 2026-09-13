@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { repairFailedBuildPlan, validateBuildPlan, type BuildPlan } from "@/lib/product-factory/build-plan";
+import { BuildPlanStateStore, type BuildPlanStateRow } from "@/lib/product-factory/build-plan-state-store";
 
 const plan = (steps: BuildPlan["steps"]): BuildPlan => ({
   build_plan_id: "bp-1", organization_id: "org-1", project_id: "project-1",
@@ -9,6 +10,26 @@ const plan = (steps: BuildPlan["steps"]): BuildPlan => ({
   acceptance_criteria: ["preview renders"], authority_envelope_ref: "authority-1", status: "DRAFT",
   idempotency_key: "idem-1", steps,
 });
+
+const stateStore = () => {
+  const rows = new Map<string, BuildPlanStateRow>();
+  return new BuildPlanStateStore({
+    async query<T>(sql: string, values: unknown[] = []) {
+      const key = `${values[0]}:${values[1]}:${values[2]}`;
+      if (sql.startsWith("select")) return { rows: (rows.get(key) ? [rows.get(key)!] : []) as T[] };
+      if (sql.startsWith("insert")) {
+        const previous = rows.get(key);
+        if (previous && ["RUNNING", "BLOCKED", "SUCCEEDED"].includes(previous.status)) return { rows: [] as T[] };
+        const row: BuildPlanStateRow = { id: key, status: "RUNNING", attempts: (previous?.attempts ?? 0) + 1, blocked_at: null };
+        rows.set(key, row);
+        return { rows: [row] as T[] };
+      }
+      const row = rows.get(key);
+      if (row) { row.status = String(values[3]); if (row.status === "BLOCKED") row.blocked_at = new Date().toISOString(); }
+      return { rows: [] as T[] };
+    },
+  });
+};
 
 describe("BuildPlan", () => {
   it("accepts an acyclic step graph and preserves per-step status", () => {
@@ -49,8 +70,8 @@ describe("BuildPlan", () => {
       { step_id: "build", dependencies: [], status: "FAILED" },
     ]), async () => {
       attempts += 1;
-      return attempts === 3 ? "SUCCEEDED" : "FAILED";
-    }, { maxAttempts: 3 });
+      return attempts === 3 ? ("SUCCEEDED" as const) : ("FAILED" as const);
+    }, { maxAttempts: 3, stateStore: stateStore() });
 
     expect(attempts).toBe(3);
     expect(result).toMatchObject({ status: "REPAIRED", attempts: 3 });
@@ -63,8 +84,8 @@ describe("BuildPlan", () => {
       { step_id: "build", dependencies: [], status: "FAILED" },
     ]), async () => {
       attempts += 1;
-      return "FAILED";
-    }, { maxAttempts: 2 });
+      return "FAILED" as const;
+    }, { maxAttempts: 2, stateStore: stateStore() });
 
     expect(attempts).toBe(2);
     expect(result.status).toBe("BLOCKED");
@@ -74,18 +95,19 @@ describe("BuildPlan", () => {
 
   it("rejects re-entry after BLOCKED, even when the caller resends the original plan", async () => {
     const blockedPlan = { ...plan([{ step_id: "terminal", dependencies: [], status: "FAILED" }]), build_plan_id: "bp-terminal" };
-    await repairFailedBuildPlan(blockedPlan, async () => "FAILED", { maxAttempts: 1 });
+    const persistentStore = stateStore();
+    await repairFailedBuildPlan(blockedPlan, async () => "FAILED" as const, { maxAttempts: 1, stateStore: persistentStore });
 
     let executions = 0;
     await expect(repairFailedBuildPlan(blockedPlan, async () => {
       executions += 1;
-      return "SUCCEEDED";
-    }, { maxAttempts: 10 })).rejects.toThrow("BuildPlan is terminally BLOCKED");
+      return "SUCCEEDED" as const;
+    }, { maxAttempts: 10, stateStore: persistentStore })).rejects.toThrow("BuildPlan is terminally BLOCKED");
     expect(executions).toBe(0);
 
     const replayed = { ...blockedPlan, status: "FAILED" as const,
       steps: [{ step_id: "terminal", dependencies: [], status: "FAILED" as const }] };
-    await expect(repairFailedBuildPlan(replayed, async () => "SUCCEEDED", { maxAttempts: 10 }))
+    await expect(repairFailedBuildPlan(replayed, async () => "SUCCEEDED" as const, { maxAttempts: 10, stateStore: persistentStore }))
       .rejects.toThrow("BuildPlan is terminally BLOCKED");
   });
 });
