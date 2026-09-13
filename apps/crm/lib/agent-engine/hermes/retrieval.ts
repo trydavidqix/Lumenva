@@ -84,10 +84,10 @@ export function rankPriorEvidence(
       const outcomeQuality = clamp(record.score ?? (record.status === 'keep' ? 0.75 : 0.25));
       const ageFreshness = freshness(record.createdAt, now);
       const score = clamp(
-        0.35 * contextSimilarity +
+        0.4 * contextSimilarity +
           0.25 * goalOverlap +
           0.15 * metricCompatibility +
-          0.15 * outcomeQuality +
+          0.1 * outcomeQuality +
           0.1 * ageFreshness,
       );
       return {
