@@ -7,13 +7,71 @@
  * This closes the loop: judge → distiller → apply proposal → outcomes → next judge run.
  */
 
+import { randomUUID } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { HermesOutcomeStore } from "@/lib/agent-engine/hermes/outcome-ledger";
 
 export interface FlywheelOutcomeStats {
   run_id: string;
   organization_id: string;
   outcomes: Record<string, number>;
   recorded_at: string;
+  hermes_mirror?: {
+    attempted: number;
+    mirrored: number;
+    errors: string[];
+  };
+}
+
+export interface FollowupOutcomeMirrorOptions {
+  store: HermesOutcomeStore;
+  idFactory?: () => string;
+}
+
+function safeMirrorError(error: unknown): string {
+  return (error instanceof Error ? error.message : String(error)).slice(0, 240);
+}
+
+/**
+ * Mirrors the already-persisted legacy aggregate into the generic Hermes ledger.
+ * This is deliberately best-effort: the legacy Phase 10 write is authoritative for
+ * compatibility and MUST NOT be rolled back if the additive Hermes mirror fails.
+ */
+export async function mirrorFollowupOutcomesToHermes(
+  stats: Omit<FlywheelOutcomeStats, "hermes_mirror">,
+  options: FollowupOutcomeMirrorOptions,
+): Promise<NonNullable<FlywheelOutcomeStats["hermes_mirror"]>> {
+  const idFactory = options.idFactory ?? randomUUID;
+  const entries = Object.entries(stats.outcomes);
+  const errors: string[] = [];
+  let mirrored = 0;
+
+  for (const [outcome, count] of entries) {
+    try {
+      await options.store.append({
+        id: idFactory(),
+        organizationId: stats.organization_id,
+        runId: stats.run_id,
+        missionId: null,
+        candidateId: null,
+        subjectKind: "followup_outcome",
+        subjectId: outcome,
+        technicalQuality: null,
+        costCents: null,
+        latencyMs: null,
+        kpiName: "followup_count",
+        kpiBaseline: null,
+        kpiObserved: count,
+        evidenceRefs: [`flywheel_followup_outcome:${stats.run_id}:${outcome}`],
+        observedAt: stats.recorded_at,
+      });
+      mirrored += 1;
+    } catch (error) {
+      errors.push(`${outcome}:${safeMirrorError(error)}`);
+    }
+  }
+
+  return { attempted: entries.length, mirrored, errors };
 }
 
 /**
@@ -28,6 +86,7 @@ export async function persistFollowupOutcomes(
   organizationId: string,
   runId: string,
   runEndedAt: Date,
+  options?: { hermesMirror?: FollowupOutcomeMirrorOptions },
 ): Promise<FlywheelOutcomeStats | null> {
   const admin = createAdminClient();
 
@@ -61,7 +120,8 @@ export async function persistFollowupOutcomes(
     outcomes[outcome] = (outcomes[outcome] || 0) + 1;
   }
 
-  // Persist to flywheel_followup_outcomes
+  // Persist to flywheel_followup_outcomes first. This remains the compatibility
+  // write and must succeed before any generic Hermes mirror is attempted.
   const recordedAt = new Date();
   const rows = Object.entries(outcomes).map(([outcome, count]) => ({
     organization_id: organizationId,
@@ -82,16 +142,32 @@ export async function persistFollowupOutcomes(
     return null;
   }
 
-  console.log(
-    `[flywheel] persisted outcomes for run ${runId}: ${JSON.stringify(outcomes)}`,
-  );
-
-  return {
+  const baseStats: Omit<FlywheelOutcomeStats, "hermes_mirror"> = {
     run_id: runId,
     organization_id: organizationId,
     outcomes,
     recorded_at: recordedAt.toISOString(),
   };
+
+  let hermesMirror: FlywheelOutcomeStats["hermes_mirror"];
+  if (options?.hermesMirror) {
+    hermesMirror = await mirrorFollowupOutcomesToHermes(baseStats, options.hermesMirror);
+    if (hermesMirror.errors.length > 0) {
+      console.warn("[flywheel] Hermes outcome mirror partially failed", {
+        organizationId,
+        runId,
+        attempted: hermesMirror.attempted,
+        mirrored: hermesMirror.mirrored,
+        errors: hermesMirror.errors,
+      });
+    }
+  }
+
+  console.log(
+    `[flywheel] persisted outcomes for run ${runId}: ${JSON.stringify(outcomes)}`,
+  );
+
+  return hermesMirror ? { ...baseStats, hermes_mirror: hermesMirror } : baseStats;
 }
 
 /**
