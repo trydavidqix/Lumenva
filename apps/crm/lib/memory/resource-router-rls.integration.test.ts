@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { persistWorker } from "./resource-router-persistence";
+import { loadWorkers, persistWorker, routeResourcePersisted } from "./resource-router-persistence";
 
 const migration = join(process.cwd(), "supabase/migrations/20260913160000_resource_router_rls.sql");
 describe("Resource Router RLS (real PostgreSQL)", () => {
@@ -18,7 +18,14 @@ describe("Resource Router RLS (real PostgreSQL)", () => {
       const tenantA = new Pool({ connectionString: url.replace("postgres:test@", `${role}:test-role@`) }); const a = await tenantA.connect();
       try { await a.query("SET app.org_ids = 'org-a'"); await persistWorker(a, "org-a", { agentId: "worker-a", surface: "Linux", capabilities: ["ts"], currentLoad: 0, capacity: 1, healthy: true }); } finally { a.release(); await tenantA.end(); }
       const tenantB = new Pool({ connectionString: url.replace("postgres:test@", `${role}:test-role@`) }); const b = await tenantB.connect();
-      try { await b.query("SET app.org_ids = 'org-b'"); expect((await b.query("SELECT agent_id FROM public.resource_router_workers WHERE tenant_id='org-a'")).rows).toEqual([]); await expect(persistWorker(b, "org-a", { agentId: "worker-b", surface: "Cloud", capabilities: [], currentLoad: 0, capacity: 1, healthy: true })).rejects.toMatchObject({ code: "42501" }); } finally { b.release(); await tenantB.end(); }
+      try {
+        await b.query("SET app.org_ids = 'org-b'");
+        expect((await b.query("SELECT agent_id FROM public.resource_router_workers WHERE tenant_id='org-a'")).rows).toEqual([]);
+        await expect(loadWorkers(b, "org-a")).resolves.toEqual([]);
+        await expect(routeResourcePersisted(b, "org-a", { taskId: "cross-tenant", requiredCapabilities: ["ts"] })).rejects.toThrow("resource_router_no_apt_worker");
+        await expect(persistWorker(b, "org-a", { agentId: "worker-b", surface: "Cloud", capabilities: [], currentLoad: 0, capacity: 1, healthy: true })).rejects.toMatchObject({ code: "42501" });
+        await expect(loadWorkers(b, "")).rejects.toThrow("resource_router_tenant_invalid");
+      } finally { b.release(); await tenantB.end(); }
     } finally { await admin.query(`DROP ROLE IF EXISTS ${role}`).catch(() => undefined); await admin.query("DROP ROLE IF EXISTS authenticated").catch(() => undefined); await admin.end(); }
   }, 30_000);
 });

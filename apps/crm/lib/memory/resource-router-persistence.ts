@@ -19,6 +19,7 @@ export async function persistWorker(db: Queryable, tenantId: string, worker: Wor
 }
 
 export async function loadWorkers(db: Queryable, tenantId: string): Promise<Worker[]> {
+  if (!tenantId.trim()) throw new Error("resource_router_tenant_invalid");
   const result = await db.query<{ agent_id: string; surface: Worker["surface"]; capabilities: string[]; current_load: string | number; capacity: string | number; healthy: boolean }>(
     `SELECT agent_id, surface, capabilities, current_load, capacity, healthy FROM resource_router_workers WHERE tenant_id=$1`, [tenantId],
   );
