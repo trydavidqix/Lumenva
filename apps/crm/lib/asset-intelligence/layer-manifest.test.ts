@@ -39,7 +39,7 @@ describe("LayerManifest", () => {
         type: "IMAGE",
         bounds: { x: 0, y: 0, width: -1, height: 10 },
         semantic_tag: "background",
-        provenance: { created_by: "" },
+        provenance: { created_by: "", owner_id: "owner", source_id: "source", license_ref: "license" },
       }],
     })).toThrow(/layer_id|bounds|created_by/);
   });

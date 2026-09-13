@@ -30,7 +30,7 @@ export class PostgresLayerReuseApprovalStore {
       [approval.approval_id, approval.organizationId, approval.status, approval.expires_at],
     );
     if (result.rows.length !== 1) throw new Error("layer_reuse_approval_not_persisted");
-    return toApproval(result.rows[0]);
+    return toApproval(result.rows[0]!);
   }
 
   async loadForTenant(organizationId: string, approvalId: string): Promise<LayerReuseApproval | null> {

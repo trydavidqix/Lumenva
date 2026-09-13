@@ -56,12 +56,12 @@ describe("Reverse Design", () => {
     const manifest = createLayerManifest({ manifest_id: "manifest-source", asset_id: "asset-source", organization_id: "org-1", version: "1", layers: [{ layer_id: "layer-1", type: "IMAGE", bounds: { x: 0, y: 0, width: 10, height: 10 }, semantic_tag: "hero", provenance: { created_by: "human:owner-1", owner_id: "owner-1", source_id: "source-1", license_ref: "lic-1" } }] });
     const approved = await approveLayerReuse(manifest, { organizationId: "org-1", targetSemanticTags: ["hero"] }, { approval_id: "approval-1", organizationId: "org-1", status: "APPROVED", expires_at: "2099-01-01T00:00:00.000Z" }, async () => ({ license_ref: "lic-1", source_id: "source-1", owner_id: "owner-1", status: "VERIFIED" as const, expires_at: null }));
     expect(approved).toHaveLength(1);
-    expect(approved[0].authorization).toBe("APPROVED_FOR_REUSE");
+    expect(approved[0]!.authorization).toBe("APPROVED_FOR_REUSE");
   });
 
   it("carrega approval pelo registry antes de liberar reuse", async () => {
     const manifest = createLayerManifest({ manifest_id: "manifest-source", asset_id: "asset-source", organization_id: "org-1", version: "1", layers: [{ layer_id: "layer-1", type: "IMAGE", bounds: { x: 0, y: 0, width: 10, height: 10 }, semantic_tag: "hero", provenance: { created_by: "human:owner-1", owner_id: "owner-1", source_id: "source-1", license_ref: "lic-1" } }] });
     const approved = await approveLayerReuseFromStore(manifest, { organizationId: "org-1", approvalId: "approval-1", targetSemanticTags: ["hero"] }, { loadForTenant: async (organizationId, approvalId) => organizationId === "org-1" && approvalId === "approval-1" ? { approval_id: approvalId, organizationId, status: "APPROVED", expires_at: "2099-01-01T00:00:00.000Z" } : null }, async () => ({ license_ref: "lic-1", source_id: "source-1", owner_id: "owner-1", status: "VERIFIED" as const, expires_at: null }));
-    expect(approved[0].authorization).toBe("APPROVED_FOR_REUSE");
+    expect(approved[0]!.authorization).toBe("APPROVED_FOR_REUSE");
   });
 });
