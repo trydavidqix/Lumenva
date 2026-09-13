@@ -26,6 +26,7 @@ export interface ScenarioRepository {
   createScenario(organizationId: string, input: CreateScenarioInput): Promise<Record<string, unknown>>;
   getScenario(organizationId: string, scenarioId: string): Promise<Record<string, unknown> | null>;
   listScenarios(organizationId: string, limit?: number): Promise<Array<Record<string, unknown>>>;
+  getLatestReport(organizationId: string, scenarioId: string): Promise<Record<string, unknown> | null>;
   updateDraft(organizationId: string, scenarioId: string, input: UpdateScenarioDraftInput): Promise<Record<string, unknown>>;
   transitionScenario(
     organizationId: string,
@@ -98,6 +99,19 @@ export function createScenarioRepository(db: ScenarioRepositoryDb): ScenarioRepo
         [organizationId, safeLimit],
       );
       return rows;
+    },
+
+    async getLatestReport(organizationId, scenarioId) {
+      const { rows } = await db.query(
+        `select * from scenario_reports
+         where organization_id = $1
+           and scenario_id = $2
+           and report_kind = 'decision_brief'
+         order by created_at desc
+         limit 1`,
+        [organizationId, scenarioId],
+      );
+      return first(rows);
     },
 
     async updateDraft(organizationId, scenarioId, input) {
