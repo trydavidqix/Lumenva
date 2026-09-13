@@ -41,9 +41,12 @@ export async function applyEditWithLock(
   proposal: AIEditProposal,
   next: CanvasDocument,
 ): Promise<void> {
-  await db.query("begin");
+  const connection = "connect" in db && typeof (db as Queryable & { connect?: unknown }).connect === "function"
+    ? await (db as Queryable & { connect: () => Promise<Queryable & { release?: () => void }> }).connect()
+    : db;
+  await connection.query("begin");
   try {
-    const { rows } = await db.query<StudioRow>(
+    const { rows } = await connection.query<StudioRow>(
       `select * from public.studio_canvas_documents
        where organization_id = $1 and session_id = $2 and canvas_id = $3
        order by version desc limit 1 for update`,
@@ -51,7 +54,7 @@ export async function applyEditWithLock(
     );
     const current = rows[0];
     if (!current || Number(current.version) !== proposal.base_version) throw new Error("stale_version");
-    await db.query(
+    await connection.query(
       `insert into public.studio_canvas_documents
          (organization_id, session_id, canvas_id, project_id, version, parent_version,
           viewport, layers, selected_variant_id, editor_state, source_refs, evidence_refs, created_by, created_at)
@@ -73,16 +76,25 @@ export async function applyEditWithLock(
         next.created_at,
       ],
     );
-    await db.query(
+    await connection.query(
       `update public.studio_edit_proposals
        set status = 'APPLIED', approved_by = $4, approved_at = $5
        where organization_id = $1 and session_id = $2 and edit_id = $3`,
       [proposal.organization_id, proposal.session_id, proposal.edit_id, next.created_by, next.created_at],
     );
-    await db.query("commit");
+    await connection.query("commit");
   } catch (error) {
-    await db.query("rollback");
+    await connection.query("rollback");
+    // Concurrent writers can both observe the same latest version before one
+    // inserts the next immutable version. The unique version key is the
+    // database-level compare-and-swap guard; expose it as the same stale
+    // version outcome as the explicit version check.
+    if (error && typeof error === "object" && "code" in error && (error as { code?: unknown }).code === "23505") {
+      throw new Error("stale_version");
+    }
     throw error;
+  } finally {
+    (connection as { release?: () => void }).release?.();
   }
 }
 
