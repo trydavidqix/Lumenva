@@ -10747,3 +10747,24 @@ create policy tenant_isolation_hermes_capability_identities_all on public.hermes
 
 alter table if exists public.flywheel_distiller_proposals drop constraint if exists flywheel_distiller_proposals_type_check;
 alter table if exists public.flywheel_distiller_proposals add constraint flywheel_distiller_proposals_type_check check (type in ('playbook_bullet','golden_case','reentry_trigger','org_memory_entry','skill_change','routing_change','eval_case','operational_threshold','prompt_change','workflow_change','agent_definition_change','model_policy_change','resource_route_change','memory_policy_change','context_policy_change','infra_change','strategy_change'));
+
+
+-- ---- Wave 4 BrowserMesh: replay claims and tenant RLS ----
+create table if not exists public.browsermesh_event_idempotency (
+  id uuid primary key default gen_random_uuid(),
+  organization_id text not null,
+  event_id text not null,
+  idempotency_key text not null,
+  status text not null check (status in (CLAIMED)),
+  claimed_at timestamptz not null default now(),
+  constraint browsermesh_event_idempotency_org_key unique (organization_id, idempotency_key),
+  constraint browsermesh_event_idempotency_event_key unique (organization_id, event_id)
+);
+alter table public.browsermesh_event_idempotency enable row level security;
+drop policy if exists browsermesh_event_idempotency_tenant_all on public.browsermesh_event_idempotency;
+create policy browsermesh_event_idempotency_tenant_all on public.browsermesh_event_idempotency
+  for all to authenticated
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
+grant select, insert on public.browsermesh_event_idempotency to authenticated;
+grant all on public.browsermesh_event_idempotency to service_role;
