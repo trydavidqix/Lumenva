@@ -17,6 +17,7 @@ describe("EventWake", () => {
   it("rejects forged actor and payload-only capability", () => { expect(wakeEvent(signWakeEvent({ ...unsigned, actor_id: "forged" }, SECRET), workers, policy, SECRET, actors)).toEqual({ status: "REJECTED", reason: "ACTOR_NOT_AUTHORIZED" }); expect(wakeEvent(signWakeEvent({ ...unsigned, required_capability: "browser.upload", actor_capabilities: ["browser.upload"] }, SECRET), workers, policy, SECRET, actors)).toEqual({ status: "REJECTED", reason: "ACTOR_CAPABILITY_DENIED" }); });
   it("rejects a missing policy instead of queueing an unauthorised wake", () => { expect(wakeEvent(event, workers, undefined as unknown as WakePolicy, SECRET, actors)).toEqual({ status: "REJECTED", reason: "INVALID_POLICY" }); });
   it("rejects a malformed policy instead of queueing an unauthorised wake", () => { expect(wakeEvent(event, workers, { organization_id: "" }, SECRET, actors)).toEqual({ status: "REJECTED", reason: "INVALID_POLICY" }); });
+  it("rejects a policy from another tenant instead of queueing the event", () => { expect(wakeEvent(event, workers, { organization_id: "org-2" }, SECRET, actors)).toEqual({ status: "REJECTED", reason: "INVALID_POLICY" }); });
   it("claims a valid event in Postgres before waking and rejects replay", async () => {
     const calls: string[] = [];
     const db = { query: async <T>(text: string) => { calls.push(text); return { rows: calls.length === 1 ? [{ id: "claim-1", organization_id: "org-1", event_id: "event-1", idempotency_key: event.idempotency_key, status: "CLAIMED" }] as T[] : [] }; } };
