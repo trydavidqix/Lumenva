@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 
+import { sanitizeLearningSummary } from '../hermes/sanitization';
 import type { LearningScope } from './contracts';
 
 export const LEARNING_SIGNAL_KINDS = [
@@ -16,9 +17,23 @@ export const LEARNING_SIGNAL_KINDS = [
   'latency_regression',
   'verification_failure',
   'post_promotion_regression',
+  'run_success',
+  'business_outcome',
+  'reviewer_finding',
+  'capability_changed',
+  'resource_regression',
 ] as const;
 
 export type LearningSignalKind = (typeof LEARNING_SIGNAL_KINDS)[number];
+
+export interface HermesProvenance {
+  missionId?: string;
+  runId?: string;
+  workflowId?: string;
+  sessionId?: string;
+  traceId?: string;
+  agentVersion?: string;
+}
 
 export interface LearningSignal {
   id: string;
@@ -30,6 +45,7 @@ export interface LearningSignal {
   observedAt: string;
   evidenceRef: string;
   redactedSummary: string | null;
+  provenance?: HermesProvenance;
 }
 
 const signalKindSet = new Set<string>(LEARNING_SIGNAL_KINDS);
@@ -48,6 +64,11 @@ const SIGNAL_WEIGHTS: Readonly<Record<LearningSignalKind, number>> = {
   latency_regression: 0.7,
   verification_failure: 1,
   post_promotion_regression: 1,
+  run_success: 0.55,
+  business_outcome: 0.9,
+  reviewer_finding: 0.85,
+  capability_changed: 0.8,
+  resource_regression: 0.75,
 };
 
 function object(value: unknown): Record<string, unknown> {
@@ -60,6 +81,12 @@ function object(value: unknown): Record<string, unknown> {
 function requiredString(value: unknown, code: string): string {
   if (typeof value !== 'string' || value.trim().length === 0) throw new Error(code);
   return value.trim();
+}
+
+function optionalString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
 }
 
 function boundedNumber(value: unknown, code: string): number {
@@ -82,6 +109,23 @@ function parseScope(value: unknown): LearningScope {
   const agentId = requiredString(scope.agentId, 'flywheel_signal_scope_invalid');
   const capabilityId = requiredString(scope.capabilityId, 'flywheel_signal_scope_invalid');
   return { organizationId, agentId, capabilityId };
+}
+
+function parseProvenance(value: unknown): HermesProvenance | undefined {
+  if (value === undefined || value === null) return undefined;
+  const row = object(value);
+  const provenance: HermesProvenance = {
+    missionId: optionalString(row.missionId),
+    runId: optionalString(row.runId),
+    workflowId: optionalString(row.workflowId),
+    sessionId: optionalString(row.sessionId),
+    traceId: optionalString(row.traceId),
+    agentVersion: optionalString(row.agentVersion),
+  };
+  const compact = Object.fromEntries(
+    Object.entries(provenance).filter(([, entry]) => entry !== undefined),
+  ) as HermesProvenance;
+  return Object.keys(compact).length > 0 ? compact : undefined;
 }
 
 function normalizeFailureClass(value: unknown): string {
@@ -111,6 +155,7 @@ export function normalizeLearningSignal(input: unknown): LearningSignal {
   const observedAt = requiredString(row.observedAt, 'flywheel_signal_observed_at_invalid');
   if (Number.isNaN(Date.parse(observedAt))) throw new Error('flywheel_signal_observed_at_invalid');
 
+  const provenance = parseProvenance(row.provenance);
   return {
     id: requiredString(row.id, 'flywheel_signal_id_invalid'),
     scope,
@@ -120,9 +165,7 @@ export function normalizeLearningSignal(input: unknown): LearningSignal {
     impact: boundedNumber(row.impact, 'flywheel_signal_impact_invalid'),
     observedAt,
     evidenceRef: requiredString(row.evidenceRef, 'flywheel_signal_evidence_ref_invalid'),
-    redactedSummary:
-      typeof row.redactedSummary === 'string' && row.redactedSummary.trim().length > 0
-        ? row.redactedSummary.trim().slice(0, 500)
-        : null,
+    redactedSummary: sanitizeLearningSummary(row.redactedSummary),
+    ...(provenance ? { provenance } : {}),
   };
 }
