@@ -44,3 +44,8 @@ export class ContentProvenanceTracker {
     this.records.set(contentId, { ...record, freshness });
   }
 }
+
+/** Fail-closed publication boundary for provenance-backed content. */
+export function assertPublishableContent(input: ContentProvenanceInput, minimumConfidence = 0.8): void {
+  if (input.freshness !== "current" || !input.source.trim() || !Number.isFinite(input.confidence) || input.confidence < minimumConfidence) throw new Error("content_publication_blocked");
+}

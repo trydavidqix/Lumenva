@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ContentProvenanceTracker, type ContentProvenanceInput } from './content-provenance';
+import { ContentProvenanceTracker, assertPublishableContent, type ContentProvenanceInput } from './content-provenance';
 
 const piece = (overrides: Partial<ContentProvenanceInput> = {}): ContentProvenanceInput => ({
   contentId: 'content-1',
@@ -37,4 +37,5 @@ describe('ContentProvenanceTracker', () => {
       'content provenance already registered: content-1',
     );
   });
+  it("blocks stale content before publication", () => { expect(() => assertPublishableContent(piece({ freshness: "stale" }))).toThrow("content_publication_blocked"); });
 });
