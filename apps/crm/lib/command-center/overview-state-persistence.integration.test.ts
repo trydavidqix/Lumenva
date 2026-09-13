@@ -1,4 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { Pool } from "pg";
 import { ensureOverviewStore, loadOverview, saveOverview } from "./overview-state-persistence";
 
@@ -13,6 +15,8 @@ describe("command center overview postgres persistence", () => {
     const connectionString = `postgres://postgres:postgres@127.0.0.1:${port}/postgres`;
     for (let i = 0; i < 30; i++) { try { const probe = new Pool({ connectionString }); await probe.query("select 1"); await probe.end(); break; } catch { await new Promise((r) => setTimeout(r, 200)); } }
     pool = new Pool({ connectionString });
+    await pool.query("CREATE OR REPLACE FUNCTION public.fn_user_org_ids() RETURNS SETOF text LANGUAGE sql STABLE AS $$ SELECT unnest(string_to_array(current_setting('app.org_ids', true), ',')) $$");
+    await pool.query(await readFile(join(process.cwd(), "supabase/migrations/20260913150000_command_center_overview_rls.sql"), "utf8"));
     await ensureOverviewStore(pool);
   });
   afterAll(async () => { await pool?.end(); if (container) { const { execFileSync } = await import("node:child_process"); execFileSync("docker", ["rm", "-f", container]); } });
