@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { compileSystemPrompt } from "./prompt-compiler";
-import type { AgentDefinition } from "./agent-definition";
+import type { AgentDefinition, AgentDefinitionOrigin } from "./agent-definition";
 
 const certifiedDefinition: AgentDefinition = {
   id: "sales",
@@ -14,9 +14,16 @@ const certifiedDefinition: AgentDefinition = {
   escalation: "Escalate policy, safety, scope or approval uncertainty to a human reviewer.",
 };
 
+const origin: AgentDefinitionOrigin = {
+  actor_id: "owner-1",
+  tenant_id: "tenant-a",
+};
+
+const expectedTenantId = "tenant-a";
+
 describe("minimum prompt compiler", () => {
   it("formats all certified birth fields in canonical order", () => {
-    const prompt = compileSystemPrompt(certifiedDefinition);
+    const prompt = compileSystemPrompt(certifiedDefinition, origin, expectedTenantId);
 
     expect(prompt).toBe(
       [
@@ -65,7 +72,7 @@ describe("minimum prompt compiler", () => {
     const prompt = compileSystemPrompt({
       ...certifiedDefinition,
       [field]: payload,
-    });
+    }, origin, expectedTenantId);
 
     expect(prompt).toContain(escaped);
     expect(prompt.match(new RegExp(opening, "g"))).toHaveLength(1);
@@ -76,7 +83,7 @@ describe("minimum prompt compiler", () => {
   it("rejects a SHADOW definition before compiling a prompt", () => {
     const shadow = { ...certifiedDefinition, status: "SHADOW" as const };
 
-    expect(() => compileSystemPrompt(shadow)).toThrow("agent_definition_not_certified");
+    expect(() => compileSystemPrompt(shadow, origin, expectedTenantId)).toThrow("agent_definition_not_certified");
   });
 
   it("does not mutate the certified definition while compiling", () => {
@@ -86,8 +93,19 @@ describe("minimum prompt compiler", () => {
     };
     const before = structuredClone(input);
 
-    compileSystemPrompt(input);
+    compileSystemPrompt(input, origin, expectedTenantId);
 
     expect(input).toEqual(before);
+  });
+
+  it("revalidates a forged CERTIFIED definition before compiling", () => {
+    const forged = {
+      ...certifiedDefinition,
+      mission: "",
+    };
+
+    expect(() => compileSystemPrompt(forged, origin, expectedTenantId)).toThrow(
+      "agent_definition_not_certified",
+    );
   });
 });
