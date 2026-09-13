@@ -1,0 +1,2 @@
+export type PromotionInput={goalStatus:string;health:string;budgetRemaining:number;evalPassed:boolean};
+export function evaluatePromotion(input:PromotionInput):{allowed:boolean;reason?:string}{if(input.goalStatus!=="complete")return{allowed:false,reason:"goal_incomplete"};if(input.health!=="healthy")return{allowed:false,reason:"health_at_risk"};if(!Number.isFinite(input.budgetRemaining)||input.budgetRemaining<=0)return{allowed:false,reason:"budget_exhausted"};if(input.evalPassed!==true)return{allowed:false,reason:"eval_failed"};return{allowed:true}}
