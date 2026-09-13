@@ -27,7 +27,7 @@ describe("Studio reviewer authorization registry", () => {
     await registerReviewer(admin, { organizationId: orgB, reviewerId: "reviewer-b", role: "owner" });
     tenant = new Pool({ connectionString: url.replace("postgres:test", "authenticated:authenticated") });
     await tenant.query(`SET app.org_ids = '${orgA}'`);
-  });
+  }, 30_000);
   afterAll(async () => { await tenant?.end(); if (admin) { await admin.query("DROP OWNED BY authenticated"); await admin.query("DROP OWNED BY service_role"); await admin.query("DROP ROLE IF EXISTS authenticated"); await admin.query("DROP ROLE IF EXISTS service_role"); await admin.end(); } if (container) { const { execFileSync } = await import("node:child_process"); execFileSync("docker", ["rm", "-f", container]); } });
 
   it("authorizes same-tenant reviewer and rejects unknown/cross-tenant identities", async () => {
@@ -35,5 +35,5 @@ describe("Studio reviewer authorization registry", () => {
     await expect(assertAuthorizedReviewer(tenant, orgA, "unknown-reviewer")).rejects.toThrow("reviewer_not_authorized");
     await expect(assertAuthorizedReviewer(tenant, orgA, "reviewer-b")).rejects.toThrow("reviewer_not_authorized");
     await expect(tenant.query("INSERT INTO public.studio_reviewer_authorizations (organization_id, reviewer_id, role) VALUES ($1,'attacker','reviewer')", [orgB])).rejects.toMatchObject({ code: "42501" });
-  });
+  }, 30_000);
 });

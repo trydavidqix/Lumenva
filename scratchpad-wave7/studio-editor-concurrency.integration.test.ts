@@ -29,7 +29,7 @@ describe("Studio Editor concurrent persistence", () => {
     await admin.query("CREATE TABLE studio_edit_proposals (organization_id text, session_id text, edit_id text, approved_by text, approved_at timestamptz, status text, PRIMARY KEY (organization_id, session_id, edit_id))");
     await admin.query("INSERT INTO studio_canvas_documents (organization_id, session_id, canvas_id, project_id, version, viewport, layers, editor_state, source_refs, evidence_refs, created_by, created_at) VALUES ($1,$2,$3,$4,1,$5,$6,'DRAFT',$7,$8,$9,$10)", [next.organization_id, next.session_id, next.canvas_id, next.project_id, JSON.stringify(next.viewport), JSON.stringify([]), JSON.stringify(next.source_refs), JSON.stringify(next.evidence_refs), "creator", next.created_at]);
     await admin.query("INSERT INTO studio_edit_proposals (organization_id, session_id, edit_id, status) VALUES ($1,$2,$3,'PENDING_REVIEW')", [proposal.organization_id, proposal.session_id, proposal.edit_id]);
-  });
+  }, 30_000);
 
   afterAll(async () => { await admin?.end(); if (container) { const { execFileSync } = await import("node:child_process"); execFileSync("docker", ["rm", "-f", container]); } });
 
@@ -49,5 +49,5 @@ describe("Studio Editor concurrent persistence", () => {
     } finally {
       await dbA.end(); await dbB.end();
     }
-  });
+  }, 30_000);
 });
