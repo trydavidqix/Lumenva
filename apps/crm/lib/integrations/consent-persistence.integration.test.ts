@@ -17,7 +17,13 @@ describe("durable consent enforcement against Postgres", () => {
       const [first, second] = await Promise.all([new PostgresConsentRegistry(clientA).register(input), new PostgresConsentRegistry(clientB).register(input)]);
       expect(first.status).toBe("GRANTED");
       expect(second.status).toBe("GRANTED");
-      await expect(new PostgresConsentRegistry(clientA).register({ ...input, consent_id: "consent-other-tenant", organization_id: "org-b" })).rejects.toMatchObject({ code: "42501" });
+      const role = await clientB.query<{ rolbypassrls: boolean }>("select rolbypassrls from pg_roles where rolname=current_user");
+      expect(role.rows[0]?.rolbypassrls).toBe(false);
+      await clientB.query("select set_config('request.jwt.claims',$1,false)", [JSON.stringify({ org_ids: ["org-b"] })]);
+      expect(await new PostgresConsentRegistry(clientB).get("org-a", "consent-concurrent")).toBeUndefined();
+      await expect(new PostgresConsentRegistry(clientB).revoke("org-a", "consent-concurrent")).rejects.toThrow("consent_not_found");
+      const crossTenantUpdate = await clientB.query("update public.contact_consents set status='REVOKED' where organization_id=$1 and consent_id=$2", ["org-a", "consent-concurrent"]);
+      expect(crossTenantUpdate.rowCount).toBe(0);
       const write: ContactMemoryWrite = { owner: "agent-1", scope: "company:org-a", authority: 3, organization_id: "org-a", subject_ref: "contact-1", channel: "email", purpose: "support" };
       const policy: MemoryGatePolicy = { owner: "agent-1", scope: "company:org-a", authority: 2 };
       const durable = new PostgresConsentRegistry(clientA);
