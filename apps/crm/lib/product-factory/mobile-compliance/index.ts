@@ -12,4 +12,5 @@ export * from "./runtime/command-adapter";
 export * from "./runtime/ios-simulator";
 export * from "./scanners";
 export * from "./store";
+export * from "./submit";
 export * from "./verdict";
