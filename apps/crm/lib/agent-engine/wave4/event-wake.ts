@@ -18,7 +18,7 @@ export type WakeDecision =
   | { status: "WAKED"; event_id: string; worker_id: string; agent_id: string }
   | { status: "QUEUED"; event: WakeEvent; reason: "NO_CAPABLE_WORKER" | "NO_POLICY_MATCH" }
   | { status: "DUPLICATE"; event_id: string; reason: "IDEMPOTENT_REPLAY" }
-  | { status: "REJECTED"; reason: "INVALID_EVENT" | "INVALID_SIGNATURE" | "ACTOR_NOT_AUTHORIZED" | "ACTOR_CAPABILITY_DENIED" };
+  | { status: "REJECTED"; reason: "INVALID_EVENT" | "INVALID_SIGNATURE" | "INVALID_POLICY" | "ACTOR_NOT_AUTHORIZED" | "ACTOR_CAPABILITY_DENIED" };
 
 function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalize);
@@ -36,6 +36,11 @@ function isValidEvent(event: unknown): event is WakeEvent {
   if (!event || typeof event !== "object") return false; const candidate = event as Partial<WakeEvent>;
   return typeof candidate.event_id === "string" && !!candidate.event_id && typeof candidate.organization_id === "string" && !!candidate.organization_id && typeof candidate.actor_id === "string" && !!candidate.actor_id && Array.isArray(candidate.actor_capabilities) && candidate.actor_capabilities.length > 0 && candidate.actor_capabilities.every((item) => typeof item === "string" && !!item) && typeof candidate.required_capability === "string" && !!candidate.required_capability && candidate.actor_capabilities.includes(candidate.required_capability) && typeof candidate.idempotency_key === "string" && !!candidate.idempotency_key && Object.prototype.hasOwnProperty.call(candidate, "payload");
 }
+function isValidPolicy(policy: unknown): policy is WakePolicy {
+  if (!policy || typeof policy !== "object") return false;
+  const candidate = policy as Partial<WakePolicy>;
+  return typeof candidate.organization_id === "string" && candidate.organization_id.trim().length > 0 && (candidate.allowed_worker_ids === undefined || (Array.isArray(candidate.allowed_worker_ids) && candidate.allowed_worker_ids.every((id) => typeof id === "string" && id.trim().length > 0)));
+}
 /** Validates schema and HMAC before routing; invalid origin never falls into QUEUED. */
 export function wakeEvent(event: unknown, workers: readonly WakeWorker[], policy: WakePolicy, secret: string, actorRegistry: WakeActorRegistry): WakeDecision {
   if (!isValidEvent(event)) return { status: "REJECTED", reason: "INVALID_EVENT" };
@@ -43,7 +48,8 @@ export function wakeEvent(event: unknown, workers: readonly WakeWorker[], policy
   const actor = actorRegistry?.get(event.organization_id, event.actor_id);
   if (!actor || actor.enabled === false) return { status: "REJECTED", reason: "ACTOR_NOT_AUTHORIZED" };
   if (!actor.capabilities.includes(event.required_capability)) return { status: "REJECTED", reason: "ACTOR_CAPABILITY_DENIED" };
-  if (!policy || event.organization_id !== policy.organization_id) return { status: "QUEUED", event, reason: "NO_POLICY_MATCH" };
+  if (!isValidPolicy(policy)) return { status: "REJECTED", reason: "INVALID_POLICY" };
+  if (event.organization_id !== policy.organization_id) return { status: "QUEUED", event, reason: "NO_POLICY_MATCH" };
   if (!Array.isArray(workers)) return { status: "QUEUED", event, reason: "NO_CAPABLE_WORKER" };
   const capable = workers.filter((worker) => worker && worker.organization_id === event.organization_id && worker.available === true && Array.isArray(worker.capabilities) && worker.capabilities.includes(event.required_capability));
   if (capable.length === 0) return { status: "QUEUED", event, reason: "NO_CAPABLE_WORKER" };
