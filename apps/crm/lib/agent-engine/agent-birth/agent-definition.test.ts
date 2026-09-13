@@ -143,6 +143,17 @@ describe("AgentDefinition validation", () => {
     });
   });
 
+  it("keeps a definition in SHADOW when approval timestamp is in the future", () => {
+    const result = certifyAgentDefinition(validDefinition, {
+      origin: validOrigin,
+      expected_tenant_id: expectedTenantId,
+      approval: { ...validApproval, approved_at: "2099-01-01T00:00:00.000Z" },
+    });
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe("SHADOW");
+    expect(result.errors).toContain("approval_timestamp_future");
+  });
+
   it.each([
     ["missing approval", undefined, "approval_required"],
     ["denied approval", { ...validApproval, status: "DENIED" }, "approval_not_granted"],

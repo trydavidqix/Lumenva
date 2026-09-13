@@ -155,8 +155,11 @@ function validateApproval(
   if (!hasText(approval.approval_id)) errors.push("approval_id_required");
   if (!hasText(approval.approver_id)) errors.push("approver_required");
   if (!hasText(approval.policy_version)) errors.push("approval_policy_required");
-  if (!hasText(approval.approved_at) || !Number.isFinite(Date.parse(approval.approved_at))) {
+  const approvedAt = hasText(approval.approved_at) ? Date.parse(approval.approved_at) : Number.NaN;
+  if (!Number.isFinite(approvedAt)) {
     errors.push("approval_timestamp_invalid");
+  } else if (approvedAt > Date.now()) {
+    errors.push("approval_timestamp_future");
   }
   if (approval.status !== "APPROVED") errors.push("approval_not_granted");
   if (!hasText(approval.tenant_id)) errors.push("approval_tenant_required");
