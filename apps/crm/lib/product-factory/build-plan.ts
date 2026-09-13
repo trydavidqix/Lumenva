@@ -1,4 +1,4 @@
-import { BuildPlanStateStore } from "./build-plan-state-store";
+import type { BuildPlanStateStore } from "./build-plan-state-store";
 export type BuildPlanStatus =
   | "DRAFT" | "VALIDATED" | "AUTHORIZED" | "QUEUED" | "RUNNING" | "PREVIEW"
   | "TESTING" | "RELEASE_CANDIDATE" | "RELEASED" | "FAILED" | "CANCELLED" | "BLOCKED_EXTERNAL";
