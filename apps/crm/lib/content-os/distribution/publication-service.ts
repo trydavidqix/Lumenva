@@ -34,9 +34,19 @@ export type CreatePublicationInput = {
   payload?: Record<string, unknown>;
 };
 
+export type CommerceComplianceReceipt = {
+  status: "PASS" | "REVIEW_REQUIRED" | "BLOCK";
+  ruleIds: readonly string[];
+  evidenceRefs: readonly string[];
+};
+
 export type PublishContentInput = CreatePublicationInput & {
   title: string;
   body: Record<string, unknown>;
+  commercial?: {
+    required: boolean;
+    compliance?: CommerceComplianceReceipt;
+  };
 };
 
 export type PublishContentRepository = {
@@ -50,6 +60,10 @@ export class PublicationQualityGateError extends Error {
   readonly code = "publish_quality_gate_required";
 }
 
+export class PublicationCommerceGateError extends Error {
+  readonly code = "commercial_compliance_required";
+}
+
 export class PublicationIdempotencyConflict extends Error {
   readonly code = "idempotency_conflict";
 }
@@ -58,16 +72,44 @@ export class PublicationValidationError extends Error {
   readonly code = "publication_not_publishable";
 }
 
+function commercialJobPayload(input: PublishContentInput): Record<string, unknown> | undefined {
+  if (!input.commercial?.required) return input.payload;
+  const compliance = input.commercial.compliance;
+  if (!compliance || compliance.status !== "PASS") {
+    throw new PublicationCommerceGateError("Commercial content requires a PASS compliance receipt before a publication job can be created.");
+  }
+  return {
+    ...(input.payload ?? {}),
+    commerceCompliance: {
+      status: compliance.status,
+      ruleIds: [...compliance.ruleIds],
+      evidenceRefs: [...compliance.evidenceRefs],
+    },
+  };
+}
+
 /** Final local publisher. It never calls a CMS or provider directly. */
 export async function publishContentItem(repository: PublishContentRepository, input: PublishContentInput): Promise<{ job: PublicationJob; reused: boolean }> {
   const item = await repository.findContentItem(input.organizationId, input.contentItemId);
   if (!item || item.organizationId !== input.organizationId) throw new PublicationValidationError("Content item not found for this organization.");
   const gate = await repository.findPublishGate(input.organizationId, input.contentItemId);
   if (!gate || gate.status !== "passed") throw new PublicationQualityGateError("Content item cannot be published without a passed publish quality gate.");
+
+  // Commerce is a second, independent gate. Editorial approval never implies
+  // that claims/disclosures/market capability are safe for a commercial post.
+  const payload = commercialJobPayload(input);
+
   // The local item is scheduled until the worker confirms the remote side
   // effect; never claim `published` before that confirmation.
   await repository.updateContentItem({ organizationId: input.organizationId, contentItemId: input.contentItemId, title: input.title, body: input.body, status: "scheduled" });
-  return repository.createPublicationJob(input);
+  return repository.createPublicationJob({
+    organizationId: input.organizationId,
+    contentItemId: input.contentItemId,
+    connectionId: input.connectionId,
+    idempotencyKey: input.idempotencyKey,
+    scheduledFor: input.scheduledFor,
+    payload,
+  });
 }
 
 function hash(input: CreatePublicationInput): string {
@@ -99,7 +141,7 @@ export async function createPublicationJob(db: PublicationDb, input: CreatePubli
     if (!raced.error && raced.data && raced.data.request_hash === requestHash) return { job: raced.data, reused: true };
     throw new Error(inserted.error.message);
   }
-  await db.from("event_log").insert({ organization_id: input.organizationId, event_type: "content.publication_requested", entity_kind: "publication_job", entity_id: inserted.data.id, payload: { organizationId: input.organizationId, entityId: inserted.data.id, contentItemId: input.contentItemId }, metadata: { request_id: input.idempotencyKey } }).select("id").maybeSingle();
+  await db.from("event_log").insert({ organization_id: input.organizationId, event_type: "content.publication_requested", entity_kind: "publication_job", entity_id: inserted.data.id, payload: { organizationId: input.organizationId, entityId: inserted.data.id, contentItemId: input.contentItemId, ...(input.payload ? { publicationPayload: input.payload } : {}) }, metadata: { request_id: input.idempotencyKey } }).select("id").maybeSingle();
   return { job: inserted.data, reused: false };
 }
 
