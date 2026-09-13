@@ -10704,3 +10704,28 @@ create trigger content_revisions_item_tenant before insert or update on public.c
 drop trigger if exists content_revisions_run_tenant on public.content_revisions;
 create trigger content_revisions_run_tenant before insert or update on public.content_revisions for each row execute function public.content_os_enforce_tenant_fk('content_research_runs','research_run_id');
 notify pgrst, 'reload schema';
+
+-- ---- Wave 9 Product Factory: durable repair state and tenant RLS ----
+create table if not exists public.build_plan_state (
+  id uuid primary key default gen_random_uuid(),
+  plan_id text not null,
+  step_id text not null,
+  status text not null,
+  attempts integer not null default 0 check (attempts >= 0),
+  blocked_at timestamptz,
+  tenant_id text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint build_plan_state_plan_step_tenant_key unique (tenant_id, plan_id, step_id)
+);
+create unique index if not exists build_plan_state_running_once
+  on public.build_plan_state (tenant_id, plan_id, step_id)
+  where status = RUNNING;
+alter table public.build_plan_state enable row level security;
+drop policy if exists build_plan_state_tenant_all on public.build_plan_state;
+create policy build_plan_state_tenant_all on public.build_plan_state
+  for all to authenticated
+  using (tenant_id in (select public.fn_user_org_ids()))
+  with check (tenant_id in (select public.fn_user_org_ids()));
+grant select, insert, update on public.build_plan_state to authenticated;
+grant all on public.build_plan_state to service_role;

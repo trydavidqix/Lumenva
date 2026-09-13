@@ -197,6 +197,8 @@ aplica.
 | `20260907100000` | `0158_content_os_editorial_persistence` | Content OS V1: research runs retomáveis, evidências com hash e estado de verificação, claims ligados a evidências, quality gates e revisões versionadas; todas tenant-aware, com RLS, índices de reconciliação, idempotência e triggers de coerência entre organizações. |
 | `20260907110000` | `0159_content_os_learning_idempotency` | Chave de idempotência tenant-aware para eventos de aprendizagem e detecção segura de content decay. |
 | `20260907120000` | `0160_ai_agent_command_approvals` | Nova Mode V1: aprovações duráveis de comandos do navegador, com idempotência por organização, expiração, estado de execução, RLS manager+ e guarda de coerência entre agente, versão e tenant. |
+| `20260913000000` | `0161_build_plan_state` | Wave 9 Product Factory: estado durável de repair por tenant, plano e step, com idempotência e bloqueio terminal. |
+| `20260913150000` | `0162_build_plan_state_rls` | Wave 9 Product Factory: RLS tenant-scoped e grants mínimos para o estado durável de repair. |
 
 ## Reproducibility
 
