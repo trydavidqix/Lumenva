@@ -25,7 +25,7 @@ describe("Hermes Source Registry RLS (real PostgreSQL)", () => {
       await admin.query("INSERT INTO public.hermes_source_registry (organization_id, source_id, uri, title, owner, license, version, source_type) VALUES ('org-a','source-a','https://a.example','A','owner','CC-BY','1','approved_internal')");
       await admin.query("RESET ROLE");
 
-      const tenantB = new Pool({ connectionString: url.replace("postgres:test@", `${role}:test-role@`) });
+      const tenantBUrl = new URL(url); tenantBUrl.username = role; tenantBUrl.password = "test-role"; const tenantB = new Pool({ connectionString: tenantBUrl.toString() });
       const tenantBClient = await tenantB.connect();
       try {
         await tenantBClient.query("SET app.org_ids = 'org-b'");
