@@ -77,3 +77,5 @@ export function dispatchRoute(
   const selected = candidates[0];
   return { decision: "ALLOW", worker_id: selected.worker_id, agent_id: selected.agent_id };
 }
+
+export { claimActiveSession, SessionSupersessionError } from "./postgres-session-supersession";

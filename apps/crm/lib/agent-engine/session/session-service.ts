@@ -374,3 +374,5 @@ export class InMemorySessionService
     return `${organizationId}:${sessionId}`;
   }
 }
+
+export { claimActiveSession, SessionSupersessionError } from "./postgres-session-supersession";
