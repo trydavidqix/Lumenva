@@ -49,7 +49,7 @@ export function wakeEvent(event: unknown, workers: readonly WakeWorker[], policy
   if (!actor || actor.enabled === false) return { status: "REJECTED", reason: "ACTOR_NOT_AUTHORIZED" };
   if (!actor.capabilities.includes(event.required_capability)) return { status: "REJECTED", reason: "ACTOR_CAPABILITY_DENIED" };
   if (!isValidPolicy(policy)) return { status: "REJECTED", reason: "INVALID_POLICY" };
-  if (event.organization_id !== policy.organization_id) return { status: "QUEUED", event, reason: "NO_POLICY_MATCH" };
+  if (event.organization_id !== policy.organization_id) return { status: "REJECTED", reason: "INVALID_POLICY" };
   if (!Array.isArray(workers)) return { status: "QUEUED", event, reason: "NO_CAPABLE_WORKER" };
   const capable = workers.filter((worker) => worker && worker.organization_id === event.organization_id && worker.available === true && Array.isArray(worker.capabilities) && worker.capabilities.includes(event.required_capability));
   if (capable.length === 0) return { status: "QUEUED", event, reason: "NO_CAPABLE_WORKER" };
