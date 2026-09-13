@@ -14,6 +14,10 @@ export type LayerReuseApproval = Readonly<{
   expires_at: string;
 }>;
 
+export type LayerReuseApprovalReader = Readonly<{
+  loadForTenant: (organizationId: string, approvalId: string) => Promise<LayerReuseApproval | null>;
+}>;
+
 export class LayerReuseAuthorizationError extends Error {
   readonly code = "layer_reuse_approval_required";
 }
@@ -57,4 +61,16 @@ export async function approveLayerReuse(
   }
   await assertLayerManifestLicensed(manifest, findLicense, now);
   return suggestLayerReuse(manifest, request.targetSemanticTags).map((suggestion) => ({ ...suggestion, authorization: "APPROVED_FOR_REUSE" as const }));
+}
+
+/** Loads approval from the durable tenant-scoped registry before authorizing. */
+export async function approveLayerReuseFromStore(
+  manifest: LayerManifest,
+  request: { organizationId: string; targetSemanticTags: readonly string[]; approvalId: string },
+  store: LayerReuseApprovalReader,
+  findLicense: (licenseRef: string) => Promise<LayerLicenseRecord | null>,
+  now = new Date(),
+): Promise<readonly LayerReuseSuggestion[]> {
+  const approval = await store.loadForTenant(request.organizationId, request.approvalId);
+  return approveLayerReuse(manifest, request, approval ?? undefined, findLicense, now);
 }
