@@ -33,6 +33,7 @@ export function createStudioVariants(project: ProjectSpec, summaries: Record<Var
 }
 
 export function issueClientPortalToken(input: { project: ProjectSpec; scope: PortalScope; expires_at: string; created_by: string; single_use?: boolean }): { token: string; record: ClientPortalToken } {
+  if (!input.created_by.trim()) throw new Error("created_by is required");
   const expiresAt = Date.parse(input.expires_at); if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) throw new Error("Client portal token must expire in the future");
   const token = randomBytes(32).toString("base64url");
   return { token, record: { token_id: randomUUID(), project_id: input.project.project_id, organization_id: input.project.organization_id, token_hash: hashToken(token), scope: input.scope, expires_at: input.expires_at, ...(input.single_use === undefined ? {} : { single_use: input.single_use }), created_by: input.created_by } };
