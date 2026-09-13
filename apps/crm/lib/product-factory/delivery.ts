@@ -53,3 +53,24 @@ export function validateDeliveryPlan(
   if (artifact.status !== "VERIFIED" && artifact.status !== "APPROVED") errors.push("delivery artifact must be VERIFIED or APPROVED");
   return { valid: errors.length === 0, errors };
 }
+
+import { BuildPlanStateStore } from "./build-plan-state-store";
+
+export async function validateDeliveryPlanWithState(
+  plan: DeliveryPlan,
+  artifact: DeliveryArtifact,
+  buildEvidence: DeliveryBuildEvidence,
+  stateStore: BuildPlanStateStore,
+): Promise<DeliveryValidation> {
+  const validation = validateDeliveryPlan(plan, artifact, buildEvidence);
+  const stepId = "delivery-gate";
+  if (!validation.valid) {
+    await stateStore.finish(plan.organization_id, plan.delivery_plan_id, stepId, "BLOCKED");
+    return validation;
+  }
+  if (!(await stateStore.claim(plan.organization_id, plan.delivery_plan_id, stepId))) {
+    return { valid: false, errors: ["delivery gate already RUNNING"] };
+  }
+  await stateStore.finish(plan.organization_id, plan.delivery_plan_id, stepId, "SUCCEEDED");
+  return validation;
+}
