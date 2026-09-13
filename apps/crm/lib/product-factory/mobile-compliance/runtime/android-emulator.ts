@@ -20,19 +20,17 @@ export function createAndroidEmulatorRuntimeAdapter(options: AndroidEmulatorOpti
   return {
     async review(input): Promise<RuntimeReviewReport> {
       if (input.platform !== "ANDROID") throw new Error("Android emulator adapter requires ANDROID input");
-      const steps: RuntimeReviewReport["steps"] = [];
+      const steps: Array<RuntimeReviewReport["steps"][number]> = [];
       const refs: string[] = [];
-      const run = async (name: string, args: string[], infrastructure = false) => {
+      const run = async (name: string, args: string[]) => {
         const [cmd, cmdArgs] = adb(args); const ref = evidence(input, name);
-        try { await options.execute(cmd, cmdArgs); refs.push(ref); steps.push({ name, status: "PASS", evidenceRefs: [ref] }); return { ok: true, infrastructure }; }
-        catch { steps.push({ name, status: "FAIL", evidenceRefs: [] }); return { ok: false, infrastructure }; }
+        try { await options.execute(cmd, cmdArgs); refs.push(ref); steps.push({ name, status: "PASS", evidenceRefs: [ref] }); return true; }
+        catch { steps.push({ name, status: "FAIL", evidenceRefs: [] }); return false; }
       };
-      const device = await run("device", ["get-state"], true);
-      if (!device.ok) return { runtimeReviewId: `runtime-android:${input.artifactHash}`, platform: "ANDROID", status: "INFRA_FAILURE", evidenceRefs: refs, steps, createdAt: new Date().toISOString() };
-      const install = await run("install", ["install", "-r", options.apkPath], true);
-      if (!install.ok) return { runtimeReviewId: `runtime-android:${input.artifactHash}`, platform: "ANDROID", status: "INFRA_FAILURE", evidenceRefs: refs, steps, createdAt: new Date().toISOString() };
-      const launch = await run("launch", ["shell", "am", "start", "-n", `${options.packageName}/${options.launchActivity}`]);
-      return { runtimeReviewId: `runtime-android:${input.artifactHash}`, platform: "ANDROID", status: launch.ok ? "PASS" : "FAIL", evidenceRefs: refs, steps, createdAt: new Date().toISOString() };
+      if (!await run("device", ["get-state"])) return { runtimeReviewId: `runtime-android:${input.artifactHash}`, platform: "ANDROID", status: "INFRA_FAILURE", evidenceRefs: refs, steps, createdAt: new Date().toISOString() };
+      if (!await run("install", ["install", "-r", options.apkPath])) return { runtimeReviewId: `runtime-android:${input.artifactHash}`, platform: "ANDROID", status: "INFRA_FAILURE", evidenceRefs: refs, steps, createdAt: new Date().toISOString() };
+      const launched = await run("launch", ["shell", "am", "start", "-n", `${options.packageName}/${options.launchActivity}`]);
+      return { runtimeReviewId: `runtime-android:${input.artifactHash}`, platform: "ANDROID", status: launched ? "PASS" : "FAIL", evidenceRefs: refs, steps, createdAt: new Date().toISOString() };
     },
   };
 }

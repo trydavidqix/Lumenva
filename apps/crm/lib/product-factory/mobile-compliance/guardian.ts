@@ -44,6 +44,18 @@ function reportId(input: MobileComplianceAuditInput, policyHash: string): string
   return `mobile-compliance:${createHash("sha256").update([input.organizationId, input.projectId, input.buildRef, input.artifactHash, policyHash].join("\u0000")).digest("hex")}`;
 }
 
+function normalizeAiFinding(candidate: ComplianceFinding): ComplianceFinding {
+  // The AI auditor currently returns findings, not independently collected evidence objects.
+  // Therefore its evidence refs are informative only and can never manufacture a hard block.
+  // A deterministic/runtime source can still verify the same fingerprint and upgrade it during dedupe.
+  return createFinding({
+    ...candidate,
+    source: "AI",
+    verification: "MANUAL_REVIEW",
+    evidenceRefs: [...candidate.evidenceRefs],
+  });
+}
+
 export async function runMobileComplianceAudit(input: MobileComplianceAuditInput): Promise<{ report: MobileComplianceReport; evidence: ComplianceEvidence[] }> {
   const store = input.store ?? expectedStoreForPlatform(input.platform);
   if (store !== expectedStoreForPlatform(input.platform)) throw new Error("mobile compliance platform/store mismatch");
@@ -60,8 +72,7 @@ export async function runMobileComplianceAudit(input: MobileComplianceAuditInput
 
   if (input.aiAuditor) {
     const candidates = await input.aiAuditor.audit({ platform: input.platform, store, snapshot: input.snapshot, deterministicFindings: findings });
-    const normalized = candidates.map((candidate) => candidate.evidenceRefs.length > 0 ? candidate : createFinding({ ...candidate, source: "AI", verification: "MANUAL_REVIEW", evidenceRefs: [] }));
-    findings = dedupeFindings([...findings, ...normalized]);
+    findings = dedupeFindings([...findings, ...candidates.map(normalizeAiFinding)]);
   }
 
   const runtimeReview = await runRuntimeReview({ organizationId: input.organizationId, projectId: input.projectId, buildRef: input.buildRef, artifactRef: input.artifactRef, artifactHash: input.artifactHash, platform: input.platform, snapshot: input.snapshot }, input.runtimeAdapter);

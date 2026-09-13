@@ -8,7 +8,7 @@ const execFileAsync = promisify(execFile);
 export type RuntimeCommandExecutor = (command: string, args: string[], input: RuntimeReviewInput) => Promise<{ stdout: string; stderr: string }>;
 
 const defaultExecutor: RuntimeCommandExecutor = async (command, args) => {
-  const result = await execFileAsync(command, args, { timeout: 5 * 60_000, maxBuffer: 2 * 1024 * 1024 });
+  const result = await execFileAsync(command, args, { encoding: "utf8", timeout: 5 * 60_000, maxBuffer: 2 * 1024 * 1024 });
   return { stdout: result.stdout, stderr: result.stderr };
 };
 
@@ -22,7 +22,7 @@ export function createCommandRuntimeAdapter(command: string, fixedArgs: string[]
         const parsed = JSON.parse(stdout) as RuntimeReviewReport;
         if (!parsed || parsed.platform !== input.platform || !parsed.runtimeReviewId || !Array.isArray(parsed.evidenceRefs) || !Array.isArray(parsed.steps)) throw new Error("runtime command returned an invalid report");
         return parsed;
-      } catch (error) {
+      } catch {
         return {
           runtimeReviewId: `runtime-infra-failure:${input.artifactHash}`,
           platform: input.platform,

@@ -19,7 +19,7 @@ export function createIosSimulatorRuntimeAdapter(options: IosSimulatorOptions): 
   return {
     async review(input): Promise<RuntimeReviewReport> {
       if (input.platform !== "IOS") throw new Error("iOS simulator adapter requires IOS input");
-      const steps: RuntimeReviewReport["steps"] = [];
+      const steps: Array<RuntimeReviewReport["steps"][number]> = [];
       const refs: string[] = [];
       const run = async (name: string, command: string, args: string[]) => {
         const ref = evidence(input, name);
