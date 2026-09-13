@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 /** Provider-free Event -> Workforce -> wake decision. HMAC is a shared-secret fixture, not production signing. */
+import type { PostgresWakeEventStore } from "./event-idempotency";
 export type WakeEvent = {
   event_id: string; organization_id: string; actor_id: string; actor_capabilities: string[]; required_capability: string;
   idempotency_key: string; payload: unknown; signature?: string;
@@ -10,6 +11,7 @@ export type WakePolicy = { organization_id: string; allowed_worker_ids?: string[
 export type WakeDecision =
   | { status: "WAKED"; event_id: string; worker_id: string; agent_id: string }
   | { status: "QUEUED"; event: WakeEvent; reason: "NO_CAPABLE_WORKER" | "NO_POLICY_MATCH" }
+  | { status: "DUPLICATE"; event_id: string; reason: "IDEMPOTENT_REPLAY" }
   | { status: "REJECTED"; reason: "INVALID_EVENT" | "INVALID_SIGNATURE" };
 
 function canonicalize(value: unknown): unknown {
@@ -39,4 +41,12 @@ export function wakeEvent(event: unknown, workers: readonly WakeWorker[], policy
   const allowed = policy.allowed_worker_ids; const candidates = capable.filter((worker) => allowed === undefined || allowed.includes(worker.worker_id)).sort((a, b) => a.worker_id.localeCompare(b.worker_id) || a.agent_id.localeCompare(b.agent_id));
   if (candidates.length === 0) return { status: "QUEUED", event, reason: "NO_POLICY_MATCH" };
   const worker = candidates[0]; return { status: "WAKED", event_id: event.event_id, worker_id: worker.worker_id, agent_id: worker.agent_id };
+}
+
+export async function wakeEventPersisted(event: unknown, workers: readonly WakeWorker[], policy: WakePolicy, secret: string, store: PostgresWakeEventStore): Promise<WakeDecision> {
+  const decision = wakeEvent(event, workers, policy, secret);
+  if (decision.status === "REJECTED") return decision;
+  const claimed = await store.claim(event as WakeEvent);
+  if (!claimed) return { status: "DUPLICATE", event_id: (event as WakeEvent).event_id, reason: "IDEMPOTENT_REPLAY" };
+  return decision;
 }
