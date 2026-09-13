@@ -3,17 +3,8 @@ import { routeResource, type ResourceRoute, type ResourceTask, type Worker } fro
 type Queryable = { query<T = Record<string, unknown>>(text: string, values?: readonly unknown[]): Promise<{ rows: T[] }> };
 
 export async function ensureResourceRouterStore(db: Queryable): Promise<void> {
-  await db.query(`CREATE TABLE IF NOT EXISTS resource_router_workers (
-    tenant_id text NOT NULL, agent_id text NOT NULL, surface text NOT NULL,
-    capabilities jsonb NOT NULL, current_load numeric NOT NULL, capacity numeric NOT NULL,
-    healthy boolean NOT NULL, updated_at timestamptz NOT NULL DEFAULT now(),
-    PRIMARY KEY (tenant_id, agent_id)
-  )`);
-  await db.query(`CREATE TABLE IF NOT EXISTS resource_router_reroutes (
-    tenant_id text NOT NULL, task_id text NOT NULL, reroute_key text NOT NULL,
-    created_at timestamptz NOT NULL DEFAULT now(),
-    PRIMARY KEY (tenant_id, task_id, reroute_key)
-  )`);
+  const result = await db.query<{ workers: string | null; reroutes: string | null }>("SELECT to_regclass('public.resource_router_workers') AS workers, to_regclass('public.resource_router_reroutes') AS reroutes");
+  if (!result.rows[0]?.workers || !result.rows[0]?.reroutes) throw new Error("resource_router_migration_required");
 }
 
 export async function persistWorker(db: Queryable, tenantId: string, worker: Worker): Promise<void> {
