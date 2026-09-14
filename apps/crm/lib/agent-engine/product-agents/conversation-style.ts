@@ -1,4 +1,4 @@
-import type { ProductAgentId } from "./contracts";
+import { isProductAgentId, type ProductAgentId } from "./contracts";
 
 export type AgentConversationRegister = "professional" | "warm" | "casual" | "custom";
 
@@ -31,6 +31,7 @@ const CONVERSATION_STYLES: Readonly<Partial<Record<ProductAgentId, AgentConversa
   },
 };
 
-export function getProductAgentConversationStyle(agentId: ProductAgentId): AgentConversationStyle {
+export function getProductAgentConversationStyle(agentId: unknown): AgentConversationStyle {
+  if (!isProductAgentId(agentId)) return PROFESSIONAL_DEFAULT;
   return CONVERSATION_STYLES[agentId] ?? PROFESSIONAL_DEFAULT;
 }
