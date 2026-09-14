@@ -1,10 +1,10 @@
 import { deriveToolIdempotencyKey } from '../../contracts/agent-os';
 import {
-  DeskcommExecutionAdapter,
+  LumenvaExecutionAdapter,
   shouldExecuteSideEffect,
-  type DeskcommExecutionPersistence,
-  type DeskcommExecutionRecord,
-} from '../../execution/deskcomm-execution-adapter';
+  type LumenvaExecutionPersistence,
+  type LumenvaExecutionRecord,
+} from '../../execution/lumenva-execution-adapter';
 import type {
   DurableBenchmarkAdapter,
   DurableBenchmarkLifecycleEvent,
@@ -16,8 +16,8 @@ import type { BenchmarkEffectStore } from '../effect-store';
 import { shouldInjectFault } from '../fault-plan';
 import { getPhase7Scenarios } from '../scenarios';
 
-function createSyntheticExecutionPersistence(): DeskcommExecutionPersistence {
-  let record: DeskcommExecutionRecord | null = null;
+function createSyntheticExecutionPersistence(): LumenvaExecutionPersistence {
+  let record: LumenvaExecutionRecord | null = null;
 
   return {
     async load({ jobId, organizationId }) {
@@ -44,7 +44,7 @@ export function createCurrentDurableBenchmarkAdapter(dependencies: {
 
       const approvalRequired = scenario.requiresApproval;
       const persistence = createSyntheticExecutionPersistence();
-      const execution = new DeskcommExecutionAdapter(persistence);
+      const execution = new LumenvaExecutionAdapter(persistence);
       const lifecycle: DurableBenchmarkLifecycleEvent[] = [];
       let tick = 0;
       let retryCount = 0;
@@ -86,7 +86,7 @@ export function createCurrentDurableBenchmarkAdapter(dependencies: {
       event('started', 'current engine started synthetic benchmark run');
 
       state = await execution.checkpoint(state, { stepId: 'work-a', data: { synthetic: true } });
-      event('checkpoint', 'checkpointed work-a through Deskcomm execution boundary', { stepId: 'work-a' });
+      event('checkpoint', 'checkpointed work-a through Lumenva execution boundary', { stepId: 'work-a' });
 
       if (shouldInjectFault({ scenario, stepId: 'work-a', occurrence: 1 })) {
         const crossTenantFault = scenario.faults.some(
@@ -198,7 +198,7 @@ export function createCurrentDurableBenchmarkAdapter(dependencies: {
       for (let occurrence = 1; occurrence <= requestedEffectAttempts; occurrence += 1) {
         effectAttempts += 1;
         if (!shouldExecuteSideEffect(state, idempotencyKey)) {
-          event('duplicate_suppressed', 'Deskcomm idempotency checkpoint suppressed duplicate synthetic effect', {
+          event('duplicate_suppressed', 'Lumenva idempotency checkpoint suppressed duplicate synthetic effect', {
             stepId: 'effect',
             attempt: occurrence,
           });
@@ -244,7 +244,7 @@ export function createCurrentDurableBenchmarkAdapter(dependencies: {
           recoveredAfterCrash,
           crossTenantViolation: false,
           durationMs: Math.max(0, tick - 1),
-          engineVersion: 'deskcomm-execution-adapter-v1',
+          engineVersion: 'lumenva-execution-adapter-v1',
         };
       }
     },
