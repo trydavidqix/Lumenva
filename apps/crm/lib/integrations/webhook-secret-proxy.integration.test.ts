@@ -1,5 +1,88 @@
+import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { spawn } from "node:child_process";
 import { createPostgresWebhookReplayStore, processWebhookOnce } from "./webhook-replay";
 import { createPostgresSecretProxy } from "./secret-proxy";
-describe("Wave 11 durable webhook and Secret Proxy",()=>{it("reprocessa webhook apenas uma vez",async()=>{const url=process.env.WAVE11_DATABASE_URL;if(!url)return;const {Pool}=await import("pg");const pool=new Pool({connectionString:url});await pool.query(`CREATE TABLE IF NOT EXISTS integration_webhook_receipts(organization_id text NOT NULL,provider text NOT NULL,event_id text NOT NULL,received_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(organization_id,provider,event_id))`);await pool.query("DELETE FROM integration_webhook_receipts WHERE organization_id=$1",["org-w"]);const db={query:(t:string,v?:unknown[])=>pool.query(t,v)};const store=createPostgresWebhookReplayStore(db);let n=0;expect(await processWebhookOnce(store,{organizationId:"org-w",provider:"fake",eventId:"evt-1"},async()=>{n++})).toBe("processed");expect(await processWebhookOnce(store,{organizationId:"org-w",provider:"fake",eventId:"evt-1"},async()=>{n++})).toBe("duplicate");expect(n).toBe(1);await pool.end();});it("Secret Proxy autoriza operação sem expor lookup direto",async()=>{const url=process.env.WAVE11_DATABASE_URL;if(!url)return;const {Pool}=await import("pg");const pool=new Pool({connectionString:url});await pool.query(`CREATE TABLE IF NOT EXISTS integration_secrets(organization_id text NOT NULL,secret_ref text NOT NULL,secret_value text NOT NULL,allowed_operations text[] NOT NULL,allowed_actors text[] NOT NULL,revoked_at timestamptz,PRIMARY KEY(organization_id,secret_ref))`);await pool.query("DELETE FROM integration_secrets WHERE organization_id=$1",["org-s"]);await pool.query("INSERT INTO integration_secrets VALUES($1,$2,$3,$4,$5,NULL)",["org-s","ref-1","third-party-secret",["send"],["actor-1"]]);const proxy=createPostgresSecretProxy({query:(t:string,v?:unknown[])=>pool.query(t,v)});await expect(proxy.withSecret({organizationId:"org-s",actorId:"actor-2"},"ref-1","send",async()=>"x")).rejects.toThrow("secret_proxy_denied");await expect(proxy.withSecret({organizationId:"org-s",actorId:"actor-1"},"ref-1","send",async(secret)=>secret)).resolves.toBe("third-party-secret");await pool.end();});it("dois processos não reprocessam o mesmo webhook",async()=>{const url=process.env.WAVE11_DATABASE_URL;if(!url)return;const {Pool}=await import("pg");const pool=new Pool({connectionString:url});await pool.query("DELETE FROM integration_webhook_receipts WHERE organization_id=$1",["org-p"]);const script=`const pg=require("pg");(async()=>{const p=new pg.Pool({connectionString:process.env.DATABASE_URL});const r=await p.query("INSERT INTO integration_webhook_receipts(organization_id,provider,event_id) VALUES ('org-p','fake','evt-p') ON CONFLICT DO NOTHING RETURNING event_id");console.log(JSON.stringify({process:process.argv[1],processed:r.rowCount===1}));await p.end()})()`;const run=(id:string)=>new Promise<string>((res,rej)=>{const c=spawn(process.execPath,["-e",script,id],{cwd:process.cwd()+"/apps/crm",env:{...process.env,DATABASE_URL:url},stdio:["ignore","pipe","pipe"]});let o="";c.stdout.on("data",d=>o+=d);c.on("close",code=>code===0?res(o.trim()):rej(Error("child_failed")));});const out=await Promise.all([run("p1"),run("p2")]);console.log(out.join("\n"));expect(out.filter(x=>JSON.parse(x).processed)).toHaveLength(1);await pool.end();});});
+
+const ORG = "00000000-0000-0000-0000-00000000000a";
+
+function tableName(prefix: string): string {
+  return `${prefix}_${randomUUID().replaceAll("-", "")}`;
+}
+
+describe("Wave 11 durable webhook and Secret Proxy", () => {
+  it("distinguishes in-progress work, completes once, and retries after handler failure", async () => {
+    const url = process.env.WAVE11_DATABASE_URL;
+    if (!url) return;
+    const { Client } = await import("pg");
+    const client = new Client({ connectionString: url });
+    await client.connect();
+    const table = tableName("wave11_replay");
+    try {
+      await client.query(`CREATE TABLE ${table}(
+        organization_id uuid NOT NULL,
+        provider text NOT NULL,
+        event_id text NOT NULL,
+        received_at timestamptz NOT NULL DEFAULT now(),
+        status text NOT NULL DEFAULT 'PROCESSED' CHECK(status IN ('PROCESSING','PROCESSED','FAILED')),
+        claim_token uuid,
+        claimed_at timestamptz,
+        completed_at timestamptz DEFAULT now(),
+        PRIMARY KEY(organization_id,provider,event_id),
+        CHECK(
+          (status='PROCESSING' AND claim_token IS NOT NULL AND claimed_at IS NOT NULL AND completed_at IS NULL)
+          OR (status='PROCESSED' AND claim_token IS NULL AND completed_at IS NOT NULL)
+          OR (status='FAILED' AND claim_token IS NULL AND completed_at IS NULL)
+        )
+      )`);
+      const db = { query: <T>(text: string, values?: unknown[]) => client.query<T>(text, values) };
+      const store = createPostgresWebhookReplayStore(db, table);
+      const input = { organizationId: ORG, provider: "fake", eventId: "evt-1" };
+
+      let unblock!: () => void;
+      let started!: () => void;
+      const startedPromise = new Promise<void>((resolve) => { started = resolve; });
+      const blocker = new Promise<void>((resolve) => { unblock = resolve; });
+      const first = processWebhookOnce(store, input, async () => { started(); await blocker; });
+      await startedPromise;
+      await expect(processWebhookOnce(store, input, async () => { throw new Error("must_not_run"); })).resolves.toBe("in_progress");
+      unblock();
+      await expect(first).resolves.toBe("processed");
+      await expect(processWebhookOnce(store, input, async () => { throw new Error("must_not_run"); })).resolves.toBe("duplicate");
+
+      const retryInput = { ...input, eventId: "evt-retry" };
+      await expect(processWebhookOnce(store, retryInput, async () => { throw new Error("handler_failed"); })).rejects.toThrow("handler_failed");
+      await expect(processWebhookOnce(store, retryInput, async () => undefined)).resolves.toBe("processed");
+    } finally {
+      await client.query(`DROP TABLE IF EXISTS ${table}`);
+      await client.end();
+    }
+  });
+
+  it("Secret Proxy authorizes only the declared actor and operation", async () => {
+    const url = process.env.WAVE11_DATABASE_URL;
+    if (!url) return;
+    const { Client } = await import("pg");
+    const client = new Client({ connectionString: url });
+    await client.connect();
+    const table = tableName("wave11_secrets");
+    try {
+      await client.query(`CREATE TABLE ${table}(
+        organization_id uuid NOT NULL,
+        secret_ref text NOT NULL,
+        secret_value text NOT NULL,
+        allowed_operations text[] NOT NULL,
+        allowed_actors text[] NOT NULL,
+        revoked_at timestamptz,
+        PRIMARY KEY(organization_id,secret_ref)
+      )`);
+      await client.query(`INSERT INTO ${table} VALUES($1,$2,$3,$4,$5,NULL)`, [ORG, "ref-1", "third-party-secret", ["send"], ["actor-1"]]);
+      const proxy = createPostgresSecretProxy({ query: <T>(text: string, values?: unknown[]) => client.query<T>(text, values) }, table);
+      await expect(proxy.withSecret({ organizationId: ORG, actorId: "actor-2" }, "ref-1", "send", async () => "x")).rejects.toThrow("secret_proxy_denied");
+      await expect(proxy.withSecret({ organizationId: ORG, actorId: "actor-1" }, "ref-1", "read", async () => "x")).rejects.toThrow("secret_proxy_denied");
+      await expect(proxy.withSecret({ organizationId: ORG, actorId: "actor-1" }, "ref-1", "send", async (secret) => secret)).resolves.toBe("third-party-secret");
+    } finally {
+      await client.query(`DROP TABLE IF EXISTS ${table}`);
+      await client.end();
+    }
+  });
+});
