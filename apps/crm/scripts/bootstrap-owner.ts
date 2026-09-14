@@ -1,5 +1,5 @@
 /**
- * Bootstrap do 1º dono de uma instância self-host do DeskcommCRM.
+ * Bootstrap do 1º dono de uma instância self-host do Lumenva.
  *
  * O app NÃO tem tela de cadastro — este script cria, de forma idempotente:
  *   1. o usuário dono (auth) com e-mail confirmado
@@ -19,7 +19,6 @@ import { createClient } from "@supabase/supabase-js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-/** Lê env do processo; completa com .env / .env.local se rodando localmente. */
 function loadEnv(): Record<string, string> {
   const out: Record<string, string> = { ...process.env } as Record<string, string>;
   for (const file of [".env", ".env.local"]) {
@@ -48,7 +47,6 @@ if (!OWNER_EMAIL || !OWNER_PASSWORD) {
   throw new Error("Faltam OWNER_EMAIL / OWNER_PASSWORD.");
 }
 
-/** slug seguro (o tipo da coluna é restrito): minúsculo, hífens, sem acento. */
 function slugify(s: string): string {
   return s
     .normalize("NFD")
@@ -145,8 +143,6 @@ async function ensurePlatformAdmin(userId: string): Promise<void> {
     console.log("[bootstrap] super-admin já existia");
     return;
   }
-  // granted_by = o próprio dono (auto-concessão no bootstrap). mfa_required
-  // fica no default (true) — TOTP é forçado no login.
   const { error } = await admin.from("platform_admins").insert({
     user_id: userId,
     granted_by: userId,
