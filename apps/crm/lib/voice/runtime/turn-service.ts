@@ -1,6 +1,5 @@
 import { classifySentiment } from "../../agent-engine/agent/sentiment";
 import type { AgentKernel } from "../../agent-engine/kernel/contracts";
-import { getProductAgentConversationStyle } from "../../agent-engine/product-agents/conversation-style";
 import type { VoiceDeliveryAuthorizer } from "./agent-os-adapter";
 import { createVoiceAgentOsAdapter } from "./agent-os-adapter";
 import { createSupervisorVoiceAgentResolver } from "./agent-resolver";
@@ -61,11 +60,26 @@ export function createVoiceTurnService(deps: {
       if (result.kind !== "reply") return result;
 
       const sentiment = classifySentiment(input.transcript);
-      const conversationStyle = getProductAgentConversationStyle(result.agentId);
-      const delivery = resolveVoiceDeliveryStyle({ sentiment, conversationStyle });
+      const delivery = resolveVoiceDeliveryStyle({ sentiment, conversationStyle: result.conversationStyle });
       const text = prepareSpeakableVoiceText(result.text);
+      if (!text) {
+        return {
+          kind: "blocked",
+          reason: "voice_agent_output_not_speakable",
+          agentId: result.agentId,
+          runId: result.runId,
+          traceId: result.traceId,
+        };
+      }
 
-      return { ...result, text, delivery };
+      return {
+        kind: "reply",
+        text,
+        delivery,
+        agentId: result.agentId,
+        runId: result.runId,
+        traceId: result.traceId,
+      };
     },
   };
 }
