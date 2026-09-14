@@ -5,7 +5,7 @@ import { llmEdgeConfigFromEnv, runModelCall } from "../../agent-engine/edge/llm/
 import { createAgentKernel } from "../../agent-engine/kernel/agent-kernel";
 import type { AgentKernel } from "../../agent-engine/kernel/contracts";
 import type { AgentKernelDependencies, KernelExecutionState } from "../../agent-engine/kernel/ports";
-import { getProductAgentConversationStyle } from "../../agent-engine/product-agents/conversation-style";
+import { resolveAgentConversationStyle } from "../../agent-engine/product-agents/conversation-style";
 import { getProductAgentDefinition } from "../../agent-engine/product-agents/definitions";
 import { createProductAgentVerificationPort } from "../../agent-engine/product-agents/verification";
 
@@ -106,7 +106,7 @@ export function createVoiceProductionKernel(db: pg.Pool): AgentKernel {
       async step({ execution, context }) {
         const started = Date.now();
         const sourceId = execution.trigger.sourceId;
-        const conversationStyle = getProductAgentConversationStyle(execution.agentId);
+        const conversationStyle = resolveAgentConversationStyle(execution.definition);
         const styleExamples = conversationStyle.examplePhrases?.length
           ? conversationStyle.examplePhrases.join(" | ")
           : null;
