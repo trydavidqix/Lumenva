@@ -1,0 +1,252 @@
+export type OverviewAgentStatus = "ACTIVE" | "SHADOW" | "SUSPENDED";
+export type OverviewJobStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
+export type OverviewApprovalStatus = "PENDING" | "APPROVED" | "DENIED";
+
+export type OverviewAgentInput = {
+  id: string;
+  version: string;
+  status: OverviewAgentStatus;
+  organizationId: string;
+};
+
+export type OverviewCostInput = {
+  id: string;
+  amount: number;
+  currency: string;
+  organizationId: string;
+  tenantId: string;
+  jobId?: string;
+  agentId?: string;
+};
+
+export type OverviewJobInput = {
+  id: string;
+  name: string;
+  status: OverviewJobStatus;
+  organizationId: string;
+};
+
+export type OverviewApprovalInput = {
+  id: string;
+  action: string;
+  requestedBy: string;
+  status: OverviewApprovalStatus;
+  decidedBy?: string;
+  decidedAt?: string;
+  organizationId: string;
+};
+
+export type OverviewProjectionMetadata = {
+  sourceEventIds: readonly string[];
+  sourceEvidenceIds: readonly string[];
+  freshness: "FRESH" | "STALE" | "UNKNOWN";
+  redacted: boolean;
+};
+
+export type OverviewInput = {
+  organizationId: string;
+  generatedAt: string;
+  agents: readonly OverviewAgentInput[];
+  costs: readonly OverviewCostInput[];
+  jobs: readonly OverviewJobInput[];
+  approvals: readonly OverviewApprovalInput[];
+  projection?: OverviewProjectionMetadata;
+};
+
+export type OverviewState = {
+  organizationId: string;
+  generatedAt: string;
+  activeAgents: readonly {
+    id: string;
+    version: string;
+    status: "ACTIVE";
+  }[];
+  accumulatedCost: { amount: number; currency: string };
+  costEntries: readonly {
+    id: string;
+    amount: number;
+    currency: string;
+    tenantId: string;
+    jobId?: string;
+    agentId?: string;
+  }[];
+  pendingJobs: readonly {
+    id: string;
+    name: string;
+    status: "PENDING";
+  }[];
+  pendingApprovals: readonly {
+    id: string;
+    action: string;
+    requestedBy: string;
+    status: "PENDING";
+  }[];
+  resolvedApprovals: readonly {
+    id: string;
+    action: string;
+    requestedBy: string;
+    status: "APPROVED" | "DENIED";
+    decidedBy: string;
+    decidedAt: string;
+  }[];
+  projection?: OverviewProjectionMetadata;
+};
+
+function assertTenant(organizationId: string, records: readonly { organizationId: string }[]): void {
+  if (records.some((record) => record.organizationId !== organizationId)) {
+    throw new Error("overview_tenant_mismatch");
+  }
+}
+
+function validateProjectionMetadata(projection: OverviewProjectionMetadata): OverviewProjectionMetadata {
+  if (
+    !Array.isArray(projection.sourceEventIds) ||
+    !projection.sourceEventIds.every((id) => typeof id === "string" && id.trim() !== "") ||
+    !Array.isArray(projection.sourceEvidenceIds) ||
+    !projection.sourceEvidenceIds.every((id) => typeof id === "string" && id.trim() !== "") ||
+    !["FRESH", "STALE", "UNKNOWN"].includes(projection.freshness) ||
+    typeof projection.redacted !== "boolean"
+  ) {
+    throw new Error("overview_projection_metadata_invalid");
+  }
+  return {
+    sourceEventIds: [...projection.sourceEventIds],
+    sourceEvidenceIds: [...projection.sourceEvidenceIds],
+    freshness: projection.freshness,
+    redacted: projection.redacted,
+  };
+}
+
+export function buildOverviewState(input: OverviewInput): OverviewState {
+  assertTenant(input.organizationId, input.agents);
+  assertTenant(input.organizationId, input.costs);
+  assertTenant(input.organizationId, input.jobs);
+  assertTenant(input.organizationId, input.approvals);
+
+  const currency = input.costs[0]?.currency ?? "EUR";
+  let amount = 0;
+  for (const cost of input.costs) {
+    if (cost.tenantId.trim() === "" || cost.tenantId !== input.organizationId) {
+      throw new Error("overview_tenant_mismatch");
+    }
+    if (!Number.isFinite(cost.amount) || cost.amount < 0 || cost.currency.trim() === "") {
+      throw new Error("overview_cost_invalid");
+    }
+    if ((!cost.jobId || cost.jobId.trim() === "") && (!cost.agentId || cost.agentId.trim() === "")) {
+      throw new Error("overview_cost_owner_required");
+    }
+    if (cost.currency !== currency) {
+      throw new Error("overview_cost_currency_mismatch");
+    }
+    amount += cost.amount;
+  }
+
+  for (const approval of input.approvals) {
+    if (
+      approval.id.trim() === "" ||
+      approval.action.trim() === "" ||
+      approval.requestedBy.trim() === ""
+    ) {
+      throw new Error("overview_approval_invalid");
+    }
+    if (approval.status !== "PENDING" && approval.status !== "APPROVED" && approval.status !== "DENIED") {
+      throw new Error("overview_approval_invalid");
+    }
+    if (approval.status !== "PENDING") {
+      if (!approval.decidedBy?.trim() || !approval.decidedAt || !Number.isFinite(Date.parse(approval.decidedAt))) {
+        throw new Error("overview_approval_decision_invalid");
+      }
+    }
+  }
+
+  return {
+    organizationId: input.organizationId,
+    generatedAt: input.generatedAt,
+    activeAgents: input.agents
+      .filter((agent) => agent.status === "ACTIVE")
+      .map(({ id, version, status }) => ({ id, version, status }))
+      .sort((left, right) => left.id.localeCompare(right.id)),
+    accumulatedCost: { amount, currency },
+    costEntries: input.costs
+      .map(({ id, amount, currency, tenantId, jobId, agentId }) => ({
+        id,
+        amount,
+        currency,
+        tenantId,
+        ...(jobId ? { jobId } : {}),
+        ...(agentId ? { agentId } : {}),
+      }))
+      .sort((left, right) => left.id.localeCompare(right.id)),
+    pendingJobs: input.jobs
+      .filter((job) => job.status === "PENDING")
+      .map(({ id, name, status }) => ({ id, name, status }))
+      .sort((left, right) => left.id.localeCompare(right.id)),
+    pendingApprovals: input.approvals
+      .filter((approval) => approval.status === "PENDING")
+      .map(({ id, action, requestedBy, status }) => ({ id, action, requestedBy, status }))
+      .sort((left, right) => left.id.localeCompare(right.id)),
+    resolvedApprovals: input.approvals
+      .filter((approval) => approval.status !== "PENDING")
+      .map(({ id, action, requestedBy, status, decidedBy, decidedAt }) => ({
+        id,
+        action,
+        requestedBy,
+        status,
+        decidedBy: decidedBy as string,
+        decidedAt: decidedAt as string,
+      }))
+      .sort((left, right) => left.id.localeCompare(right.id)),
+    ...(input.projection ? { projection: validateProjectionMetadata(input.projection) } : {}),
+  };
+}
+
+export function createMockOverviewState(): OverviewState {
+  return buildOverviewState({
+    organizationId: "mock-org",
+    generatedAt: "2026-09-12T00:00:00.000Z",
+    agents: [
+      { id: "sales", version: "1.0.0", status: "ACTIVE", organizationId: "mock-org" },
+      { id: "support", version: "1.0.0", status: "SHADOW", organizationId: "mock-org" },
+    ],
+    costs: [
+      {
+        id: "cost-1",
+        amount: 10,
+        currency: "EUR",
+        organizationId: "mock-org",
+        tenantId: "mock-org",
+        agentId: "sales",
+      },
+      {
+        id: "cost-2",
+        amount: 5,
+        currency: "EUR",
+        organizationId: "mock-org",
+        tenantId: "mock-org",
+        jobId: "job-1",
+      },
+    ],
+    jobs: [
+      { id: "job-1", name: "qualify leads", status: "PENDING", organizationId: "mock-org" },
+      { id: "job-2", name: "completed sync", status: "COMPLETED", organizationId: "mock-org" },
+    ],
+    approvals: [
+      {
+        id: "approval-1",
+        action: "qualify leads",
+        requestedBy: "sales",
+        status: "PENDING",
+        organizationId: "mock-org",
+      },
+      {
+        id: "approval-2",
+        action: "publish summary",
+        requestedBy: "sales",
+        status: "APPROVED",
+        decidedBy: "owner",
+        decidedAt: "2026-09-12T00:05:00.000Z",
+        organizationId: "mock-org",
+      },
+    ],
+  });
+}
