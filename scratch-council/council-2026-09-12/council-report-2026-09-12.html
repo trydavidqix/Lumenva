@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<title>Council Report — Voice/Video Blueprints (2026-09-12)</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:#fff; color:#1a1a1a; max-width: 980px; margin: 0 auto; padding: 32px 20px 80px; line-height:1.55; }
+  h1 { font-size: 22px; margin-bottom:4px; }
+  .meta { color:#666; font-size:13px; margin-bottom: 4px; }
+  .pipeline { display:inline-block; font-size:12px; color:#555; background:#f2f2f2; border:1px solid #ddd; border-radius:6px; padding:3px 10px; margin-top:8px; }
+  .question-box { background:#fafafa; border:1px solid #e2e2e2; border-radius:10px; padding:16px 18px; margin:18px 0 28px; font-size:14px; }
+  .verdict-card { border:2px solid #1a1a1a; border-radius:12px; padding:20px 22px; margin-bottom:32px; background:#fdfdfd; }
+  .verdict-card h2 { margin-top:0; font-size:18px; }
+  .badge { display:inline-block; font-size:12px; font-weight:600; padding:3px 10px; border-radius:999px; }
+  .badge.high { background:#e6f4ea; color:#1e7e34; }
+  .badge.medium { background:#fff4e0; color:#8a5a00; }
+  .rec-box { background:#f5f0ff; border:1px solid #d8c8f5; border-radius:8px; padding:14px 16px; margin-top:14px; }
+  .first-action { background:#e9f6ff; border:1px solid #bfe4f7; border-radius:8px; padding:14px 16px; margin-top:14px; }
+  table.grid { width:100%; border-collapse: collapse; margin: 20px 0; font-size:13px; }
+  table.grid th, table.grid td { border:1px solid #ddd; padding:8px 10px; text-align:left; vertical-align:top; }
+  table.grid th { background:#f6f6f6; }
+  details { border:1px solid #e2e2e2; border-radius:8px; margin-bottom:10px; padding:10px 14px; }
+  summary { cursor:pointer; font-weight:600; font-size:14px; }
+  .evidence { font-size:11px; font-weight:600; padding:2px 8px; border-radius:6px; margin-left:8px; }
+  .evidence.fact { background:#e6f4ea; color:#1e7e34; }
+  .evidence.unverified { background:#fdeaea; color:#a12a2a; }
+  .section-title { font-size:17px; margin-top:36px; border-bottom:2px solid #eee; padding-bottom:6px; }
+  .review-block { font-size:13px; margin-bottom:14px; }
+  footer { margin-top:48px; border-top:1px solid #eee; padding-top:16px; font-size:12px; color:#888; }
+  code { background:#f2f2f2; padding:1px 5px; border-radius:4px; font-size:12px; }
+  ul { padding-left: 20px; }
+</style>
+</head>
+<body>
+
+<div class="meta">2026-09-12 · Council V2 (Karpathy method)</div>
+<h1>Voice OS &amp; AI Influencer Engine — Council Verdict</h1>
+<span class="pipeline">5 advisors → 5 anonymous reviewers → 1 chairman</span>
+
+<div class="question-box">
+<strong>Decision:</strong> The owner received two large, unverified external blueprints today — a talking-avatar
+video pipeline ("Lumenva AI Influencer Engine", needs a new GPU VPS) and a multi-model agent runtime + voice
+router for customer calls ("Multi-Model Runtime + Voice OS", uses Gemini CLI/Antigravity + OpenAI Live/Gemini
+Live). He asked the council to turn these into an implementation plan and map them onto the existing 16-Wave
+Business OS plan — and to pressure-test them for real, not rubber-stamp them.
+</div>
+
+<div class="verdict-card">
+  <h2>Chairman Verdict <span class="badge high">HIGH confidence</span></h2>
+  <p><strong>Do not open build work on either blueprint today.</strong> Map both into the existing plan as
+  documented, gated backlog items — no new Wave 17 needed. Fix the existing, unfinished voice bug first;
+  only then extend Wave 11 with the new Voice Router. The video engine stays parked in Wave 12 backlog until
+  a paying customer exists, the GPU/VRAM claims are independently verified, and the owner explicitly approves
+  the spend.</p>
+  <div class="rec-box">
+    <strong>Priority order:</strong>
+    <ol>
+      <li>Owner makes the 3 pending MVP decisions (WhatsApp number, Resend key, legal) — outranks both blueprints entirely.</li>
+      <li>Reproduce &amp; root-cause the existing voice loop bug (SIP+Asterisk+Pipecat, commit <code>b09243a5</code>) — prove it live.</li>
+      <li>Only after that's proven: extend Wave 11 with Voice Router (OpenAI Live primary / Gemini Live shadow), after verifying SIP/interface claims.</li>
+      <li>Wave 12 video engine: log as backlog, not started — needs customer, verified GPU specs, and owner GPU-spend approval.</li>
+    </ol>
+  </div>
+  <div class="first-action">
+    <strong>The one thing to do first:</strong> Dispatch one Codex agent (Maestri) to reproduce the existing
+    voice loop bug end-to-end on the current SIP+Asterisk+Pipecat path and prove one real phone call completes
+    without the loop — not another code-only "fix." Owner: Claude (orchestrator) → Maestri Codex agent.
+    Success signal: a real call, evidence attached (log/transcript/recording).
+  </div>
+</div>
+
+<h2 class="section-title">Agreement / Disagreement Map</h2>
+<table class="grid">
+<tr><th>Advisor</th><th>Stance</th><th>Confidence</th><th>Evidence status</th><th>Key tension</th></tr>
+<tr><td>Contrarian</td><td>Kill video now; freeze voice work entirely until first customer</td><td>High</td><td>Fact-grounded</td><td>Most extreme — even opposed extending Wave 11 now</td></tr>
+<tr><td>First Principles</td><td>Neither is "the plan yet"; wrong decision variable being asked</td><td>High</td><td>Fact-grounded</td><td>Reframes question itself as premature</td></tr>
+<tr><td>Expansionist</td><td>Both have real option value; fund planning, not GPU spend</td><td>Medium</td><td>Partly ASSUMPTION</td><td>Only advisor to favor starting Voice Router shadow-mode now — rejected 5/5 by peer review</td></tr>
+<tr><td>Outsider</td><td>Jargon hides missing customer-value case for both</td><td>Medium</td><td>Fact + inference</td><td>Proposes a cheap gate (plain-language value sentence) others skip</td></tr>
+<tr><td>Executor</td><td>Map into existing Waves, gate on proving voice fix first</td><td>High</td><td>Fact-grounded</td><td>Unanimous pick as strongest in peer review (5/5)</td></tr>
+</table>
+
+<h2 class="section-title">Blind Spots the Council Caught</h2>
+<ul>
+  <li><strong>No advisor checked</strong> whether the owner's Google AI Pro subscription terms even cover CLI/agent-level programmatic use, or whether a second agent-runtime family (Gemini CLI/Antigravity) adds real maintenance burden alongside the existing Codex-only architecture. <span class="evidence unverified">UNVERIFIED</span></li>
+  <li><strong>Most consequential omission</strong> (caught independently by 2 reviewers): nobody named that the fastest path to revenue is the owner making 3 pending decisions that already block the first customer — every advisor debated where to file two new speculative projects instead.</li>
+  <li>The tension between the owner's stated wish ("plan everything today") and the council's actual recommendation ("don't build") was resolved silently by the advisors rather than surfaced to the owner as a choice.</li>
+</ul>
+
+<h2 class="section-title">Advisor Responses (full)</h2>
+
+<details>
+<summary>Contrarian <span class="evidence fact">FACT-heavy</span></summary>
+<div class="review-block"><p><strong>Verdict:</strong> Kill the video engine now. Voice work: neither finish nor redesign — freeze until MVP has a paying customer.</p>
+<p><strong>Findings:</strong> MVP is code-complete, only owner decisions block it (FACT). Planning two speculative Waves still consumes the owner's own scarce attention (INFERENCE). GPU VPS has real recurring cost and doesn't exist; home worker already froze twice this session under load (FACT).</p>
+<p><strong>Counterargument handled:</strong> "Zero opportunity cost, why not plan now?" → Planning is not free when the planner is the bottleneck.</p>
+<p><strong>First step:</strong> Don't draft implementation plans today — get the owner to make the 3 pending MVP decisions instead.</p></div>
+</details>
+
+<details>
+<summary>First Principles Thinker <span class="evidence fact">FACT-heavy</span></summary>
+<div class="review-block"><p><strong>Verdict:</strong> Neither blueprint is "the plan yet" — the real decision variable is whether building either moves the owner closer to his first paying customer. Neither does.</p>
+<p><strong>Findings:</strong> A third voice path before the first two are proven live is "abandonment-by-addition," not iteration. GPU/SIP/Live-API specs are all UNVERIFIED — planning on them risks repeating a documented prior "skeleton without substance" failure.</p>
+<p><strong>First step:</strong> Independently verify OpenAI Live SIP capability and real GPU VRAM specs before either enters a plan as fact.</p></div>
+</details>
+
+<details>
+<summary>Expansionist <span class="evidence unverified">Partly assumption-based</span></summary>
+<div class="review-block"><p><strong>Verdict:</strong> Both have real option value; Multi-Model Runtime is near-zero-cost (rides existing subscription); Video Engine has the biggest theoretical upside but is gated by unfunded infra.</p>
+<p><strong>Findings:</strong> Voice Router shadow-mode could start in parallel with the bug fix (rejected by peer review — see blind spots). Video belongs in Wave 12 backlog, not a new Wave 17. Media MCP itself is reusable infra regardless of which video models win — preserved as minority insight.</p>
+<p><strong>First step:</strong> Log Video Engine as Wave 12 backlog; do not provision GPU infra this session.</p></div>
+</details>
+
+<details>
+<summary>Outsider <span class="evidence fact">Fact + inference</span></summary>
+<div class="review-block"><p><strong>Verdict:</strong> A newcomer sees two speculative mega-projects justified in vendor jargon, on a business with zero paying customers — value proposition unclear even to a technical reader.</p>
+<p><strong>Findings:</strong> Nothing indicates a customer asked for either. "Media MCP" reads as internal plumbing dressed as justification. A plan built on unverified vendor specs is a plan built on marketing copy.</p>
+<p><strong>First step:</strong> Write a one-line, plain-language customer-value sentence for each blueprint before mapping either to any Wave.</p></div>
+</details>
+
+<details>
+<summary>Executor <span class="evidence fact">FACT-heavy — chosen strongest 5/5</span></summary>
+<div class="review-block"><p><strong>Verdict:</strong> Both are premature builds, not premature plans. Map into existing Waves now (no Wave 17); gate execution behind proving the existing voice fix and explicit owner decisions.</p>
+<p><strong>Findings:</strong> Starting a third voice system before closing the existing gap doubles unfinished inventory instead of shipping one working thing. GPU VRAM/SIP claims are unverified — can't be sequenced as "next," only as a research ticket.</p>
+<p><strong>First step:</strong> Assign one agent today to reproduce and close the intermittent voice loop bug on the existing path — zero new dependencies, same-day test.</p></div>
+</details>
+
+<h2 class="section-title">Peer Review Highlights</h2>
+<details>
+<summary>All 5 reviewers, condensed</summary>
+<div class="review-block">
+<p><strong>Strongest response:</strong> Executor (D) — unanimous 5/5. Direct, falsifiable, same-day action, no new dependencies.</p>
+<p><strong>Biggest blind spot found:</strong> Expansionist (A), repeatedly — treats shadow-mode voice work and subscription-based runtimes as low/no-cost without weighing the owner's own attention as the real bottleneck, and without questioning whether the subscription even covers CLI/agent use.</p>
+<p><strong>Verification required (named by all 5):</strong> GPU VRAM specs for the named video models, and whether OpenAI Live/Gemini Live actually support SIP/telephony as claimed — none of this was independently checked before advisors reasoned about it.</p>
+<p><strong>Council-wide omission (2 reviewers, independently):</strong> nobody said the plainest thing — the fastest path to revenue is the owner resolving the 3 pending MVP decisions that already block customer #1, ahead of either blueprint.</p>
+<p><strong>Minority insights preserved:</strong> Media MCP as reusable infra regardless of model stack (Expansionist); "planning is not free when the planner is the bottleneck" (Contrarian); write a one-line customer-value sentence before any Wave assignment (Outsider).</p>
+</div>
+</details>
+
+<h2 class="section-title">Verification Notes</h2>
+<p><strong>Checked / grounded in supplied context:</strong> MVP code-complete status; existing two competing unfinished voice architectures; no GPU exists today; home worker has frozen twice under load this session; Wave 11 and Wave 12 already exist in the master plan matching this scope.</p>
+<p><strong>Still UNVERIFIED — verify before treating as fact:</strong></p>
+<ul>
+  <li>GPU VRAM requirements for HunyuanVideo-Avatar / SkyReels V3 / Wan 2.2 / MuseTalk / LatentSync — check each project's own docs.</li>
+  <li>OpenAI Live's SIP/telephony acceptance (<code>gpt-live-1</code>) and Gemini Live's actual interface/limits — check official API docs.</li>
+  <li>Whether the owner's Google AI Pro subscription terms cover CLI/agent-level programmatic use — check subscription ToS, not marketing pages.</li>
+  <li>Whether adding Gemini CLI/Antigravity as a second runtime is compatible with the current Codex-only architecture without real added maintenance burden — not analyzed this round; flagged as a follow-up.</li>
+</ul>
+
+<footer>
+Generated 2026-09-12 · LLM Council V2 (Karpathy method) · Question: "Do these two blueprints belong in the 16-Wave plan, in what priority order, and is the video engine worth doing now?" · Files: <code>council-report-2026-09-12.html</code>, <code>council-transcript-2026-09-12.md</code>
+</footer>
+
+</body>
+</html>
