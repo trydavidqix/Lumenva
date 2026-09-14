@@ -1,0 +1,13 @@
+diff --git a/openvoice/se_extractor.py b/openvoice/se_extractor.py
+index a41c256..7496087 100644
+--- a/openvoice/se_extractor.py
++++ b/openvoice/se_extractor.py
+@@ -19,7 +19,7 @@ model = None
+ def split_audio_whisper(audio_path, audio_name, target_dir='processed'):
+     global model
+     if model is None:
+-        model = WhisperModel(model_size, device="cuda", compute_type="float16")
++        model = WhisperModel(model_size, device="cpu", compute_type="int8")
+     audio = AudioSegment.from_file(audio_path)
+     max_len = len(audio)
+ 
