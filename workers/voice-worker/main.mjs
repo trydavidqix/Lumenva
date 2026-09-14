@@ -121,11 +121,7 @@ const deliveryContext = createCallDeliveryContext({
   ttlMs: positiveNumberEnv("VOICE_DELIVERY_CONTEXT_TTL_MS", 120_000),
   maxResponsesPerCall: positiveNumberEnv("VOICE_DELIVERY_CONTEXT_RESPONSES", 4),
 });
-const {
-  recordDelivery,
-  decorateSentence,
-  clearDelivery,
-} = deliveryContext;
+const { recordDelivery, decorateSentence, clearDelivery } = deliveryContext;
 
 const phone = new Patter({
   carrier: new Telnyx({
@@ -151,10 +147,7 @@ const minSilenceDuration = positiveNumberEnv("VOICE_VAD_MIN_SILENCE_SECONDS", 0.
 if (minSilenceDuration < 0.1 || minSilenceDuration > 2) {
   throw new Error("VOICE_VAD_MIN_SILENCE_SECONDS must be between 0.1 and 2 seconds");
 }
-const vad = await SileroVAD.forPhoneCall({
-  minSilenceDuration,
-  forceCpu: true,
-});
+const vad = await SileroVAD.forPhoneCall({ minSilenceDuration, forceCpu: true });
 
 const agent = phone.agent({
   stt,
@@ -179,7 +172,10 @@ async function onCallStart(data) {
   if (direction === "outbound") {
     const pending = pendingOutbound.consume(endpoints.called);
     if (!pending) throw new Error("outbound_context_missing_or_ambiguous");
-    context = { voice_call_id: pending.voiceCallId };
+    context = {
+      voice_call_id: pending.voiceCallId,
+      organization_id: pending.organizationId,
+    };
   } else {
     context = await brain.resolveContext({
       provider_call_id: endpoints.callId,
@@ -187,6 +183,9 @@ async function onCallStart(data) {
       called_e164: endpoints.called,
       direction,
     });
+  }
+  if (typeof context?.organization_id !== "string" || !context.organization_id.trim()) {
+    throw new Error("voice_call_tenant_context_missing");
   }
   putCallContext(endpoints.callId, context);
   await brain.recordEvent({
@@ -219,6 +218,7 @@ async function onMessage(message) {
     recordDelivery({ callId: message.callId, text: replyText, delivery });
     process.stdout.write(JSON.stringify({
       event: "lumenva_voice_delivery",
+      organization_id: context.organization_id,
       voice_call_id: context.voice_call_id,
       ...delivery,
     }) + "\n");
