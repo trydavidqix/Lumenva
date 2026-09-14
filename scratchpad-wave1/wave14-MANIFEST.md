@@ -43,6 +43,10 @@ aplica.
 
 ## Applied
 
+| `20260913030200` | `0168_psyche_watchdog_requesters` | Wave 14: registry persistente de requester/capability para reroute do Watchdog, tenant-scoped e RLS. |
+
+| `20260913030100` | `0167_psyche_watchdog_observations` | Wave 14: estado persistente do No-Progress Watchdog, replay por ciclo, serialização transacional e RLS tenant-scoped. |
+
 | `20260905170000` | `0155_rgpd_transfer_inventory` | J5 provider/subprocessor transfer inventory with unknown initial status, SCC/BCR/TIA fields and OFF-by-default observe/block gate. |
 
 | `20260905160000` | `0154_rgpd_breach_incidents` | J3 additive breach register with UTC 72-hour deadline, notification decision, CNPD evidence and tenant RLS; workflow remains feature-flagged OFF. |
@@ -197,8 +201,6 @@ aplica.
 | `20260907100000` | `0158_content_os_editorial_persistence` | Content OS V1: research runs retomáveis, evidências com hash e estado de verificação, claims ligados a evidências, quality gates e revisões versionadas; todas tenant-aware, com RLS, índices de reconciliação, idempotência e triggers de coerência entre organizações. |
 | `20260907110000` | `0159_content_os_learning_idempotency` | Chave de idempotência tenant-aware para eventos de aprendizagem e detecção segura de content decay. |
 | `20260907120000` | `0160_ai_agent_command_approvals` | Nova Mode V1: aprovações duráveis de comandos do navegador, com idempotência por organização, expiração, estado de execução, RLS manager+ e guarda de coerência entre agente, versão e tenant. |
-| `20260913100000` | `0162_browsermesh_event_idempotency` | Wave 4 BrowserMesh: claims de replay por tenant, evento e chave de idempotência. |
-| `20260913160000` | `0163_browsermesh_event_idempotency_rls` | Wave 4 BrowserMesh: RLS tenant-scoped para claims de replay e grants mínimos. |
 
 ## Reproducibility
 
@@ -216,4 +218,3 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 - **Integrations**: tenant_integrations, orders, nuvemshop_products
 - **Compliance**: lgpd_requests
 - **Ops**: incidents
-| `20260913130000` | `0163_hermes_learning_os` | Hermes Unified Learning OS: tenant-safe append-only research experiments, outcomes and capability identities with RLS; extends the governed Flywheel proposal type allowlist. |
