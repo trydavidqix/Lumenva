@@ -5,6 +5,7 @@ import type { VoiceDeliveryAuthorizer } from "./agent-os-adapter";
 import { createVoiceAgentOsAdapter } from "./agent-os-adapter";
 import { createSupervisorVoiceAgentResolver } from "./agent-resolver";
 import { resolveVoiceDeliveryStyle, type VoiceDeliveryStyle } from "./delivery-style";
+import { prepareSpeakableVoiceText } from "./voice-humanizer";
 
 const CONVERSATIONAL_AGENT_IDS = ["atendimento", "sales", "retention"] as const;
 
@@ -62,8 +63,9 @@ export function createVoiceTurnService(deps: {
       const sentiment = classifySentiment(input.transcript);
       const conversationStyle = getProductAgentConversationStyle(result.agentId);
       const delivery = resolveVoiceDeliveryStyle({ sentiment, conversationStyle });
+      const text = prepareSpeakableVoiceText(result.text);
 
-      return { ...result, delivery };
+      return { ...result, text, delivery };
     },
   };
 }
