@@ -19,7 +19,7 @@
  */
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { env } from "@/lib/env";
-export { IMPERSONATE_COOKIE_NAME, IMPERSONATE_COOKIE_NAME_LEGACY, readImpersonateCookie } from "./names";
+export { IMPERSONATE_COOKIE_NAME, readImpersonateCookie } from "./names";
 export const IMPERSONATE_TTL_SECONDS = 3600; // 1 hour
 
 
