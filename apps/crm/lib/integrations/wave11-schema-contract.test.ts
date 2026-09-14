@@ -31,7 +31,18 @@ describe("Wave 11 schema contract", () => {
       /revoke\s+all\s+on\s+public\.integration_secrets\s+from\s+authenticated/i,
     );
     expect(integrationSql).toMatch(
-      /grant\s+select\s+on\s+public\.integration_secrets\s+to\s+service_role/i,
+      /grant\s+select\s*,\s*insert\s*,\s*update\s*,\s*delete\s+on\s+public\.integration_secrets\s+to\s+service_role/i,
     );
+  });
+
+  it("persists a retry-safe replay lifecycle and keeps writes trusted", () => {
+    expect(integrationSql).toMatch(/status\s+text\s+not\s+null\s+default\s+'PROCESSED'/i);
+    expect(integrationSql).toMatch(/status\s+in\s*\(\s*'PROCESSING'\s*,\s*'PROCESSED'\s*,\s*'FAILED'\s*\)/i);
+    expect(integrationSql).toMatch(/claim_token\s+uuid/i);
+    expect(integrationSql).toMatch(/claimed_at\s+timestamptz/i);
+    expect(integrationSql).toMatch(/completed_at\s+timestamptz/i);
+    expect(integrationSql).toMatch(/revoke\s+all\s+on\s+public\.integration_webhook_receipts\s+from\s+authenticated/i);
+    expect(integrationSql).toMatch(/grant\s+select\s+on\s+public\.integration_webhook_receipts\s+to\s+authenticated/i);
+    expect(integrationSql).toMatch(/grant\s+select\s*,\s*insert\s*,\s*update\s*,\s*delete\s+on\s+public\.integration_webhook_receipts\s+to\s+service_role/i);
   });
 });
