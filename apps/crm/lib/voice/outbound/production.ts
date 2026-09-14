@@ -36,8 +36,6 @@ export function createProductionVoiceOutboundService(db: pg.Pool, internalSecret
           limit 2`,
         [organizationId],
       );
-      // Until tenant routing explicitly selects a source number, multiple enabled
-      // workers are ambiguous. Fail closed instead of choosing one implicitly.
       if (rows.length !== 1) return null;
       const row = rows[0]!;
       if (!E164.test(row.phone_e164)) return null;
@@ -86,6 +84,7 @@ export function createProductionVoiceOutboundService(db: pg.Pool, internalSecret
         },
         body: JSON.stringify({
           voice_call_id: input.voiceCallId,
+          organization_id: input.organizationId,
           to_e164: input.toE164,
           first_message: input.firstMessage,
         }),
