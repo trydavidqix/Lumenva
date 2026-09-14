@@ -33,6 +33,7 @@ NODE_ENV=test pnpm vitest run \
   lib/voice/runtime/delivery-policy.test.ts \
   lib/voice/runtime/delivery-style.test.ts \
   lib/voice/runtime/voice-humanizer.test.ts \
+  lib/voice/runtime/voice-output-policy.test.ts \
   lib/voice/runtime/context-service.test.ts \
   lib/voice/runtime/turn-service.test.ts \
   lib/voice/runtime/session.test.ts \
