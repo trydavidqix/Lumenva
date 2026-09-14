@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   executeDeliveryWithGate,
+  validateDeliveryChannelArtifact,
   validateDeliveryPlan,
   validateDeliveryPlanWithState,
   type DeliveryArtifact,
@@ -50,18 +51,11 @@ describe("Wave 10 delivery gates", () => {
     expect(validateDeliveryPlan(deliveryPlan, artifact, evidence)).toEqual({ valid: true, errors: [] });
   });
 
-  it("applies the same gates to every declared delivery channel", () => {
-    const artifacts = {
-      WEB_PREVIEW: artifact,
-      MOBILE_PREVIEW: { ...artifact, platform: "IOS" as const },
-      APP_STORE: { ...artifact, platform: "IOS" as const },
-      PLAY_STORE: { ...artifact, platform: "ANDROID" as const },
-      MANAGED_SERVICE: artifact,
-    };
+  it("applies the same evidence gates to every declared delivery channel", () => {
     for (const channel of ["WEB_PREVIEW", "MOBILE_PREVIEW", "APP_STORE", "PLAY_STORE", "MANAGED_SERVICE"] as const) {
       const result = validateDeliveryPlan(
         { ...deliveryPlan, channels: [channel] },
-        artifacts[channel],
+        artifact,
         { ...evidence, evidence_refs: [] },
       );
       expect(result.valid, channel).toBe(false);
@@ -76,12 +70,12 @@ describe("Wave 10 delivery gates", () => {
     expect(result.errors).toContain("unsupported delivery channel: FUTURE_CHANNEL");
   });
 
-  it("fails closed when a declared channel does not match the artifact platform", () => {
-    expect(validateDeliveryPlan({ ...deliveryPlan, channels: ["APP_STORE"] }, artifact, evidence).errors)
+  it("fails closed when a selected channel does not match the artifact platform", () => {
+    expect(validateDeliveryChannelArtifact("APP_STORE", artifact).errors)
       .toContain("delivery channel APP_STORE requires IOS artifact");
-    expect(validateDeliveryPlan({ ...deliveryPlan, channels: ["PLAY_STORE"] }, { ...artifact, platform: "IOS" }, evidence).errors)
+    expect(validateDeliveryChannelArtifact("PLAY_STORE", { ...artifact, platform: "IOS" }).errors)
       .toContain("delivery channel PLAY_STORE requires ANDROID artifact");
-    expect(validateDeliveryPlan({ ...deliveryPlan, channels: ["MOBILE_PREVIEW"] }, { ...artifact, platform: undefined }, evidence).errors)
+    expect(validateDeliveryChannelArtifact("MOBILE_PREVIEW", { ...artifact, platform: undefined }).errors)
       .toContain("delivery channel MOBILE_PREVIEW requires IOS or ANDROID artifact");
   });
 
