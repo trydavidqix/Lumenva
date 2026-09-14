@@ -21,11 +21,10 @@ export function toElevenLabsDeliverySettings(delivery: VoiceDeliveryStyle): Elev
     firm: { stability: 0.86, similarity_boost: 0.8, style: 0.1, use_speaker_boost: false },
   };
   const base = presets[delivery.affect];
-  const energyAdjustment = (delivery.energy - 0.5) * 0.2;
   return {
-    stability: clamp01(base.stability - Math.max(0, energyAdjustment) * 0.25),
+    stability: clamp01(base.stability),
     similarity_boost: clamp01(base.similarity_boost),
-    style: clamp01(base.style + energyAdjustment),
+    style: clamp01(base.style),
     use_speaker_boost: base.use_speaker_boost,
   };
 }
