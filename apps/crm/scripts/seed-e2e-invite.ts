@@ -31,7 +31,7 @@ if (!url || !serviceKey) {
 const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
 
 const CREDS_PATH = path.join(process.cwd(), ".e2e-creds.json");
-const INVITE_EMAIL = "convidado.invite@deskcomm.test";
+const INVITE_EMAIL = "convidado.invite@lumenva.test";
 
 interface BaseCreds {
   password: string;
@@ -44,7 +44,6 @@ async function findUserId(email: string): Promise<string | null> {
 }
 
 async function main(): Promise<void> {
-  // 1. Garante o seed base (org + admin+TOTP + agent + viewer).
   if (!fs.existsSync(CREDS_PATH)) {
     console.log("[seed-invite] rodando seed base (seed-e2e-credentials)...");
     execFileSync("npx", ["tsx", "scripts/seed-e2e-credentials.ts"], { stdio: "inherit" });
@@ -53,7 +52,6 @@ async function main(): Promise<void> {
   const adminId = base.users.admin?.id;
   if (!adminId) throw new Error("seed base sem admin em .e2e-creds.json");
 
-  // 2. Resolve a org do admin (a org do seed base).
   const { data: membership, error: mErr } = await admin
     .from("user_organizations")
     .select("organization_id")
@@ -65,7 +63,6 @@ async function main(): Promise<void> {
   const orgId = (membership as { organization_id: string }).organization_id;
   console.log(`[seed-invite] org do seed base: ${orgId}`);
 
-  // 3. Convidado: conta existe (mesma senha do base), SEM membership.
   let inviteeId = await findUserId(INVITE_EMAIL);
   if (inviteeId) {
     await admin.auth.admin.updateUserById(inviteeId, { password: base.password, email_confirm: true });
@@ -81,7 +78,6 @@ async function main(): Promise<void> {
     console.log(`[seed-invite] convidado criado: ${inviteeId}`);
   }
 
-  // estado inicial: SEM membership (o aceite é quem cria)
   await admin.from("user_organizations").delete().eq("user_id", inviteeId).eq("organization_id", orgId);
   console.log("[seed-invite] convidado sem membership (estado inicial correto)");
 
