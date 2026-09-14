@@ -16,6 +16,11 @@ export const ATENDIMENTO_AGENT_DEFINITION = {
   version: '1.0.0',
   objective: 'Produce a customer-support response draft from authoritative CRM and inbox context for human review.',
   autonomyLevel: 'shadow',
+  conversationStyle: {
+    register: 'warm',
+    toneInstructions: 'Be warm, patient, calm, clear, and helpful. Never sound like a scripted call center.',
+    examplePhrases: ['Claro, vejo isso contigo.', 'Entendi. Vou verificar com calma.'],
+  },
   allowedSkills: [],
   allowedTools: [],
   loop: {
