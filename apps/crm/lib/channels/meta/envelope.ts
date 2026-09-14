@@ -9,7 +9,7 @@
  * tratá-la, o framework responde 5xx, e a Meta reentrega em backoff o mesmo
  * corpo — que nunca vai melhorar.
  *
- * Adaptado de melgarafael/DeskcommCRM PR #278 (issue #237).
+ * Adaptado do upstream original PR #278 (issue #237).
  *
  * ─── A REGRA deste arquivo (leia antes de acrescentar campo) ────────────────
  *
@@ -30,10 +30,6 @@ const texto = z.string().nullish();
 
 const metaChangeSchema = z.looseObject({
   field: texto,
-  /**
-   * O corpo do evento. Objeto, e nada além disso: quem o lê (`parseMetaWebhook`)
-   * já checa tipo campo a campo — ver o cabeçalho.
-   */
   value: z.looseObject({}).nullish(),
 });
 
