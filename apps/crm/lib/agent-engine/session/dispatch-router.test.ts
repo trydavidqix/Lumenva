@@ -28,6 +28,26 @@ describe("DispatchRouter", () => {
     expect(dispatchRoute({ ...task, actor_id: "" }, workers, policy)).toEqual({ decision: "DENY", reason: "ACTOR_UNAUTHORIZED" });
   });
 
+  it("rejects a payload with no actor identity", () => {
+    expect(dispatchRoute({ ...task, actor_id: undefined as unknown as string }, workers, policy)).toEqual({ decision: "DENY", reason: "ACTOR_UNAUTHORIZED" });
+  });
+
+  it("rejects a payload with no policy actor identity", () => {
+    expect(dispatchRoute(task, workers, { ...policy, actor_id: undefined as unknown as string })).toEqual({ decision: "DENY", reason: "ACTOR_UNAUTHORIZED" });
+  });
+
+  it("rejects a payload with no policy capability grant", () => {
+    expect(dispatchRoute(task, workers, { ...policy, allowed_actor_capabilities: undefined as unknown as string[] })).toEqual({ decision: "DENY", reason: "ACTOR_UNAUTHORIZED" });
+  });
+
+  it("denies whitespace-only actor identity instead of treating it as authenticated", () => {
+    expect(dispatchRoute({ ...task, actor_id: "   " }, workers, { ...policy, actor_id: "   " })).toEqual({ decision: "DENY", reason: "ACTOR_UNAUTHORIZED" });
+  });
+
+  it("denies whitespace-only policy identity instead of treating it as a valid policy", () => {
+    expect(dispatchRoute(task, workers, { ...policy, actor_id: "   " })).toEqual({ decision: "DENY", reason: "ACTOR_UNAUTHORIZED" });
+  });
+
   it("denies a capability not authorized for the actor", () => {
     expect(dispatchRoute({ ...task, required_capability: "crm.write" }, workers, policy)).toEqual({ decision: "DENY", reason: "ACTOR_UNAUTHORIZED" });
   });
