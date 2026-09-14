@@ -48,7 +48,7 @@ describe("voice worker tenant binding", () => {
   });
 
   it("keeps private worker endpoints service-only even if grants change later", () => {
-    const migration = readCrm("supabase/migrations/20260827020000_0130_voice_worker_endpoint_privileges.sql");
+    const migration = readRepo("supabase/migrations/20260827020000_0130_voice_worker_endpoint_privileges.sql");
     expect(migration).toContain("revoke all on table public.voice_worker_endpoints from anon");
     expect(migration).toContain("revoke all on table public.voice_worker_endpoints from authenticated");
   });
