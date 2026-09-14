@@ -53,10 +53,12 @@ export function startVoiceControlServer({
       const body = await readJson(req);
       const to = String(body?.to_e164 ?? "").trim();
       const voiceCallId = String(body?.voice_call_id ?? "").trim();
+      const organizationId = String(body?.organization_id ?? "").trim();
       if (!/^\+[1-9]\d{6,14}$/.test(to)) return json(res, 422, { error: "invalid_e164" });
       if (!voiceCallId) return json(res, 422, { error: "voice_call_id_required" });
+      if (!organizationId) return json(res, 422, { error: "organization_id_required" });
       const firstMessage = typeof body?.first_message === "string" ? body.first_message.trim().slice(0, 500) : undefined;
-      reserved = pendingOutbound.reserve({ toE164: to, voiceCallId });
+      reserved = pendingOutbound.reserve({ toE164: to, voiceCallId, organizationId });
       await phone.call({
         to,
         agent,
