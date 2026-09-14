@@ -1,7 +1,7 @@
 /**
  * Acesso tipado às tabelas núcleo do harness. SQL cru, sem ORM.
  *
- * ponytail: fluxo de espelho morto no porte para o DeskcommCRM (mesmo banco agora) —
+ * ponytail: fluxo de espelho morto no porte para o Lumenva (mesmo banco agora) —
  * removidos createTenant, upsertLead, getLead, listLeads, ingestCrmEvent,
  * listCrmEvents e os tipos TenantRow/LeadRow/EventInboxRow (organizations/contacts
  * são as tabelas reais do CRM; o drain lê event_log direto). Sobra o inbox de
@@ -12,16 +12,6 @@
  */
 import type pg from 'pg';
 
-/**
- * O vocabulário dos avisos do runtime. Espelha o CHECK de
- * `agent_inbox_items.kind` — e o espelho é MECÂNICO: o invariante
- * `tests/invariants/vocabulario-banco-x-typescript.test.ts` compara os dois
- * conjuntos contra Postgres real, porque o compilador não enxerga o banco.
- *
- * Esta lista já ficou 3 valores atrás do banco (`judge_unaligned`,
- * `followup_dead`, `next_action_ambiguous`) sem nada falhar. Quem adiciona um
- * kind numa migration adiciona aqui na mesma mudança.
- */
 export type InboxKind =
   | 'qr_rescan'
   | 'job_dead'
@@ -63,7 +53,7 @@ function one<T>(rows: T[], what: string): T {
 
 export async function insertInboxItem(
   db: pg.Pool,
-  tenantId: string | null, // null = plataforma (ex.: infra)
+  tenantId: string | null,
   input: { kind: InboxKind; title: string; severity?: InboxItemRow['severity']; body?: string; refKind?: string; refId?: string },
 ): Promise<InboxItemRow> {
   const { rows } = await db.query<InboxItemRow>(
