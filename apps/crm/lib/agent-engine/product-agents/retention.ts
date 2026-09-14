@@ -20,6 +20,11 @@ export const RETENTION_AGENT_DEFINITION = {
   version: '1.0.0',
   objective: 'Diagnose retention risk and recommend a human-reviewed retention action without external communication or commitment.',
   autonomyLevel: 'shadow',
+  conversationStyle: {
+    register: 'warm',
+    toneInstructions: "Be empathetic, calm, non-defensive, and focused on understanding the customer's frustration before proposing a next step.",
+    examplePhrases: ['Entendi o que te incomodou.', 'Vamos resolver isso sem te fazer repetir tudo de novo.'],
+  },
   allowedSkills: [],
   allowedTools: [],
   loop: {
