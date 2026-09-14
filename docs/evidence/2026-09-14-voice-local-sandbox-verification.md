@@ -1,139 +1,133 @@
 # Voice local/free sandbox verification — 2026-09-14
 
 Branch: `feat/voice-personality-patter-inline`
+PR: #37 (draft / do not merge)
 
-This evidence records only checks actually executed in the assistant sandbox using source copied from the branch through the GitHub connector. It does **not** claim a full-monorepo CI pass, real-model Speaches pass, or live PSTN pass.
+This evidence records only checks actually executed in the assistant sandbox using source fetched from this branch through the GitHub connector. It does **not** claim a full-monorepo pass, a real-model Speaches pass, or a live PSTN pass.
 
-## Executed results
+## Fresh verification run
 
-### Baseline local STT/TTS adapters — 11/11 passed
+### Node worker-focused suites — 35/35 passed, 0 failed
 
-Executed with Node 22 `node:test` against the branch implementations of `speaches-stt.mjs` and `speaches-tts.mjs`.
+Executed with Node 22 against the current branch implementations.
 
-Covered:
-- PCM16 mono WAV header generation;
-- local faster-whisper transcription request;
-- no API-key header for local STT;
-- per-call STT clone/buffer isolation;
-- bounded utterance buffering;
-- no transcript after close;
-- abort of in-flight STT after close;
-- local TTS PCM16/16 kHz request;
-- streamed chunk join;
-- Kokoro -> Piper fallback before first audio only;
-- no voice switch after primary audio was emitted;
-- model/voice/empty-text validation.
+Breakdown:
 
-### Worker safety/control helpers — 11/11 passed
-
-Executed with Node 22 `node:test`.
+- brain client + control server + pending outbound: **9/9**
+- call-scoped delivery context: **8/8**
+- delivery log + Speaches health: **5/5**
+- faster-whisper/Speaches STT adapter: **6/6**
+- Kokoro/Piper/Speaches TTS adapter: **7/7**
 
 Covered:
-- control `/healthz` returns 503 when local speech is unavailable;
-- outbound dialing is rejected before carrier call when local speech is unavailable;
-- `/healthz` returns 200 when local speech is ready;
-- Speaches health endpoint is keyless;
-- health HTTP/network failures fail closed;
-- outbound destination reservation uniqueness;
-- expired reservation cleanup;
-- E.164 and call-id validation;
-- provider-neutral delivery logging;
-- malformed delivery metadata rejection.
 
-### Personality / delivery / turn-service focused harness — 6/6 passed
+- `delivery` metadata survives CRM-style HTTP transport through the worker brain client;
+- `/healthz` fails closed when local speech is unavailable;
+- outbound dialing is rejected before carrier use while speech runtime is unavailable;
+- outbound reservation carries `organization_id` and rejects requests without it;
+- destination reservations are unique, expire, and validate E.164/call/tenant identity;
+- provider-neutral delivery metadata is validated and strips unrelated payload fields;
+- call-scoped delivery envelopes round-trip without becoming speakable text;
+- corrupt internal envelopes fail closed;
+- `slow` maps to `0.92x`, `fast` to `1.06x`, normal preserves base speed, bounded to the provider-safe range;
+- concurrent calls keep different delivery styles on the same TTS provider instance without mutating its base speed;
+- stale/cancelled response metadata does not inherit the wrong style;
+- call delivery state clears and expires;
+- PCM16 mono WAV generation is valid;
+- faster-whisper requests are local/keyless and final transcripts are isolated per call;
+- STT utterance buffering is bounded;
+- closing a call aborts in-flight STT and suppresses late transcript/error callbacks;
+- local TTS requests PCM16/16 kHz with no hosted TTS key;
+- the internal delivery envelope is removed before text reaches Speaches;
+- Kokoro -> Piper fallback happens only before the first primary audio byte;
+- fallback never changes voice mid-sentence after primary audio has started;
+- local TTS validates model, voice and non-empty text.
 
-The branch source for the relevant modules was compiled with the available TypeScript compiler and exercised with a minimal Node test harness. Type-only dependencies not needed at runtime were represented by minimal interfaces, so this proves the focused runtime logic but is not a substitute for the repository's full TypeScript gate.
+### TypeScript focused runtime assertions — 16/16 passed
 
-Covered:
-- canonical Product Agent conversation styles;
-- negative/positive/neutral `VoiceDeliveryStyle` rules;
-- professional personality does not become hyper-upbeat;
-- voice humanizer removes presentation artifacts while preserving facts/numbers/dates/prices;
-- delivery authorization blocks before model work;
-- negative support turn becomes empathetic/slow/warm without rewriting Agent OS text;
-- supervisor-selected `atendimento`, `sales`, and `retention` routing is preserved.
-
-### Call-scoped emotional delivery — TDD verified
-
-A RED contract was committed first and executed in the sandbox. It failed for the intended reason: the call-scoped delivery bridge did not exist yet.
-
-After implementation, the focused delivery-context + TTS suite passed **12/12**.
+The exact current branch source for the pure runtime modules was executed with Node 22 type stripping and a minimal assertion harness. This is focused runtime evidence, not a substitute for the repository's full `pnpm typecheck`/Vitest gate.
 
 Covered:
-- provider-neutral delivery envelope round-trip;
-- malformed internal envelope is never exposed as speakable text;
-- `slow` maps to base speed × `0.92`;
-- `normal` preserves configured base speed;
-- `fast` maps to base speed × `1.06`;
-- final speed is bounded to `0.75..1.25`;
-- two call IDs retain independent delivery styles;
-- recent responses retain their own style across barge-in/cancel-style ordering races;
-- unknown sentences fail safe to default TTS delivery rather than guessing;
-- call state is cleared on completion;
-- stale response metadata expires;
-- TTS strips the internal envelope before sending text to Speaches;
-- a shared `SpeachesLocalTTS` instance concurrently synthesized one slow and one fast utterance while its configured base speed remained unchanged.
 
-A subsequent regression run combining the new delivery-context tests with the existing faster-whisper STT and local TTS tests passed **18/18, 0 failed**.
+- negative + warm personality -> empathetic / slow / warm delivery;
+- negative + professional -> calm / slow / serious;
+- positive + casual may be upbeat but remains energy-bounded;
+- professional personality cannot become hyper-upbeat;
+- absent personality uses the professional neutral default;
+- humanizer removes canned bot praise and visual Markdown;
+- humanizer preserves numbers, dates, prices, identifiers and factual sentences;
+- humanizer can reduce a canned-only response to empty, matching the fail-closed case enforced by `turn-service`;
+- voice output policy accepts one/two short turns with an explicit handoff cue;
+- voice output policy rejects >2 sentences;
+- voice output policy rejects raw digits/currency symbols;
+- voice output policy rejects missing end-of-turn cues;
+- voice output policy rejects empty output.
 
-This closes the previous implementation gap where Lumenva knew `calm/empathetic/upbeat` but the local TTS could not safely receive per-call delivery. Pace is now audible per call without shared mutable provider state.
+### Syntax checks — 8/8 passed
 
-Important limitation: `affect`, `tone`, and `energy` remain provider-neutral metadata. They are not falsely mapped to acoustic controls that the current local Speaches/Kokoro/Piper interface does not expose. The currently proven acoustic modulation is call-scoped **pace/speed**.
+`node --check` passed for the reconstructed current branch sources of:
 
-## Earlier aggregate focused check
+- `brain-client.mjs`
+- `control-server.mjs`
+- `pending-outbound.mjs`
+- `delivery-context.mjs`
+- `delivery-log.mjs`
+- `speaches-health.mjs`
+- `speaches-stt.mjs`
+- `speaches-tts.mjs`
 
-Before the call-scoped bridge work, the combined isolated checks reported:
+## Review closure
 
-- **28 passed**
-- **0 failed**
+All six inline review threads currently present on PR #37 are resolved. The fixes verified in branch source include:
 
-The later 12/12 and 18/18 runs overlap with some of those baseline STT/TTS tests, so these numbers must not be added together as unique-test counts.
+- cwd-independent contract-test paths;
+- conversation personality moved onto the versioned canonical `AgentDefinition`;
+- post-humanizer empty text fails closed with `voice_agent_output_not_speakable`;
+- inbound/outbound tenant identity is propagated and `lumenva_voice_delivery` logs carry `organization_id`;
+- evidence/plan no longer treats GitHub Actions as an authoritative gate.
 
 ## Static branch verification
 
 Fetched directly from the branch:
 
-- `workers/voice-worker/main.mjs` uses `Patter`, `SileroVAD`, `SpeachesFasterWhisperSTT`, `SpeachesLocalTTS`, `brain.runTurn()`, and a Patter `beforeSynthesize` hook;
-- `beforeSynthesize` keys delivery by Patter `hookContext.callId`;
-- `onMessage` records delivery using the same per-call ID surface instead of mutating global TTS state;
-- `workers/voice-worker/delivery-context.mjs` owns the bounded call-scoped delivery bridge;
-- `SpeachesLocalTTS` decodes metadata locally, strips it from speakable text, and computes a request-local speed;
-- production worker source contains no Deepgram or ElevenLabs adapter references;
-- worker keeps `persist: false` and `telemetry: false`;
-- `workers/voice-worker/package.json` pins `getpatter` `0.7.1` and `onnxruntime-node` `~1.18.0`;
-- Docker base is `node:22-bookworm-slim`;
-- `kernel-runtime.ts` applies Product Agent conversation style in the canonical Agent OS runtime;
-- legacy `lib/ai/runtime/agent.ts` remains marked `@deprecated` and does not contain the new voice style types.
+- `workers/voice-worker/main.mjs` uses call-scoped `beforeSynthesize(callId)` delivery decoration and logs tenant-tagged delivery metadata;
+- inbound context returns `organization_id`;
+- outbound CRM -> worker control requests send `organization_id`;
+- pending outbound reservations retain tenant identity and fail closed without it;
+- `/api/internal/voice/turn` regression coverage asserts `delivery` is returned unchanged;
+- `brain-client.mjs` transparently returns the CRM control-plane payload;
+- Product Agent conversation style is owned by the versioned `AgentDefinition`, not a parallel runtime registry;
+- `turn-service.ts` re-checks text after humanization and fails closed if no speakable text remains;
+- production worker path uses local Silero/faster-whisper/Kokoro/Piper infrastructure and no Deepgram/ElevenLabs adapter path;
+- worker package pins `getpatter` `0.7.1` and `onnxruntime-node` `~1.18.0`.
 
-Upstream Patter source was checked before implementing the bridge:
+## Verification doctrine correction
 
-- `PipelineHooks.beforeSynthesize(text, ctx)` is a per-sentence pipeline hook;
-- `HookContext` contains `callId`, `caller`, and `callee`;
-- Patter integration tests exercise hooks together with the external `onMessage` flow;
-- the public TTS adapter contract still receives only `synthesizeStream(text)`, which is why the implementation deliberately does not depend on a non-existent per-call TTS option parameter.
+GitHub Actions is intentionally disabled by repository doctrine and is **not** an authoritative completion gate for this task. The temporary branch-only workflow previously created during experimentation has been removed. PR #37 remains a draft review surface only.
 
-## GitHub Actions attempt
+Canonical full-checkout commands, when a complete runnable checkout is available:
 
-A branch-only workflow exists at `.github/workflows/voice-local-inline-ci.yml` with:
+```bash
+pnpm install --frozen-lockfile
+pnpm typecheck
+pnpm lint
+pnpm lint:channels
+pnpm lint:tenant-filter
+pnpm test:unit
+cd apps/crm && bash scripts/verify-voice-core.sh
+cd ../../workers/voice-worker && npm run check
+```
 
-1. monorepo install;
-2. voice-worker install/check;
-3. CRM typecheck;
-4. CRM unit tests;
-5. `scripts/verify-voice-core.sh`.
+These full-monorepo commands remain **unmeasured in this assistant environment** unless explicitly recorded otherwise.
 
-At evidence time the repository returned no normal GitHub Actions run for the branch workflow; only the existing dynamic Copilot review run was visible. Connector-created commits therefore have not produced a full repository CI result in this session. **Full repository CI remains unproved.**
+## Remaining gates before 100% production-proven
 
-## Remaining gates before 100% proven
+1. Full repository install/typecheck/lint/unit/`verify-voice-core.sh` in a complete checkout.
+2. Resolve the current Vercel Preview team/access configuration and run the final Preview only after local gates are green.
+3. Start a real Speaches runtime with approved faster-whisper/Kokoro/Piper model assets.
+4. Controlled real PSTN call.
+5. Two overlapping real calls with different delivery styles.
+6. Barge-in/interruption, runtime failure/fallback, transfer/handoff and endpointing-to-first-audio p50/p95 measurement.
+7. Richer acoustic emotion beyond pace remains provider-capability-dependent; no unsupported Kokoro/Piper prosody behavior is claimed.
 
-1. Full repository `pnpm install --frozen-lockfile` in a real checkout.
-2. Full CRM typecheck.
-3. Full unit suite.
-4. `apps/crm/scripts/verify-voice-core.sh`, including Next build and other voice runtimes.
-5. Real Speaches runtime with downloaded faster-whisper/Kokoro/Piper models.
-6. Controlled PSTN call.
-7. Two concurrent PSTN calls to verify end-to-end media/call isolation.
-8. Barge-in, latency, local-runtime failure, fallback, and transfer validation with real media.
-9. Richer acoustic emotion beyond pace remains provider-capability-dependent; no unsupported Kokoro/Piper behavior is claimed.
-
-No merge to `main` was performed.
+No merge to `main` was performed or authorized.
