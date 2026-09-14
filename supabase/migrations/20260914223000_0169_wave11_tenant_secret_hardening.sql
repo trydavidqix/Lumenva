@@ -1,5 +1,10 @@
 -- Wave 11 forward-fix: canonical tenant UUIDs, retry-safe replay state, and server-only secret writes.
 -- Existing non-UUID organization identifiers are rejected rather than silently remapped.
+-- Drop RLS policies before ALTER TYPE: PostgreSQL policies depend on organization_id.
+
+drop policy if exists contact_consents_tenant_all on public.contact_consents;
+drop policy if exists integration_webhook_receipts_tenant on public.integration_webhook_receipts;
+drop policy if exists integration_secrets_tenant on public.integration_secrets;
 
 alter table public.contact_consents
   alter column organization_id type uuid using organization_id::uuid;
@@ -76,8 +81,15 @@ begin
   end if;
 end $$;
 
+alter table public.contact_consents enable row level security;
+create policy contact_consents_tenant_all on public.contact_consents
+  for all to authenticated
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
+revoke all on public.contact_consents from public;
+grant select, insert, update on public.contact_consents to authenticated;
+
 alter table public.integration_webhook_receipts enable row level security;
-drop policy if exists integration_webhook_receipts_tenant on public.integration_webhook_receipts;
 create policy integration_webhook_receipts_tenant on public.integration_webhook_receipts
   for select to authenticated
   using (organization_id in (select public.fn_user_org_ids()));
@@ -87,7 +99,6 @@ grant select on public.integration_webhook_receipts to authenticated;
 grant select, insert, update, delete on public.integration_webhook_receipts to service_role;
 
 alter table public.integration_secrets enable row level security;
-drop policy if exists integration_secrets_tenant on public.integration_secrets;
 revoke all on public.integration_secrets from public;
 revoke all on public.integration_secrets from authenticated;
 grant select, insert, update, delete on public.integration_secrets to service_role;
