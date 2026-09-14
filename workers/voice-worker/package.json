@@ -5,7 +5,7 @@
   "engines": { "node": ">=22" },
   "scripts": {
     "start": "node main.mjs",
-    "check": "node --check main.mjs && node --check brain-client.mjs && node --check call-context.mjs && node --check control-server.mjs && node --check delivery-log.mjs && node --check pending-outbound.mjs && node --check speaches-stt.mjs && node --check speaches-tts.mjs && node --test delivery-log.test.mjs pending-outbound.test.mjs speaches-stt.test.mjs speaches-tts.test.mjs"
+    "check": "node --check main.mjs && node --check brain-client.mjs && node --check call-context.mjs && node --check control-server.mjs && node --check delivery-log.mjs && node --check pending-outbound.mjs && node --check speaches-health.mjs && node --check speaches-stt.mjs && node --check speaches-tts.mjs && node --test delivery-log.test.mjs pending-outbound.test.mjs speaches-health.test.mjs speaches-stt.test.mjs speaches-tts.test.mjs"
   },
   "dependencies": {
     "getpatter": "0.7.1",
