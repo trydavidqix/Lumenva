@@ -20,7 +20,7 @@ type Ctx = State & {
 
 const VariantCtx = React.createContext<Ctx | null>(null);
 
-const STORAGE = "deskcomm.designshowcase.v1";
+const STORAGE = "lumenva.designshowcase.v1";
 
 const TYPO_VAR_MAP: Record<TypoId, { display: string; body: string; mono: string }> = {
   "bricolage-jakarta": {
@@ -57,7 +57,6 @@ function applyToRoot(s: State) {
   root.dataset.palette = s.palette;
   root.dataset.density = s.density;
 
-  // accent stops
   Object.entries(p.accent).forEach(([k, v]) => {
     root.style.setProperty(`--accent-${k}`, v);
   });
@@ -65,7 +64,6 @@ function applyToRoot(s: State) {
     root.style.setProperty(`--neutral-${k}`, v);
   });
 
-  // semantic
   root.style.setProperty("--ds-bg", surfaces.bg);
   root.style.setProperty("--ds-surface", surfaces.surface);
   root.style.setProperty("--ds-surface-elevated", surfaces.surfaceElevated);
@@ -82,14 +80,12 @@ function applyToRoot(s: State) {
   root.style.setProperty("--ds-error", states.error);
   root.style.setProperty("--ds-info", states.info);
 
-  // density
   const d = DENSITIES[s.density];
   root.style.setProperty("--density-row-h", d.rowH);
   root.style.setProperty("--density-gap", d.gap);
   root.style.setProperty("--density-pad-x", d.padX);
   root.style.setProperty("--density-pad-y", d.padY);
 
-  // typography
   const t = TYPO_VAR_MAP[s.typo];
   root.style.setProperty("--ds-font-display", t.display);
   root.style.setProperty("--ds-font-body", t.body);
@@ -125,7 +121,6 @@ export function VariantProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, [state, hydrated]);
 
-  // First synchronous paint also: apply default tokens immediately.
   React.useEffect(() => {
     applyToRoot(state);
     // eslint-disable-next-line react-hooks/exhaustive-deps
