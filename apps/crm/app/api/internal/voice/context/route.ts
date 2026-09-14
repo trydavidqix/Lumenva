@@ -23,9 +23,6 @@ const bodySchema = z
     caller_e164: z.string().regex(E164),
     called_e164: z.string().regex(E164),
     direction: z.enum(["inbound", "outbound"]),
-    // SIP/BYOC path (Fase 3): a verified customer connection replaces the
-    // purchased-technical-number identity Telnyx used. Optional and
-    // mutually exclusive with the (implicit) Telnyx path below.
     connection_id: z.string().min(1).max(256).optional(),
   })
   .refine((data) => !data.connection_id || data.connection_id.trim().length > 0, {
@@ -34,12 +31,12 @@ const bodySchema = z
 
 interface ContextResult {
   voiceCallId: string;
+  organizationId: string;
   contactId: string | null;
   callerKind: VoiceCallerResolution["kind"];
   locale: string;
 }
 
-/** Shared by both paths — locale/config lookup has never been provider-specific. */
 async function loadVoiceTenantConfig(db: pg.Pool, organizationId: string): Promise<{ locale: string }> {
   const { rows } = await db.query<{ settings: Record<string, unknown> | null }>(
     `select settings from organizations where id = $1 limit 1`,
@@ -50,7 +47,6 @@ async function loadVoiceTenantConfig(db: pg.Pool, organizationId: string): Promi
   return { locale: voice.locale };
 }
 
-/** Legacy path: a purchased Telnyx number identifies the tenant by itself, via the shared `createVoiceCallContextService`. */
 async function resolveTelnyxContext(
   db: pg.Pool,
   callerResolver: ReturnType<typeof createVoiceCallerResolver>,
@@ -91,22 +87,12 @@ async function resolveTelnyxContext(
   });
 }
 
-/**
- * SIP/BYOC path (Fase 3 do plano open-source): no purchased number exists —
- * the boundary is a verified customer connection, mirroring
- * `lib/voice/runtime/context-service.ts`'s Telnyx orchestration (resolve
- * organization -> resolve caller -> persist call -> load config) but through
- * `resolveByConnection` instead of `resolve`, and persisting
- * `provider = 'asterisk'`.
- */
 async function resolveSipContext(
   db: pg.Pool,
   callerResolver: ReturnType<typeof createVoiceCallerResolver>,
   input: { providerCallId: string; connectionId: string; callerE164: string; calledE164: string; direction: "inbound" | "outbound" },
 ): Promise<ContextResult> {
   const orgResolver = createVoiceOrganizationResolver(db);
-  // Same rule as the Telnyx path: the platform-registered number is the
-  // called number for inbound, the caller number for outbound.
   const technicalE164 = input.direction === "inbound" ? input.calledE164 : input.callerE164;
   const customerE164 = input.direction === "inbound" ? input.callerE164 : input.calledE164;
 
@@ -128,7 +114,13 @@ async function resolveSipContext(
   if (!rows[0]?.id) throw new Error("voice_call_persist_failed");
 
   const config = await loadVoiceTenantConfig(db, organizationId);
-  return { voiceCallId: rows[0].id, contactId: caller.contactId, callerKind: caller.kind, locale: config.locale };
+  return {
+    voiceCallId: rows[0].id,
+    organizationId,
+    contactId: caller.contactId,
+    callerKind: caller.kind,
+    locale: config.locale,
+  };
 }
 
 function timingSafeEq(a: string, b: string): boolean {
@@ -184,13 +176,12 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     return ok({
       voice_call_id: data.voiceCallId,
+      organization_id: data.organizationId,
       contact_id: data.contactId,
       caller_kind: data.callerKind,
       locale: data.locale,
     }, { requestId });
   } catch (error) {
-    // Provider/DB errors can contain credentials, SQL fragments, or personal
-    // data. Only expose the deliberately safe, user-actionable Voice errors.
     const rawMessage = error instanceof Error ? error.message : "";
     const message = rawMessage.startsWith("[voice]")
       ? rawMessage
