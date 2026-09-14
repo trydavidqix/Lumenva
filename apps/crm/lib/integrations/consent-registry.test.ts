@@ -6,7 +6,7 @@ describe("ConsentRegistry", () => {
     const registry = new ConsentRegistry();
     const record = registry.register({ consent_id: "consent-wa", organization_id: "org-1", subject_ref: "contact-1", purpose: "support", channel: "whatsapp", source_refs: ["form-1"], evidence_refs: ["event-1"], granted_at: "2026-09-12T20:00:00.000Z" });
     expect(record).toMatchObject({ status: "GRANTED", channel: "whatsapp", granted_at: "2026-09-12T20:00:00.000Z" });
-    expect(registry.canContact("org-1", "contact-1", "whatsapp", "support")).toBe(true);
+    expect(registry.canContact("org-1", "contact-1", "whatsapp", "support", new Date("2026-09-12T20:00:01.000Z"))).toBe(true);
   });
 
   it("supports email and voice consent independently", () => {
@@ -30,5 +30,20 @@ describe("ConsentRegistry", () => {
     registry.register({ consent_id: "consent-1", organization_id: "org-1", subject_ref: "contact-1", purpose: "support", channel: "voice", source_refs: [], evidence_refs: [] });
     expect(registry.get("org-2", "consent-1")).toBeUndefined();
     expect(() => registry.revoke("org-2", "consent-1")).toThrow("consent_tenant_mismatch");
+  });
+
+  it("denies grants that are not active yet or whose retention window expired", () => {
+    const registry = new ConsentRegistry();
+    registry.register({ consent_id: "future", organization_id: "org-1", subject_ref: "contact-future", purpose: "support", channel: "email", source_refs: [], evidence_refs: [], granted_at: "2030-01-01T00:00:00.000Z" });
+    registry.register({ consent_id: "expired", organization_id: "org-1", subject_ref: "contact-expired", purpose: "support", channel: "email", source_refs: [], evidence_refs: [], granted_at: "2020-01-01T00:00:00.000Z", retention_until: "2020-01-02T00:00:00.000Z" });
+    const now = new Date("2026-09-14T22:30:00.000Z");
+    expect(registry.canContact("org-1", "contact-future", "email", "support", now)).toBe(false);
+    expect(registry.canContact("org-1", "contact-expired", "email", "support", now)).toBe(false);
+  });
+
+  it("rejects a replayed consent id when the immutable grant facts differ", () => {
+    const registry = new ConsentRegistry();
+    registry.register({ consent_id: "consent-1", organization_id: "org-1", subject_ref: "contact-1", purpose: "support", channel: "email", source_refs: ["form-1"], evidence_refs: ["event-1"], granted_at: "2026-09-12T20:00:00.000Z" });
+    expect(() => registry.register({ consent_id: "consent-1", organization_id: "org-1", subject_ref: "contact-2", purpose: "marketing", channel: "voice", source_refs: ["form-2"], evidence_refs: ["event-2"], granted_at: "2026-09-12T20:00:00.000Z" })).toThrow("consent_conflict");
   });
 });
