@@ -20,6 +20,7 @@ describe("voice personality ownership boundary", () => {
     expect(adapter).toContain("deps.kernel.run");
     expect(adapter).toContain("authorizeDelivery");
     expect(route).toContain("createVoiceTurnService");
+    expect(route).toContain("return ok(result");
   });
 
   it("keeps provider-neutral conversation style beside canonical Product Agents", () => {
@@ -35,12 +36,16 @@ describe("voice personality ownership boundary", () => {
   it("keeps per-turn delivery metadata in the canonical voice runtime", () => {
     const turnService = readCrm("lib/voice/runtime/turn-service.ts");
     const kernelRuntime = readCrm("lib/voice/runtime/kernel-runtime.ts");
+    const worker = readRepo("workers/voice-worker/main.mjs");
 
     expect(turnService).toContain("VoiceDeliveryStyle");
     expect(turnService).toContain("resolveVoiceDeliveryStyle");
     expect(turnService).toContain("classifySentiment");
+    expect(turnService).toContain("prepareSpeakableVoiceText");
     expect(kernelRuntime).toContain("getProductAgentConversationStyle");
     expect(kernelRuntime).toContain("Conversation style affects wording and tone only");
+    expect(worker).toContain("normalizeVoiceDeliveryForLog(result.delivery)");
+    expect(worker).toContain("return result.text.trim()");
   });
 
   it("does not implement the new feature in the deprecated legacy AI runtime", () => {
