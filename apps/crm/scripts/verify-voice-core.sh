@@ -16,6 +16,7 @@ NODE_ENV=test pnpm vitest run \
   lib/voice/patter/adapter.test.ts \
   lib/voice/patter/media.test.ts \
   lib/voice/patter/telemetry.test.ts \
+  lib/voice/patter/elevenlabs-style.test.ts \
   lib/voice/pipecat/adapter.test.ts \
   lib/voice/sip/asterisk-adapter.test.ts \
   lib/voice/sip/asterisk-ari-client.test.ts \
