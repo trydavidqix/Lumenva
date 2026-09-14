@@ -89,7 +89,7 @@ export interface RunLangSmithEvaluationOptions {
   judgeApiKey?: string;
 }
 
-const DATASET_NAME = "deskcomm-ai-platform-golden-v1";
+const DATASET_NAME = "lumenva-ai-platform-golden-v1";
 const DATASET_DESCRIPTION = "Synthetic offline evaluation cases for AI platform safety contracts.";
 const FALLBACK_CASE_PATTERN = /(?:timeout|down)/i;
 const SECRET_PATTERN = /\b(?:sk|pk|rk)-[A-Za-z0-9_-]{6,}\b/;
@@ -114,7 +114,6 @@ export function isSyntheticUploadRequested(argv: string[]): boolean {
 
 export function createSyntheticExamples(cases: GoldenCase[]): SyntheticExample[] {
   return cases.map((testCase) => ({
-    // contact_id values in the fixture are stable UUIDs and deliberately synthetic.
     id: testCase.contact_id,
     inputs: {
       case_id: testCase.id,
