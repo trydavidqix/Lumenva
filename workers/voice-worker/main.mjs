@@ -14,6 +14,7 @@ import {
 import { startVoiceControlServer } from "./control-server.mjs";
 import { normalizeVoiceDeliveryForLog } from "./delivery-log.mjs";
 import { createPendingOutboundRegistry } from "./pending-outbound.mjs";
+import { createSpeachesHealthCheck } from "./speaches-health.mjs";
 import { SpeachesFasterWhisperSTT } from "./speaches-stt.mjs";
 import { SpeachesFailoverTTS, SpeachesLocalTTS } from "./speaches-tts.mjs";
 
@@ -103,6 +104,14 @@ process.env.PATTER_TELEMETRY_DISABLED = "1";
 process.env.PATTER_DASHBOARD_NOTIFY = "0";
 process.env.PATTER_BIND_HOST = process.env.PATTER_BIND_HOST ?? "0.0.0.0";
 
+const speechHealth = createSpeachesHealthCheck({
+  baseUrl: localSpeechUrl,
+  timeoutMs: positiveNumberEnv("VOICE_LOCAL_SPEECH_HEALTH_TIMEOUT_MS", 2_000),
+});
+if (liveEnabled && !(await speechHealth())) {
+  throw new Error("local_speech_unavailable_at_startup");
+}
+
 const brain = createVoiceBrainClient();
 const workerPolicy = await brain.resolveWorkerConfig({ phone_e164: phoneNumber });
 const recordingEnabled = workerPolicy.recording_enabled === true && workerPolicy.recording_requires_disclosure !== true;
@@ -146,6 +155,7 @@ const agent = phone.agent({
 
 async function onCallStart(data) {
   if (!liveEnabled) throw new Error("voice_live_disabled");
+  if (!(await speechHealth())) throw new Error("local_speech_unavailable");
   const endpoints = extractPatterCallEndpoints(data);
   const direction = endpoints.caller === phoneNumber ? "outbound" : "inbound";
   let context;
@@ -236,6 +246,7 @@ const controlServer = await startVoiceControlServer({
   liveEnabled,
   port: controlPort,
   pendingOutbound,
+  readinessCheck: speechHealth,
 });
 
 let shuttingDown = false;
