@@ -67,10 +67,12 @@ node --check ../../workers/voice-worker/call-context.mjs
 node --check ../../workers/voice-worker/control-server.mjs
 node --check ../../workers/voice-worker/delivery-log.mjs
 node --check ../../workers/voice-worker/pending-outbound.mjs
+node --check ../../workers/voice-worker/speaches-health.mjs
 node --check ../../workers/voice-worker/speaches-stt.mjs
 node --check ../../workers/voice-worker/speaches-tts.mjs
 node --test ../../workers/voice-worker/delivery-log.test.mjs
 node --test ../../workers/voice-worker/pending-outbound.test.mjs
+node --test ../../workers/voice-worker/speaches-health.test.mjs
 node --test ../../workers/voice-worker/speaches-stt.test.mjs
 node --test ../../workers/voice-worker/speaches-tts.test.mjs
 node --check workers/voice-pipecat-runtime/main.mjs
