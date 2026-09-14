@@ -1,8 +1,8 @@
-# Supabase CLI config — DeskcommCRM
+# Supabase CLI config — Lumenva
 # Docs: https://supabase.com/docs/guides/cli/config
 # Este arquivo é versionado. Segredos vivem em .env.local / Vercel.
 
-project_id = "deskcomm-crm"
+project_id = "lumenva-crm"
 
 [api]
 enabled = true
