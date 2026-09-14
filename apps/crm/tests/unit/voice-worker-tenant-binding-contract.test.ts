@@ -30,6 +30,22 @@ describe("voice worker tenant binding", () => {
     expect(route).toContain("vc.caller_number = $2");
   });
 
+  it("keeps organization identity in inbound context, outbound reservations, and delivery logs", () => {
+    const contextRoute = readCrm("app/api/internal/voice/context/route.ts");
+    const outboundProduction = readCrm("lib/voice/outbound/production.ts");
+    const controlServer = readRepo("workers/voice-worker/control-server.mjs");
+    const pendingOutbound = readRepo("workers/voice-worker/pending-outbound.mjs");
+    const main = readRepo("workers/voice-worker/main.mjs");
+
+    expect(contextRoute).toContain("organization_id: data.organizationId");
+    expect(outboundProduction).toContain("organization_id: input.organizationId");
+    expect(controlServer).toContain("organization_id");
+    expect(controlServer).toContain("organizationId");
+    expect(pendingOutbound).toContain("organizationId: organizationId.trim()");
+    expect(main).toContain("organization_id: pending.organizationId");
+    expect(main).toContain("organization_id: context.organization_id");
+  });
+
   it("binds lifecycle events to the same technical-number boundary", () => {
     const route = readCrm("app/api/internal/voice/event/route.ts");
     expect(route).toContain("technical_phone_e164");
