@@ -7,11 +7,12 @@ export interface RetentionRecommendation {
   risk: RetentionRisk;
   action: string;
   rationale: string;
+  draftMessage?: string;
 }
 
 export type RetentionRecommendationValidation =
   | { ok: true }
-  | { ok: false; reason: 'invalid_input' | 'invalid_kind' | 'invalid_risk' | 'invalid_action' | 'invalid_rationale' };
+  | { ok: false; reason: 'invalid_input' | 'invalid_kind' | 'invalid_risk' | 'invalid_action' | 'invalid_rationale' | 'invalid_draft' };
 
 const RETENTION_RISKS = new Set<string>(['low', 'medium', 'high']);
 
@@ -47,5 +48,8 @@ export function validateRetentionRecommendation(input: unknown): RetentionRecomm
   if (typeof candidate.risk !== 'string' || !RETENTION_RISKS.has(candidate.risk)) return { ok: false, reason: 'invalid_risk' };
   if (typeof candidate.action !== 'string' || !candidate.action.trim()) return { ok: false, reason: 'invalid_action' };
   if (typeof candidate.rationale !== 'string' || !candidate.rationale.trim()) return { ok: false, reason: 'invalid_rationale' };
+  if (candidate.draftMessage !== undefined && (typeof candidate.draftMessage !== 'string' || !candidate.draftMessage.trim())) {
+    return { ok: false, reason: 'invalid_draft' };
+  }
   return { ok: true };
 }
