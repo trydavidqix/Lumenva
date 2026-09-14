@@ -18,7 +18,7 @@ export const PUBLIC_PATHS: RegExp[] = [
   /^\/api\/v1\/stripe\/webhook$/,
   /^\/api\/v1\/cron\//,
   // Inngest serve endpoint performs its own protocol/signature checks and must
-  // be reachable without a Deskcomm browser session for local/cloud sync.
+  // be reachable without a Lumenva browser session for local/cloud sync.
   /^\/api\/inngest$/,
   // Phase 7 Vercel Workflow benchmark endpoints are public only at middleware
   // level; each route is hard-disabled outside local development and accepts
