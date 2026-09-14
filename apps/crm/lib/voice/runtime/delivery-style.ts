@@ -1,5 +1,5 @@
 import type { SentimentVerdict } from "../../agent-engine/agent/sentiment";
-import type { AgentConversationStyle } from "../../agent-engine/product-agents/conversation-style";
+import type { AgentConversationStyle } from "../../agent-engine/contracts/agent-os";
 
 export type VoiceAffect = "neutral" | "calm" | "warm" | "empathetic" | "upbeat" | "firm";
 export type VoicePace = "slow" | "normal" | "fast";
