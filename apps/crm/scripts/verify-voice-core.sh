@@ -65,12 +65,15 @@ node --check ../../workers/voice-worker/main.mjs
 node --check ../../workers/voice-worker/brain-client.mjs
 node --check ../../workers/voice-worker/call-context.mjs
 node --check ../../workers/voice-worker/control-server.mjs
+node --check ../../workers/voice-worker/delivery-context.mjs
 node --check ../../workers/voice-worker/delivery-log.mjs
 node --check ../../workers/voice-worker/pending-outbound.mjs
 node --check ../../workers/voice-worker/speaches-health.mjs
 node --check ../../workers/voice-worker/speaches-stt.mjs
 node --check ../../workers/voice-worker/speaches-tts.mjs
 node --test ../../workers/voice-worker/control-server.test.mjs
+node --test ../../workers/voice-worker/delivery-context.contract.test.mjs
+node --test ../../workers/voice-worker/delivery-context.test.mjs
 node --test ../../workers/voice-worker/delivery-log.test.mjs
 node --test ../../workers/voice-worker/pending-outbound.test.mjs
 node --test ../../workers/voice-worker/speaches-health.test.mjs
