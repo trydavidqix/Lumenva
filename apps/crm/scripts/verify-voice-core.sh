@@ -70,6 +70,7 @@ node --check ../../workers/voice-worker/pending-outbound.mjs
 node --check ../../workers/voice-worker/speaches-health.mjs
 node --check ../../workers/voice-worker/speaches-stt.mjs
 node --check ../../workers/voice-worker/speaches-tts.mjs
+node --test ../../workers/voice-worker/control-server.test.mjs
 node --test ../../workers/voice-worker/delivery-log.test.mjs
 node --test ../../workers/voice-worker/pending-outbound.test.mjs
 node --test ../../workers/voice-worker/speaches-health.test.mjs
