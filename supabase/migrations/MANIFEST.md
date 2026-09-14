@@ -214,3 +214,4 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 - **Integrations**: tenant_integrations, orders, nuvemshop_products
 - **Compliance**: lgpd_requests
 - **Ops**: incidents
+| `20260913130000` | `0163_hermes_learning_os` | Hermes Unified Learning OS: tenant-safe append-only research experiments, outcomes and capability identities with RLS; extends the governed Flywheel proposal type allowlist. |
