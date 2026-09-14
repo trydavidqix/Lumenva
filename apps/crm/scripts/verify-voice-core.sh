@@ -50,6 +50,7 @@ NODE_ENV=test pnpm vitest run \
   lib/voice/testing/simulator.test.ts \
   lib/voice/testing/evals.test.ts \
   app/api/internal/voice/context/route.test.ts \
+  app/api/internal/voice/turn/route.test.ts \
   app/api/internal/voice/event/route.test.ts \
   tests/unit/voice-migration-contract.test.ts \
   tests/unit/voice-hardening-migration-contract.test.ts \
@@ -71,6 +72,7 @@ node --check ../../workers/voice-worker/pending-outbound.mjs
 node --check ../../workers/voice-worker/speaches-health.mjs
 node --check ../../workers/voice-worker/speaches-stt.mjs
 node --check ../../workers/voice-worker/speaches-tts.mjs
+node --test ../../workers/voice-worker/brain-client.test.mjs
 node --test ../../workers/voice-worker/control-server.test.mjs
 node --test ../../workers/voice-worker/delivery-context.contract.test.mjs
 node --test ../../workers/voice-worker/delivery-context.test.mjs
