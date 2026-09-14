@@ -1,4 +1,4 @@
-# Codex adapter — DeskcommCRM
+# Codex adapter — Lumenva
 
 This file supplements the root [`AGENTS.md`](../AGENTS.md) for Codex-specific behavior.
 
@@ -8,7 +8,7 @@ This file supplements the root [`AGENTS.md`](../AGENTS.md) for Codex-specific be
 - Portable contract: `../AGENTS.md`.
 - Shared modular rules: `../.claude/rules/`.
 - Doctrine reconciliation matrix: `../docs/harness-doctrine-matrix.md`.
-- Codex repo skill: `../.agents/skills/DeskcommCRM/SKILL.md`.
+- Codex repo skill: `../.agents/skills/Lumenva/SKILL.md`.
 
 The Codex skill is a **bridge**, not an independent source of conventions. If it disagrees with `CLAUDE.md`, follow `CLAUDE.md`. If historical wording conflicts with current Spec/PRD/business-rule, use the repository precedence and the reconciliation matrix rather than reviving a frozen snapshot.
 
