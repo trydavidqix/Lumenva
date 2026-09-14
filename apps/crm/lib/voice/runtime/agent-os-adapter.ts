@@ -1,3 +1,4 @@
+import type { AgentConversationStyle } from "../../agent-engine/contracts/agent-os";
 import type { AgentKernel } from "../../agent-engine/kernel/contracts";
 
 export interface VoiceAgentResolutionInput {
@@ -12,7 +13,14 @@ export type VoiceDeliveryChannel = "voice" | "default";
 export type VoiceDeliveryAuthorizer = (input: { organizationId: string; agentId: string; channel?: VoiceDeliveryChannel }) => Promise<boolean>;
 
 export type VoiceAgentTurnResult =
-  | { kind: "reply"; text: string; agentId: string; runId: string; traceId: string }
+  | {
+      kind: "reply";
+      text: string;
+      agentId: string;
+      runId: string;
+      traceId: string;
+      conversationStyle?: AgentConversationStyle;
+    }
   | { kind: "blocked"; reason: string; agentId?: string; runId?: string; traceId?: string; approvalId?: string };
 
 export function extractSpeakableVoiceText(output: unknown): string | null {
@@ -63,7 +71,14 @@ export function createVoiceAgentOsAdapter(deps: {
         return { kind: "blocked", reason: "voice_agent_output_not_speakable", agentId, runId: result.runId, traceId: result.traceId };
       }
 
-      return { kind: "reply", text, agentId, runId: result.runId, traceId: result.traceId };
+      return {
+        kind: "reply",
+        text,
+        agentId,
+        runId: result.runId,
+        traceId: result.traceId,
+        ...(result.conversationStyle ? { conversationStyle: result.conversationStyle } : {}),
+      };
     },
   };
 }
