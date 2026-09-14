@@ -15,16 +15,52 @@ export type ConsentRecord = {
   evidence_refs: string[];
 };
 
+type ConsentInput = Omit<ConsentRecord, "status" | "granted_at" | "revoked_at"> & { granted_at?: string };
+
+function validTimestamp(value: string | undefined): boolean {
+  return value === undefined || Number.isFinite(Date.parse(value));
+}
+
+function normalizeTimestamp(value: string | Date | null | undefined): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) throw new Error("consent_timestamp_invalid");
+  return date.toISOString();
+}
+
+function arraysEqual(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function consentMatchesInput(existing: ConsentRecord, input: ConsentInput): boolean {
+  if (existing.organization_id !== input.organization_id) return false;
+  if (existing.subject_ref !== input.subject_ref || existing.purpose !== input.purpose || existing.channel !== input.channel) return false;
+  if ((existing.legal_basis_ref ?? undefined) !== (input.legal_basis_ref ?? undefined)) return false;
+  if ((existing.retention_until ?? undefined) !== normalizeTimestamp(input.retention_until)) return false;
+  if (input.granted_at && existing.granted_at !== normalizeTimestamp(input.granted_at)) return false;
+  return arraysEqual(existing.source_refs, input.source_refs) && arraysEqual(existing.evidence_refs, input.evidence_refs);
+}
+
 export class ConsentRegistry {
   private readonly records = new Map<string, ConsentRecord>();
 
-  register(input: Omit<ConsentRecord, "status" | "granted_at" | "revoked_at"> & { granted_at?: string }): ConsentRecord {
+  register(input: ConsentInput): ConsentRecord {
+    if (!validTimestamp(input.granted_at) || !validTimestamp(input.retention_until)) throw new Error("consent_timestamp_invalid");
     const existing = this.records.get(input.consent_id);
     if (existing && existing.organization_id !== input.organization_id) throw new Error("consent_tenant_mismatch");
-    if (existing) return structuredClone(existing);
-    const grantedAt = input.granted_at ?? new Date().toISOString();
-    if (!Number.isFinite(Date.parse(grantedAt))) throw new Error("consent_timestamp_invalid");
-    const record: ConsentRecord = { ...structuredClone(input), status: "GRANTED", granted_at: grantedAt, source_refs: [...input.source_refs], evidence_refs: [...input.evidence_refs] };
+    if (existing) {
+      if (!consentMatchesInput(existing, input)) throw new Error("consent_conflict");
+      return structuredClone(existing);
+    }
+    const grantedAt = normalizeTimestamp(input.granted_at ?? new Date().toISOString())!;
+    const record: ConsentRecord = {
+      ...structuredClone(input),
+      status: "GRANTED",
+      granted_at: grantedAt,
+      ...(input.retention_until ? { retention_until: normalizeTimestamp(input.retention_until) } : {}),
+      source_refs: [...input.source_refs],
+      evidence_refs: [...input.evidence_refs],
+    };
     this.records.set(record.consent_id, record);
     return structuredClone(record);
   }
@@ -33,8 +69,8 @@ export class ConsentRegistry {
     const record = this.records.get(consentId);
     if (!record) throw new Error("consent_not_found");
     if (record.organization_id !== organizationId) throw new Error("consent_tenant_mismatch");
-    if (!Number.isFinite(Date.parse(revokedAt))) throw new Error("consent_timestamp_invalid");
-    const revoked = { ...record, status: "REVOKED" as const, revoked_at: revokedAt };
+    if (!validTimestamp(revokedAt)) throw new Error("consent_timestamp_invalid");
+    const revoked = { ...record, status: "REVOKED" as const, revoked_at: normalizeTimestamp(revokedAt) };
     this.records.set(consentId, revoked);
     return structuredClone(revoked);
   }
@@ -45,40 +81,77 @@ export class ConsentRegistry {
     return structuredClone(record);
   }
 
-  canContact(organizationId: string, subjectRef: string, channel: ConsentChannel, purpose: string): boolean {
-    return [...this.records.values()].some((record) => record.organization_id === organizationId && record.subject_ref === subjectRef && record.channel === channel && record.purpose === purpose && record.status === "GRANTED");
+  canContact(organizationId: string, subjectRef: string, channel: ConsentChannel, purpose: string, now = new Date()): boolean {
+    const nowMs = now.getTime();
+    if (!Number.isFinite(nowMs)) return false;
+    return [...this.records.values()].some((record) => {
+      if (record.organization_id !== organizationId || record.subject_ref !== subjectRef || record.channel !== channel || record.purpose !== purpose || record.status !== "GRANTED") return false;
+      const grantedMs = record.granted_at ? Date.parse(record.granted_at) : Number.NaN;
+      if (!Number.isFinite(grantedMs) || grantedMs > nowMs) return false;
+      if (record.retention_until) {
+        const retentionMs = Date.parse(record.retention_until);
+        if (!Number.isFinite(retentionMs) || retentionMs <= nowMs) return false;
+      }
+      return true;
+    });
   }
 }
 
 export type ConsentQueryable = { query<T = unknown>(text: string, values?: unknown[]): Promise<{ rows: T[] }> };
 
-type StoredConsentRecord = ConsentRecord & { source_refs: string[]; evidence_refs: string[] };
+type StoredConsentRecord = Omit<ConsentRecord, "legal_basis_ref" | "granted_at" | "revoked_at" | "retention_until"> & {
+  legal_basis_ref?: string | null;
+  granted_at?: string | Date | null;
+  revoked_at?: string | Date | null;
+  retention_until?: string | Date | null;
+  source_refs: string[];
+  evidence_refs: string[];
+};
+
+function rowToConsent(row: StoredConsentRecord): ConsentRecord {
+  return {
+    consent_id: row.consent_id,
+    organization_id: row.organization_id,
+    subject_ref: row.subject_ref,
+    purpose: row.purpose,
+    channel: row.channel,
+    ...(row.legal_basis_ref ? { legal_basis_ref: row.legal_basis_ref } : {}),
+    status: row.status,
+    ...(row.granted_at ? { granted_at: normalizeTimestamp(row.granted_at) } : {}),
+    ...(row.revoked_at ? { revoked_at: normalizeTimestamp(row.revoked_at) } : {}),
+    ...(row.retention_until ? { retention_until: normalizeTimestamp(row.retention_until) } : {}),
+    source_refs: [...row.source_refs],
+    evidence_refs: [...row.evidence_refs],
+  };
+}
 
 /** Durable consent source of truth. The in-memory registry remains fixture-only. */
 export class PostgresConsentRegistry {
   constructor(private readonly db: ConsentQueryable) {}
 
-  async register(input: Omit<ConsentRecord, "status" | "granted_at" | "revoked_at"> & { granted_at?: string }): Promise<ConsentRecord> {
-    const grantedAt = input.granted_at ?? new Date().toISOString();
-    if (!Number.isFinite(Date.parse(grantedAt))) throw new Error("consent_timestamp_invalid");
+  async register(input: ConsentInput): Promise<ConsentRecord> {
+    if (!validTimestamp(input.granted_at) || !validTimestamp(input.retention_until)) throw new Error("consent_timestamp_invalid");
+    const grantedAt = normalizeTimestamp(input.granted_at ?? new Date().toISOString())!;
+    const retentionUntil = normalizeTimestamp(input.retention_until);
     const inserted = await this.db.query<StoredConsentRecord>(
       `insert into public.contact_consents (consent_id,organization_id,subject_ref,purpose,channel,legal_basis_ref,status,granted_at,retention_until,source_refs,evidence_refs) values ($1,$2,$3,$4,$5,$6,'GRANTED',$7,$8,$9::jsonb,$10::jsonb) on conflict (organization_id,consent_id) do nothing returning consent_id,organization_id,subject_ref,purpose,channel,legal_basis_ref,status,granted_at,revoked_at,retention_until,source_refs,evidence_refs`,
-      [input.consent_id, input.organization_id, input.subject_ref, input.purpose, input.channel, input.legal_basis_ref ?? null, grantedAt, input.retention_until ?? null, JSON.stringify(input.source_refs), JSON.stringify(input.evidence_refs)],
+      [input.consent_id, input.organization_id, input.subject_ref, input.purpose, input.channel, input.legal_basis_ref ?? null, grantedAt, retentionUntil ?? null, JSON.stringify(input.source_refs), JSON.stringify(input.evidence_refs)],
     );
-    if (inserted.rows[0]) return structuredClone(inserted.rows[0]);
+    if (inserted.rows[0]) return rowToConsent(inserted.rows[0]);
     const existing = await this.get(input.organization_id, input.consent_id);
     if (!existing) throw new Error("consent_not_found");
+    if (!consentMatchesInput(existing, { ...input, ...(retentionUntil ? { retention_until: retentionUntil } : {}) })) throw new Error("consent_conflict");
     return existing;
   }
 
   async revoke(organizationId: string, consentId: string, revokedAt = new Date().toISOString()): Promise<ConsentRecord> {
-    if (!Number.isFinite(Date.parse(revokedAt))) throw new Error("consent_timestamp_invalid");
+    if (!validTimestamp(revokedAt)) throw new Error("consent_timestamp_invalid");
     const result = await this.db.query<StoredConsentRecord>(
       `update public.contact_consents set status='REVOKED',revoked_at=$3,updated_at=now() where organization_id=$1 and consent_id=$2 and status='GRANTED' returning consent_id,organization_id,subject_ref,purpose,channel,legal_basis_ref,status,granted_at,revoked_at,retention_until,source_refs,evidence_refs`,
-      [organizationId, consentId, revokedAt],
+      [organizationId, consentId, normalizeTimestamp(revokedAt)],
     );
     if (!result.rows[0]) throw new Error("consent_not_found");
-    return structuredClone(result.rows[0]);
+    return rowToConsent(result.rows[0]);
   }
 
   async get(organizationId: string, consentId: string): Promise<ConsentRecord | undefined> {
@@ -86,7 +159,7 @@ export class PostgresConsentRegistry {
       `select consent_id,organization_id,subject_ref,purpose,channel,legal_basis_ref,status,granted_at,revoked_at,retention_until,source_refs,evidence_refs from public.contact_consents where organization_id=$1 and consent_id=$2`,
       [organizationId, consentId],
     );
-    return result.rows[0] ? structuredClone(result.rows[0]) : undefined;
+    return result.rows[0] ? rowToConsent(result.rows[0]) : undefined;
   }
 
   async canContact(organizationId: string, subjectRef: string, channel: ConsentChannel, purpose: string): Promise<boolean> {
