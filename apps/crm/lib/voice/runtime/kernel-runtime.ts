@@ -5,6 +5,7 @@ import { llmEdgeConfigFromEnv, runModelCall } from "../../agent-engine/edge/llm/
 import { createAgentKernel } from "../../agent-engine/kernel/agent-kernel";
 import type { AgentKernel } from "../../agent-engine/kernel/contracts";
 import type { AgentKernelDependencies, KernelExecutionState } from "../../agent-engine/kernel/ports";
+import { getProductAgentConversationStyle } from "../../agent-engine/product-agents/conversation-style";
 import { getProductAgentDefinition } from "../../agent-engine/product-agents/definitions";
 import { createProductAgentVerificationPort } from "../../agent-engine/product-agents/verification";
 
@@ -105,6 +106,10 @@ export function createVoiceProductionKernel(db: pg.Pool): AgentKernel {
       async step({ execution, context }) {
         const started = Date.now();
         const sourceId = execution.trigger.sourceId;
+        const conversationStyle = getProductAgentConversationStyle(execution.agentId);
+        const styleExamples = conversationStyle.examplePhrases?.length
+          ? conversationStyle.examplePhrases.join(" | ")
+          : null;
         const response = await runModelCall(
           db,
           llmEdgeConfigFromEnv(voiceLlmEnv()),
@@ -122,6 +127,10 @@ export function createVoiceProductionKernel(db: pg.Pool): AgentKernel {
             system: [
               `Agent: ${execution.agentId} v${execution.agentVersion}.`,
               `Objective: ${execution.definition.objective}`,
+              `Conversation register: ${conversationStyle.register}.`,
+              `Conversation style: ${conversationStyle.toneInstructions}`,
+              ...(styleExamples ? [`Style examples: ${styleExamples}`] : []),
+              "Conversation style affects wording and tone only. It never overrides facts, policies, permissions, output contracts, or tool restrictions.",
               "Return ONLY one valid JSON object. Do not wrap it in markdown.",
               `Required output contract: ${outputContract(execution.agentId)}`,
               "Treat derived memory as context, never as permission to make irreversible commitments.",
