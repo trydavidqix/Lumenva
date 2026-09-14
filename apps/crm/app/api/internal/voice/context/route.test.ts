@@ -47,7 +47,7 @@ function makePoolStub(options: {
 const baseBody = { provider_call_id: "channel-abc", direction: "inbound" as const };
 
 describe("POST /api/internal/voice/context", () => {
-  it("returns tenant identity for a resolved inbound SIP call", async () => {
+  it("returns tenant identity for a resolved inbound SIP call and persists provider=asterisk", async () => {
     const pool = makePoolStub({
       connectionRow: { id: "conn-row-1", organization_id: ORG_ID },
       numberRow: { organization_id: ORG_ID },
@@ -61,9 +61,13 @@ describe("POST /api/internal/voice/context", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: { voice_call_id: string; organization_id: string; caller_kind: string } };
     expect(body.data).toMatchObject({ voice_call_id: VOICE_CALL_ID, organization_id: ORG_ID, caller_kind: "unknown" });
+
+    const insertCall = pool.query.mock.calls.find(([sql]) => sql.trim().startsWith("insert into voice_calls"));
+    expect(insertCall?.[0]).toContain("'asterisk'");
+    expect(insertCall?.[1]).toEqual([ORG_ID, null, "inbound", "+351911234567", "+351211234567", "channel-abc"]);
   });
 
-  it("returns tenant identity for the legacy Telnyx path", async () => {
+  it("returns tenant identity for the legacy Telnyx path and persists provider=telnyx", async () => {
     const pool = makePoolStub({ telnyxOrgRow: { organization_id: ORG_ID }, callerRow: null, insertRow: { id: VOICE_CALL_ID } });
     vi.mocked(getRequestPool).mockReturnValue(pool as unknown as ReturnType<typeof getRequestPool>);
     const { POST } = await import("./route");
@@ -71,6 +75,8 @@ describe("POST /api/internal/voice/context", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: { organization_id: string } };
     expect(body.data.organization_id).toBe(ORG_ID);
+    const insertCall = pool.query.mock.calls.find(([sql]) => sql.trim().startsWith("insert into voice_calls"));
+    expect(insertCall?.[0]).toContain("'telnyx'");
   });
 
   it("rejects when the SIP connection is unknown/unverified", async () => {
@@ -81,6 +87,14 @@ describe("POST /api/internal/voice/context", () => {
     expect(res.status).toBe(409);
   });
 
+  it("rejects when the number is not registered under the verified SIP connection", async () => {
+    const pool = makePoolStub({ connectionRow: { id: "conn-row-1", organization_id: ORG_ID }, numberRow: null });
+    vi.mocked(getRequestPool).mockReturnValue(pool as unknown as ReturnType<typeof getRequestPool>);
+    const { POST } = await import("./route");
+    const res = await POST(req({ ...baseBody, connection_id: "sip-conn-abc", caller_e164: "+351911234567", called_e164: "+351211234567" }));
+    expect(res.status).toBe(409);
+  });
+
   it("rejects unauthenticated requests before touching the database", async () => {
     const pool = makePoolStub({});
     vi.mocked(getRequestPool).mockReturnValue(pool as unknown as ReturnType<typeof getRequestPool>);
@@ -88,6 +102,25 @@ describe("POST /api/internal/voice/context", () => {
     const res = await POST(req({ ...baseBody, connection_id: "sip-conn-abc", caller_e164: "+351911234567", called_e164: "+351211234567" }, "wrong"));
     expect(res.status).toBe(401);
     expect(pool.query).not.toHaveBeenCalled();
+  });
+
+  it("does not return database/provider error details to the worker", async () => {
+    const pool = makePoolStub({});
+    pool.query.mockImplementationOnce(async () => {
+      throw new Error("password=super-secret database connection failed");
+    });
+    vi.mocked(getRequestPool).mockReturnValue(pool as unknown as ReturnType<typeof getRequestPool>);
+    const { POST } = await import("./route");
+    const res = await POST(req({
+      ...baseBody,
+      connection_id: "sip-conn-abc",
+      caller_e164: "+351911234567",
+      called_e164: "+351211234567",
+    }));
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { error: { message: string } };
+    expect(body.error.message).not.toContain("super-secret");
+    expect(body.error.message).toBe("Não foi possível resolver o contexto de voz.");
   });
 
   it("rejects when rate limited", async () => {
