@@ -12,13 +12,28 @@ export function receiptStore(): DeliveryReceiptStore {
       const row = rows.get(`${values[0]}:${values[1]}`);
       return { rows: row ? [row as T] : [] };
     }
+
     const row: Row = {
-      tenant_id: String(values[0]), delivery_receipt_id: String(values[1]), delivery_plan_id: String(values[2]), organization_id: String(values[3]),
-      artifact_refs: JSON.parse(String(values[4])), environment: String(values[5]), actor_id: String(values[6]), channel: values[7] as Row["channel"],
-      result: values[9] as Row["result"], evidence_refs: JSON.parse(String(values[11])), created_at: String(values[12]), content_hash: String(values[13]),
+      tenant_id: String(values[0]),
+      delivery_receipt_id: String(values[1]),
+      delivery_plan_id: String(values[2]),
+      organization_id: String(values[3]),
+      artifact_refs: JSON.parse(String(values[4])),
+      environment: String(values[5]),
+      actor_id: String(values[6]),
+      channel: values[7] as Row["channel"],
+      ...(values[8] ? { approval_id: String(values[8]) } : {}),
+      result: values[9] as Row["result"],
+      ...(values[10] ? { support_ticket_ref: String(values[10]) } : {}),
+      evidence_refs: JSON.parse(String(values[11])),
+      created_at: String(values[12]),
+      content_hash: String(values[13]),
     };
-    const stored = rows.get(`${row.tenant_id}:${row.delivery_receipt_id}`) ?? row;
-    rows.set(`${row.tenant_id}:${row.delivery_receipt_id}`, stored);
-    return { rows: [stored as T] };
+
+    const globalOwner = [...rows.values()].find((candidate) => candidate.delivery_receipt_id === row.delivery_receipt_id);
+    if (globalOwner) return { rows: [] };
+
+    rows.set(`${row.tenant_id}:${row.delivery_receipt_id}`, row);
+    return { rows: [row as T] };
   } });
 }
