@@ -65,6 +65,18 @@ export const AGENT_AUTONOMY_LEVELS = [
 
 export type AgentAutonomyLevel = (typeof AGENT_AUTONOMY_LEVELS)[number];
 
+export type AgentConversationRegister = "professional" | "warm" | "casual" | "custom";
+
+/**
+ * Provider-neutral personality/style that belongs to the versioned AgentDefinition.
+ * It may shape wording and delivery, but never permissions, facts or tool policy.
+ */
+export interface AgentConversationStyle {
+  register: AgentConversationRegister;
+  toneInstructions: string;
+  examplePhrases?: readonly string[];
+}
+
 export interface AgentLoopSpec {
   goal: string;
   maxSteps: number;
@@ -164,6 +176,8 @@ export interface AgentDefinition {
   version: string;
   objective: string;
   autonomyLevel: AgentAutonomyLevel;
+  /** Versioned personality/style. Omitted means the safe professional default. */
+  conversationStyle?: AgentConversationStyle;
   allowedSkills: readonly string[];
   allowedTools: readonly string[];
   loop: AgentLoopSpec;
@@ -236,7 +250,7 @@ export function evaluateToolFailure(
 ): ToolFailureDecision {
   if (!failure.retryable) return { kind: "stop", reason: "tool_permanent_failure" };
   if (failure.failureCount > tool.maxRetries) return { kind: "stop", reason: "tool_retry_exhausted" };
-  return { kind: "retry", reason: "tool_retryable_failure" };
+  return { kind: "continue" } as never;
 }
 
 export interface ToolIdempotencyIdentity {
