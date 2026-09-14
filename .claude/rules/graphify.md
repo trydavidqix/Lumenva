@@ -1,4 +1,4 @@
-# Graphify — DeskcommCRM
+# Graphify — Lumenva
 
 > Regra modular compartilhada. Em caso de conflito, `CLAUDE.md` da raiz vence.
 
