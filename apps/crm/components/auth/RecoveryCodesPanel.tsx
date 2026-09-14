@@ -12,11 +12,6 @@ interface RecoveryCodesPanelProps {
   onAcknowledge: () => void;
 }
 
-/**
- * One-time display of recovery codes. User must check the acknowledgement
- * box before completing setup. Codes are shown in a 2x5 mono grid with copy
- * + download options.
- */
 export function RecoveryCodesPanel({ codes, onAcknowledge }: RecoveryCodesPanelProps) {
   const [acked, setAcked] = useState(false);
 
@@ -31,7 +26,7 @@ export function RecoveryCodesPanel({ codes, onAcknowledge }: RecoveryCodesPanelP
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "deskcommcrm-recovery-codes.txt";
+    a.download = "lumenva-recovery-codes.txt";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
