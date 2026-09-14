@@ -13,12 +13,18 @@ export function createPendingOutboundRegistry(options = {}) {
   }
 
   return {
-    reserve({ toE164, voiceCallId }) {
+    reserve({ toE164, voiceCallId, organizationId }) {
       purgeExpired();
       if (typeof toE164 !== "string" || !E164.test(toE164)) throw new Error("invalid_e164");
       if (typeof voiceCallId !== "string" || !voiceCallId.trim()) throw new Error("voice_call_id_required");
+      if (typeof organizationId !== "string" || !organizationId.trim()) throw new Error("organization_id_required");
       if (entries.has(toE164)) throw new Error("outbound_destination_busy");
-      const entry = { toE164, voiceCallId: voiceCallId.trim(), reservedAt: now() };
+      const entry = {
+        toE164,
+        voiceCallId: voiceCallId.trim(),
+        organizationId: organizationId.trim(),
+        reservedAt: now(),
+      };
       entries.set(toE164, entry);
       return entry;
     },
