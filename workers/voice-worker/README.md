@@ -26,7 +26,9 @@ CRM internal voice control plane
     ↓
 Lumenva Agent OS
     ↓ approved text + delivery metadata
-Patter → local TTS → phone
+Patter beforeSynthesize(callId)
+    ↓ call-scoped delivery envelope
+local TTS → phone
 ```
 
 Patter never becomes the business brain. `onMessage` delegates content to `brain.runTurn()` and only an authorized Agent OS `reply` is speakable.
@@ -73,6 +75,11 @@ Local speech:
 - `VOICE_LOCAL_TTS_FALLBACK_SPEED` — optional, default `1` when fallback is enabled.
 - `VOICE_VAD_MIN_SILENCE_SECONDS` — optional, default `0.5`, accepted range `0.1..2`.
 
+Delivery context:
+
+- `VOICE_DELIVERY_CONTEXT_TTL_MS` — optional, default `120000`; bounded retention window for recent reply delivery metadata.
+- `VOICE_DELIVERY_CONTEXT_RESPONSES` — optional, default `4`; maximum recent replies retained per provider `callId` to survive barge-in/cancel races without shared global style.
+
 Other:
 
 - `VOICE_OUTBOUND_PENDING_TTL_MS` — optional, default `60000`.
@@ -91,6 +98,34 @@ The worker asks Speaches for:
 - `/v1/audio/speech` — PCM16/16 kHz speech generation.
 
 Patter owns the final carrier codec conversion.
+
+## Call-scoped emotional delivery
+
+Agent OS owns personality and sentiment. The worker receives provider-neutral delivery metadata such as:
+
+```json
+{
+  "affect": "empathetic",
+  "pace": "slow",
+  "energy": 0.35,
+  "tone": "warm"
+}
+```
+
+The worker records that metadata against Patter's provider `callId` and the exact approved response text. Patter's pipeline-mode `beforeSynthesize(text, hookContext)` hook exposes `hookContext.callId` per sentence, so the worker can attach the matching delivery metadata immediately before TTS without mutating a shared provider object.
+
+The internal envelope is removed inside `SpeachesLocalTTS` before the text is sent to Speaches. Control metadata is therefore never intended to be spoken or stored by the speech model.
+
+Current acoustic mapping is deliberately conservative:
+
+- `slow` → base TTS speed × `0.92`;
+- `normal` → configured base speed;
+- `fast` → base TTS speed × `1.06`;
+- final speed is clamped to `0.75..1.25`.
+
+`affect`, `tone`, and `energy` remain provider-neutral metadata and observability fields. They are **not** falsely mapped to unsupported Kokoro/Piper controls. If a future local provider exposes call-scoped pitch/style/prosody controls, its adapter can consume the same metadata without moving personality ownership out of Lumenva.
+
+Concurrency rule: if a synthesized sentence cannot be matched to a recent approved reply for that same `callId`, the worker fails safe to the provider's default speed instead of guessing. Recent replies are retained briefly so an older sentence finishing during a barge-in/cancel race can still resolve its own style. `onCallEnd` clears the call state.
 
 ## VAD / barge-in
 
@@ -131,5 +166,7 @@ Do not expose the control port publicly without network-level restrictions in ad
 npm install
 npm run check
 ```
+
+The worker gate includes syntax checks plus call-scoped delivery, STT/TTS isolation, local health, outbound correlation and fallback tests.
 
 The full repo gate is `apps/crm/scripts/verify-voice-core.sh` from a runnable checkout. Live rollout additionally requires a controlled PSTN test with barge-in and at least two concurrent calls.
