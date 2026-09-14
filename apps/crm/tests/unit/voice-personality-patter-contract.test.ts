@@ -31,12 +31,19 @@ describe("voice personality ownership boundary", () => {
     expect(route).toContain("return ok(result");
   });
 
-  it("keeps provider-neutral conversation style beside canonical Product Agents", () => {
+  it("stores personality on the canonical versioned AgentDefinition instead of a parallel registry", () => {
+    const contract = readCrm("lib/agent-engine/contracts/agent-os.ts");
     const styles = readCrm("lib/agent-engine/product-agents/conversation-style.ts");
-    expect(styles).toContain("AgentConversationStyle");
-    expect(styles).toContain("atendimento");
-    expect(styles).toContain("sales");
-    expect(styles).toContain("retention");
+    const atendimento = readCrm("lib/agent-engine/product-agents/atendimento.ts");
+    const sales = readCrm("lib/agent-engine/product-agents/sales.ts");
+    const retention = readCrm("lib/agent-engine/product-agents/retention.ts");
+
+    expect(contract).toContain("conversationStyle?: AgentConversationStyle");
+    expect(atendimento).toContain("conversationStyle:");
+    expect(sales).toContain("conversationStyle:");
+    expect(retention).toContain("conversationStyle:");
+    expect(styles).toContain("resolveAgentConversationStyle");
+    expect(styles).not.toContain("CONVERSATION_STYLES");
     expect(styles).not.toContain("getpatter");
     expect(styles).not.toContain("ElevenLabs");
   });
@@ -49,11 +56,22 @@ describe("voice personality ownership boundary", () => {
     expect(turnService).toContain("VoiceDeliveryStyle");
     expect(turnService).toContain("resolveVoiceDeliveryStyle");
     expect(turnService).toContain("classifySentiment");
+    expect(turnService).toContain("result.conversationStyle");
     expect(turnService).toContain("prepareSpeakableVoiceText");
-    expect(kernelRuntime).toContain("getProductAgentConversationStyle");
+    expect(kernelRuntime).toContain("resolveAgentConversationStyle(execution.definition)");
     expect(kernelRuntime).toContain("Conversation style affects wording and tone only");
     expect(worker).toContain("normalizeVoiceDeliveryForLog(result.delivery)");
-    expect(worker).toContain("return result.text.trim()");
+    expect(worker).toContain("recordDelivery({ callId: message.callId, text: replyText, delivery })");
+  });
+
+  it("tenant-scopes per-turn voice delivery observability", () => {
+    const worker = readRepo("workers/voice-worker/main.mjs");
+    const outbound = readCrm("lib/voice/outbound/production.ts");
+    const contextRoute = readCrm("app/api/internal/voice/context/route.ts");
+
+    expect(worker).toContain("organization_id: context.organization_id");
+    expect(outbound).toContain("organization_id: input.organizationId");
+    expect(contextRoute).toContain("organization_id: data.organizationId");
   });
 
   it("does not implement the new feature in the deprecated legacy AI runtime", () => {
