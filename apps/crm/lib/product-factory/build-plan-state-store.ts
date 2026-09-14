@@ -18,7 +18,9 @@ export class BuildPlanStateStore {
       throw error;
     }
   }
+  /** Complete only the reservation that is still RUNNING; stale workers cannot overwrite a terminal state. */
   async finish(tenantId: string, planId: string, stepId: string, status: "FAILED" | "SUCCEEDED" | "BLOCKED"): Promise<void> {
-    await this.db.query(`update public.build_plan_state set status=$4, blocked_at=case when $4='BLOCKED' then now() else null end, updated_at=now() where tenant_id=$1 and plan_id=$2 and step_id=$3`, [tenantId, planId, stepId, status]);
+    const result = await this.db.query<{ id: string }>(`update public.build_plan_state set status=$4, blocked_at=case when $4='BLOCKED' then now() else null end, updated_at=now() where tenant_id=$1 and plan_id=$2 and step_id=$3 and status='RUNNING' returning id`, [tenantId, planId, stepId, status]);
+    if (!result.rows[0]) throw new Error("build_plan_state_transition_lost");
   }
 }
