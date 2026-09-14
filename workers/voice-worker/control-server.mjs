@@ -23,15 +23,30 @@ async function readJson(req) {
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 
-export function startVoiceControlServer({ phone, agent, secret, liveEnabled, port, pendingOutbound }) {
+export function startVoiceControlServer({
+  phone,
+  agent,
+  secret,
+  liveEnabled,
+  port,
+  pendingOutbound,
+  readinessCheck = async () => true,
+}) {
   const server = http.createServer(async (req, res) => {
     const path = (req.url ?? "").split("?", 1)[0];
     if (req.method === "GET" && path === "/healthz") {
-      return json(res, 200, { status: "ok", live_enabled: liveEnabled, pending_outbound: pendingOutbound.size() });
+      const speechReady = await readinessCheck().catch(() => false);
+      return json(res, speechReady ? 200 : 503, {
+        status: speechReady ? "ok" : "degraded",
+        live_enabled: liveEnabled,
+        local_speech_ready: speechReady,
+        pending_outbound: pendingOutbound.size(),
+      });
     }
     if (req.method !== "POST" || path !== "/v1/calls") return json(res, 404, { error: "not_found" });
     if (!safeEqual(req.headers["x-internal-secret"] ?? "", secret)) return json(res, 401, { error: "unauthenticated" });
     if (!liveEnabled) return json(res, 409, { error: "voice_live_disabled" });
+    if (!(await readinessCheck().catch(() => false))) return json(res, 503, { error: "local_speech_unavailable" });
 
     let reserved;
     try {
