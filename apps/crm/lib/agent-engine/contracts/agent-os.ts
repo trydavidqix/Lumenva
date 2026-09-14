@@ -250,7 +250,7 @@ export function evaluateToolFailure(
 ): ToolFailureDecision {
   if (!failure.retryable) return { kind: "stop", reason: "tool_permanent_failure" };
   if (failure.failureCount > tool.maxRetries) return { kind: "stop", reason: "tool_retry_exhausted" };
-  return { kind: "continue" } as never;
+  return { kind: "retry", reason: "tool_retryable_failure" };
 }
 
 export interface ToolIdempotencyIdentity {
