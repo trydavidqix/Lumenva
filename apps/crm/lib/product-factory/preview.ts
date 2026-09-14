@@ -1,5 +1,12 @@
 import { createHash } from "node:crypto";
-import { validateDeliveryPlanWithState, type DeliveryArtifact, type DeliveryBuildEvidence, type DeliveryPlan } from "./delivery";
+import {
+  validateDeliveryChannelArtifact,
+  validateDeliveryPlanWithState,
+  type DeliveryArtifact,
+  type DeliveryBuildEvidence,
+  type DeliveryChannel,
+  type DeliveryPlan,
+} from "./delivery";
 import type { BuildPlanStateStore } from "./build-plan-state-store";
 
 export type PreviewArtifact = {
@@ -22,8 +29,16 @@ export async function generatePreview(
   buildEvidence: DeliveryBuildEvidence,
   stateStore: BuildPlanStateStore,
 ): Promise<PreviewResult> {
-  if (!plan.channels.includes("WEB_PREVIEW") && !plan.channels.includes("MOBILE_PREVIEW")) {
-    throw new Error("preview channel is not declared by delivery plan");
+  const previewChannels = plan.channels.filter(
+    (channel): channel is Extract<DeliveryChannel, "WEB_PREVIEW" | "MOBILE_PREVIEW"> =>
+      channel === "WEB_PREVIEW" || channel === "MOBILE_PREVIEW",
+  );
+  if (!previewChannels.length) throw new Error("preview channel is not declared by delivery plan");
+
+  const compatible = previewChannels.some((channel) => validateDeliveryChannelArtifact(channel, artifact).valid);
+  if (!compatible) {
+    const errors = previewChannels.flatMap((channel) => validateDeliveryChannelArtifact(channel, artifact).errors);
+    throw new Error(errors.join("; "));
   }
 
   const gate = await validateDeliveryPlanWithState(plan, artifact, buildEvidence, stateStore);
