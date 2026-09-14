@@ -25,17 +25,26 @@ export type DeliveryReceipt = Readonly<{
   content_hash: string;
 }>;
 
-type ReceiptRow = Omit<DeliveryReceipt, "artifact_refs" | "evidence_refs"> & {
+type ReceiptRow = Omit<DeliveryReceipt, "artifact_refs" | "evidence_refs" | "created_at" | "approval_id" | "support_ticket_ref"> & {
   tenant_id: string;
   artifact_refs: string[];
   evidence_refs: string[];
+  created_at: string | Date;
+  approval_id?: string | null;
+  support_ticket_ref?: string | null;
 };
 
 const freeze = (values: readonly string[]): readonly string[] => Object.freeze([...values]);
+function normalizeCreatedAt(value: string | Date): string {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
 const rowToReceipt = (row: ReceiptRow): DeliveryReceipt => {
-  const { tenant_id: _tenantId, ...receipt } = row;
+  const { tenant_id: _tenantId, approval_id, support_ticket_ref, ...receipt } = row;
   return Object.freeze({
     ...receipt,
+    ...(approval_id ? { approval_id } : {}),
+    ...(support_ticket_ref ? { support_ticket_ref } : {}),
+    created_at: normalizeCreatedAt(row.created_at),
     artifact_refs: freeze(row.artifact_refs),
     evidence_refs: freeze(row.evidence_refs),
   });
@@ -144,6 +153,7 @@ export async function createDeliveryReceipt(
   const gate = await validateDeliveryPlanWithState(plan, artifact, buildEvidence, stateStore);
   if (!gate.valid) throw new Error(gate.errors.join("; "));
 
+  const createdAt = normalizeCreatedAt(options.created_at);
   const hashInput = JSON.stringify({
     delivery_plan_id: plan.delivery_plan_id,
     organization_id: plan.organization_id,
@@ -155,7 +165,7 @@ export async function createDeliveryReceipt(
     approval_id: options.approval_id ?? null,
     support_ticket_ref: options.support_ticket_ref ?? null,
     evidence_refs: buildEvidence.evidence_refs,
-    created_at: options.created_at,
+    created_at: createdAt,
   });
   const candidate: DeliveryReceipt = Object.freeze({
     delivery_receipt_id: options.delivery_receipt_id,
@@ -169,7 +179,7 @@ export async function createDeliveryReceipt(
     result: "AVAILABLE" as const,
     ...(options.support_ticket_ref ? { support_ticket_ref: options.support_ticket_ref } : {}),
     evidence_refs: freeze(buildEvidence.evidence_refs),
-    created_at: options.created_at,
+    created_at: createdAt,
     content_hash: createHash("sha256").update(hashInput).digest("hex"),
   });
 
