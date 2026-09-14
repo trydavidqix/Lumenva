@@ -13,7 +13,7 @@ O Lumenva é distribuído em rolling release a partir da branch `main`. Correç�
 
 **Não abra issue pública para vulnerabilidades.**
 
-Use o [relato privado de vulnerabilidades do GitHub](https://github.com/melgarafael/DeskcommCRM/security/advisories/new) — o relato chega só aos mantenedores, e o histórico fica auditável.
+Use o [relato privado de vulnerabilidades do GitHub](https://github.com/trydavidqix/Lumenva/security/advisories/new) — o relato chega só aos mantenedores, e o histórico fica auditável.
 
 O que esperar:
 
