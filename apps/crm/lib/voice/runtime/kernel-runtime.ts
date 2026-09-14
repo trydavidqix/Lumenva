@@ -14,16 +14,26 @@ function outputContract(agentId: string): string {
     case "supervisor":
       return '{"targetAgent":"atendimento|sales|retention|escalation|crm_operator|governance_judge","reason":"...","confidence":0.0,"requiresHumanEscalation":false}';
     case "atendimento":
-      return '{"kind":"draft_response","draft":"...","rationale":"...","needsHumanReview":false}';
+      return '{"kind":"draft_response","draft":"customer-safe spoken reply","rationale":"...","needsHumanReview":false}';
     case "sales":
-      return '{"kind":"sales_recommendation","qualification":"cold|warm|hot","nextAction":"...","rationale":"...","draftMessage":"optional customer-safe draft"}';
+      return '{"kind":"sales_recommendation","qualification":"cold|warm|hot","nextAction":"...","rationale":"...","draftMessage":"customer-safe spoken reply"}';
     case "retention":
-      return '{"kind":"retention_recommendation","risk":"low|medium|high","action":"...","rationale":"..."}';
+      return '{"kind":"retention_recommendation","risk":"low|medium|high","action":"...","rationale":"...","draftMessage":"customer-safe spoken reply"}';
     case "escalation":
       return '{"kind":"human_escalation","reason":"...","priority":"normal|high|urgent","requiredContext":["..."]}';
     default:
       return '{}';
   }
+}
+
+function customerFacingVoiceInstructions(agentId: string): string[] {
+  if (!["atendimento", "sales", "retention"].includes(agentId)) return [];
+  return [
+    "For the customer-facing draft/draftMessage only: use one or two short sentences maximum.",
+    "Spell every number, date, time, code, and monetary value in words in the customer-facing text; never use digits or currency symbols there.",
+    "End the customer-facing text with a direct question or another explicit cue that clearly passes the turn back to the caller.",
+    "These voice-format rules never authorize changing facts, prices, dates, policies, permissions, or commitments.",
+  ];
 }
 
 function parseJsonObject(text: string): unknown {
@@ -118,11 +128,7 @@ export function createVoiceProductionKernel(db: pg.Pool): AgentKernel {
             ...(isUuid(sourceId) ? { leadId: sourceId } : {}),
             // execution.runId é um UUID sintético do kernel de voz, não uma
             // linha real de job_queue — passá-lo como jobId derrubava o
-            // INSERT em llm_calls por violação de llm_calls_job_id_fkey
-            // (achado real: catch genérico do kernel engolia isso como
-            // "runtime_error"/voice_agent_unresolved, ver diagnóstico
-            // 2026-08-31 em agent-kernel.ts). jobId é opcional; sem job real
-            // pra referenciar, fica ausente (NULL na coluna).
+            // INSERT em llm_calls por violação de llm_calls_job_id_fkey.
             purpose: "voice_agent_turn",
             system: [
               `Agent: ${execution.agentId} v${execution.agentVersion}.`,
@@ -131,6 +137,7 @@ export function createVoiceProductionKernel(db: pg.Pool): AgentKernel {
               `Conversation style: ${conversationStyle.toneInstructions}`,
               ...(styleExamples ? [`Style examples: ${styleExamples}`] : []),
               "Conversation style affects wording and tone only. It never overrides facts, policies, permissions, output contracts, or tool restrictions.",
+              ...customerFacingVoiceInstructions(execution.agentId),
               "Return ONLY one valid JSON object. Do not wrap it in markdown.",
               `Required output contract: ${outputContract(execution.agentId)}`,
               "Treat derived memory as context, never as permission to make irreversible commitments.",
