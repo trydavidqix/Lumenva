@@ -1,7 +1,7 @@
 create table if not exists public.contact_consents (
   id uuid primary key default gen_random_uuid(),
   consent_id text not null,
-  organization_id text not null,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
   subject_ref text not null,
   purpose text not null,
   channel text not null check (channel in ('whatsapp','email','voice')),
@@ -26,4 +26,5 @@ create policy contact_consents_tenant_all on public.contact_consents
   for all to authenticated
   using (organization_id in (select public.fn_user_org_ids()))
   with check (organization_id in (select public.fn_user_org_ids()));
+revoke all on public.contact_consents from public;
 grant select, insert, update on public.contact_consents to authenticated;

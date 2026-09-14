@@ -1,12 +1,33 @@
-CREATE TABLE IF NOT EXISTS integration_webhook_receipts (organization_id text NOT NULL, provider text NOT NULL, event_id text NOT NULL, received_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (organization_id,provider,event_id));
-CREATE TABLE IF NOT EXISTS integration_secrets (organization_id text NOT NULL, secret_ref text NOT NULL, secret_value text NOT NULL, allowed_operations text[] NOT NULL, allowed_actors text[] NOT NULL, revoked_at timestamptz, PRIMARY KEY (organization_id,secret_ref));
+CREATE TABLE IF NOT EXISTS public.integration_webhook_receipts (
+  organization_id uuid NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+  provider text NOT NULL,
+  event_id text NOT NULL,
+  received_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (organization_id, provider, event_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.integration_secrets (
+  organization_id uuid NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+  secret_ref text NOT NULL,
+  secret_value text NOT NULL,
+  allowed_operations text[] NOT NULL,
+  allowed_actors text[] NOT NULL,
+  revoked_at timestamptz,
+  PRIMARY KEY (organization_id, secret_ref)
+);
+
 ALTER TABLE public.integration_webhook_receipts ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS integration_webhook_receipts_tenant ON public.integration_webhook_receipts;
-CREATE POLICY integration_webhook_receipts_tenant ON public.integration_webhook_receipts FOR ALL TO authenticated USING (organization_id IN (SELECT public.fn_user_org_ids())) WITH CHECK (organization_id IN (SELECT public.fn_user_org_ids()));
+CREATE POLICY integration_webhook_receipts_tenant ON public.integration_webhook_receipts
+  FOR ALL TO authenticated
+  USING (organization_id IN (SELECT public.fn_user_org_ids()))
+  WITH CHECK (organization_id IN (SELECT public.fn_user_org_ids()));
 REVOKE ALL ON public.integration_webhook_receipts FROM PUBLIC;
 GRANT SELECT, INSERT ON public.integration_webhook_receipts TO authenticated;
+
 ALTER TABLE public.integration_secrets ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS integration_secrets_tenant ON public.integration_secrets;
-CREATE POLICY integration_secrets_tenant ON public.integration_secrets FOR ALL TO authenticated USING (organization_id IN (SELECT public.fn_user_org_ids())) WITH CHECK (organization_id IN (SELECT public.fn_user_org_ids()));
 REVOKE ALL ON public.integration_secrets FROM PUBLIC;
-GRANT SELECT ON public.integration_secrets TO authenticated;
+REVOKE ALL ON public.integration_secrets FROM authenticated;
+GRANT SELECT ON public.integration_secrets TO service_role;
+GRANT INSERT, UPDATE, DELETE ON public.integration_secrets TO service_role;
