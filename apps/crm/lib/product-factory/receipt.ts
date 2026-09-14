@@ -91,7 +91,7 @@ export class DeliveryReceiptStore {
 
   async insertOrGet(receipt: DeliveryReceipt): Promise<DeliveryReceipt> {
     const result = await this.db.query<ReceiptRow>(
-      "insert into public.delivery_receipts (tenant_id,delivery_receipt_id,delivery_plan_id,organization_id,artifact_refs,environment,actor_id,channel,approval_id,result,support_ticket_ref,evidence_refs,created_at,content_hash) values ($1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$14) on conflict (tenant_id,delivery_receipt_id) do update set delivery_receipt_id=public.delivery_receipts.delivery_receipt_id returning *",
+      "insert into public.delivery_receipts (tenant_id,delivery_receipt_id,delivery_plan_id,organization_id,artifact_refs,environment,actor_id,channel,approval_id,result,support_ticket_ref,evidence_refs,created_at,content_hash) values ($1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$14) on conflict do nothing returning *",
       [
         receipt.organization_id,
         receipt.delivery_receipt_id,
@@ -109,8 +109,14 @@ export class DeliveryReceiptStore {
         receipt.content_hash,
       ],
     );
-    if (!result.rows[0]) throw new Error("delivery receipt insert returned no row");
-    return rowToReceipt(result.rows[0]);
+    if (result.rows[0]) return rowToReceipt(result.rows[0]);
+
+    const existing = await this.get(receipt.organization_id, receipt.delivery_receipt_id);
+    if (existing) return existing;
+
+    const owner = await this.findTenantByReceiptId(receipt.delivery_receipt_id);
+    if (owner && owner !== receipt.organization_id) throw new Error("receipt ID belongs to another tenant");
+    throw new Error("delivery receipt insert returned no row");
   }
 }
 
