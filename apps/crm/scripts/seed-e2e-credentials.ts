@@ -43,10 +43,10 @@ const USERS: Array<{
   role: "admin" | "manager" | "agent" | "viewer";
   full_name: string;
 }> = [
-  { email: "e2e-admin@deskcomm.test", role: "admin", full_name: "E2E Admin" },
-  { email: "e2e-manager@deskcomm.test", role: "manager", full_name: "E2E Manager" },
-  { email: "e2e-agent@deskcomm.test", role: "agent", full_name: "E2E Agent" },
-  { email: "e2e-viewer@deskcomm.test", role: "viewer", full_name: "E2E Viewer" },
+  { email: "e2e-admin@lumenva.test", role: "admin", full_name: "E2E Admin" },
+  { email: "e2e-manager@lumenva.test", role: "manager", full_name: "E2E Manager" },
+  { email: "e2e-agent@lumenva.test", role: "agent", full_name: "E2E Agent" },
+  { email: "e2e-viewer@lumenva.test", role: "viewer", full_name: "E2E Viewer" },
 ];
 
 async function ensureOrg(): Promise<string> {
