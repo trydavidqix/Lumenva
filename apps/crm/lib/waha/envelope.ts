@@ -5,9 +5,9 @@
  * **cast**, que é uma promessa do autor ao compilador e nada mais. Em tempo de
  * execução o campo podia ser o que quisesse, e a rota não tinha como saber.
  *
- * Adaptado de melgarafael/DeskcommCRM PR #278 (issue #237) — sem os campos
+ * Adaptado do upstream original PR #278 (issue #237) — sem os campos
  * `_data.key.remoteJid*`/`participant*` do upstream (feature @lid alternate
- * phone que este fork não tem ainda); tudo mais mantido.
+ * phone que o Lumenva não tem ainda); tudo mais mantido.
  *
  * ─── O que o cast custava, medido ───────────────────────────────────────────
  *
@@ -41,7 +41,6 @@ const texto = z.string().nullish();
 const numero = z.number().nullish();
 const booleano = z.boolean().nullish();
 
-/** WAHA >= 2026.x (NOWEB): a mídia vem aninhada aqui. */
 const wahaMediaSchema = z.looseObject({
   url: texto,
   mimetype: texto,
@@ -65,24 +64,12 @@ export const wahaPayloadSchema = z.looseObject({
   mediaUrl: texto,
   mimetype: texto,
   media: wahaMediaSchema.nullish(),
-  /** Id da mensagem ORIGINAL nos eventos `message.edited` / `message.revoked`. */
   editedMessageId: texto,
   revokedMessageId: texto,
   _data: z
     .looseObject({
       notifyName: texto,
       pushName: texto,
-      /**
-       * O conteúdo NOWEB (`imageMessage`, `stickerMessage`, …). Fica sem tipo
-       * de propósito: `dispatchWahaEvent` já checa forma antes de olhar as
-       * chaves, então exigir objeto aqui só criaria uma forma nova de
-       * descartar a mensagem inteira.
-       *
-       * ⚠️ O `.optional()` NÃO é enfeite: no Zod 4 um `z.unknown()` solto
-       * dentro de um objeto é OBRIGATÓRIO (a chave ausente reprova com
-       * `expected nonoptional`). Sem ele, todo payload sem `_data.message` —
-       * inclusive ack — seria recusado.
-       */
       message: z.unknown().optional(),
     })
     .nullish(),
@@ -97,18 +84,6 @@ export const wahaEnvelopeSchema = z.looseObject({
 export type WahaPayload = z.infer<typeof wahaPayloadSchema>;
 export type WahaEnvelope = z.infer<typeof wahaEnvelopeSchema>;
 
-/**
- * ─── Por que a conferência acontece em DOIS momentos ────────────────────────
- *
- * As duas rotas gravam `webhook_events_log` (raw_body + payload_parsed) ANTES
- * de despachar o evento — o corpo cru de um payload cujo formato mudou é o
- * artefato que responde O QUE mudou, e conferir o contrato inteiro antes do
- * INSERT destruiria essa evidência caso o contrato reprove.
- *
- * O estágio 1 confere só o que a rota precisa ANTES de poder arquivar: a
- * sessão (que resolve o tenant) e o id da mensagem (coluna do próprio
- * arquivo). O estágio 2 confere o resto, depois do INSERT.
- */
 export const wahaRoteamentoSchema = z.looseObject({
   event: texto,
   session: texto,
@@ -117,18 +92,10 @@ export const wahaRoteamentoSchema = z.looseObject({
 
 export type WahaRoteamento = z.infer<typeof wahaRoteamentoSchema>;
 
-/** Estágio 1 — o mínimo para resolver o tenant e arquivar o corpo. */
 export function lerRoteamentoWaha(rawBody: string): LeituraDeEnvelope<WahaRoteamento> {
   return lerEnvelope(rawBody, wahaRoteamentoSchema);
 }
 
-/**
- * Estágio 2 — o contrato completo, sobre o que o estágio 1 já desserializou.
- *
- * Reconferir o objeto do estágio 1 equivale a reconferir o corpo original: o
- * schema é `loose` em todo nível, então o que ele devolve tem as MESMAS
- * chaves que entraram.
- */
 export function conferirContratoWaha(roteado: WahaRoteamento): LeituraDeEnvelope<WahaEnvelope> {
   return conferirEnvelope(roteado, wahaEnvelopeSchema);
 }
