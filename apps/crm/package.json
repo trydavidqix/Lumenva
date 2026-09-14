@@ -36,7 +36,7 @@
     "ai:eval:local": "tsx scripts/ai-platform-eval.ts",
     "ai:eval:live": "tsx scripts/ai-platform-eval-live.ts",
     "ai:eval:langsmith": "tsx scripts/ai-platform-eval-langsmith.ts",
-    "harness:check": "node scripts/check-harness-consistency.mjs",
+    "harness:check": "node scripts/check-harness-consistency.mjs ../..",
     "gov:verify": "pnpm harness:check && pnpm typecheck && pnpm lint && pnpm lint:channels && pnpm lint:tenant-filter && pnpm test:unit",
     "worker": "tsx --env-file=.env --env-file=.env.local workers/agent-worker/main.ts",
     "flywheel:judge": "tsx --env-file=.env --env-file=.env.local scripts/flywheel-judge-live.ts",
