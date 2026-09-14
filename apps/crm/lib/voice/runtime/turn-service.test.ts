@@ -32,6 +32,33 @@ describe("voice turn service", () => {
     expect(kernel.run).toHaveBeenCalledTimes(2);
   });
 
+  it("attaches emotional delivery metadata without rewriting Agent OS text", async () => {
+    const kernel: AgentKernel = {
+      run: vi.fn()
+        .mockResolvedValueOnce({
+          status: "completed", stopReason: "completed", runId: "supervisor-run", traceId: "t1", correlationId: "call-1",
+          output: { targetAgent: "atendimento", reason: "support", confidence: 0.99, requiresHumanEscalation: false },
+        })
+        .mockResolvedValueOnce({
+          status: "completed", stopReason: "completed", runId: "agent-run", traceId: "t2", correlationId: "call-1",
+          output: { kind: "draft_response", draft: "Entendi. Vou verificar.", rationale: "safe", needsHumanReview: false },
+        }),
+    };
+    const service = createVoiceTurnService({ kernel, authorizeDelivery: async ({ agentId }) => agentId === "atendimento" });
+
+    await expect(service.run({
+      organizationId: "org-1",
+      contactId: "contact-1",
+      voiceCallId: "call-1",
+      transcript: "Estou frustrado, isto é um problema.",
+    })).resolves.toMatchObject({
+      kind: "reply",
+      text: "Entendi. Vou verificar.",
+      agentId: "atendimento",
+      delivery: { affect: "empathetic", pace: "slow", energy: 0.35, tone: "warm" },
+    });
+  });
+
   it.each([
     ["atendimento", { kind: "draft_response", draft: "Resposta de atendimento", rationale: "support", needsHumanReview: false }],
     ["sales", { kind: "sales_recommendation", qualification: "warm", nextAction: "contactar", rationale: "sales", draftMessage: "Resposta de sales" }],
