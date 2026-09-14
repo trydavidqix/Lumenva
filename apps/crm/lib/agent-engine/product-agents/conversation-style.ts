@@ -1,18 +1,16 @@
-import type { AgentConversationStyle, AgentDefinition } from "../contracts/agent-os";
+import type { AgentConversationStyle } from "../contracts/agent-os";
+import { getProductAgentDefinition } from "./definitions";
 
-export type { AgentConversationRegister, AgentConversationStyle } from "../contracts/agent-os";
-
-export const PROFESSIONAL_CONVERSATION_STYLE: AgentConversationStyle = {
+/** Safe fallback for definitions that do not explicitly carry a conversational persona. */
+export const DEFAULT_AGENT_CONVERSATION_STYLE: AgentConversationStyle = Object.freeze({
   register: "professional",
   toneInstructions: "Be calm, concise, professional, and emotionally steady.",
-};
+});
 
 /**
- * Resolve the style from the exact versioned AgentDefinition execution snapshot.
- * There is intentionally no parallel agent-id registry here.
+ * Compatibility helper for callers that only have an agent id.
+ * The source of truth is the versioned AgentDefinition; there is no parallel style registry.
  */
-export function resolveAgentConversationStyle(
-  definition: Pick<AgentDefinition, "conversationStyle"> | null | undefined,
-): AgentConversationStyle {
-  return definition?.conversationStyle ?? PROFESSIONAL_CONVERSATION_STYLE;
+export function getProductAgentConversationStyle(agentId: unknown): AgentConversationStyle {
+  return getProductAgentDefinition(agentId)?.conversationStyle ?? DEFAULT_AGENT_CONVERSATION_STYLE;
 }
