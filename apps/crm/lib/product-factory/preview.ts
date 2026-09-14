@@ -3,9 +3,16 @@ import { validateDeliveryPlanWithState, type DeliveryArtifact, type DeliveryBuil
 import type { BuildPlanStateStore } from "./build-plan-state-store";
 
 export type PreviewArtifact = {
-  preview_id: string; delivery_plan_id: string; organization_id: string; build_ref: string;
-  artifact_ref: string; content_hash: string; source_refs: string[]; test_refs: string[];
-  evidence_refs: string[]; status: "READY";
+  preview_id: string;
+  delivery_plan_id: string;
+  organization_id: string;
+  build_ref: string;
+  artifact_ref: string;
+  content_hash: string;
+  source_refs: string[];
+  test_refs: string[];
+  evidence_refs: string[];
+  status: "READY";
 };
 export type PreviewResult = { status: "READY"; preview: PreviewArtifact };
 
@@ -15,8 +22,13 @@ export async function generatePreview(
   buildEvidence: DeliveryBuildEvidence,
   stateStore: BuildPlanStateStore,
 ): Promise<PreviewResult> {
+  if (!plan.channels.includes("WEB_PREVIEW") && !plan.channels.includes("MOBILE_PREVIEW")) {
+    throw new Error("preview channel is not declared by delivery plan");
+  }
+
   const gate = await validateDeliveryPlanWithState(plan, artifact, buildEvidence, stateStore);
   if (!gate.valid) throw new Error(gate.errors.join("; "));
+
   const source = JSON.stringify({
     build_ref: plan.build_ref,
     artifact_ref: artifact.artifact_ref,
