@@ -20,16 +20,16 @@ export const REQUIRED_RULES = [
 ];
 
 const ACTIVE_HARNESS_FILES = [
-  ".claude/skills/DeskcommCRM/SKILL.md",
-  ".agents/skills/DeskcommCRM/SKILL.md",
-  ".claude/homunculus/instincts/inherited/DeskcommCRM-instincts.yaml",
+  ".claude/skills/Lumenva/SKILL.md",
+  ".agents/skills/Lumenva/SKILL.md",
+  ".claude/homunculus/instincts/inherited/Lumenva-instincts.yaml",
   ".claude/ecc-tools.json",
   ".codex/AGENTS.md",
 ];
 
 const SKILL_FILES = [
-  ".claude/skills/DeskcommCRM/SKILL.md",
-  ".agents/skills/DeskcommCRM/SKILL.md",
+  ".claude/skills/Lumenva/SKILL.md",
+  ".agents/skills/Lumenva/SKILL.md",
 ];
 
 const DOCTRINE_MATRIX = "docs/harness-doctrine-matrix.md";
@@ -162,12 +162,12 @@ export async function checkHarnessConsistency(rootDir) {
     const content = await read(rootDir, relativePath);
     if (content === null) continue;
 
-    if (content.includes("melgarafael/DeskcommCRM")) {
+    if (/melgarafael\//i.test(content)) {
       findings.push(
         finding(
           "historical-repo-reference",
           relativePath,
-          "Active harness artifact points to the historical repository instead of trydavidqix/CRM.",
+          "Active harness artifact points to the historical repository instead of trydavidqix/Lumenva.",
         ),
       );
     }
