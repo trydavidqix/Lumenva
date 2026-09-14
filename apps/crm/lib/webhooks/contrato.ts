@@ -7,8 +7,8 @@
  * requisição saiba traduzir. Isso mora aqui para os canais falharem do mesmo
  * jeito, em vez de cada rota inventar o seu.
  *
- * Adaptado de melgarafael/DeskcommCRM PR #278 (issue #237) — reimplementado à
- * mão porque nosso fork já divergiu demais do upstream para cherry-pick direto
+ * Adaptado do upstream original PR #278 (issue #237) — reimplementado à
+ * mão porque o Lumenva já divergiu demais para cherry-pick direto
  * (canal Zernio removido, docs reestruturados). A doutrina é a mesma: Zod em
  * TODO input externo (CLAUDE.md invariante 8).
  *
@@ -24,30 +24,13 @@ import type { z } from "zod";
 
 export type LeituraDeEnvelope<T> =
   | { ok: true; envelope: T }
-  /**
-   * Duas causas, separadas de propósito: JSON quebrado é o CORPO, contrato
-   * violado é o FORMATO. Quem investiga procura em lugares diferentes.
-   */
   | { ok: false; motivo: "json_invalido" | "contrato_violado"; campos: string[] };
 
-/**
- * Os caminhos dos campos recusados, sem repetição e sem valor.
- *
- * Só nomeia chave DECLARADA no schema: objeto `loose` não valida o que não
- * conhece, então nada vindo de fora entra nesta lista.
- */
 export function camposForaDoContrato(erro: z.ZodError): string[] {
   const vistos = new Set(erro.issues.map((i) => (i.path.length > 0 ? i.path.join(".") : "(raiz)")));
   return [...vistos];
 }
 
-/**
- * Confere um valor JÁ desserializado.
- *
- * Existe separado de `lerEnvelope` porque uma rota pode precisar conferir o
- * contrato em DOIS momentos: o mínimo para saber de quem é o payload (antes
- * de resolver o tenant) e o resto depois de arquivar o corpo cru.
- */
 export function conferirEnvelope<T>(valor: unknown, schema: z.ZodType<T>): LeituraDeEnvelope<T> {
   const r = schema.safeParse(valor);
   if (!r.success) {
