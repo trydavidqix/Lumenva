@@ -1,5 +1,6 @@
 import type { AgentConversationStyle } from "../../agent-engine/contracts/agent-os";
 import type { AgentKernel } from "../../agent-engine/kernel/contracts";
+import { DEFAULT_AGENT_CONVERSATION_STYLE } from "../../agent-engine/product-agents/conversation-style";
 
 export interface VoiceAgentResolutionInput {
   organizationId: string;
@@ -19,7 +20,7 @@ export type VoiceAgentTurnResult =
       agentId: string;
       runId: string;
       traceId: string;
-      conversationStyle?: AgentConversationStyle;
+      conversationStyle: AgentConversationStyle;
     }
   | { kind: "blocked"; reason: string; agentId?: string; runId?: string; traceId?: string; approvalId?: string };
 
@@ -77,7 +78,7 @@ export function createVoiceAgentOsAdapter(deps: {
         agentId,
         runId: result.runId,
         traceId: result.traceId,
-        ...(result.conversationStyle ? { conversationStyle: result.conversationStyle } : {}),
+        conversationStyle: result.conversationStyle ?? DEFAULT_AGENT_CONVERSATION_STYLE,
       };
     },
   };
