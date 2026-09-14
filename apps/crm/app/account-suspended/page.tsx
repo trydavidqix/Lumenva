@@ -14,10 +14,10 @@ export default function AccountSuspendedPage() {
         <p className="text-sm text-muted-foreground">
           Sua conta está suspensa. Entre em contato com{" "}
           <a
-            href="mailto:support@deskcomm.com.br"
+            href="mailto:support@lumenva.pt"
             className="underline underline-offset-4 hover:text-foreground transition-colors"
           >
-            support@deskcomm.com.br
+            support@lumenva.pt
           </a>{" "}
           para mais informações.
         </p>
