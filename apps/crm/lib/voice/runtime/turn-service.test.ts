@@ -23,12 +23,12 @@ describe("voice turn service", () => {
         })
         .mockResolvedValueOnce({
           status: "completed", stopReason: "completed", runId: "agent-run", traceId: "t2", correlationId: "call-1",
-          output: { kind: "draft_response", draft: "Olá!", rationale: "safe", needsHumanReview: false },
+          output: { kind: "draft_response", draft: "Olá! Como posso ajudar?", rationale: "safe", needsHumanReview: false },
         }),
     };
     const service = createVoiceTurnService({ kernel, authorizeDelivery: async ({ agentId }) => agentId === "atendimento" });
     await expect(service.run({ organizationId: "org-1", contactId: "contact-1", voiceCallId: "call-1", transcript: "Olá" }))
-      .resolves.toMatchObject({ kind: "reply", text: "Olá!", agentId: "atendimento" });
+      .resolves.toMatchObject({ kind: "reply", text: "Olá! Como posso ajudar?", agentId: "atendimento" });
     expect(kernel.run).toHaveBeenCalledTimes(2);
   });
 
@@ -45,7 +45,7 @@ describe("voice turn service", () => {
             register: "warm",
             toneInstructions: "Be warm, patient and calm.",
           },
-          output: { kind: "draft_response", draft: "Entendi. Vou verificar.", rationale: "safe", needsHumanReview: false },
+          output: { kind: "draft_response", draft: "Entendi. Quer que eu verifique?", rationale: "safe", needsHumanReview: false },
         }),
     };
     const service = createVoiceTurnService({ kernel, authorizeDelivery: async ({ agentId }) => agentId === "atendimento" });
@@ -57,7 +57,7 @@ describe("voice turn service", () => {
       transcript: "Estou frustrado, isto é um problema.",
     })).resolves.toMatchObject({
       kind: "reply",
-      text: "Entendi. Vou verificar.",
+      text: "Entendi. Quer que eu verifique?",
       agentId: "atendimento",
       delivery: { affect: "empathetic", pace: "slow", energy: 0.35, tone: "warm" },
     });
@@ -76,7 +76,7 @@ describe("voice turn service", () => {
             register: "professional",
             toneInstructions: "Be formal and emotionally steady.",
           },
-          output: { kind: "draft_response", draft: "Entendi. Vou verificar.", rationale: "safe", needsHumanReview: false },
+          output: { kind: "draft_response", draft: "Entendi. Quer que eu verifique?", rationale: "safe", needsHumanReview: false },
         }),
     };
     const service = createVoiceTurnService({ kernel, authorizeDelivery: async ({ agentId }) => agentId === "atendimento" });
@@ -111,9 +111,28 @@ describe("voice turn service", () => {
       .resolves.toMatchObject({ kind: "blocked", reason: "voice_agent_output_not_speakable", agentId: "atendimento" });
   });
 
+  it("fails closed when Agent OS returns a voice-format violation", async () => {
+    const kernel: AgentKernel = {
+      run: vi.fn()
+        .mockResolvedValueOnce({
+          status: "completed", stopReason: "completed", runId: "supervisor-run", traceId: "t1", correlationId: "call-1",
+          output: { targetAgent: "atendimento", reason: "support", confidence: 1, requiresHumanEscalation: false },
+        })
+        .mockResolvedValueOnce({
+          status: "completed", stopReason: "completed", runId: "agent-run", traceId: "t2", correlationId: "call-1",
+          conversationStyle: { register: "warm", toneInstructions: "Be warm." },
+          output: { kind: "draft_response", draft: "O valor é 50€. Quer continuar?", rationale: "safe", needsHumanReview: false },
+        }),
+    };
+    const service = createVoiceTurnService({ kernel, authorizeDelivery: async ({ agentId }) => agentId === "atendimento" });
+
+    await expect(service.run({ organizationId: "org-1", contactId: "contact-1", voiceCallId: "call-1", transcript: "Qual é o valor?" }))
+      .resolves.toMatchObject({ kind: "blocked", reason: "voice_output_unspoken_value", agentId: "atendimento" });
+  });
+
   it.each([
-    ["atendimento", { kind: "draft_response", draft: "Resposta de atendimento", rationale: "support", needsHumanReview: false }],
-    ["sales", { kind: "sales_recommendation", qualification: "warm", nextAction: "contactar", rationale: "sales", draftMessage: "Resposta de sales" }],
+    ["atendimento", { kind: "draft_response", draft: "Posso ajudar?", rationale: "support", needsHumanReview: false }],
+    ["sales", { kind: "sales_recommendation", qualification: "warm", nextAction: "contactar", rationale: "sales", draftMessage: "Quer que eu explique?" }],
     ["retention", { kind: "retention_recommendation", risk: "low", action: "acompanhar", rationale: "retention" }],
   ] as const)("preserves the supervisor-selected role exactly for %s", async (targetAgent, output) => {
     const kernel: AgentKernel = {
