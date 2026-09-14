@@ -6,7 +6,7 @@ function normalizeBaseUrl(value) {
   const url = String(value ?? "").trim().replace(/\/+$/, "");
   if (!url) throw new Error("Speaches STT baseUrl is required");
   const parsed = new URL(url);
-  if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error("Speaches STT baseUrl must use http(s)");
+  if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("Speaches STT baseUrl must use http(s)");
   return parsed.toString().replace(/\/$/, "");
 }
 
@@ -74,6 +74,7 @@ export class SpeachesFasterWhisperSTT {
     this.connected = false;
     this.closed = false;
     this.flushTail = Promise.resolve();
+    this.inFlightControllers = new Set();
   }
 
   clone() {
@@ -134,7 +135,10 @@ export class SpeachesFasterWhisperSTT {
     this.audioBytes = 0;
     this.flushTail = this.flushTail
       .then(() => this.transcribeFinal(pcm))
-      .catch((error) => this.emitError(error instanceof Error ? error : new Error(String(error))));
+      .catch((error) => {
+        if (this.closed) return;
+        this.emitError(error instanceof Error ? error : new Error(String(error)));
+      });
   }
 
   close() {
@@ -142,9 +146,12 @@ export class SpeachesFasterWhisperSTT {
     this.closed = true;
     this.audioChunks = [];
     this.audioBytes = 0;
+    for (const controller of this.inFlightControllers) controller.abort(new Error("local_stt_closed"));
+    this.inFlightControllers.clear();
   }
 
   async transcribeFinal(pcm) {
+    if (this.closed) return;
     const wav = pcm16MonoToWav(pcm, this.sampleRate);
     const form = new FormData();
     form.append("file", new Blob([wav], { type: "audio/wav" }), "utterance.wav");
@@ -152,6 +159,7 @@ export class SpeachesFasterWhisperSTT {
     if (this.language) form.append("language", this.language);
 
     const controller = new AbortController();
+    this.inFlightControllers.add(controller);
     const timer = setTimeout(() => controller.abort(new Error("local_stt_timeout")), this.timeoutMs);
     try {
       const response = await this.fetchImpl(`${this.baseUrl}/v1/audio/transcriptions`, {
@@ -159,11 +167,13 @@ export class SpeachesFasterWhisperSTT {
         body: form,
         signal: controller.signal,
       });
+      if (this.closed) return;
       if (!response?.ok) {
-        const detail = await response?.text?.().catch(() => "") ?? "";
+        const detail = (await response?.text?.().catch(() => "")) ?? "";
         throw new Error(`local_stt_http_${response?.status ?? "unknown"}:${detail.slice(0, 240)}`);
       }
       const raw = await response.text();
+      if (this.closed) return;
       let text = "";
       try {
         const parsed = JSON.parse(raw);
@@ -185,10 +195,15 @@ export class SpeachesFasterWhisperSTT {
         );
       }
     } catch (error) {
-      if (controller.signal.aborted) throw new Error("local_stt_timeout");
+      if (this.closed) return;
+      if (controller.signal.aborted) {
+        const reason = controller.signal.reason;
+        throw reason instanceof Error ? reason : new Error("local_stt_aborted");
+      }
       throw error;
     } finally {
       clearTimeout(timer);
+      this.inFlightControllers.delete(controller);
     }
   }
 
