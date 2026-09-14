@@ -34,6 +34,7 @@ describe("governed voice outbound service", () => {
       voiceCallId: "11111111-1111-4111-8111-111111111111",
     }));
     expect(dial).toHaveBeenCalledWith({
+      organizationId: "org-1",
       endpoint: "https://voice.internal",
       voiceCallId: "11111111-1111-4111-8111-111111111111",
       toE164: "+351912345678",
