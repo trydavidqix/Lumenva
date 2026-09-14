@@ -2,25 +2,28 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const read = (path: string) => readFileSync(join(process.cwd(), "apps/crm", path), "utf8");
+const readCrm = (path: string) => readFileSync(join(process.cwd(), "apps/crm", path), "utf8");
+const readRepo = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
 describe("voice personality ownership boundary", () => {
   it("keeps Patter media-only and delegates business reasoning to Agent OS", () => {
-    const worker = read("workers/voice-worker/main.mjs");
-    const adapter = read("lib/voice/runtime/agent-os-adapter.ts");
-    const route = read("app/api/internal/voice/turn/route.ts");
+    const worker = readRepo("workers/voice-worker/main.mjs");
+    const adapter = readCrm("lib/voice/runtime/agent-os-adapter.ts");
+    const route = readCrm("app/api/internal/voice/turn/route.ts");
 
     expect(worker).toContain("brain.runTurn");
     expect(worker).toContain('systemPrompt: "You are the Lumenva media shell. Business reasoning is provided externally."');
     expect(worker).not.toContain("runModelCall");
     expect(worker).not.toContain("customer_memory");
+    expect(worker).not.toContain("currentEmotion");
+    expect(worker).not.toContain("voiceSettings =");
     expect(adapter).toContain("deps.kernel.run");
     expect(adapter).toContain("authorizeDelivery");
     expect(route).toContain("createVoiceTurnService");
   });
 
   it("keeps provider-neutral conversation style beside canonical Product Agents", () => {
-    const styles = read("lib/agent-engine/product-agents/conversation-style.ts");
+    const styles = readCrm("lib/agent-engine/product-agents/conversation-style.ts");
     expect(styles).toContain("AgentConversationStyle");
     expect(styles).toContain("atendimento");
     expect(styles).toContain("sales");
@@ -30,8 +33,8 @@ describe("voice personality ownership boundary", () => {
   });
 
   it("keeps per-turn delivery metadata in the canonical voice runtime", () => {
-    const turnService = read("lib/voice/runtime/turn-service.ts");
-    const kernelRuntime = read("lib/voice/runtime/kernel-runtime.ts");
+    const turnService = readCrm("lib/voice/runtime/turn-service.ts");
+    const kernelRuntime = readCrm("lib/voice/runtime/kernel-runtime.ts");
 
     expect(turnService).toContain("VoiceDeliveryStyle");
     expect(turnService).toContain("resolveVoiceDeliveryStyle");
@@ -41,7 +44,7 @@ describe("voice personality ownership boundary", () => {
   });
 
   it("does not implement the new feature in the deprecated legacy AI runtime", () => {
-    const legacy = read("lib/ai/runtime/agent.ts");
+    const legacy = readCrm("lib/ai/runtime/agent.ts");
     expect(legacy).toContain("@deprecated");
     expect(legacy).not.toContain("VoiceDeliveryStyle");
     expect(legacy).not.toContain("AgentConversationStyle");
