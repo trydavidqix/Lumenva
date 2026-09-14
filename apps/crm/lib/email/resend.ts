@@ -35,7 +35,7 @@ function getClient(): Resend | null {
 }
 
 function fromAddress(): string {
-  return process.env.RESEND_FROM_EMAIL || "Lumenva <noreply@deskcomm.app>";
+  return process.env.RESEND_FROM_EMAIL || "Lumenva <noreply@lumenva.pt>";
 }
 
 export async function sendEmail(args: SendArgs): Promise<SendResult> {
