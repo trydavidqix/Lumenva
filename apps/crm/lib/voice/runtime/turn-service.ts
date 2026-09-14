@@ -5,6 +5,7 @@ import { createVoiceAgentOsAdapter } from "./agent-os-adapter";
 import { createSupervisorVoiceAgentResolver } from "./agent-resolver";
 import { resolveVoiceDeliveryStyle, type VoiceDeliveryStyle } from "./delivery-style";
 import { prepareSpeakableVoiceText } from "./voice-humanizer";
+import { validateVoiceOutput } from "./voice-output-policy";
 
 const CONVERSATIONAL_AGENT_IDS = ["atendimento", "sales", "retention"] as const;
 
@@ -59,8 +60,6 @@ export function createVoiceTurnService(deps: {
       });
       if (result.kind !== "reply") return result;
 
-      const sentiment = classifySentiment(input.transcript);
-      const delivery = resolveVoiceDeliveryStyle({ sentiment, conversationStyle: result.conversationStyle });
       const text = prepareSpeakableVoiceText(result.text);
       if (!text) {
         return {
@@ -71,6 +70,20 @@ export function createVoiceTurnService(deps: {
           traceId: result.traceId,
         };
       }
+
+      const outputPolicy = validateVoiceOutput(text);
+      if (!outputPolicy.ok) {
+        return {
+          kind: "blocked",
+          reason: outputPolicy.reason,
+          agentId: result.agentId,
+          runId: result.runId,
+          traceId: result.traceId,
+        };
+      }
+
+      const sentiment = classifySentiment(input.transcript);
+      const delivery = resolveVoiceDeliveryStyle({ sentiment, conversationStyle: result.conversationStyle });
 
       return {
         kind: "reply",
