@@ -13,6 +13,7 @@ import {
   putCallContext,
 } from "./call-context.mjs";
 import { startVoiceControlServer } from "./control-server.mjs";
+import { normalizeVoiceDeliveryForLog } from "./delivery-log.mjs";
 import { createPendingOutboundRegistry } from "./pending-outbound.mjs";
 
 function required(name) {
@@ -132,6 +133,14 @@ async function onMessage(message) {
   });
   if (result.kind !== "reply" || typeof result.text !== "string" || !result.text.trim()) {
     throw new Error(`voice_turn_blocked:${result.reason ?? "unknown"}`);
+  }
+  const delivery = normalizeVoiceDeliveryForLog(result.delivery);
+  if (delivery) {
+    process.stdout.write(JSON.stringify({
+      event: "lumenva_voice_delivery",
+      voice_call_id: context.voice_call_id,
+      ...delivery,
+    }) + "\n");
   }
   return result.text.trim();
 }
