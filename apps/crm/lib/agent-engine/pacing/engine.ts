@@ -27,7 +27,7 @@ export interface PacingInput {
   /**
    * channel_sessions.daily_message_limit (fonte única do cap diário absoluto) —
    * mesmo banco agora: o chamador lê por query direta, não por edge HTTP.
-   * null = sem limite conhecido. O Deskcomm também tem channel_sessions
+   * null = sem limite conhecido. O Lumenva também tem channel_sessions
    * warmup_started_at/warmup_completed_at/is_warmup_complete, mas o warm-up DESTE
    * motor é o cálculo próprio por idade (channel_knobs.number_activated_at +
    * degraus) — não os campos do CRM.
@@ -58,7 +58,7 @@ const DAY_MS = 86_400_000;
 export function decidePacing(input: PacingInput): PacingDecision {
   const { now, knobs, state, crmDailyLimit } = input;
   const rng = input.rng ?? Math.random;
-  const banRisk = input.banRisk ?? true; // default preserva o comportamento atual
+  const banRisk = input.banRisk ?? true;
   if (input.pacingExempt === true) return { allow: true, waitMs: 0 };
   const wall = wallClock(now, knobs.timezone);
 
@@ -75,14 +75,8 @@ export function decidePacing(input: PacingInput): PacingDecision {
     };
   }
 
-  // Daqui para baixo tudo é ANTI-BAN (warm-up, cap diário, throttle+jitter): só
-  // arma onde há risco de banimento. A janela horária acima é CORTESIA e roda
-  // SEMPRE — desarmar as duas juntas acordaria cliente às 3h (invariante 3).
   if (!banRisk) return { allow: true, waitMs: 0 };
 
-  // Clamp em >= 0: number_activated_at no futuro (typo do admin / clock skew
-  // daemon↔DB) cai no degrau MAIS conservador — warm-up falha FECHADO, nunca
-  // vira "número formado" por idade negativa.
   const ageDays = state.numberActivatedAt
     ? Math.max(0, Math.floor((now.getTime() - state.numberActivatedAt.getTime()) / DAY_MS))
     : 0;
@@ -111,15 +105,6 @@ export function decidePacing(input: PacingInput): PacingDecision {
   return { allow: true, waitMs };
 }
 
-/**
- * Degrau vigente para a idade (degraus ordenados por minAgeDays crescente).
- * Falha FECHADO: idade aquém do primeiro degrau usa o cap do PRIMEIRO degrau
- * (o mais conservador) — configuração com furo nunca vira "sem cap".
- *
- * Exportada para a TELA poder dizer ao operador qual é o teto de hoje. A regra
- * tem de ser esta mesma função: uma segunda cópia na UI é a receita para a tela
- * prometer um número e o motor aplicar outro.
- */
 export function warmupCapFor(ageDays: number, steps: WarmupStep[]): number | null {
   let cap: number | null = steps[0]?.cap ?? null;
   for (const step of steps) {
@@ -136,9 +121,6 @@ function addMs(d: Date, ms: number): Date {
   return new Date(d.getTime() + ms);
 }
 
-// ---------------------------------------------------------------------------
-// Relógio de parede na tz do tenant — Intl puro, sem dependência nova.
-
 interface Wall {
   y: number;
   mo: number;
@@ -146,7 +128,7 @@ interface Wall {
   h: number;
   mi: number;
   s: number;
-  weekday: string; // 'Sun'..'Sat'
+  weekday: string;
 }
 
 function wallClock(instant: Date, timezone: string): Wall {
@@ -166,17 +148,13 @@ function wallClock(instant: Date, timezone: string): Wall {
     y: Number(get('year')),
     mo: Number(get('month')),
     d: Number(get('day')),
-    h: Number(get('hour')) % 24, // algumas ICU rendem '24' à meia-noite
+    h: Number(get('hour')) % 24,
     mi: Number(get('minute')),
     s: Number(get('second')),
     weekday: get('weekday'),
   };
 }
 
-/**
- * Instante UTC cuja hora de parede na tz é (y, mo, d, h):00 — técnica clássica
- * de duas passadas pelo offset (correta inclusive sob DST).
- */
 function instantFromWall(y: number, mo: number, d: number, h: number, timezone: string): Date {
   const targetAsUtc = Date.UTC(y, mo - 1, d, h);
   let guess = targetAsUtc;
@@ -188,7 +166,6 @@ function instantFromWall(y: number, mo: number, d: number, h: number, timezone: 
   return new Date(guess);
 }
 
-/** Meia-noite LOCAL do tenant contendo `instant` — o corte do "hoje" dos caps diários. */
 export function dayStartInTz(instant: Date, timezone: string): Date {
   const w = wallClock(instant, timezone);
   return instantFromWall(w.y, w.mo, w.d, 0, timezone);
@@ -199,11 +176,9 @@ function insideWindow(wall: Wall, knobs: PacingKnobs): boolean {
   return wall.h >= knobs.windowStartHour && wall.h < knobs.windowEndHour;
 }
 
-/** Próxima abertura de janela ESTRITAMENTE depois de `now` (pula domingo se evitado). */
 function nextWindowOpen(now: Date, knobs: PacingKnobs): Date {
   const w = wallClock(now, knobs.timezone);
   for (let add = 0; ; add += 1) {
-    // Date.UTC normaliza overflow de dia/mês em instantFromWall.
     const candidate = instantFromWall(w.y, w.mo, w.d + add, knobs.windowStartHour, knobs.timezone);
     if (candidate.getTime() <= now.getTime()) continue;
     if (!knobs.allowSunday && wallClock(candidate, knobs.timezone).weekday === 'Sun') continue;
@@ -211,7 +186,6 @@ function nextWindowOpen(now: Date, knobs: PacingKnobs): Date {
   }
 }
 
-/** Abertura do PRÓXIMO dia permitido (cap diário reseta na meia-noite local). */
 function nextDayOpen(now: Date, knobs: PacingKnobs): Date {
   const w = wallClock(now, knobs.timezone);
   for (let add = 1; ; add += 1) {
@@ -221,9 +195,7 @@ function nextDayOpen(now: Date, knobs: PacingKnobs): Date {
   }
 }
 
-/** Render local legível para a mensagem de veto (pt-br vê hora do SEU fuso). */
 function formatInTz(instant: Date, timezone: string): string {
-  // sv-SE rende 'YYYY-MM-DD HH:mm:ss' — ISO-like, sem dependência.
   return `${new Intl.DateTimeFormat('sv-SE', {
     timeZone: timezone,
     dateStyle: 'short',
