@@ -1,8 +1,7 @@
 import {
   Patter,
   Telnyx,
-  DeepgramSTT,
-  ElevenLabsTTS,
+  SileroVAD,
 } from "getpatter";
 import { createVoiceBrainClient } from "./brain-client.mjs";
 import {
@@ -15,6 +14,8 @@ import {
 import { startVoiceControlServer } from "./control-server.mjs";
 import { normalizeVoiceDeliveryForLog } from "./delivery-log.mjs";
 import { createPendingOutboundRegistry } from "./pending-outbound.mjs";
+import { SpeachesFasterWhisperSTT } from "./speaches-stt.mjs";
+import { SpeachesFailoverTTS, SpeachesLocalTTS } from "./speaches-tts.mjs";
 
 function required(name) {
   const value = process.env[name];
@@ -22,8 +23,20 @@ function required(name) {
   return value.trim();
 }
 
+function optional(name) {
+  const value = process.env[name];
+  return value?.trim() ? value.trim() : undefined;
+}
+
 function enabled(name) {
   return /^(1|true|yes|on)$/i.test(process.env[name] ?? "");
+}
+
+function positiveNumberEnv(name, fallback) {
+  const raw = optional(name);
+  const value = raw === undefined ? fallback : Number(raw);
+  if (!Number.isFinite(value) || value <= 0) throw new Error(`${name} must be a positive number`);
+  return value;
 }
 
 function number(value) {
@@ -49,9 +62,36 @@ function metricsFromCallEnd(data) {
   return Object.fromEntries(Object.entries(normalized).filter(([, value]) => value !== undefined));
 }
 
+function createLocalTts({ baseUrl }) {
+  const primary = new SpeachesLocalTTS({
+    baseUrl,
+    model: required("VOICE_LOCAL_TTS_PRIMARY_MODEL"),
+    voice: required("VOICE_LOCAL_TTS_PRIMARY_VOICE"),
+    speed: positiveNumberEnv("VOICE_LOCAL_TTS_PRIMARY_SPEED", 1),
+    providerKey: "kokoro-local",
+  });
+
+  const fallbackModel = optional("VOICE_LOCAL_TTS_FALLBACK_MODEL");
+  const fallbackVoice = optional("VOICE_LOCAL_TTS_FALLBACK_VOICE");
+  if (Boolean(fallbackModel) !== Boolean(fallbackVoice)) {
+    throw new Error("VOICE_LOCAL_TTS_FALLBACK_MODEL and VOICE_LOCAL_TTS_FALLBACK_VOICE must be configured together");
+  }
+  if (!fallbackModel || !fallbackVoice) return primary;
+
+  const fallback = new SpeachesLocalTTS({
+    baseUrl,
+    model: fallbackModel,
+    voice: fallbackVoice,
+    speed: positiveNumberEnv("VOICE_LOCAL_TTS_FALLBACK_SPEED", 1),
+    providerKey: "piper-local",
+  });
+  return new SpeachesFailoverTTS({ primary, fallback });
+}
+
 const liveEnabled = enabled("VOICE_LIVE_ENABLED");
 const phoneNumber = required("TELNYX_PHONE_NUMBER");
 const webhookUrl = required("VOICE_WEBHOOK_HOST");
+const localSpeechUrl = optional("VOICE_LOCAL_SPEECH_URL") ?? "http://127.0.0.1:8000";
 const port = Number(process.env.PORT ?? 8080);
 const controlPort = Number(process.env.VOICE_CONTROL_PORT ?? 8081);
 if (!Number.isInteger(port) || port <= 0 || port > 65535) throw new Error("PORT must be a valid TCP port");
@@ -79,15 +119,27 @@ const phone = new Patter({
   telemetry: false,
 });
 
+const stt = new SpeachesFasterWhisperSTT({
+  baseUrl: localSpeechUrl,
+  model: required("VOICE_LOCAL_STT_MODEL"),
+  language: optional("VOICE_LOCAL_STT_LANGUAGE") ?? workerPolicy.locale ?? "pt",
+  timeoutMs: positiveNumberEnv("VOICE_LOCAL_STT_TIMEOUT_MS", 20_000),
+  maxUtteranceSeconds: positiveNumberEnv("VOICE_LOCAL_STT_MAX_UTTERANCE_SECONDS", 30),
+});
+const tts = createLocalTts({ baseUrl: localSpeechUrl });
+const minSilenceDuration = positiveNumberEnv("VOICE_VAD_MIN_SILENCE_SECONDS", 0.5);
+if (minSilenceDuration < 0.1 || minSilenceDuration > 2) {
+  throw new Error("VOICE_VAD_MIN_SILENCE_SECONDS must be between 0.1 and 2 seconds");
+}
+const vad = await SileroVAD.forPhoneCall({
+  minSilenceDuration,
+  forceCpu: true,
+});
+
 const agent = phone.agent({
-  stt: new DeepgramSTT({
-    apiKey: required("DEEPGRAM_API_KEY"),
-    language: process.env.VOICE_STT_LANGUAGE ?? workerPolicy.locale ?? "pt",
-  }),
-  tts: new ElevenLabsTTS({
-    apiKey: required("ELEVENLABS_API_KEY"),
-    voiceId: required("ELEVENLABS_VOICE_ID"),
-  }),
+  stt,
+  tts,
+  vad,
   systemPrompt: "You are the Lumenva media shell. Business reasoning is provided externally.",
   firstMessage: "",
 });
@@ -203,6 +255,10 @@ process.stdout.write(JSON.stringify({
   port,
   control_port: controlPort,
   live_enabled: liveEnabled,
+  speech_runtime: "local",
+  stt_provider: "faster-whisper-local",
+  tts_provider: "local-speech",
+  vad_provider: "silero-local",
   recording_enabled: recordingEnabled,
   recording_blocked_by_disclosure_policy:
     workerPolicy.recording_enabled === true && workerPolicy.recording_requires_disclosure === true,
