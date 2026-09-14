@@ -27,25 +27,39 @@ export type DispatchDecision =
   | { decision: "ALLOW"; worker_id: string; agent_id: string }
   | { decision: "DENY"; reason: "ACTOR_UNAUTHORIZED" | "NO_CAPABLE_WORKER" | "NO_POLICY_MATCH" };
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isStringList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every(isNonEmptyString);
+}
+
 /** Routes only after actor authority, tenant, capability and worker availability checks. */
 export function dispatchRoute(
   task: DispatchTask,
   workers: readonly DispatchWorker[],
   policy: DispatchPolicy,
 ): DispatchDecision {
-  if (!task || !policy || task.organization_id !== policy.organization_id) {
+  if (
+    !task ||
+    !policy ||
+    !isNonEmptyString(task.organization_id) ||
+    !isNonEmptyString(policy.organization_id) ||
+    task.organization_id !== policy.organization_id
+  ) {
     return { decision: "DENY", reason: "NO_POLICY_MATCH" };
   }
   if (
-    typeof task.actor_id !== "string" ||
-    task.actor_id.length === 0 ||
+    !isNonEmptyString(task.actor_id) ||
+    !isNonEmptyString(policy.actor_id) ||
     task.actor_id !== policy.actor_id ||
-    !Array.isArray(task.actor_capabilities) ||
-    !Array.isArray(policy.allowed_actor_capabilities) ||
-    typeof task.required_capability !== "string" ||
-    task.required_capability.length === 0 ||
+    !isStringList(task.actor_capabilities) ||
+    !isStringList(policy.allowed_actor_capabilities) ||
+    !isNonEmptyString(task.required_capability) ||
     !task.actor_capabilities.includes(task.required_capability) ||
-    !policy.allowed_actor_capabilities.includes(task.required_capability)
+    !policy.allowed_actor_capabilities.includes(task.required_capability) ||
+    (policy.allowed_worker_ids !== undefined && !isStringList(policy.allowed_worker_ids))
   ) {
     return { decision: "DENY", reason: "ACTOR_UNAUTHORIZED" };
   }
