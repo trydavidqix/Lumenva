@@ -40,6 +40,9 @@ export default defineConfig({
       // o vitest acabava coletando specs Playwright de até 10 worktrees, travando a suíte.
       "**/.worktrees/**",
       "**/.claude/worktrees/**",
+      // The media worker owns Node's built-in `node:test` suites. Vercel/Vitest can
+      // evaluate this config from different roots, so the glob must be root-agnostic.
+      "**/workers/voice-worker/**",
       "apps/site/**",
       "workers/voice-worker/**",
       "apps/site/**",
