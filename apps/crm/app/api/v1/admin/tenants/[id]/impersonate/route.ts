@@ -2,7 +2,7 @@
  * POST /api/v1/admin/tenants/[id]/impersonate (S-11.07)
  *
  * Starts a platform-admin impersonation session for a tenant. Issues a signed
- * `deskcomm-impersonate` cookie (HMAC-SHA256, 1h TTL, HttpOnly+Secure+Lax).
+ * `lumenva-impersonate` cookie (HMAC-SHA256, 1h TTL, HttpOnly+Secure+Lax).
  * Audits start + emits cross-tenant `event_log` row.
  *
  * Security:
@@ -42,7 +42,6 @@ export async function POST(
     return fail("forbidden", "Platform admin required", 403, { requestId });
   }
 
-  // Misconfiguration guard — refuse to mint cookies we can't verify later.
   if (!isImpersonateSecretReady()) {
     void audit({
       action: "platform_admin.impersonate_misconfigured",
@@ -99,7 +98,6 @@ export async function POST(
     path: "/",
   });
 
-  // Audit start (acting_as_platform_admin=true is the tell-tale signal).
   void audit({
     action: "platform_admin.impersonate_started",
     actorUserId: adminCtx.user.id,
@@ -117,8 +115,6 @@ export async function POST(
     },
   });
 
-  // Emit a cross-tenant domain event for downstream consumers (e.g. SIEM,
-  // anomaly detection). Service-role admin bypasses RLS — this is intentional.
   await admin.from("event_log").insert({
     organization_id: org.id,
     entity_kind: "platform_admin_session",
