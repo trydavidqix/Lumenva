@@ -52,20 +52,28 @@ const DELIVERY_CHANNELS = new Set<DeliveryChannel>([
   "MANAGED_SERVICE",
 ]);
 
-function channelPlatformError(channel: DeliveryChannel, artifact: DeliveryArtifact): string | null {
+export function validateDeliveryChannelArtifact(
+  channel: DeliveryChannel,
+  artifact: DeliveryArtifact,
+): DeliveryValidation {
+  const errors: string[] = [];
+  if (!DELIVERY_CHANNELS.has(channel)) {
+    errors.push(`unsupported delivery channel: ${String(channel)}`);
+    return { valid: false, errors };
+  }
   if (channel === "WEB_PREVIEW" && artifact.platform !== "WEB") {
-    return "delivery channel WEB_PREVIEW requires WEB artifact";
+    errors.push("delivery channel WEB_PREVIEW requires WEB artifact");
   }
   if (channel === "MOBILE_PREVIEW" && artifact.platform !== "IOS" && artifact.platform !== "ANDROID") {
-    return "delivery channel MOBILE_PREVIEW requires IOS or ANDROID artifact";
+    errors.push("delivery channel MOBILE_PREVIEW requires IOS or ANDROID artifact");
   }
   if (channel === "APP_STORE" && artifact.platform !== "IOS") {
-    return "delivery channel APP_STORE requires IOS artifact";
+    errors.push("delivery channel APP_STORE requires IOS artifact");
   }
   if (channel === "PLAY_STORE" && artifact.platform !== "ANDROID") {
-    return "delivery channel PLAY_STORE requires ANDROID artifact";
+    errors.push("delivery channel PLAY_STORE requires ANDROID artifact");
   }
-  return null;
+  return { valid: errors.length === 0, errors };
 }
 
 export function validateDeliveryPlan(
@@ -76,12 +84,7 @@ export function validateDeliveryPlan(
   const errors: string[] = [];
   if (!plan.channels.length) errors.push("delivery plan requires at least one channel");
   for (const channel of plan.channels) {
-    if (!DELIVERY_CHANNELS.has(channel)) {
-      errors.push(`unsupported delivery channel: ${String(channel)}`);
-      continue;
-    }
-    const platformError = channelPlatformError(channel, artifact);
-    if (platformError) errors.push(platformError);
+    if (!DELIVERY_CHANNELS.has(channel)) errors.push(`unsupported delivery channel: ${String(channel)}`);
   }
   if (artifact.delivery_plan_id !== plan.delivery_plan_id) errors.push("delivery artifact does not belong to delivery plan");
   if (buildEvidence.organization_id !== plan.organization_id) errors.push("organization_id mismatch between delivery plan and build evidence");
@@ -159,6 +162,10 @@ export async function deliverBuild(
   stateStore: BuildPlanStateStore,
   execute: () => Promise<void>,
 ): Promise<{ delivered: true }> {
+  for (const channel of plan.channels) {
+    const compatibility = validateDeliveryChannelArtifact(channel, artifact);
+    if (!compatibility.valid) throw new Error(`delivery_blocked: ${compatibility.errors.join(";")}`);
+  }
   const gate = await validateDeliveryPlanWithState(plan, artifact, buildEvidence, stateStore);
   if (!gate.valid) throw new Error(`delivery_blocked: ${gate.errors.join(";")}`);
   await execute();
@@ -173,6 +180,10 @@ export async function executeDeliveryWithGate<T>(
   stateStore: BuildPlanStateStore,
   execute: () => Promise<T>,
 ): Promise<T> {
+  for (const channel of plan.channels) {
+    const compatibility = validateDeliveryChannelArtifact(channel, artifact);
+    if (!compatibility.valid) throw new Error(`delivery blocked: ${compatibility.errors.join(";")}`);
+  }
   const gate = await validateDeliveryPlanWithState(plan, artifact, buildEvidence, stateStore);
   if (!gate.valid) throw new Error(`delivery blocked: ${gate.errors.join(";")}`);
   return execute();
