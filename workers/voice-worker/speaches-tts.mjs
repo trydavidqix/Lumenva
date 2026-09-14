@@ -1,3 +1,5 @@
+import { decodeVoiceDeliveryEnvelope, resolveDeliverySpeed } from "./delivery-context.mjs";
+
 const DEFAULT_SAMPLE_RATE = 16_000;
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_CHUNK_BYTES = 3_200;
@@ -6,7 +8,7 @@ function normalizeBaseUrl(value) {
   const url = String(value ?? "").trim().replace(/\/+$/, "");
   if (!url) throw new Error("Speaches TTS baseUrl is required");
   const parsed = new URL(url);
-  if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error("Speaches TTS baseUrl must use http(s)");
+  if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("Speaches TTS baseUrl must use http(s)");
   return parsed.toString().replace(/\/$/, "");
 }
 
@@ -58,8 +60,10 @@ export class SpeachesLocalTTS {
   }
 
   async *synthesizeStream(text) {
-    const input = String(text ?? "").trim();
+    const decoded = decodeVoiceDeliveryEnvelope(text);
+    const input = decoded.text.trim();
     if (!input) throw new Error("local_tts_empty_text");
+    const speed = resolveDeliverySpeed(decoded.delivery, this.speed);
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(new Error("local_tts_timeout")), this.timeoutMs);
@@ -73,13 +77,13 @@ export class SpeachesLocalTTS {
           voice: this.voice,
           response_format: "pcm",
           sample_rate: this.sampleRate,
-          speed: this.speed,
+          speed,
           stream_format: "audio",
         }),
         signal: controller.signal,
       });
       if (!response?.ok) {
-        const detail = await response?.text?.().catch(() => "") ?? "";
+        const detail = (await response?.text?.().catch(() => "")) ?? "";
         throw new Error(`local_tts_http_${response?.status ?? "unknown"}:${detail.slice(0, 240)}`);
       }
       if (!response.body) {
