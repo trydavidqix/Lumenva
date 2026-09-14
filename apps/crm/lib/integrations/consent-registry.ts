@@ -53,11 +53,12 @@ export class ConsentRegistry {
       return structuredClone(existing);
     }
     const grantedAt = normalizeTimestamp(input.granted_at ?? new Date().toISOString())!;
+    const retentionUntil = input.retention_until ? normalizeTimestamp(input.retention_until)! : undefined;
     const record: ConsentRecord = {
       ...structuredClone(input),
       status: "GRANTED",
       granted_at: grantedAt,
-      ...(input.retention_until ? { retention_until: normalizeTimestamp(input.retention_until) } : {}),
+      ...(retentionUntil ? { retention_until: retentionUntil } : {}),
       source_refs: [...input.source_refs],
       evidence_refs: [...input.evidence_refs],
     };
@@ -70,7 +71,8 @@ export class ConsentRegistry {
     if (!record) throw new Error("consent_not_found");
     if (record.organization_id !== organizationId) throw new Error("consent_tenant_mismatch");
     if (!validTimestamp(revokedAt)) throw new Error("consent_timestamp_invalid");
-    const revoked = { ...record, status: "REVOKED" as const, revoked_at: normalizeTimestamp(revokedAt) };
+    const normalizedRevokedAt = normalizeTimestamp(revokedAt)!;
+    const revoked: ConsentRecord = { ...record, status: "REVOKED", revoked_at: normalizedRevokedAt };
     this.records.set(consentId, revoked);
     return structuredClone(revoked);
   }
@@ -109,6 +111,9 @@ type StoredConsentRecord = Omit<ConsentRecord, "legal_basis_ref" | "granted_at" 
 };
 
 function rowToConsent(row: StoredConsentRecord): ConsentRecord {
+  const grantedAt = row.granted_at ? normalizeTimestamp(row.granted_at)! : undefined;
+  const revokedAt = row.revoked_at ? normalizeTimestamp(row.revoked_at)! : undefined;
+  const retentionUntil = row.retention_until ? normalizeTimestamp(row.retention_until)! : undefined;
   return {
     consent_id: row.consent_id,
     organization_id: row.organization_id,
@@ -117,9 +122,9 @@ function rowToConsent(row: StoredConsentRecord): ConsentRecord {
     channel: row.channel,
     ...(row.legal_basis_ref ? { legal_basis_ref: row.legal_basis_ref } : {}),
     status: row.status,
-    ...(row.granted_at ? { granted_at: normalizeTimestamp(row.granted_at) } : {}),
-    ...(row.revoked_at ? { revoked_at: normalizeTimestamp(row.revoked_at) } : {}),
-    ...(row.retention_until ? { retention_until: normalizeTimestamp(row.retention_until) } : {}),
+    ...(grantedAt ? { granted_at: grantedAt } : {}),
+    ...(revokedAt ? { revoked_at: revokedAt } : {}),
+    ...(retentionUntil ? { retention_until: retentionUntil } : {}),
     source_refs: [...row.source_refs],
     evidence_refs: [...row.evidence_refs],
   };
@@ -146,9 +151,10 @@ export class PostgresConsentRegistry {
 
   async revoke(organizationId: string, consentId: string, revokedAt = new Date().toISOString()): Promise<ConsentRecord> {
     if (!validTimestamp(revokedAt)) throw new Error("consent_timestamp_invalid");
+    const normalizedRevokedAt = normalizeTimestamp(revokedAt)!;
     const result = await this.db.query<StoredConsentRecord>(
       `update public.contact_consents set status='REVOKED',revoked_at=$3,updated_at=now() where organization_id=$1 and consent_id=$2 and status='GRANTED' returning consent_id,organization_id,subject_ref,purpose,channel,legal_basis_ref,status,granted_at,revoked_at,retention_until,source_refs,evidence_refs`,
-      [organizationId, consentId, normalizeTimestamp(revokedAt)],
+      [organizationId, consentId, normalizedRevokedAt],
     );
     if (!result.rows[0]) throw new Error("consent_not_found");
     return rowToConsent(result.rows[0]);
