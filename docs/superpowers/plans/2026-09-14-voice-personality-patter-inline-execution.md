@@ -1,242 +1,142 @@
 # Voice Personality + Patter Inline Execution Plan
 
-> **Execution mode:** REQUIRED SUB-SKILL: `superpowers:executing-plans`. Execute inline in this chat/session. Do **not** use subagents. Do **not** merge to `main` when finished. Keep all commits on `feat/voice-personality-patter-inline` and use draft PR #37 only as a CI harness.
+> **Execution mode:** inline in this chat/session, no subagents. Do **not** merge to `main`. Keep work on `feat/voice-personality-patter-inline`. PR #37 is a WIP review surface only; it is not a CI harness and is not authorized for merge.
 
-**Goal:** Preserve Lumenva agent personality and per-turn emotional delivery in telephone calls while keeping Patter media-only and replaceable.
+**Goal:** Preserve Lumenva agent personality and per-turn emotional delivery in telephone calls while keeping Patter media-only, replaceable and independent from paid STT/TTS APIs.
 
-**Architecture:** The canonical `lib/agent-engine` Product Agent remains the source of agent identity/behavior. Voice transport sends caller transcript to the CRM; the Agent Kernel returns business-safe text; a deterministic Lumenva resolver combines the Product Agent conversational style with local sentiment to produce provider-neutral `VoiceDeliveryStyle`. Patter transports audio/STT/TTS but never owns personality, policy, memory or business reasoning.
+**Architecture:** The canonical `lib/agent-engine` Product Agent definition owns agent identity and conversation personality. Voice transport sends caller transcript to the CRM; the Agent Kernel returns business-safe text plus the exact conversation style from the versioned definition; a deterministic Lumenva resolver combines that style with local sentiment to produce provider-neutral `VoiceDeliveryStyle`. Patter handles media lifecycle. Speaches hosts faster-whisper and Kokoro/Piper locally. Patter, Speaches and TTS providers never own personality, policy, memory or business reasoning.
 
-**Tech Stack:** TypeScript, Next.js, Vitest, Agent OS/Agent Kernel, Patter, Deepgram, ElevenLabs, GitHub Actions CI.
+**Current stack:** TypeScript, Next.js, Vitest, Agent OS/Agent Kernel, Patter 0.7.1, Silero VAD, Speaches, faster-whisper, Kokoro, optional Piper fallback, Telnyx carrier.
 
 **Authoritative implementation paths:**
 - `apps/crm/lib/agent-engine/**`
 - `apps/crm/lib/voice/runtime/**`
 - `apps/crm/app/api/internal/voice/**`
 - `workers/voice-worker/**`
+- `ops/voice-local/**`
 
 **Non-authoritative/deprecated path:** `apps/crm/lib/ai/runtime/agent.ts` is explicitly deprecated and MUST NOT receive this feature.
 
-## Global Constraints
+## Global constraints
 
-- Patter is media infrastructure only. It MUST NOT select the Product Agent, read Customer Memory directly, make policy decisions, choose business tools, or become source of truth.
-- `blocked` Agent OS results MUST never produce TTS.
-- Conversation personality MUST live in provider-independent Lumenva contracts.
-- Acoustic voice selection (`voiceId`, TTS provider, clone consent) remains separate from conversation personality and per-turn emotion.
-- V1 emotional delivery is deterministic; no second LLM call just to classify delivery style.
-- Sentiment comes from the existing provider-free `classifySentiment()` path.
-- Per-turn delivery metadata MUST NOT mutate shared Patter/ElevenLabs `voiceSettings`; Patter's current `ElevenLabsTTS` stores settings on a shared instance. Until a call/turn-scoped provider API exists, dynamic acoustic changes degrade safely to metadata/text-level behavior rather than risk cross-call leakage.
-- Do not copy business logic into `workers/voice-worker`.
-- Do not merge or enable auto-merge on PR #37.
-- No completion claim without fresh CI/test evidence.
+- Patter is media infrastructure only; it never selects business policy, memory, tools or source-of-truth state.
+- `blocked` Agent OS results never produce TTS.
+- Conversation personality lives on the versioned `AgentDefinition`.
+- Per-turn emotion is deterministic and provider-neutral; no second LLM call is added for delivery classification.
+- Sentiment uses the existing provider-free `classifySentiment()` path.
+- No hosted STT/TTS API is required by the production worker path.
+- Per-call acoustic delivery must be isolated by `callId`; no global mutable emotion/voice state.
+- Tenant-domain logs and metrics include `organization_id`.
+- No merge or auto-merge on PR #37.
+- No completion claim without fresh execution evidence.
 
-## Completion accounting
+## Verification doctrine
 
-Eight gates, each worth 12.5%:
-1. Isolated branch + CI harness.
-2. Architectural ownership regression gate.
-3. Product Agent conversational-style contract.
-4. Deterministic `VoiceDeliveryStyle` resolver.
-5. Canonical voice turn returns approved text + delivery metadata.
-6. Internal voice API/worker transports delivery without owning it.
-7. Full CI and voice-core regression verification.
-8. Real PSTN call proving audible behavior, barge-in and no cross-call style leakage.
+GitHub Actions is intentionally disabled at repository level by `.claude/rules/testing-verification.md`. Adding/editing workflow files does not create a valid gate. The temporary task-specific workflow created earlier was removed.
 
-Final report MUST state: completed gates, blocked gates, exact percentage, evidence, and reason for every missing gate.
+Primary verification surfaces are:
+1. focused tests executed against branch source;
+2. canonical local checkout commands when a full checkout is available;
+3. Vercel Preview only at the end of the task, after its current team/access problem is resolved;
+4. real Speaches + PSTN acceptance for media/runtime behavior.
 
----
+Canonical local commands:
 
-## Task 0 — Isolation and baseline
-
-- [x] Create `feat/voice-personality-patter-inline` from `plan/voice-personality-patter`.
-- [x] Open draft PR #37 against `main` for CI only.
-- [ ] Read current CI workflow and confirm PR triggers `typecheck`, `lint`, `lint:channels`, harness checks, unit tests, shell tests and DB invariants.
-- [ ] Record baseline PR CI before feature code. If baseline fails for unrelated pre-existing reasons, preserve the evidence and distinguish it from feature failures.
-
-## Task 1 — RED: lock Patter/Agent OS ownership boundary
-
-**Create:** `apps/crm/tests/unit/voice-personality-patter-contract.test.ts`
-
-The test MUST prove:
-- `workers/voice-worker/main.mjs` delegates each user transcript to `brain.runTurn()`.
-- The worker's Patter system prompt says business reasoning is external.
-- `agent-os-adapter.ts` invokes `deps.kernel.run()` and `authorizeDelivery()`.
-- `turn/route.ts` invokes `createVoiceTurnService()`.
-- Patter adapter/worker does not import Agent Kernel internals, Customer Memory repositories or policy engines.
-- The canonical personality implementation does not touch deprecated `lib/ai/runtime/agent.ts`.
-
-**TDD:** commit this test first; CI must fail on the not-yet-existing conversational-style/delivery contract while existing boundary assertions remain valid.
-
-## Task 2 — GREEN: add Product Agent conversational style
-
-**Modify:** `apps/crm/lib/agent-engine/contracts/agent-os.ts`
-
-Add provider-neutral types:
-
-```ts
-export type AgentConversationRegister = 'professional' | 'warm' | 'casual' | 'custom';
-
-export interface AgentConversationStyle {
-  register: AgentConversationRegister;
-  toneInstructions: string;
-  examplePhrases?: readonly string[];
-}
+```bash
+pnpm typecheck
+pnpm lint
+pnpm lint:channels
+pnpm lint:tenant-filter
+pnpm test:unit
+cd apps/crm && bash scripts/verify-voice-core.sh
+cd ../../workers/voice-worker && npm run check
 ```
 
-Extend `AgentDefinition` with optional `conversationStyle?: AgentConversationStyle`.
+Any command not actually executed remains **unmeasured**.
 
-**Modify:** Product Agents used in voice:
-- `product-agents/atendimento.ts` → warm, patient, calm, clear.
-- `product-agents/sales.ts` → warm/confident, concise, energetic without pressure.
-- `product-agents/retention.ts` → empathetic, calm, non-defensive.
+## Completion gates
 
-**Modify:** `apps/crm/lib/voice/runtime/kernel-runtime.ts`
-- Include `execution.definition.conversationStyle` in the voice system instructions.
-- Style instructions may influence wording only; they never override output contract, policy or tool restrictions.
+Eight gates, 12.5% each:
+1. isolated branch/WIP PR and correct verification surface;
+2. Patter/Agent OS ownership boundary;
+3. canonical versioned Product Agent conversation style;
+4. deterministic `VoiceDeliveryStyle` resolver;
+5. authorized text + delivery metadata from canonical voice turn;
+6. API → brain client → worker delivery transport + tenant-scoped observability;
+7. full repository local verification + final Vercel Preview;
+8. real local-model/PSTN acceptance including concurrency and barge-in.
 
-**Tests:** extend product-agent/voice-kernel tests to prove style is part of the canonical definition and the voice runtime consumes it.
+## Task status
 
-## Task 3 — RED/GREEN: deterministic per-turn delivery style
+### Task 0 — Isolation and baseline
+- [x] Work isolated on `feat/voice-personality-patter-inline`.
+- [x] PR #37 exists as WIP review surface.
+- [x] Confirm repository Actions are intentionally disabled.
+- [x] Remove the inert task-specific Actions workflow.
+- [ ] Full local-checkout baseline remains unmeasured in this assistant environment.
 
-**Create:**
-- `apps/crm/lib/voice/runtime/delivery-style.ts`
-- `apps/crm/lib/voice/runtime/delivery-style.test.ts`
+### Task 1 — Ownership boundary
+- [x] Contract keeps Patter media-only and delegates each transcript to `brain.runTurn()`.
+- [x] Worker does not import Agent Kernel business internals or Customer Memory repositories.
+- [x] Deprecated `lib/ai/runtime/agent.ts` remains untouched by the feature.
 
-Canonical contract:
+### Task 2 — Canonical Product Agent personality
+- [x] `AgentDefinition` carries optional `conversationStyle`.
+- [x] `atendimento`, `sales`, and `retention` definitions carry their versioned styles.
+- [x] Agent Kernel returns the exact style from the resolved execution definition.
+- [x] Voice runtime uses `resolveAgentConversationStyle(execution.definition)`; no parallel personality map is source of truth.
 
-```ts
-export type VoiceAffect = 'neutral' | 'calm' | 'warm' | 'empathetic' | 'upbeat' | 'firm';
-export type VoicePace = 'slow' | 'normal' | 'fast';
+### Task 3 — Deterministic delivery style
+- [x] Provider-neutral `VoiceDeliveryStyle` implemented.
+- [x] Negative/warm → empathetic + slow; negative/professional → calm + slow + serious.
+- [x] Positive/neutral behavior remains bounded by the agent personality.
+- [x] No network/model call is used for delivery classification.
 
-export interface VoiceDeliveryStyle {
-  affect: VoiceAffect;
-  pace: VoicePace;
-  energy: number; // 0..1
-  tone: 'neutral' | 'warm' | 'serious' | 'bright';
-}
-```
+### Task 4 — Authorized output and humanization
+- [x] Delivery is attached only after Agent OS completion + voice authorization.
+- [x] Humanizer is conservative and does not rewrite facts/numbers/dates/prices.
+- [x] If humanization removes the entire response, the turn fails closed with `voice_agent_output_not_speakable`.
 
-Resolver input is `SentimentVerdict + AgentConversationStyle | undefined`.
+### Task 5 — API/worker transport and tenancy
+- [x] `/api/internal/voice/turn` returns `delivery` unchanged.
+- [x] `brain-client.mjs` remains transparent; regression test added.
+- [x] Inbound call context returns `organization_id`.
+- [x] Outbound CRM → worker control request carries `organization_id`.
+- [x] Pending outbound reservation keeps tenant identity.
+- [x] Per-turn delivery log includes `organization_id`.
 
-Mandatory behavior:
-- negative + warm → empathetic/slow/warm, energy <= .45
-- negative + professional → calm/slow/serious
-- positive + casual → upbeat/normal/bright, energy <= .75
-- positive + professional → warm or neutral, never max-energy upbeat
-- neutral → stable personality default
-- missing style → professional safe default
+### Task 6 — Free/local speech + call-scoped acoustic delivery
+- [x] Deepgram/ElevenLabs removed from production worker path.
+- [x] Silero VAD is local.
+- [x] faster-whisper STT uses local Speaches.
+- [x] Kokoro TTS uses local Speaches; optional Piper fallback is local.
+- [x] `VoiceDeliveryStyle` is transported per call through Patter `beforeSynthesize(callId)` without shared mutable state.
+- [x] Slow/normal/fast delivery maps to local synthesis speed while preserving call isolation.
+- [x] Fallback never switches voice after primary audio has already begun.
 
-No network/model call.
+### Task 7 — Canonical verification
+- [x] `verify-voice-core.sh` includes personality, delivery, route transport and worker regression checks.
+- [x] Focused worker/sandbox tests have been executed during this task; exact results are recorded in `docs/evidence/2026-09-14-voice-local-sandbox-verification.md`.
+- [ ] Full `pnpm typecheck`, lint gates, full unit suite and full `verify-voice-core.sh` require a complete runnable checkout and remain unmeasured here.
+- [ ] Final Vercel Preview is blocked by the current Vercel team/access configuration and must be retried only after local gates are green.
 
-## Task 4 — attach delivery only after authorized Agent OS output
+### Task 8 — Real runtime acceptance
+- [ ] Start a real Speaches runtime with approved faster-whisper/Kokoro/Piper model assets.
+- [ ] Controlled PSTN call.
+- [ ] Two overlapping calls with different delivery styles.
+- [ ] Barge-in/interruption.
+- [ ] Local speech runtime failure/fallback.
+- [ ] Transfer/handoff where enabled.
+- [ ] Measure endpointing-to-first-audio p50/p95.
 
-**Modify:**
-- `apps/crm/lib/voice/runtime/turn-service.ts`
-- tests for `turn-service`
-
-Required order:
-
-```text
-resolve Product Agent -> kernel.run -> completed? -> authorizeDelivery -> speakable text -> classify caller sentiment -> resolve delivery -> reply
-```
-
-Return shape on success:
-
-```ts
-{
-  kind: 'reply',
-  text,
-  delivery,
-  agentId,
-  runId,
-  traceId,
-}
-```
-
-`blocked` responses have neither `text` nor `delivery`.
-
-The delivery resolver MUST NOT rewrite `text`.
-
-## Task 5 — API and worker transport
-
-**Modify/test:**
-- `apps/crm/app/api/internal/voice/turn/route.ts`
-- `apps/crm/app/api/internal/voice/turn/route.test.ts`
-- `workers/voice-worker/brain-client.mjs`
-- worker tests if present
-
-The API returns the canonical `delivery` object unchanged. Identity binding (`voice_call_id` + technical phone) is untouched.
-
-`brain-client.mjs` remains a transparent transport.
-
-`workers/voice-worker/main.mjs` may observe normalized delivery metadata but MUST NOT decide or overwrite it.
-
-## Task 6 — safe Patter/ElevenLabs behavior
-
-Current Patter `ElevenLabsTTS` stores `voiceSettings` on the provider instance and `synthesizeStream(text)` has no call/turn context. Therefore:
-
-- Do NOT mutate shared `voiceSettings` per turn.
-- Do NOT introduce global mutable `currentEmotion` state.
-- Do NOT encode hidden style control bytes into customer text as a shortcut.
-- Preserve delivery metadata through the Lumenva boundary for future call-scoped provider adapters.
-- Keep static tenant/acoustic voice settings working exactly as before.
-- If a provider later exposes call-scoped synthesis options, implement that behind a provider adapter without changing Agent OS contracts.
-
-Add a concurrency regression test/documented contract that rejects shared mutable per-turn TTS state.
-
-## Task 7 — canonical verification
-
-Update `apps/crm/scripts/verify-voice-core.sh` to include the new contract and delivery-style tests.
-
-Use PR #37 CI as the authoritative execution environment available in this session.
-
-Required green evidence before claiming code complete:
-- Typecheck
-- Lint
-- channel-provider leak gate
-- harness checks
-- unit tests
-- shell tests
-- DB invariants
-
-If any check fails, inspect logs, fix feature-caused failures, rerun CI and record unrelated baseline failures separately.
-
-## Task 8 — real PSTN acceptance (environmental gate)
-
-Only execute if this session has access to live Telnyx/Patter/Deepgram/ElevenLabs credentials and an active test number.
-
-Test two separate calls, including overlap, to prove no emotion leakage between calls:
-1. normal conversation;
-2. negative/frustrated utterance;
-3. positive utterance;
-4. interruption/barge-in;
-5. transfer attempt where allowed;
-6. simultaneous calls with different sentiments.
-
-Acceptance evidence:
-- transcript reaches Agent OS;
-- correct Product Agent selected;
-- delivery metadata follows personality + sentiment;
-- blocked output never reaches TTS;
-- no cross-call style state leakage;
-- call completes without regression.
-
-If live credentials/telephony are unavailable, mark this gate blocked rather than simulated.
+These are environmental acceptance gates; do not replace them with mocks and do not call the system 100% production-proven until they run.
 
 ## Finish procedure
 
-1. Re-read this plan and the original plan.
-2. Fetch PR diff and inspect every changed file.
-3. Run/read fresh CI results.
-4. Do NOT merge PR #37.
-5. Keep `feat/voice-personality-patter-inline` and draft PR #37 intact.
-6. Final report format:
-
-```text
-Implementation status: NN%
-Completed: G1, G2, ...
-Blocked/not proven: G...
-Why: exact technical/environmental reason
-CI: exact jobs/checks and outcomes
-Branch: feat/voice-personality-patter-inline
-PR: #37 draft, NOT MERGED
-```
+1. Inspect the full diff against `main`.
+2. Execute the canonical local gates in a full checkout.
+3. Fix feature-caused failures and rerun.
+4. Resolve Vercel Preview access and run one final Preview after all local work is complete.
+5. Run real Speaches/PSTN acceptance.
+6. Do **not** merge PR #37 automatically.
+7. Final report must list commands actually executed, pass/fail counts, unmeasured gates, and the exact reason for every remaining gap.
