@@ -12,6 +12,7 @@ import {
   putCallContext,
 } from "./call-context.mjs";
 import { startVoiceControlServer } from "./control-server.mjs";
+import { createCallDeliveryContext } from "./delivery-context.mjs";
 import { normalizeVoiceDeliveryForLog } from "./delivery-log.mjs";
 import { createPendingOutboundRegistry } from "./pending-outbound.mjs";
 import { createSpeachesHealthCheck } from "./speaches-health.mjs";
@@ -116,6 +117,16 @@ const brain = createVoiceBrainClient();
 const workerPolicy = await brain.resolveWorkerConfig({ phone_e164: phoneNumber });
 const recordingEnabled = workerPolicy.recording_enabled === true && workerPolicy.recording_requires_disclosure !== true;
 const pendingOutbound = createPendingOutboundRegistry({ ttlMs: Number(process.env.VOICE_OUTBOUND_PENDING_TTL_MS ?? 60_000) });
+const deliveryContext = createCallDeliveryContext({
+  ttlMs: positiveNumberEnv("VOICE_DELIVERY_CONTEXT_TTL_MS", 120_000),
+  maxResponsesPerCall: positiveNumberEnv("VOICE_DELIVERY_CONTEXT_RESPONSES", 4),
+});
+const {
+  recordDelivery,
+  decorateSentence,
+  clearDelivery,
+} = deliveryContext;
+
 const phone = new Patter({
   carrier: new Telnyx({
     apiKey: required("TELNYX_API_KEY"),
@@ -149,6 +160,11 @@ const agent = phone.agent({
   stt,
   tts,
   vad,
+  hooks: {
+    beforeSynthesize(text, hookContext) {
+      return decorateSentence(hookContext.callId, text);
+    },
+  },
   systemPrompt: "You are the Lumenva media shell. Business reasoning is provided externally.",
   firstMessage: "",
 });
@@ -157,6 +173,7 @@ async function onCallStart(data) {
   if (!liveEnabled) throw new Error("voice_live_disabled");
   if (!(await speechHealth())) throw new Error("local_speech_unavailable");
   const endpoints = extractPatterCallEndpoints(data);
+  clearDelivery(endpoints.callId);
   const direction = endpoints.caller === phoneNumber ? "outbound" : "inbound";
   let context;
   if (direction === "outbound") {
@@ -196,15 +213,17 @@ async function onMessage(message) {
   if (result.kind !== "reply" || typeof result.text !== "string" || !result.text.trim()) {
     throw new Error(`voice_turn_blocked:${result.reason ?? "unknown"}`);
   }
+  const replyText = result.text.trim();
   const delivery = normalizeVoiceDeliveryForLog(result.delivery);
   if (delivery) {
+    recordDelivery({ callId: message.callId, text: replyText, delivery });
     process.stdout.write(JSON.stringify({
       event: "lumenva_voice_delivery",
       voice_call_id: context.voice_call_id,
       ...delivery,
     }) + "\n");
   }
-  return result.text.trim();
+  return replyText;
 }
 
 async function onCallEnd(data) {
@@ -225,6 +244,7 @@ async function onCallEnd(data) {
       });
     }
   } finally {
+    clearDelivery(callId);
     deleteCallContext(callId);
   }
 }
