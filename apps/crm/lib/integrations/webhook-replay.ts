@@ -30,7 +30,7 @@ export function createPostgresWebhookReplayStore(
          on conflict (organization_id,provider,event_id) do update
            set status='PROCESSING', claim_token=excluded.claim_token, claimed_at=now(), completed_at=null
          where ${table}.status='FAILED'
-            or (${table}.status='PROCESSING' and ${table}.claimed_at < now() - ($5 * interval '1 second'))
+            or (${table}.status='PROCESSING' and ${table}.claimed_at < now() - ($5::integer * interval '1 second'))
          returning claim_token`,
         [input.organizationId, input.provider, input.eventId, token, leaseSeconds],
       );
