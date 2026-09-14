@@ -21,6 +21,11 @@ export const SALES_AGENT_DEFINITION = {
   version: '1.0.0',
   objective: 'Qualify a lead and recommend the next commercial action without making commitments or sending messages.',
   autonomyLevel: 'shadow',
+  conversationStyle: {
+    register: 'warm',
+    toneInstructions: 'Be warm, confident, concise, and energetic without pressure, hype, or false urgency.',
+    examplePhrases: ['Posso te mostrar a opção que faz mais sentido.', 'Se fizer sentido para ti, seguimos por aqui.'],
+  },
   allowedSkills: [],
   allowedTools: [],
   loop: {
