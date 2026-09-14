@@ -4,7 +4,7 @@ import type { DurableBenchmarkLifecycleEvent, DurableBenchmarkTerminalState } fr
 import { getPhase7Scenarios } from '../../scenarios';
 import { INNGEST_PHASE_7_EVENT_NAMES } from './functions';
 
-export const INNGEST_PHASE_7_APP_ID = 'deskcomm-agent-os-phase-7-benchmark';
+export const INNGEST_PHASE_7_APP_ID = 'lumenva-agent-os-phase-7-benchmark';
 export const INNGEST_PHASE_7_ENGINE_VERSION = 'inngest-v4.18.1-local-dev';
 
 const retryAttempts = new Map<string, number>();
