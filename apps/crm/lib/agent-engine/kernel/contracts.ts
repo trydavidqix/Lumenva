@@ -1,4 +1,4 @@
-import type { AgentDefinition, AgentRunIdentity, AgentRunStatus } from "../contracts/agent-os";
+import type { AgentConversationStyle, AgentDefinition, AgentRunIdentity, AgentRunStatus } from "../contracts/agent-os";
 
 export interface AgentKernelTrigger {
   kind: string;
@@ -24,6 +24,8 @@ export interface AgentKernelResult {
   runId: string;
   traceId: string;
   correlationId: string;
+  /** Exact style from the resolved versioned AgentDefinition, when resolution succeeded. */
+  conversationStyle?: AgentConversationStyle;
   approvalId?: string;
   output?: unknown;
 }
