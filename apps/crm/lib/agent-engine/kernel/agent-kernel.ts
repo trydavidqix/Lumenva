@@ -34,6 +34,9 @@ function resultFor(
     runId: execution.runId,
     traceId: execution.traceId,
     correlationId: execution.correlationId,
+    ...(execution.definition.conversationStyle
+      ? { conversationStyle: execution.definition.conversationStyle }
+      : {}),
     ...extra,
   };
 }
