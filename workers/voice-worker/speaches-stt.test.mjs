@@ -120,3 +120,32 @@ test("close drops later audio instead of leaking a transcript into another call"
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.equal(fetchCalls, 0);
 });
+
+test("close aborts an in-flight local transcription and suppresses late callbacks", async () => {
+  let fetchStartedResolve;
+  const fetchStarted = new Promise((resolve) => { fetchStartedResolve = resolve; });
+  let transcriptCount = 0;
+  let errorCount = 0;
+  const stt = new SpeachesFasterWhisperSTT({
+    baseUrl: "http://speech.local:8000",
+    model: "local-whisper",
+    fetchImpl: async (_url, init) => {
+      fetchStartedResolve();
+      await new Promise((resolve, reject) => {
+        if (init.signal.aborted) return reject(init.signal.reason);
+        init.signal.addEventListener("abort", () => reject(init.signal.reason), { once: true });
+      });
+      return responseJson({ text: "late" });
+    },
+  });
+  await stt.connect();
+  stt.onTranscript(() => { transcriptCount += 1; });
+  stt.onError(() => { errorCount += 1; });
+  stt.sendAudio(Buffer.alloc(320, 1));
+  stt.finalize();
+  await fetchStarted;
+  stt.close();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(transcriptCount, 0);
+  assert.equal(errorCount, 0);
+});
