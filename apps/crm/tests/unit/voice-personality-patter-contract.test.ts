@@ -1,9 +1,17 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const readCrm = (path: string) => readFileSync(join(process.cwd(), "apps/crm", path), "utf8");
-const readRepo = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
+function repoRoot(): string {
+  const cwd = process.cwd();
+  if (existsSync(join(cwd, "apps", "crm")) && existsSync(join(cwd, "workers", "voice-worker"))) return cwd;
+  const parent = resolve(cwd, "../..");
+  if (existsSync(join(parent, "apps", "crm")) && existsSync(join(parent, "workers", "voice-worker"))) return parent;
+  throw new Error(`repository root not found from ${cwd}`);
+}
+
+const readCrm = (path: string) => readFileSync(join(repoRoot(), "apps/crm", path), "utf8");
+const readRepo = (path: string) => readFileSync(join(repoRoot(), path), "utf8");
 
 describe("voice personality ownership boundary", () => {
   it("keeps Patter media-only and delegates business reasoning to Agent OS", () => {
