@@ -19,7 +19,6 @@ import type { CreateLeadInput } from "@/lib/schemas";
 import { mapInboundPayload, verifyInboundSignature, type FieldMap } from "@/lib/webhooks/inbound";
 import { decryptWebhookSecret } from "@/lib/webhooks/secrets";
 import { ApiError } from "@/lib/api/types";
-import { readHeaderWithLegacy } from "@/lib/http/compat";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -89,9 +88,7 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
     }
   }
 
-  // Compatibilidade de 90 dias: o nome novo tem precedência, mas webhooks
-  // existentes que ainda enviam o header antigo continuam válidos.
-  const sigHeader = readHeaderWithLegacy(req.headers, "x-lumenva-signature", "x-deskcomm-signature");
+  const sigHeader = req.headers.get("x-lumenva-signature");
   // secret cifrado at-rest (migration 0041). Decrypt falhou (chave da GUC
   // ausente/trocada)? Precedente WAHA: pula a validação em vez de derrubar a
   // captação — secret aqui é defesa opcional, não gate de disponibilidade.
@@ -166,14 +163,10 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
 
   const dedupedLeadId = await findLeadByExternalId();
   if (dedupedLeadId) {
-    // Mesmo envio repetido: 200 com o lead existente, nada é recriado — a
-    // ferramenta que reenviou recebe sucesso e para de tentar.
     return respondWithLead(dedupedLeadId);
   }
 
   const fieldMap = (source.field_map ?? {}) as FieldMap;
-  // external_id não é dado do lead — sai do payload antes do mapeamento pra
-  // não virar custom_field (o log de recebimento acima preserva o original).
   const { external_id: _reservedExternalId, ...payloadForMapping } = payload;
   const mapped = mapInboundPayload(externalId ? payloadForMapping : payload, fieldMap);
   if (!mapped.phone) {
@@ -184,9 +177,6 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
     return fail("invalid_request", "Nenhum campo mapeável (nome/telefone/email).", 400, { requestId });
   }
 
-  // Contato: upsert por telefone (se houver) — reusa a coluna E.164 canônica.
-  // is_merged_into null: contato mesclado não deve ser reaproveitado (o índice
-  // único uniq_contacts_org_phone só cobre a linha ativa por telefone).
   let contactId: string | undefined;
   if (mapped.phone) {
     const selectActiveByPhone = () =>
@@ -216,9 +206,6 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
         .maybeSingle();
       if (insertErr) {
         if (insertErr.code === "23505") {
-          // Corrida: outro POST concorrente com o mesmo telefone novo já
-          // criou o contato entre o select e o insert. Re-seleciona o
-          // vencedor em vez de deixar o lead órfão.
           const { data: winner } = await selectActiveByPhone();
           contactId = (winner?.id as string | undefined) ?? undefined;
         } else {
@@ -244,8 +231,6 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
     stage_id: source.default_stage_id,
     title: mapped.name ?? mapped.phone ?? mapped.email ?? "Lead sem nome",
     contact_id: contactId,
-    // TODO(i18n): read the organisation currency from settings when that
-    // field has a stable schema contract; no schema change in this item.
     currency: "BRL",
     tags: [],
     source: "webhook",
@@ -267,9 +252,6 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
     );
   } catch (err) {
     if (err instanceof ApiError) {
-      // Corrida do retry: dois POSTs simultâneos com o mesmo external_id
-      // passam ambos pelo fast-path; o índice único derruba o segundo INSERT
-      // (23505) — re-seleciona o vencedor e responde idempotente.
       if (externalId && err.message?.includes("uniq_crm_leads_org_source_external")) {
         const winnerId = await findLeadByExternalId();
         if (winnerId) return respondWithLead(winnerId);
