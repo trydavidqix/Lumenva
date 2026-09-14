@@ -40,6 +40,23 @@ describe("free/local voice worker architecture", () => {
     expect(worker).toContain("VOICE_LOCAL_SPEECH_URL");
   });
 
+  it("keeps emotional delivery call-scoped instead of mutating a shared TTS provider", () => {
+    const worker = readRepo("workers/voice-worker/main.mjs");
+    const delivery = readRepo("workers/voice-worker/delivery-context.mjs");
+    const tts = readRepo("workers/voice-worker/speaches-tts.mjs");
+
+    expect(worker).toContain("createCallDeliveryContext");
+    expect(worker).toContain("beforeSynthesize");
+    expect(worker).toContain("hookContext.callId");
+    expect(worker).toContain("recordDelivery");
+    expect(worker).toContain("clearDelivery");
+    expect(delivery).toContain("encodeVoiceDeliveryEnvelope");
+    expect(delivery).toContain("resolveDeliverySpeed");
+    expect(tts).toContain("decodeVoiceDeliveryEnvelope");
+    expect(tts).not.toContain("currentEmotion");
+    expect(tts).not.toContain("voiceSettings =");
+  });
+
   it("keeps Lumenva as the brain and Patter as a media shell", () => {
     const worker = readRepo("workers/voice-worker/main.mjs");
 
