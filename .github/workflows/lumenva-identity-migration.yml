@@ -4,13 +4,17 @@ on:
   push:
     branches:
       - refactor/lumenva-identity-purge-2026-09-14
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
 
 jobs:
   migrate:
-    if: ${{ !contains(github.event.head_commit.message, '[identity-purge-complete]') }}
+    if: ${{ github.event_name == 'pull_request' || !contains(github.event.head_commit.message, '[identity-purge-complete]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -65,7 +69,6 @@ jobs:
               ("deskcomm-crm", "lumenva-crm"),
               ("DESKCOMM_", "LUMENVA_"),
           ]
-
           old_word = re.compile(r"deskcomm", re.IGNORECASE)
 
           def replace_word(match: re.Match[str]) -> str:
@@ -79,12 +82,9 @@ jobs:
           def transform(value: str) -> str:
               for old, new in explicit:
                   value = value.replace(old, new)
-              value = old_word.sub(replace_word, value)
-              return value
+              return old_word.sub(replace_word, value)
 
-          tracked = run("git", "ls-files", "-z").split("\0")
-          tracked = [p for p in tracked if p]
-
+          tracked = [p for p in run("git", "ls-files", "-z").split("\0") if p]
           moves: list[tuple[str, str]] = []
           new_to_old: dict[str, str] = {}
           for old in tracked:
@@ -101,8 +101,7 @@ jobs:
               Path(new).parent.mkdir(parents=True, exist_ok=True)
               subprocess.check_call(["git", "mv", old, new])
 
-          tracked = run("git", "ls-files", "-z").split("\0")
-          tracked = [p for p in tracked if p]
+          tracked = [p for p in run("git", "ls-files", "-z").split("\0") if p]
           changed = 0
           skipped_binary = []
           for name in tracked:
