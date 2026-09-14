@@ -19,26 +19,25 @@ describe("voice personality ownership boundary", () => {
     expect(route).toContain("createVoiceTurnService");
   });
 
-  it("requires canonical Product Agents to own provider-neutral conversation style", () => {
-    const contracts = read("lib/agent-engine/contracts/agent-os.ts");
-    const atendimento = read("lib/agent-engine/product-agents/atendimento.ts");
-    const sales = read("lib/agent-engine/product-agents/sales.ts");
-    const retention = read("lib/agent-engine/product-agents/retention.ts");
-
-    expect(contracts).toContain("AgentConversationStyle");
-    expect(contracts).toContain("conversationStyle");
-    expect(atendimento).toContain("conversationStyle");
-    expect(sales).toContain("conversationStyle");
-    expect(retention).toContain("conversationStyle");
+  it("keeps provider-neutral conversation style beside canonical Product Agents", () => {
+    const styles = read("lib/agent-engine/product-agents/conversation-style.ts");
+    expect(styles).toContain("AgentConversationStyle");
+    expect(styles).toContain("atendimento");
+    expect(styles).toContain("sales");
+    expect(styles).toContain("retention");
+    expect(styles).not.toContain("getpatter");
+    expect(styles).not.toContain("ElevenLabs");
   });
 
-  it("requires per-turn delivery metadata to stay in the canonical voice runtime", () => {
+  it("keeps per-turn delivery metadata in the canonical voice runtime", () => {
     const turnService = read("lib/voice/runtime/turn-service.ts");
     const kernelRuntime = read("lib/voice/runtime/kernel-runtime.ts");
 
     expect(turnService).toContain("VoiceDeliveryStyle");
     expect(turnService).toContain("resolveVoiceDeliveryStyle");
-    expect(kernelRuntime).toContain("conversationStyle");
+    expect(turnService).toContain("classifySentiment");
+    expect(kernelRuntime).toContain("getProductAgentConversationStyle");
+    expect(kernelRuntime).toContain("Conversation style affects wording and tone only");
   });
 
   it("does not implement the new feature in the deprecated legacy AI runtime", () => {
