@@ -20,6 +20,7 @@ export interface GovernedVoiceOutboundDeps {
     goal: string;
   }): Promise<OutboundOpeningResult>;
   dial(input: {
+    organizationId: string;
     endpoint: string;
     voiceCallId: string;
     toE164: string;
@@ -75,7 +76,13 @@ export function createGovernedVoiceOutboundService(deps: GovernedVoiceOutboundDe
       }
 
       try {
-        await deps.dial({ endpoint: worker.endpoint, voiceCallId, toE164, firstMessage });
+        await deps.dial({
+          organizationId: input.organizationId,
+          endpoint: worker.endpoint,
+          voiceCallId,
+          toE164,
+          firstMessage,
+        });
       } catch {
         await deps.markFailed(input.organizationId, voiceCallId, "voice_worker_dial_failed");
         return { kind: "blocked", reason: "voice_worker_dial_failed", voiceCallId };
