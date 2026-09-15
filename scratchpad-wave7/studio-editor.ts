@@ -1,4 +1,4 @@
-import { validateAIEditRequest, type ContextPack, type PermissionLevel, type RiskLevel } from "./context-pack";
+import { validateAIEditRequest, type ContextPack, type PermissionLevel, type RiskLevel } from "../apps/crm/lib/studio/context-pack";
 
 export type LayerRef = {
   layer_id: string;

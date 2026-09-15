@@ -12,7 +12,7 @@ describe("contrato de ambiente de runtime", () => {
   });
 
   it("expõe somente o valor já validado pelo schema", () => {
-    const script = read("app/public-env-script.tsx");
+    const script = read("apps/crm/app/public-env-script.tsx");
 
     expect(script).toContain("CONVERSATION_ARCHIVE_V1: env.CONVERSATION_ARCHIVE_V1");
     expect(script).not.toContain("process.env.CONVERSATION_ARCHIVE_V1");
