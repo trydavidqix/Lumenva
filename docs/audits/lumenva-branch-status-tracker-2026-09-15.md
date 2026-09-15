@@ -295,3 +295,29 @@ O grupo permanece aberto até o Codex Cloud executar os testes e typecheck; as v
 | business-os/phase-1-http-2026-09-11 | Migrations | remediation/entitlements-billing-migrations-2026-09-15 | aplicado, teste real pendente | commit cf511bbc; declaração .mjs.d.ts restaurada |
 
 O grupo não é considerado fechado: a execução local de pnpm tentou resolver pacotes em registry.npmjs.org e falhou repetidamente por DNS. Gate obrigatório no Codex Cloud: pnpm install --frozen-lockfile e, depois, os comandos completos desta página.
+## Pendência CRM_OPERATOR_AGENT_DEFINITION — verificação — 2026-09-15
+
+Pendência encerrada sem alteração de código. A inspeção do worktree da branch
+`remediation/wave2-agent-birth-2026-09-15` encontrou:
+
+```text
+apps/crm/lib/agent-engine/product-agents/definitions.ts:4:
+import { CRM_OPERATOR_AGENT_DEFINITION } from './crm-operator';
+apps/crm/lib/agent-engine/product-agents/definitions.ts:26:
+['crm_operator', CRM_OPERATOR_AGENT_DEFINITION],
+```
+
+O `git show d2bd8cb4 -- apps/crm/lib/agent-engine/product-agents/definitions.ts`
+confirmou que o commit adicionou `FIRST_BIRTH_CONTRACTS` e substituiu somente os
+imports de `SALES_AGENT_DEFINITION`/`SUPERVISOR_AGENT_DEFINITION`; o import de
+`CRM_OPERATOR_AGENT_DEFINITION` e sua entrada no registry já estavam preservados.
+O `rg` no repositório encontrou ainda a definição exportada em
+`apps/crm/lib/agent-engine/product-agents/crm-operator.ts`, reexport em `index.ts`,
+uso em `verification.ts`/`evals/assertions.ts` e cobertura em
+`tests/unit/agent-product-crm-operator.test.ts` e
+`tests/unit/agent-product-definitions.test.ts`.
+
+Conclusão: não havia import quebrado para restaurar; a lista de agentes inclui
+`crm_operator` e a constante está referenciada corretamente. Vitest não foi
+executado porque o runner continua ausente neste sandbox; a confirmação acima é
+de Git/diff/grep estáticos. Nenhum arquivo de produção foi alterado.
