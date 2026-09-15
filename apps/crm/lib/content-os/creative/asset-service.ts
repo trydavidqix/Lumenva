@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import type { AssetProvenance } from "./asset-provenance";
 
 export type ContentAsset = {
   id: string;
@@ -11,6 +12,8 @@ export type ContentAsset = {
   byte_size: number;
   checksum: string | null;
   origin_provider: string | null;
+  license: string | null;
+  provenance: AssetProvenance | null;
   metadata: Record<string, unknown>;
 };
 
@@ -38,12 +41,12 @@ export function assertSafeAssetUrl(value: string): URL {
   return url;
 }
 
-export async function registerContentAsset(repository: AssetRepository, input: { organizationId: string; assetId?: string; assetType: string; mimeType: string; bytes: Uint8Array; contentItemId?: string | null; originProvider?: string | null; metadata?: Record<string, unknown> }): Promise<ContentAsset> {
+export async function registerContentAsset(repository: AssetRepository, input: { organizationId: string; assetId?: string; assetType: string; mimeType: string; bytes: Uint8Array; contentItemId?: string | null; originProvider?: string | null; license?: string | null; provenance?: AssetProvenance | null; metadata?: Record<string, unknown> }): Promise<ContentAsset> {
   const extension = MIME_TYPES[input.mimeType];
   if (!extension || !input.assetType.trim()) throw new ContentAssetValidationError("Unsupported asset type or MIME type.");
   if (input.bytes.byteLength > MAX_BYTES) throw new ContentAssetValidationError("Asset exceeds the maximum size.");
   const assetId = input.assetId ?? randomUUID();
   const storagePath = contentAssetObjectKey({ organizationId: input.organizationId, assetId, extension });
   const checksum = createHash("sha256").update(input.bytes).digest("hex");
-  return repository.create({ organization_id: input.organizationId, id: assetId, content_item_id: input.contentItemId ?? null, asset_type: input.assetType, storage_bucket: CONTENT_ASSET_BUCKET, storage_path: storagePath, mime_type: input.mimeType, byte_size: input.bytes.byteLength, checksum, origin_provider: input.originProvider ?? null, metadata: input.metadata ?? {} });
+  return repository.create({ organization_id: input.organizationId, id: assetId, content_item_id: input.contentItemId ?? null, asset_type: input.assetType, storage_bucket: CONTENT_ASSET_BUCKET, storage_path: storagePath, mime_type: input.mimeType, byte_size: input.bytes.byteLength, checksum, origin_provider: input.originProvider ?? null, license: input.license ?? null, provenance: input.provenance ?? null, metadata: input.metadata ?? {} });
 }
