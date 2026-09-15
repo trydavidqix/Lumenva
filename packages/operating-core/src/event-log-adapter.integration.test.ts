@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import pg from "../../../apps/crm/node_modules/pg";
 import { createPostgresJobEventLogAdapter } from "./event-log-adapter";
-describe("event_log adapter PostgreSQL real", () => {
+describe.skipIf(!process.env.DATABASE_URL)("event_log adapter PostgreSQL real", () => {
   it("appends idempotently and replays only the tenant stream", async () => {
     const url=process.env.DATABASE_URL; if(!url) throw new Error("DATABASE_URL required");
     const pool=new pg.Pool({connectionString:url}); await pool.query("create table if not exists event_log (id text primary key, organization_id text not null, event_type text not null, entity_kind text not null, entity_id text not null, payload jsonb not null, metadata jsonb, created_at timestamptz default now())"); await pool.query("truncate event_log");

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { loadWorkers, persistWorker, routeResourcePersisted } from "./resource-router-persistence";
 
 const migration = join(process.cwd(), "supabase/migrations/20260913160000_resource_router_rls.sql");
-describe("Resource Router RLS (real PostgreSQL)", () => {
+describe.skipIf(!process.env.RESOURCE_ROUTER_DATABASE_URL)("Resource Router RLS (real PostgreSQL)", () => {
   it("isola workers por tenant com role sem BYPASSRLS", async () => {
     const url = process.env.RESOURCE_ROUTER_DATABASE_URL;
     if (!url) throw new Error("RESOURCE_ROUTER_DATABASE_URL_required");

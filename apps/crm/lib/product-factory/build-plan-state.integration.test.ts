@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Pool } from "pg";
 import { BuildPlanStateStore } from "./build-plan-state-store";
 
-describe("BuildPlanStateStore real PostgreSQL", () => {
+describe.skipIf(!process.env.BUILD_PLAN_DATABASE_URL)("BuildPlanStateStore real PostgreSQL", () => {
   it("reserva uma tentativa concorrente e mantém BLOCKED após restart", async () => {
     const url = process.env.BUILD_PLAN_DATABASE_URL;
     if (!url) throw new Error("BUILD_PLAN_DATABASE_URL_required");
