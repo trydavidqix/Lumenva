@@ -788,3 +788,30 @@ publicou o commit na branch remota apesar do `git push` solicitado. O diff
 continua disponível apenas na tarefa Cloud e precisa ser aplicado/publicado por
 um mecanismo que preserve o commit antes de abrir o PR de CI. Nenhum merge,
 aprovação ou alteração em `main` foi feito.
+
+### Aplicação local e publicação do lockfile — 2026-09-15
+
+O diff da tarefa `task_e_6aa925c311f88324a274368d89ccc4b2` foi salvo em
+`/tmp/lockfile-regen.diff` (`1473` linhas) e `rg '^diff --git'` confirmou que
+ele contém somente `pnpm-lock.yaml`. No worktree
+`fix/lockfile-regen-2026-09-15`, `git apply --check` passou e a aplicação
+resultou em:
+
+```text
+pnpm-lock.yaml | 110 +++++----------------------------------------------------
+1 file changed, 8 insertions(+), 102 deletions(-)
+```
+
+`docs/Current-State.md` já estava modificado no worktree antes desta tarefa e
+não foi incluído no commit. O lockfile foi commitado em `859af05b` com a
+mensagem `chore(deps): regenerate pnpm lockfile`.
+
+Evidência de publicação:
+
+```text
+fec2d253..859af05b  HEAD -> fix/lockfile-regen-2026-09-15
+859af05b3fbdaa65f52fe9eb07b3f68f331a4afd9 refs/heads/fix/lockfile-regen-2026-09-15
+```
+
+PR de CI aberto, sem merge ou aprovação:
+`https://github.com/trydavidqix/Lumenva/pull/62`.
