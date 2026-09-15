@@ -133,6 +133,18 @@ No ambiente Codex Cloud, por worktree/branch: pnpm install --frozen-lockfile; pn
 
 Até a execução desses comandos, nenhuma linha M/P é considerada tratada ou consolidada.
 
+## Ledger de remediação — Wave 1–5
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| wave1/job-engine-persistence-2026-09-13 | Wave 1 Job Engine | remediation/waves-1-9-2026-09-15 | aplicado, teste real pendente | commit ad2dc7df; job-engine.ts/test.ts adicionados |
+| wave2/agent-birth-2026-09-12 | Wave 2 Agent Birth | remediation/waves-1-9-2026-09-15 | aplicado, teste real pendente | commit 1260125e; teste Postgres descartável adicionado |
+| wave3/session-runtime-skeleton-2026-09-12 | Wave 3 Session Runtime | remediation/waves-1-9-2026-09-15 | já coberto pelo baseline | cherry-pick vazio após reconciliação |
+| wave4/browsermesh-wake-2026-09-12 | Wave 4 BrowserMesh | remediation/waves-1-9-2026-09-15 | já coberto pelo baseline | cherry-pick vazio após reconciliação |
+| wave5/command-center-2026-09-12 | Wave 5 Command Center | remediation/waves-1-9-2026-09-15 | aplicado, teste real pendente | commit 6f645e29; RLS integration test preservado |
+
+O grupo permanece aberto até Vitest/Postgres/typecheck no Codex Cloud; validações locais package_json=valid, conflict_markers=none e git diff --check=pass.
+
 ## Ledger de remediação — LGPD/PAdES
 
 | Branch original | Grupo | Branch isolada | Estado | Evidência |
