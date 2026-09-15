@@ -8,7 +8,7 @@ const otherTenantId = "00000000-0000-4000-8000-000000000002";
 const userId = "00000000-0000-4000-8000-000000000099";
 const definition = { id: "sales", version: "1.0.0", status: "CERTIFIED" as const, identity: "Sales", mission: "Qualify", boundaries: ["No send"], authority: "P0", escalation: "Human" };
 function input(store: InMemoryAgentBirthAuthorityStore) { return { definition, origin: { actor_id: "author", tenant_id: tenantId }, expectedTenantId: tenantId, approval: { approval_id: "ap-1", approver_id: "reviewer", tenant_id: tenantId, status: "APPROVED" as const, approved_at: "2026-09-13T00:00:00Z", policy_version: "p1" }, authorityStore: store }; }
-describe("durable registry migration RLS", () => {
+describe.skipIf(!process.env.DATABASE_URL)("durable registry migration RLS", () => {
   it("applies migration 0168 and proves authenticated cross-tenant isolation", async () => {
     const url = process.env.DATABASE_URL; if (!url) throw new Error("DATABASE_URL required");
     const admin = new pg.Pool({ connectionString: url });

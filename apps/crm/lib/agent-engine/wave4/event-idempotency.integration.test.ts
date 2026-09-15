@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { PostgresWakeEventStore } from "./event-idempotency";
 import { dispatchWakeEvent, signWakeEvent, WakeActorRegistry, type WakePolicy, type WakeWorker } from "./event-wake";
 
-describe("BrowserMesh event idempotency against real Postgres", () => {
+describe.skipIf(!process.env.DATABASE_URL)("BrowserMesh event idempotency against real Postgres", () => {
   it("allows one concurrent wake and rejects the replay after a new store instance", async () => {
     const databaseUrl = process.env.DATABASE_URL;
     if (!databaseUrl) throw new Error("DATABASE_URL is required for this integration test");
