@@ -133,6 +133,18 @@ No ambiente Codex Cloud, por worktree/branch: pnpm install --frozen-lockfile; pn
 
 Até a execução desses comandos, nenhuma linha M/P é considerada tratada ou consolidada.
 
+## Ledger de remediação — Wave 10–15
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| wave10/mobile-delivery-2026-09-13 | Wave 10 Delivery | remediation/waves-10-15-2026-09-15 | aplicado, teste real pendente | commit 4d19b14d; delivery gate persistido e testes adicionados |
+| wave11/consent-registry-2026-09-12 | Wave 11 Consent | remediation/waves-10-15-2026-09-15 | já coberto pelo baseline | cherry-pick vazio após comparação |
+| wave12/marketing-content-2026-09-13 | Wave 12 Content | remediation/waves-10-15-2026-09-15 | aplicado, teste real pendente | commit c5ba644c; TOCTOU consent integration test adicionado |
+| wave13/source-registry-rls-proof-2026-09-13 | Wave 13 Source Registry | remediation/waves-10-15-2026-09-15 | aplicado, teste real pendente | commit 8a365c90; RLS integration test adicionado |
+| wave15/resource-router-2026-09-13 | Wave 15 Resource Router | remediation/waves-10-15-2026-09-15 | aplicado, teste real pendente | commit 48b56ddf; router e teste de input malformado adicionados |
+
+O subgrupo permanece aberto até Vitest/typecheck no Codex Cloud. Validações locais: package_json=valid, conflict_markers=none e git diff --check=pass.
+
 ## Ledger de remediação — Wave 6–9
 
 | Branch original | Grupo | Branch isolada | Estado | Evidência |
