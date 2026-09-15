@@ -717,3 +717,48 @@ para outro importer/dependência, então deve ser aberta uma branch dedicada
 `--frozen-lockfile` em ambiente com rede real, revisado o diff e só depois
 reexecutados os 16 gates. O erro concreto do Cloud deve ser preservado antes de
 qualquer regeneração; sem ele, alterar o lockfile seria especulativo.
+## Lockfile regeneration probe via Codex Cloud — 2026-09-15
+
+Foi criada a branch isolada `fix/lockfile-regen-2026-09-15` a partir de
+`origin/main` no SHA `fec2d25348d357e9091c2d5e11fbfd7ee7427208`. O checkout
+administrativo de `main` estava com `HEAD` zerado e não foi tocado; a ref remota
+`origin/main` foi usada por ser a única base válida confirmada, com o mesmo SHA
+do remoto.
+
+O comando autorizado foi submetido ao Codex Cloud:
+
+```text
+codex cloud exec --env "trydavidqix/Lumenva" --branch "fix/lockfile-regen-2026-09-15" "pnpm install && git diff --stat pnpm-lock.yaml && git add pnpm-lock.yaml && git commit -m 'chore(deps): regenerate pnpm lockfile' || echo NO_CHANGES"
+```
+
+Tarefa real: `task_e_6aa923c452b083249e0657976f17a338`.
+
+| Verificação | Resultado real |
+|---|---|
+| submissão `codex cloud exec` | exit `0`, tarefa criada sem erro de billing/branch |
+| status inicial consultado | `[PENDING] Regenerate pnpm lockfile` |
+| status final | `[READY] Regenerate pnpm lockfile`, `+6/-100`, 1 arquivo |
+| `codex cloud diff` | diff somente em `pnpm-lock.yaml` |
+| ref remota após a tarefa | permaneceu em `fec2d253`; nenhum commit Cloud foi publicado na branch remota |
+
+### Conteúdo do diff Cloud para revisão
+
+O diff não foi aplicado localmente. As mudanças observadas foram:
+
+- importer `apps/crm`: `@next/eslint-plugin-next` passou de
+  `16.3.0` para `16.3.0(eslint@9.39.5(jiti@2.7.0))`;
+- importer `apps/crm`: `eslint-plugin-react-hooks` passou de `7.1.1` para
+  `7.1.1(eslint@9.39.5(jiti@2.7.0))`;
+- referências de `fdir`/`picomatch` foram atualizadas de `picomatch@4.0.5` para
+  `picomatch@4.0.7` em snapshots relacionados;
+- foram removidos aproximadamente 100 metadados `libc: [glibc]`/`libc: [musl]`
+  de pacotes opcionais multiplataforma (`@img`, `@napi-rs`, `@next/swc`,
+  `@rollup`, `@swc`, `@tailwindcss`, `@unrs` e `lightningcss`).
+
+Conclusão: o `pnpm install` Cloud identificou uma regeneração real do lockfile;
+isso confirma que o lockfile original estava desatualizado para a resolução
+atual do pnpm, embora `@next/eslint-plugin-next` já estivesse presente. Porém o
+resultado ainda é somente um diff da tarefa Cloud: a branch remota não recebeu
+commit (`git ls-remote origin refs/heads/fix/lockfile-regen-2026-09-15` retornou
+`fec2d253`). Revisão/aplicação/publicação do diff permanece pendente de decisão;
+nenhum lockfile foi alterado neste worktree de remediação.
