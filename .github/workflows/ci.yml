@@ -23,33 +23,33 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Typecheck
-        run: pnpm typecheck
+        run: pnpm --filter lumenva-crm typecheck
 
       - name: Lint
-        run: pnpm lint
+        run: pnpm --filter lumenva-crm lint
 
       # Invariante 1 de docs/doctrine/restricao-de-canal.md: nenhuma feature
       # nomeia um provider. Step próprio (e não só dentro de `gov:verify`)
       # porque é o CI que gateia PR — `gov:verify` não é invocado por nenhum
       # workflow, e mecanismo que não roda no gate não protege nada.
       - name: Channel provider leak
-        run: pnpm lint:channels
+        run: pnpm --filter lumenva-crm lint:channels
 
       # O harness é multi-superfície (CLAUDE.md, AGENTS.md, skills Claude/Codex,
       # rules e artefatos ECC). Este gate impede regressões de instruções antigas
       # e garante que a doutrina modular continua versionável e apontando para a
       # mesma fonte canônica.
       - name: Harness consistency
-        run: pnpm test:harness && pnpm harness:check
+        run: pnpm --filter lumenva-crm test:harness && pnpm --filter lumenva-crm harness:check
 
       - name: Unit tests
-        run: pnpm test:unit
+        run: pnpm --filter lumenva-crm test:unit
 
       # Scripts do kit self-host num repo git descartável (docker/crontab
       # dublados). É o único gate que exercita o update.sh — um erro aqui
       # rebobina a instalação de quem hospeda, e nenhum teste TS o veria.
       - name: Kit self-host (bash)
-        run: pnpm test:shell
+        run: pnpm --filter lumenva-crm test:shell
 
   # Gate de isolamento multi-tenant + invariantes de governança.
   # Job separado de propósito: roda em paralelo ao verify (não atrasa o feedback
@@ -74,4 +74,4 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: RLS isolation + governance invariants
-        run: pnpm test:db
+        run: pnpm --filter lumenva-crm test:db
