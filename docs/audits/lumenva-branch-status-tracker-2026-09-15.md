@@ -176,6 +176,14 @@ O grupo permanece aberto até typecheck/lint/testes no Codex Cloud. Conflitos fo
 
 O subgrupo permanece aberto até typecheck/lint/testes no Codex Cloud. Validações locais: package_json=valid, migration_policy_syntax=pass, conflict_markers=none e git diff --check=pass.
 
+## Ledger de remediação — Automation/Identity
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| automation/lumenva-identity-trigger-2026-09-14 | Automation/Identity | remediation/automation-identity-2026-09-15 | aplicado, verificação externa pendente | commit ce05ffa4; trigger doc versionado |
+
+O grupo depende de runner/credenciais externas para prova operacional; localmente package_json=valid, conflict_markers=none e git diff --check=pass.
+
 | wave10/mobile-compliance-guardian-2026-09-13 | Wave 10 Mobile Compliance | remediation/waves-10-15-2026-09-15 | aplicado, teste real pendente | commit 4d34220c; Mobile Releases registrado na navegação |
 | wave14-15/evals-autonomy-2026-09-12 | Wave 14–15 Evals | remediation/waves-10-15-2026-09-15 | já coberto pelo baseline | cherry-pick vazio após comparação; não houve alteração descartada |
 
