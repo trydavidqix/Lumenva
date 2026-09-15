@@ -7,6 +7,7 @@ import {
 } from '../autonomy/evidence';
 import type { ApprovalStore } from '../policies/approval';
 import { createApprovalRequest } from '../policies/approval';
+import type { AuthorizeModuleInput, AuthorizationDecision } from '@/lib/entitlements/authorize-module';
 import {
   evaluateToolPolicy,
   type AgentAutonomyLevel,
