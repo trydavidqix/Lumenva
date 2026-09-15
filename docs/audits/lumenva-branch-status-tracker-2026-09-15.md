@@ -514,6 +514,43 @@ Investigação confirmou o padrão de persistência existente: `createAdminClien
 
 GREEN estático executado: `PASS adapter production static contract` e `PASS adapter tests contain load and concurrent CAS assertions`; `git diff --check` passou. O Vitest real não está disponível neste sandbox (`node_modules` ausente/DNS npm bloqueado), portanto o gate end-to-end permanece pendente no Codex Cloud/CI: `pnpm install` e `pnpm --filter lumenva-crm exec vitest run lib/agent-engine/persistence/supabase-approval-store.test.ts`.
 
+## Varredura sistêmica de policies RLS sobrepostas — 2026-09-15
+
+Foi feita análise somente leitura de todas as `supabase/migrations/*.sql`, em ordem lexicográfica de migration, acompanhando `create policy`/`drop policy` por tabela e verificando sobreposição de operações (`for all` cobre `insert` e `update`).
+
+Comando de inventário executado:
+
+```bash
+rg -n -i "^(drop policy|create policy)|^\s*(drop policy|create policy)" supabase/migrations --glob '*.sql'
+```
+
+Análise histórica de sobreposição retornou exatamente:
+
+```text
+OVERLAP public.organization_plan new all organization_plan_tenant_all@20260915090000_0170_tenant_rls_hardening.sql
+  existing all organization_plan_platform_write@20260911100000_0161_entitlements_catalog.sql
+OVERLAP public.entitlement_events new all entitlement_events_tenant_all@20260915090000_0170_tenant_rls_hardening.sql
+  existing insert entitlement_events_insert@20260911100000_0161_entitlements_catalog.sql
+HISTORICAL_OVERLAP_EVENTS=2
+```
+
+### Casos encontrados, já excluídos conforme solicitado
+
+| Tabela | Migrations | Evidência da sobreposição | Por que a policy antiga não foi removida |
+|---|---|---|---|
+| `organization_plan` | `0161` → `0170` → `0172` | `0161` cria `organization_plan_platform_write for all` com `fn_is_platform_admin()`; `0170` cria `organization_plan_tenant_all for all` com pertencimento à organização | `0170` só faz `drop policy if exists organization_plan_tenant_all`, isto é, o nome da policy nova; não remove `organization_plan_platform_write` antes de criar a segunda policy. Corrigido por `0172`, que remove ambas e recria select + write platform-only. |
+| `entitlement_events` | `0161` → `0170` → `0172` | `0161` cria `entitlement_events_insert for insert` tenant-scoped; `0170` cria `entitlement_events_tenant_all for all` tenant-scoped | `0170` não faz drop de `entitlement_events_insert` antes de criar a policy `for all`; como `for all` inclui insert/update/delete, a combinação altera a autoridade efetiva. Corrigido por `0172`, que remove ambas e recria select + insert append-only. |
+
+### Resultado fora das exceções
+
+Após excluir `organization_plan`/`entitlement_events` (corrigidos em `0172`) e `approval_requests` (corrigido em `0174`), a análise de policies ativas retornou:
+
+```text
+DUPLICATE_TABLE_OPERATION_GROUPS=0
+```
+
+Portanto não foram encontrados novos candidatos reais ao padrão “policy tenant-wide permissiva coexistindo com policy restritiva sem drop prévio”. As múltiplas policies restantes em tabelas como `conversations`, `messages`, `crm_leads` e `voice_sip_connections` são operações distintas (`select`/`insert`/`update`), não sobreposições adicionais de `for all` com escopo conflitante. Nenhuma migration ou policy foi alterada nesta varredura.
+
 ## Verificação de limpeza sem alteração de conteúdo
 
 Em 2026-09-15 foi executado `git worktree list --porcelain`: todos os 16 worktrees de remediação e os 20 worktrees de etapas estão registrados; não há diretório `.worktree-*` órfão no workspace. A varredura de `git status --porcelain` em todos os worktrees encontrou somente a modificação preexistente `docs/Current-State.md`. Os diretórios `scratchpad-*` presentes em branches de Wave são arquivos versionados e foram preservados. A árvore `main` possui `.DS_Store`, `.obsidian/` e `Lumenva-Knowledge/` não versionados, fora do escopo desta tarefa; não foram tocados. Nenhum cleanup destrutivo foi executado.
