@@ -349,17 +349,17 @@ Foi investigada a possibilidade de executar testes reais sem baixar dependência
 
 | Comando | Resultado real |
 |---|---|
-| `pnpm install --offline --frozen-lockfile --ignore-scripts` | `rc=1`; aborta antes de instalar porque `pnpm-lock.yaml` não contém `importers["packages/skill-registry"]`, embora o workspace e o package existam. Este é um bloqueio de lockfile independente de DNS e precisa ser corrigido/validado antes dos gates Cloud. |
-| `bash apps/crm/tests/shell/update-guard.test.sh` | `rc=1`; 18 asserções falharam. A causa primária da suíte é de fixture: ela copia `_common.sh`, `update.sh` e `agent.sh`, mas não copia `_env-alias.sh`, que `_common.sh` importa; por isso vários cenários ficam inconclusivos. Há também uma falha independente de quoting em senha com aspa simples (`escreveu: [se'nha]`, `voltou: [se"'"nha]`) que requer investigação própria antes de qualquer correção. |
+| `pnpm install --offline --frozen-lockfile --ignore-scripts` (antes da correção) | `rc=1`; abortava porque faltavam os importers de `packages/skill-registry` e `packages/tool-registry`. Correção aplicada em `f6e4400d`. |
+| `bash apps/crm/tests/shell/update-guard.test.sh` | Primeira execução: `rc=1`, 18 asserções falharam porque a fixture não copiava `_env-alias.sh`; correção da fixture em `dda862f9`. Segunda execução: `rc=0`, zero falhas, `OK — todas as provas passaram`. |
 | `node --test apps/crm/scripts/check-harness-consistency.test.mjs` | `rc=0`; 12 testes, 12 pass, 0 fail. Este é o único teste real executado com sucesso nesta sondagem, sem dependências externas. |
 | `pg_isready` | `rc=2`; `/tmp:5432 - no response`; não há Postgres local pronto. |
 | `supabase status` | `rc=1`; falhou ao gravar `/Users/david/.supabase/telemetry.json.tmp...` com `EPERM`; não é prova de serviço ativo. Docker também não está instalado (`docker=absent`). |
 
-Conclusão: existe uma prova Node local útil e aprovada (12/12), mas não há runner Vitest nem banco local disponível. O lockfile inconsistente deve ser tratado como pré-condição dos 16 comandos Cloud; nenhum resultado Cloud foi marcado como sucesso com base nesta sondagem.
+Conclusão: existem duas provas locais úteis e aprovadas (harness Node 12/12 e update-guard completo); não há runner Vitest nem banco local disponível. O lockfile agora está estruturalmente consistente, mas o cache offline não contém metadata de terceiros; nenhum resultado Cloud foi marcado como sucesso com base nesta sondagem.
 
 ### Atualização do lockfile e pré-condição Cloud
 
-Comparação dos cinco manifests de packages com `pnpm-lock.yaml`: `packages/agent-runtime`, `packages/prompt-compiler` e `packages/operating-core` já tinham importer; `packages/skill-registry` e `packages/tool-registry` estavam ausentes. Foram adicionados somente estes dois importers vazios, porque ambos declaram apenas `typecheck` e nenhuma dependência:
+Comparação dos cinco manifests de packages com `pnpm-lock.yaml`: `packages/agent-runtime`, `packages/prompt-compiler` e `packages/operating-core` já tinham importer; `packages/skill-registry` e `packages/tool-registry` estavam ausentes e foram adicionados em `f6e4400d`. Foram adicionados somente estes dois importers vazios, porque ambos declaram apenas `typecheck` e nenhuma dependência:
 
 ```yaml
   packages/skill-registry: {}
@@ -385,7 +385,11 @@ loaded:     se"'"nha
 loaded_bytes: 73 65 22 27 22 6e 68 61
 ```
 
-Causa raiz: o encoder usa o escape POSIX `'''`, enquanto o decoder atual transforma a sequência em artefatos de aspas duplas (`"'"`) em vez de remover somente a camada sintática. Impacto confirmado: corrupção silenciosa de segredos com aspa simples, podendo causar falha de autenticação/connection string depois, longe do parser. O caminho `load_env` não usa `eval`/`source`, então esta reprodução não demonstrou execução de código; ainda assim é uma vulnerabilidade de integridade/secreto e qualquer consumidor que volte a interpretar o valor como shell ampliaria o risco. Correção deliberadamente não aplicada nesta etapa, conforme pedido; requer teste RED/GREEN dedicado para round-trip antes da implementação.
+Causa raiz: o encoder usa o escape POSIX `'''`, enquanto o decoder antigo transformava a sequência em artefatos de aspas duplas (`"'"`) em vez de remover somente a camada sintática. Impacto confirmado: corrupção silenciosa de segredos com aspa simples, podendo causar falha de autenticação/connection string depois, longe do parser. O caminho `load_env` não usa `eval`/`source`, então esta reprodução não demonstrou execução de código; ainda assim era uma vulnerabilidade de integridade/secreto. Correção aplicada em `3d8b07bf`: decoder por varredura byte a byte que reconhece exatamente `\\'` na forma POSIX emitida por `envq`. TDD real: RED `rc=1` com `expected=[se'nha] actual=[se"'"nha]`; GREEN `rc=0` com `round_trip=[se'nha]`. A suíte ampla posterior também confirmou `com aspa simples` verde.
+
+## Verificação das 44 refs F após remediação
+
+Checagem independente executada sem reprocessar F: `F_rows=44`, `sha_missing=0`, `ancestor_of_main=39`, `distinct_trees=37`, `duplicate_tree_groups=5`, `non_ancestor_F=5`, `non_ancestor_covered_by_duplicate_tree=5`, `non_ancestor_unexplained=0`. As 39 refs ancestrais não possuem divergência contra `origin/main`; as 5 restantes são integralmente cobertas por cinco grupos de árvores duplicadas já identificados. A classificação F permanece consistente e nenhuma F foi convertida em M/P.
 
 ## Verificação de limpeza sem alteração de conteúdo
 
