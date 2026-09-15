@@ -7,7 +7,7 @@ const read = (path: string) => readFileSync(join(root, path), "utf8");
 
 describe("contrato de ambiente de runtime", () => {
   it("valida e documenta a flag pública de archive", () => {
-    expect(read("lib/env.ts")).toMatch(/CONVERSATION_ARCHIVE_V1:\s*z\.\s*\n?\s*\.enum\(\[\"true\", \"false\"\]\)/);
+    expect(read("lib/env.ts")).toMatch(/CONVERSATION_ARCHIVE_V1:\s*z\s*\.enum\(\[\"true\", \"false\"\]\)/);
     expect(read(".env.example")).toContain("CONVERSATION_ARCHIVE_V1=false");
   });
 
