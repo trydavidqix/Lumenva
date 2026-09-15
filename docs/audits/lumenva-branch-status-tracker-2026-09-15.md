@@ -306,3 +306,32 @@ O grupo não é considerado fechado: a execução local de pnpm tentou resolver 
 | business-os/wave-3-session-runtime-mvp-2026-09-11 | Session Runtime service | remediation/wave3-session-runtime-2026-09-15 | aplicado, teste real pendente | referência exata corrigida; commit 1d41987a adicionou providers/service e testes |
 
 A correção elimina aliases de data/nome que deixavam quatro referências M/P fora do ledger automatizado; nenhuma linha original foi removida.
+
+## Execução consolidada no Codex Cloud — 16 branches de remediação
+
+Executar cada linha a partir da raiz do worktree/branch indicado. Cada linha é um comando composto independente: instala exatamente o lockfile e em seguida executa o teste específico do grupo. O resultado deve ser anexado ao ledger correspondente; `not_run_local` não deve ser substituído por sucesso sem saída real do Codex Cloud.
+
+| # | Branch de remediação | Comando exato Codex Cloud |
+|---:|---|---|
+| 1 | `remediation/automation-identity-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm test:unit` |
+| 2 | `remediation/ai-creator-commerce-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm test:unit` |
+| 3 | `remediation/business-os-audit-stripe-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm exec vitest run --config vitest.config.ts lib/billing/stripe-contract.test.ts lib/billing/stripe-route-contract.test.ts` |
+| 4 | `remediation/business-os-cli-entitlements-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm exec vitest run --config vitest.config.ts lib/entitlements/boundary.test.ts lib/cli/lumenva.test.ts lib/mcp/tools/entitlements.test.ts` |
+| 5 | `remediation/customer360-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm test:fast` |
+| 6 | `remediation/entitlements-billing-migrations-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm test:db` |
+| 7 | `remediation/lgpd-pades-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm test:pades` |
+| 8 | `remediation/remaining-entitlements-operating-core-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm exec vitest run --config vitest.config.ts lib/agent-engine/tools/entitlement-dispatch.test.ts lib/agent-engine/product-agents/birth.test.ts` |
+| 9 | `remediation/wave2-agent-birth-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm exec vitest run --config vitest.config.ts lib/agent-engine/agent-birth/agent-definition-registry-pg.integration.test.ts` |
+| 10 | `remediation/wave3-session-runtime-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm exec vitest run --config vitest.config.ts lib/agent-engine/session-runtime/service.test.ts && pnpm --filter @lumenva/agent-runtime typecheck` |
+| 11 | `remediation/waves-1-9-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm test:db` |
+| 12 | `remediation/waves-6-9-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm test:db` |
+| 13 | `remediation/waves-10-15-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm exec vitest run --config vitest.config.ts tests/unit/product-factory-delivery.test.ts lib/memory/resource-router.test.ts` |
+| 14 | `remediation/business-os-operating-core-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm test:unit` |
+| 15 | `remediation/business-os-reconcile-equivalence-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm exec vitest run --config vitest.config.ts lib/agent-engine/contracts/wave1-policy-edges.test.ts` |
+| 16 | `remediation/business-os-acceptance-mcp-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm test:db` |
+
+Observação: os grupos que adicionaram testes de integração Postgres usam `test:db` como comando específico porque o runner prepara o banco descartável e aplica as migrações; os testes unitários direcionados são complementares quando listados. Estes 16 comandos não substituem os gates transversais de typecheck/lint/harness do handoff.
+
+## Verificação de limpeza sem alteração de conteúdo
+
+Em 2026-09-15 foi executado `git worktree list --porcelain`: todos os 16 worktrees de remediação e os 20 worktrees de etapas estão registrados; não há diretório `.worktree-*` órfão no workspace. A varredura de `git status --porcelain` em todos os worktrees encontrou somente a modificação preexistente `docs/Current-State.md`. Os diretórios `scratchpad-*` presentes em branches de Wave são arquivos versionados e foram preservados. A árvore `main` possui `.DS_Store`, `.obsidian/` e `Lumenva-Knowledge/` não versionados, fora do escopo desta tarefa; não foram tocados. Nenhum cleanup destrutivo foi executado.
