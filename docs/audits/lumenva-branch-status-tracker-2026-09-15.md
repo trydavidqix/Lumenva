@@ -815,3 +815,57 @@ fec2d253..859af05b  HEAD -> fix/lockfile-regen-2026-09-15
 
 PR de CI aberto, sem merge ou aprovação:
 `https://github.com/trydavidqix/Lumenva/pull/62`.
+
+## Achado CI: BrowserMesh `CLAIMED` sem aspas no baseline — 2026-09-15
+
+O run real `34964317314`, no job `invariants`, confirmou a falha durante
+`pnpm --filter lumenva-crm test:db`, ao aplicar `supabase/baseline.sql`:
+
+```text
+psql:<stdin>:10762: ERROR:  column "claimed" does not exist
+LINE 6: status text not null check (status in (CLAIMED)),
+HINT: Perhaps you meant to reference the column "browsermesh_event_idempotency.claimed_at".
+```
+
+A investigação estática separou a migration do artefato de instalação:
+
+```text
+supabase/migrations/20260913100000_browsermesh_event_idempotency.sql:6:
+  status text not null check (status in ('CLAIMED')),
+supabase/baseline.sql:10758:
+  status text not null check (status in (CLAIMED)),
+```
+
+Portanto, a migration legada `20260913100000_browsermesh_event_idempotency.sql`
+está correta e não deve receber migration corretiva. O defeito confirmado é a
+cópia divergente em `supabase/baseline.sql`, que é o schema usado pelo
+`apps/crm/scripts/run-test-db.mjs` e pelo job `invariants`. Não foi criada
+migration nova nem alterada migration já commitada.
+
+### TDD e correção aplicada
+
+Foi adicionado o teste estático
+`apps/crm/tests/unit/browsermesh-claim-check-contract.test.ts`, que exige a
+forma quoted em ambos os artefatos. O RED foi reproduzido antes da correção:
+
+```text
+RED: baseline contains unquoted CLAIMED check
+```
+
+A correção mínima trocou somente `status in (CLAIMED)` por
+`status in ('CLAIMED')` no baseline. A verificação GREEN estática executada
+depois retornou:
+
+```text
+GREEN: quoted CLAIMED check present in migration and baseline; unquoted form absent
+```
+
+Commits separados:
+
+- `1cc8897a` — teste estático RED do contrato;
+- `00850abf` — correção de uma linha no `supabase/baseline.sql`.
+
+A suíte Vitest não pôde ser executada localmente: `pnpm` tentou buscar pacotes
+no `registry.npmjs.org`, mas o sandbox não resolve DNS. O CI real deve reexecutar
+`pnpm --filter lumenva-crm test:db` para confirmar a aplicação do baseline em
+Postgres; esse é o gate pendente de validação end-to-end.
