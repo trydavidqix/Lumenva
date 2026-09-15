@@ -99,7 +99,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   const secret = auth.startsWith("Bearer ") ? auth.slice(7).trim() : req.headers.get("x-cron-secret")?.trim() ?? "";
   if (!cronSecretMatches(secret)) return fail("forbidden", "Cron secret missing or invalid.", 403, { requestId });
   try { return ok(await runLearningTick(), { requestId }); }
-  catch (error) { return fail("internal_error", error instanceof Error ? error.message : "Learning worker unavailable.", 500, { requestId }); }
+  catch (error) { console.error("[content-learning.cron] failed", { requestId, error }); return fail("internal_error", "Learning worker unavailable.", 500, { requestId }); }
 }
 
 export async function POST(req: NextRequest): Promise<Response> { return GET(req); }

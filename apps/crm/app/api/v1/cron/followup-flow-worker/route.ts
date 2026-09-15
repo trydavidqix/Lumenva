@@ -69,7 +69,7 @@ async function handle(req: NextRequest): Promise<Response> {
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
     logger.error("[followup-flow-worker.cron] runFollowupTick threw", { error: detail, requestId });
-    return fail("internal_error", detail, 500, { requestId });
+    return fail("internal_error", "Follow-up worker unavailable.", 500, { requestId });
   }
 
   // Só audita tick que MEXEU em alguma coisa. Auditar toda batida enchia o

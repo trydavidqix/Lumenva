@@ -41,7 +41,8 @@ export async function handleEditorialCollection(
   } catch (error) {
     const status = error instanceof ContentOsNotFoundError ? 404 : error instanceof ContentOsValidationError ? 422 : 500;
     const code = status === 404 ? "not_found" : status === 422 ? "validation_failed" : "internal_error";
-    return fail(code, error instanceof Error ? error.message : "Content collection failed", status, { requestId });
+    console.error("[content-editorial.cron] collection failed", { requestId, error });
+    return fail(code, status === 404 ? "Editorial source not found." : status === 422 ? "Editorial request is invalid." : "Content collection failed.", status, { requestId });
   }
 }
 
@@ -114,7 +115,8 @@ export async function GET(req: NextRequest): Promise<Response> {
     }
     return ok({ dry_run: true, collections: collections.length, resumed: runs.length - started, started, runs }, { requestId });
   } catch (error) {
-    return fail("not_configured", error instanceof Error ? error.message : "Editorial repository unavailable.", 503, { requestId });
+    console.error("[content-editorial.cron] tick failed", { requestId, error });
+    return fail("not_configured", "Editorial repository unavailable.", 503, { requestId });
   }
 }
 
