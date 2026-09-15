@@ -133,6 +133,21 @@ No ambiente Codex Cloud, por worktree/branch: pnpm install --frozen-lockfile; pn
 
 Até a execução desses comandos, nenhuma linha M/P é considerada tratada ou consolidada.
 
+## Ledger de remediação — Customer 360
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| f5/autonomy-001-2026-09-10 | Autonomy/Customer 360 | remediation/customer360-2026-09-15 | aplicado, teste real pendente | commit 99d02d8f; f5-promotion.test.ts incluído |
+| f5/customer360-contacts-ui-2026-09-10 | Customer 360 UI | remediation/customer360-2026-09-15 | aplicado, teste real pendente | commit 8c38ef40; contrato de Contacts UI incluído |
+| f5/customer360-merge-followup-2026-09-10 | Customer 360 merge | remediation/customer360-2026-09-15 | aplicado, teste real pendente | commit 26087144; merge queue já existente no baseline, gate mantido |
+| f5/customer360-merge-hooks-2026-09-10 | Customer 360 merge | remediation/customer360-2026-09-15 | conteúdo redundante verificado | cherry-pick vazio após comparação; mesma implementação já presente |
+| f5/team-audit-settings-004-2026-09-10 | Team audit | remediation/customer360-2026-09-15 | aplicado, teste real pendente | commit 6875de15; schemas/audit.test.ts no fast gate |
+| f5/team-audit-settings-004-af142-2026-09-10 | Team audit | remediation/customer360-2026-09-15 | conteúdo redundante verificado | gate já continha audit.test.ts; cherry-pick vazio |
+| f5/team-settings-role-revoke-be452-2026-09-10 | Team audit | remediation/customer360-2026-09-15 | já coberto pelo baseline, teste real pendente | arquivos de revogação e testes já presentes; cherry-pick vazio |
+| f5/customer360-security-qa-2026-09-10 | Customer 360 security | remediation/customer360-2026-09-15 | documentação aplicada, teste real pendente | commit 62dd1db7; fronteira PII registrada |
+
+O grupo permanece aberto até o Codex Cloud executar os testes e typecheck; as validações locais package_json=valid, conflict_markers=none e git diff --check=pass não substituem esses gates.
+
 ## Ledger de remediação
 
 | Branch original | Grupo | Branch isolada | Estado | Evidência |
@@ -144,4 +159,3 @@ Até a execução desses comandos, nenhuma linha M/P é considerada tratada ou c
 | business-os/phase-1-http-2026-09-11 | Migrations | remediation/entitlements-billing-migrations-2026-09-15 | aplicado, teste real pendente | commit cf511bbc; declaração .mjs.d.ts restaurada |
 
 O grupo não é considerado fechado: a execução local de pnpm tentou resolver pacotes em registry.npmjs.org e falhou repetidamente por DNS. Gate obrigatório no Codex Cloud: pnpm install --frozen-lockfile e, depois, os comandos completos desta página.
-
