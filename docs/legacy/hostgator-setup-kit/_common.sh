@@ -260,7 +260,17 @@ load_env() {
         # aspa volta da releitura com quatro caracteres a mais, e o erro só
         # aparece longe daqui (o psql recusa a conexão, o login não bate) sem
         # nada apontando para o .env. Achado pelo teste de round-trip.
-        val="${val//"'\\''"/"'"}"
+        local decoded='' i=0
+        while [ "$i" -lt "${#val}" ]; do
+          if [ "${val:i:4}" = "'\\''" ]; then
+            decoded+="'"
+            i=$((i + 4))
+          else
+            decoded+="${val:i:1}"
+            i=$((i + 1))
+          fi
+        done
+        val="$decoded"
         ;;
     esac
     printf -v "$key" '%s' "$val"
