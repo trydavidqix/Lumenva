@@ -500,6 +500,20 @@ As três branches foram confirmadas por `git worktree list --porcelain`, corrigi
 
 O gap de `SessionSnapshotStore` permanece documentado separadamente: `load`/`save` não formam transição condicional e não há adapter/backend CAS no worktree. Não foi criada API fictícia nem correção parcial insegura.
 
+## ApprovalStore — persistência de produção — 2026-09-15
+
+Investigação confirmou o padrão de persistência existente: `createAdminClient()` em `apps/crm/lib/supabase/admin.ts`, query builder Supabase com `.select().eq().maybeSingle()` e UPDATE condicional já usado em `apps/crm/lib/ai/agent-command/runtime.ts`. A tabela `ai_agent_command_approvals` não é equivalente ao contrato `ApprovalStore` porque não contém todos os campos/estados necessários; por isso foi criada tabela dedicada seguindo o mesmo client.
+
+| Unidade | Resultado | Commit |
+|---|---|---|
+| Migration `0173_approval_store` | `approval_requests` com `id`, `organization_id`, `status`, `payload`, timestamps, índice pending, RLS e grants service-role | `c341b31a` |
+| Migration corretiva `0174_approval_store_update_rls` | UPDATE restrito a manager da organização ou platform admin; 0173 não foi editada | `fa14111f` |
+| Teste RED | `supabase-approval-store.test.ts` criado antes do adapter; comando estático confirmou `adapter module absent` e teste concorrente presente | `45a0a16a` |
+| Adapter | `SupabaseApprovalStore implements ApprovalStore`; `load` faz SELECT; `compareAndSet` faz UPDATE com `id` + `status` esperado + SELECT/RETURNING e retorna `true` somente com linha retornada; factory usa `createAdminClient()` | `2a51fa82` |
+| Testes | load do payload e duas chamadas concorrentes, com primeira `true` e segunda `false` | `f5ed337d` |
+
+GREEN estático executado: `PASS adapter production static contract` e `PASS adapter tests contain load and concurrent CAS assertions`; `git diff --check` passou. O Vitest real não está disponível neste sandbox (`node_modules` ausente/DNS npm bloqueado), portanto o gate end-to-end permanece pendente no Codex Cloud/CI: `pnpm install` e `pnpm --filter lumenva-crm exec vitest run lib/agent-engine/persistence/supabase-approval-store.test.ts`.
+
 ## Verificação de limpeza sem alteração de conteúdo
 
 Em 2026-09-15 foi executado `git worktree list --porcelain`: todos os 16 worktrees de remediação e os 20 worktrees de etapas estão registrados; não há diretório `.worktree-*` órfão no workspace. A varredura de `git status --porcelain` em todos os worktrees encontrou somente a modificação preexistente `docs/Current-State.md`. Os diretórios `scratchpad-*` presentes em branches de Wave são arquivos versionados e foram preservados. A árvore `main` possui `.DS_Store`, `.obsidian/` e `Lumenva-Knowledge/` não versionados, fora do escopo desta tarefa; não foram tocados. Nenhum cleanup destrutivo foi executado.
