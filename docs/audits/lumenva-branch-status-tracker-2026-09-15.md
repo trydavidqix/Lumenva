@@ -343,6 +343,20 @@ Observação: os grupos que adicionaram testes de integração Postgres usam `te
 
 Diagnóstico de causa raiz: as quatro tarefas falharam no serviço Cloud antes de iniciar o comando solicitado; a CLI não expôs log de execução, e a sessão local que submeteu as tarefas registrou `credits.has_credits=false`, `balance=0` e `spend_control_reached=null`. Isso caracteriza indisponibilidade de créditos/entitlement do executor, não falha confirmada do código. Não foram feitas tentativas variantes. Os quatro grupos permanecem `teste real pendente` até o Cloud aceitar uma execução e devolver stdout/stderr.
 
+## Verificação local sem DNS — evidência adicional
+
+Foi investigada a possibilidade de executar testes reais sem baixar dependências. Resultado objetivo:
+
+| Comando | Resultado real |
+|---|---|
+| `pnpm install --offline --frozen-lockfile --ignore-scripts` | `rc=1`; aborta antes de instalar porque `pnpm-lock.yaml` não contém `importers["packages/skill-registry"]`, embora o workspace e o package existam. Este é um bloqueio de lockfile independente de DNS e precisa ser corrigido/validado antes dos gates Cloud. |
+| `bash apps/crm/tests/shell/update-guard.test.sh` | `rc=1`; 18 asserções falharam. A causa primária da suíte é de fixture: ela copia `_common.sh`, `update.sh` e `agent.sh`, mas não copia `_env-alias.sh`, que `_common.sh` importa; por isso vários cenários ficam inconclusivos. Há também uma falha independente de quoting em senha com aspa simples (`escreveu: [se'nha]`, `voltou: [se"'"nha]`) que requer investigação própria antes de qualquer correção. |
+| `node --test apps/crm/scripts/check-harness-consistency.test.mjs` | `rc=0`; 12 testes, 12 pass, 0 fail. Este é o único teste real executado com sucesso nesta sondagem, sem dependências externas. |
+| `pg_isready` | `rc=2`; `/tmp:5432 - no response`; não há Postgres local pronto. |
+| `supabase status` | `rc=1`; falhou ao gravar `/Users/david/.supabase/telemetry.json.tmp...` com `EPERM`; não é prova de serviço ativo. Docker também não está instalado (`docker=absent`). |
+
+Conclusão: existe uma prova Node local útil e aprovada (12/12), mas não há runner Vitest nem banco local disponível. O lockfile inconsistente deve ser tratado como pré-condição dos 16 comandos Cloud; nenhum resultado Cloud foi marcado como sucesso com base nesta sondagem.
+
 ## Verificação de limpeza sem alteração de conteúdo
 
 Em 2026-09-15 foi executado `git worktree list --porcelain`: todos os 16 worktrees de remediação e os 20 worktrees de etapas estão registrados; não há diretório `.worktree-*` órfão no workspace. A varredura de `git status --porcelain` em todos os worktrees encontrou somente a modificação preexistente `docs/Current-State.md`. Os diretórios `scratchpad-*` presentes em branches de Wave são arquivos versionados e foram preservados. A árvore `main` possui `.DS_Store`, `.obsidian/` e `Lumenva-Knowledge/` não versionados, fora do escopo desta tarefa; não foram tocados. Nenhum cleanup destrutivo foi executado.
