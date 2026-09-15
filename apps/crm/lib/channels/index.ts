@@ -6,6 +6,8 @@ import { metaCloudAdapter } from "./adapters/meta-cloud";
 import { wahaAdapter } from "./adapters/waha";
 import type { ChannelAdapter, ChannelProvider } from "./types";
 
+export { assertChannelConsent, hasChannelConsent } from "./gateway/consent";
+
 const ADAPTERS: Record<ChannelProvider, ChannelAdapter | null> = {
   waha: wahaAdapter,
   meta_cloud: metaCloudAdapter,
