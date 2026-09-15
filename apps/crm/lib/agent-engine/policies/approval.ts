@@ -141,8 +141,12 @@ export async function decideApprovalRequest(
     ...(decision.reason === undefined ? {} : { decisionReason: decision.reason }),
   };
 
-  await store.save(next);
-  return next;
+  const committed = await store.compareAndSet(request.id, 'pending', next);
+  if (committed) return next;
+
+  // Another worker won the pending -> terminal transition. Return the
+  // durable winner instead of overwriting it with this worker's decision.
+  return requireApproval(await store.load(approvalId), approvalId, guard);
 }
 
 export async function expireApprovalRequest(
