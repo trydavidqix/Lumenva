@@ -343,6 +343,23 @@ Observação: os grupos que adicionaram testes de integração Postgres usam `te
 
 Diagnóstico de causa raiz: as quatro tarefas falharam no serviço Cloud antes de iniciar o comando solicitado; a CLI não expôs log de execução, e a sessão local que submeteu as tarefas registrou `credits.has_credits=false`, `balance=0` e `spend_control_reached=null`. Isso caracteriza indisponibilidade de créditos/entitlement do executor, não falha confirmada do código. Não foram feitas tentativas variantes. Os quatro grupos permanecem `teste real pendente` até o Cloud aceitar uma execução e devolver stdout/stderr.
 
+## Investigação de billing/autenticação do Codex Cloud — 2026-09-15
+
+Objetivo: confirmar se há uma flag/configuração suportada que force `codex cloud exec` a consumir a assinatura ChatGPT Plus/sessão autenticada em vez de créditos separados. Nenhum dos 16 gates foi reenviado durante esta investigação.
+
+| Evidência | Resultado real |
+|---|---|
+| `codex login status` | `Logged in using ChatGPT`; autenticação local configurada pelo arquivo `~/.codex/auth.json`, sem API key armazenada. |
+| `codex cloud --help`, `codex cloud exec --help`, `codex cloud list --help`, `codex cloud status --help` | `cloud exec` aceita ambiente, branch, tentativas, features e `--config` genérico; não expõe `billing_mode`, `account_type`, `subscription`, `credits` nem opção “use ChatGPT plan”. Os demais subcomandos também não expõem essa seleção. |
+| `~/.codex/config.toml` | Contém `model`, `model_reasoning_effort`, `approvals_reviewer`, confiança de projetos e estado de UI; não contém chave de billing/account/subscription. `model_reasoning_effort` controla somente esforço de raciocínio. |
+| `codex doctor` | Confirma `stored auth mode: chatgpt`, `stored API key: false` e `reachability mode: ChatGPT auth`; também reporta DNS/WebSocket/HTTP indisponíveis neste sandbox e estado de banco de memórias inválido. Isto não cria nem seleciona um modo de cobrança. |
+| Variáveis `OPENAI_API_KEY`, `OPENAI_ORG_ID`, `OPENAI_PROJECT_ID` | Nenhuma estava definida no processo; não há indicação local de fallback para billing da API. |
+| Documentação oficial Codex Cloud/CLI/config/env | A configuração do Cloud orienta entrar com a conta ChatGPT, conectar GitHub/GitLab e criar ambiente; não documenta flag de billing ou conversão de créditos. A referência oficial de configuração lista `model_reasoning_effort`, autenticação e ambientes, mas não `billing_mode`, `account_type` ou `use_experimental_reasoning_effort`. |
+
+Conclusão operacional: não foi encontrada uma flag/configuração pública suportada para “forçar cobrança pela assinatura Plus”. A sessão local está corretamente autenticada via ChatGPT, mas os quatro erros Cloud anteriores registraram `plan_type=plus` junto de `credits.has_credits=false`/`balance=0`; portanto o problema observado é compatível com entitlement/limite do serviço Cloud, e não com uma chave local ausente. Não é seguro inventar `-c billing_mode=...`, pois o CLI não documenta essa chave e ela não alteraria a autorização server-side.
+
+Pendência do dono: verificar no produto Codex web, com a mesma conta Plus, se o ambiente/repositório está habilitado para tarefas Cloud e se existe aviso de plano/limite; se a UI também recusar a tarefa, abrir suporte OpenAI com os IDs das quatro tasks já registradas. Só após uma execução Cloud retornar stdout/stderr real deve-se retomar os 16 gates. Referências: [Codex cloud — documentação oficial](https://developers.openai.com/codex/cloud), [Codex CLI — documentação oficial](https://developers.openai.com/codex/cli), [referência oficial de configuração](https://learn.chatgpt.com/docs/config-file/config-reference), [variáveis de ambiente oficiais](https://learn.chatgpt.com/docs/config-file/environment-variables).
+
 ## Verificação local sem DNS — evidência adicional
 
 Foi investigada a possibilidade de executar testes reais sem baixar dependências. Resultado objetivo:
