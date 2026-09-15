@@ -56,6 +56,7 @@ describe('Agent OS Tool Gateway', () => {
     const execute = vi.fn();
     const save = vi.fn();
     const load = vi.fn();
+    const compareAndSet = vi.fn();
 
     const result = await executeThroughToolGateway({
       ...baseContext,
@@ -63,7 +64,7 @@ describe('Agent OS Tool Gateway', () => {
       args: { body: 'Olá' },
       idempotencyKey: 'idem-send-1',
       execute,
-      approvalStore: { save, load },
+      approvalStore: { save, load, compareAndSet },
     });
 
     expect(result.kind).toBe('pending_approval');

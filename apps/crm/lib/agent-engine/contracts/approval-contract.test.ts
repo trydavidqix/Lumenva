@@ -18,6 +18,13 @@ function memoryApprovalStore(): ApprovalStore & { read: () => unknown[] } {
     async load(id) {
       return (rows.find((row) => (row as { id?: string }).id === id) as never) ?? null;
     },
+    async compareAndSet(id, expectedStatus, next) {
+      const index = rows.findIndex((row) => (row as { id?: string }).id === id);
+      const current = index >= 0 ? (rows[index] as { status?: string }) : undefined;
+      if (!current || current.status !== expectedStatus) return false;
+      rows[index] = next;
+      return true;
+    },
     read: () => rows,
   };
 }
