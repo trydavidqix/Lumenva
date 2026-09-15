@@ -32,6 +32,11 @@ export interface ApprovalRequest {
 export interface ApprovalStore {
   save(request: ApprovalRequest): Promise<void>;
   load(id: string): Promise<ApprovalRequest | null>;
+  compareAndSet(
+    id: string,
+    expectedStatus: ApprovalStatus,
+    next: ApprovalRequest,
+  ): Promise<boolean>;
 }
 
 const executionLocks = new Map<string, Promise<void>>();

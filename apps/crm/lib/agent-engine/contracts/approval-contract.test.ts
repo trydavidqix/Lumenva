@@ -18,11 +18,38 @@ function memoryApprovalStore(): ApprovalStore & { read: () => unknown[] } {
     async load(id) {
       return (rows.find((row) => (row as { id?: string }).id === id) as never) ?? null;
     },
+    async compareAndSet(id, expectedStatus, next) {
+      const index = rows.findIndex((row) => (row as { id?: string }).id === id);
+      const current = index >= 0 ? (rows[index] as { status?: string }) : undefined;
+      if (!current || current.status !== expectedStatus) return false;
+      rows[index] = next;
+      return true;
+    },
     read: () => rows,
   };
 }
 
 describe('Agent OS approval contract', () => {
+  it('expõe compare-and-set para rejeitar atualização com status esperado obsoleto', async () => {
+    const store = memoryApprovalStore();
+    const request = await createApprovalRequest(store, {
+      organizationId: 'org-1',
+      runId: 'run-cas',
+      agentId: 'agent-1',
+      toolId: 'crm.discount.apply',
+      approvalType: 'sensitive_commercial',
+      idempotencyKey: 'idem-cas-1',
+      reason: 'approval_required',
+    });
+
+    const approved = { ...request, status: 'approved' as const };
+    const stale = { ...request, status: 'denied' as const };
+
+    expect(await store.compareAndSet(request.id, 'pending', approved)).toBe(true);
+    expect(await store.compareAndSet(request.id, 'pending', stale)).toBe(false);
+    expect((await store.load(request.id))?.status).toBe('approved');
+  });
+
   it('cria pedido durável com identidade suficiente para retomar depois', async () => {
     const store = memoryApprovalStore();
     const request = await createApprovalRequest(store, {

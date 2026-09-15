@@ -17,7 +17,16 @@ const tool = {
 
 function memoryStore(): ApprovalStore {
   const rows = new Map<string, ApprovalRequest>();
-  return { save: async (row) => void rows.set(row.id, row), load: async (id) => rows.get(id) ?? null };
+  return {
+    save: async (row) => void rows.set(row.id, row),
+    load: async (id) => rows.get(id) ?? null,
+    compareAndSet: async (id, expectedStatus, next) => {
+      const current = rows.get(id);
+      if (!current || current.status !== expectedStatus) return false;
+      rows.set(id, next);
+      return true;
+    },
+  };
 }
 
 describe("Wave 1 evidence, policy and approval foundations", () => {

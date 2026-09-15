@@ -14,6 +14,12 @@ class MemoryApprovalStore implements ApprovalStore {
   async load(id: string): Promise<ApprovalRequest | null> {
     return this.records.get(id) ?? null;
   }
+  async compareAndSet(id: string, expectedStatus: ApprovalRequest['status'], next: ApprovalRequest): Promise<boolean> {
+    const current = this.records.get(id);
+    if (!current || current.status !== expectedStatus) return false;
+    this.records.set(id, { ...next });
+    return true;
+  }
 }
 
 function tool(overrides: Partial<AgentToolDefinition> = {}): AgentToolDefinition {
