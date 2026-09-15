@@ -2,7 +2,7 @@ import type { Queryable } from "../queue/queue";
 import { claimToolLoopLock, completeToolLoopLock, ToolLoopLockError, type ToolLoopLock } from "./session-service";
 
 type LockRow = ToolLoopLock & { tenant_id: string; version: number; active_tool_call_id: string | null; lock_id: string; session_id: string; execution_epoch: number; iteration: number; max_iterations: number; expires_at: string | Date };
-function map(row: LockRow): ToolLoopLock { return { lock_id: row.lock_id, session_id: row.session_id, execution_epoch: row.execution_epoch, iteration: row.iteration, max_iterations: row.max_iterations, expires_at: row.expires_at instanceof Date ? row.expires_at.toISOString() : new Date(row.expires_at).toISOString(), ...(row.active_tool_call_id == null ? {} : { active_tool_call_id: row.active_tool_call_id }) }; }
+function map(row: LockRow): ToolLoopLock { return { lock_id: row.lock_id, session_id: row.session_id, execution_epoch: row.execution_epoch, iteration: row.iteration, max_iterations: row.max_iterations, expires_at: typeof row.expires_at === "string" ? new Date(row.expires_at).toISOString() : row.expires_at.toISOString(), ...(row.active_tool_call_id == null ? {} : { active_tool_call_id: row.active_tool_call_id }) }; }
 export class PostgresToolLoopLockStore {
   constructor(private readonly db: Queryable, private readonly tenantId: string, private readonly lockId: string, private readonly table = "hermes_tool_loop_locks") { if (!tenantId.trim()) throw new Error("tool_loop_tenant_required"); if (!/^\w+$/.test(table)) throw new Error("tool_loop_table_invalid"); }
   async claim(toolCallId: string, executionEpoch: number, now = new Date()): Promise<ToolLoopLock> {
