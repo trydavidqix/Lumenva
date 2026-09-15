@@ -5,7 +5,7 @@ import type { AgentToolDefinition } from '../tools/registry';
 import type { AuthorizeModuleInput, ModuleRiskTier } from '../../entitlements/authorize-module';
 
 function entitlementFor(toolDefinition: AgentToolDefinition, requestId: string): AuthorizeModuleInput {
-  const risk: ModuleRiskTier = { r0_read: 'P0', r1_reversible_write: 'P1', r2_external_communication: 'P2', r3_sensitive_commercial: 'P3', r4_destructive_admin: 'P4' }[toolDefinition.risk];
+  const risk: ModuleRiskTier = ({ r0_read: 'P0', r1_reversible_write: 'P1', r2_external_communication: 'P2', r3_sensitive_commercial: 'P3', r4_destructive_admin: 'P4' } as const)[toolDefinition.risk];
   return {
     requestId, policyVersion: 'entitlements.v1',
     module: { id: toolDefinition.id, version: '1.0.0', dependencies: [], conflicts: [], requiredCapabilities: [], allowedRoles: ['agent'], risk, requiresApproval: false },
