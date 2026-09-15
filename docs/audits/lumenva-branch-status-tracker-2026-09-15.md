@@ -295,3 +295,14 @@ O grupo permanece aberto até o Codex Cloud executar os testes e typecheck; as v
 | business-os/phase-1-http-2026-09-11 | Migrations | remediation/entitlements-billing-migrations-2026-09-15 | aplicado, teste real pendente | commit cf511bbc; declaração .mjs.d.ts restaurada |
 
 O grupo não é considerado fechado: a execução local de pnpm tentou resolver pacotes em registry.npmjs.org e falhou repetidamente por DNS. Gate obrigatório no Codex Cloud: pnpm install --frozen-lockfile e, depois, os comandos completos desta página.
+
+## Correção de rastreamento — referências exatas remanescentes
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| business-os/phase-1-entitlements-bronze-2026-09-11 | Entitlements bronze | remediation/remaining-entitlements-operating-core-2026-09-15 | aplicado, teste real pendente | commit 5b098e30; gateway legado protegido por entitlement e teste preservado após conflito modify/delete |
+| business-os/wave-1-operating-core | Operating Core receipts | remediation/business-os-acceptance-mcp-2026-09-15 | aplicado, teste real pendente | commit a27b1815; referência exata corrigida, receipt persistence test descartável |
+| business-os/wave-2-agent-birth-2026-09-11 | Agent Birth factory | remediation/remaining-entitlements-operating-core-2026-09-15 | conteúdo equivalente verificado, teste real pendente | cherry-pick 5d001358 vazio após comparação manual; única divergência eram IDs support/claude_orchestrator, rejeitados por compatibilidade de identidade, já coberta em d2bd8cb4 |
+| business-os/wave-3-session-runtime-mvp-2026-09-11 | Session Runtime service | remediation/wave3-session-runtime-2026-09-15 | aplicado, teste real pendente | referência exata corrigida; commit 1d41987a adicionou providers/service e testes |
+
+A correção elimina aliases de data/nome que deixavam quatro referências M/P fora do ledger automatizado; nenhuma linha original foi removida.
