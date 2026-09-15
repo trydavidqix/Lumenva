@@ -24,15 +24,15 @@ function pool(organizationId: string) {
             const sql = "INSERT INTO psyche_affect_events (organization_id,agent_id,session_id,event_id,at_ms,pleasure,arousal,dominance) VALUES (" +
               [organizationId, values[1], values[2], values[3], values[4], values[5], values[6], values[7]].map(quote).join(",") +
               ") ON CONFLICT (organization_id,agent_id,session_id,event_id) DO NOTHING RETURNING organization_id,agent_id,session_id,event_id,at_ms,pleasure,arousal,dominance;";
-            return { rows: parseRows(await psql("select set_config('app.organization_id'," + quote(organizationId) + ",true);" + sql, "app_user")) as T[] };
+            return { rows: parseRows(await psql("DO $$ BEGIN PERFORM set_config('app.organization_id'," + quote(organizationId) + ",true); END $$;" + sql, "app_user")) as T[] };
           }
           if (text.startsWith("SELECT organization_id, agent_id")) {
             const sql = "SELECT organization_id,agent_id,session_id,event_id,at_ms,pleasure,arousal,dominance FROM psyche_affect_events WHERE organization_id=" + quote(values[0]) + " AND agent_id=" + quote(values[1]) + " AND session_id=" + quote(values[2]) + " ORDER BY at_ms,event_id;";
-            return { rows: parseRows(await psql("select set_config('app.organization_id'," + quote(organizationId) + ",true);" + sql, "app_user")) as T[] };
+            return { rows: parseRows(await psql("DO $$ BEGIN PERFORM set_config('app.organization_id'," + quote(organizationId) + ",true); END $$;" + sql, "app_user")) as T[] };
           }
           if (text.startsWith("SELECT organization_id")) {
             const sql = "SELECT organization_id,agent_id,session_id,event_id,at_ms,pleasure,arousal,dominance FROM psyche_affect_events WHERE organization_id=" + quote(values[0]) + " AND agent_id=" + quote(values[1]) + " AND session_id=" + quote(values[2]) + " AND event_id=" + quote(values[3]) + ";";
-            return { rows: parseRows(await psql("select set_config('app.organization_id'," + quote(organizationId) + ",true);" + sql, "app_user")) as T[] };
+            return { rows: parseRows(await psql("DO $$ BEGIN PERFORM set_config('app.organization_id'," + quote(organizationId) + ",true); END $$;" + sql, "app_user")) as T[] };
           }
           throw new Error("unhandled query: " + text);
         },
