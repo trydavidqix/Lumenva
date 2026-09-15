@@ -488,6 +488,18 @@ Os falsos positivos recorrentes em `agent-definition-registry-pg.integration.tes
 
 Esses quatro registros são apenas candidatos documentados; não houve correção nem alteração nos 15 worktrees. A confirmação/mitigação exige contrato de CAS ou operação condicional no backend correspondente e testes concorrentes reais.
 
+## Remediação dos candidatos CAS — 2026-09-15
+
+As três branches foram confirmadas por `git worktree list --porcelain`, corrigidas sem tocar em `main` e receberam um commit próprio. O teste RED estático mostrou, em cada branch, ausência de `expectedStatus: ApprovalStatus` e presença de `await store.save(next)`; após a alteração, o GREEN estático confirmou a interface CAS, a chamada `store.compareAndSet(request.id, 'pending', next)`, ausência de `save(next)` na decisão e CAS presente nos fakes.
+
+| Branch | Correção | Commit | PR / push |
+|---|---|---|---|
+| `remediation/business-os-reconcile-equivalence-2026-09-15` | `approval.ts:119-139` usa CAS e retorna o vencedor persistido | `a0d85f11` | PR #60; push `fab54a5b..a0d85f11` concluído |
+| `remediation/wave2-agent-birth-2026-09-15` | `approval.ts:119-139` usa CAS e retorna o vencedor persistido | `f96c6768` | PR #54; push `d26ccf73..f96c6768` concluído |
+| `remediation/wave3-session-runtime-2026-09-15` | `approval.ts:119-139` usa CAS e retorna o vencedor persistido; `session-runtime/service.ts:57-65/74-82` não alterado porque `SessionSnapshotStore` não suporta CAS | `c413ac2d` | PR #55; push `c26fa930..c413ac2d` concluído |
+
+O gap de `SessionSnapshotStore` permanece documentado separadamente: `load`/`save` não formam transição condicional e não há adapter/backend CAS no worktree. Não foi criada API fictícia nem correção parcial insegura.
+
 ## Verificação de limpeza sem alteração de conteúdo
 
 Em 2026-09-15 foi executado `git worktree list --porcelain`: todos os 16 worktrees de remediação e os 20 worktrees de etapas estão registrados; não há diretório `.worktree-*` órfão no workspace. A varredura de `git status --porcelain` em todos os worktrees encontrou somente a modificação preexistente `docs/Current-State.md`. Os diretórios `scratchpad-*` presentes em branches de Wave são arquivos versionados e foram preservados. A árvore `main` possui `.DS_Store`, `.obsidian/` e `Lumenva-Knowledge/` não versionados, fora do escopo desta tarefa; não foram tocados. Nenhum cleanup destrutivo foi executado.
