@@ -133,4 +133,15 @@ No ambiente Codex Cloud, por worktree/branch: pnpm install --frozen-lockfile; pn
 
 Até a execução desses comandos, nenhuma linha M/P é considerada tratada ou consolidada.
 
+## Ledger de remediação
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| business-os/phase-1-entitlements-bigorna-2026-09-11 | Entitlements | remediation/entitlements-billing-migrations-2026-09-15 | aplicado, teste real pendente | commit 0f414b92; pnpm/vitest bloqueado por DNS do registry |
+| business-os/phase-1-entitlements-torno-2026-09-11 | Entitlements | remediation/entitlements-billing-migrations-2026-09-15 | aplicado, teste real pendente | commit 7fcf4ab6; contrato risk_contract_invalid reconciliado |
+| business-os/phase-1-reconcile-2026-09-11 | Entitlements | remediation/entitlements-billing-migrations-2026-09-15 | aplicado, teste real pendente | commit 1bf4a4e6; API decision preservada |
+| business-os/bronze-stripe-checkout-security-fix-2026-09-13 | Billing | remediation/entitlements-billing-migrations-2026-09-15 | aplicado, teste real pendente | commit 43c1c239; teste Postgres adicionado |
+| business-os/phase-1-http-2026-09-11 | Migrations | remediation/entitlements-billing-migrations-2026-09-15 | aplicado, teste real pendente | commit cf511bbc; declaração .mjs.d.ts restaurada |
+
+O grupo não é considerado fechado: a execução local de pnpm tentou resolver pacotes em registry.npmjs.org e falhou repetidamente por DNS. Gate obrigatório no Codex Cloud: pnpm install --frozen-lockfile e, depois, os comandos completos desta página.
 
