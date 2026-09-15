@@ -360,6 +360,33 @@ Conclusão operacional: não foi encontrada uma flag/configuração pública sup
 
 Pendência do dono: verificar no produto Codex web, com a mesma conta Plus, se o ambiente/repositório está habilitado para tarefas Cloud e se existe aviso de plano/limite; se a UI também recusar a tarefa, abrir suporte OpenAI com os IDs das quatro tasks já registradas. Só após uma execução Cloud retornar stdout/stderr real deve-se retomar os 16 gates. Referências: [Codex cloud — documentação oficial](https://developers.openai.com/codex/cloud), [Codex CLI — documentação oficial](https://developers.openai.com/codex/cli), [referência oficial de configuração](https://learn.chatgpt.com/docs/config-file/config-reference), [variáveis de ambiente oficiais](https://learn.chatgpt.com/docs/config-file/environment-variables).
 
+## PRs GitHub para execução dos 16 gates — estado real 2026-09-15
+
+Com autorização do dono, cada branch foi enviada com `git push origin HEAD:refs/heads/<branch>` e recebeu um PR aberto contra `main`. Não houve merge, aprovação, squash ou rebase. Os PRs foram criados sequencialmente:
+
+| # | Branch | PR | `ci.yml` | Checks observados |
+|---:|---|---|---|---|
+| 1 | `remediation/automation-identity-2026-09-15` | [#46](https://github.com/trydavidqix/Lumenva/pull/46) | não criado | Vercel CRM `fail` — deployment blocked; website `fail` — GitHub não verificou conta; Preview Comments `pass`. |
+| 2 | `remediation/ai-creator-commerce-2026-09-15` | [#47](https://github.com/trydavidqix/Lumenva/pull/47) | não criado | Vercel CRM `fail` — deployment blocked; website `fail` — GitHub não verificou conta; Preview Comments `pass`. |
+| 3 | `remediation/business-os-audit-stripe-2026-09-15` | [#48](https://github.com/trydavidqix/Lumenva/pull/48) | não criado | Vercel website `fail` — GitHub não verificou conta. |
+| 4 | `remediation/business-os-cli-entitlements-2026-09-15` | [#49](https://github.com/trydavidqix/Lumenva/pull/49) | não criado | Vercel CRM `fail` — deployment blocked; website `fail` — GitHub não verificou conta; Preview Comments `pass`. |
+| 5 | `remediation/customer360-2026-09-15` | [#50](https://github.com/trydavidqix/Lumenva/pull/50) | não criado | Vercel website `fail` — GitHub não verificou conta. |
+| 6 | `remediation/entitlements-billing-migrations-2026-09-15` | [#51](https://github.com/trydavidqix/Lumenva/pull/51) | não criado | Vercel website `fail` — GitHub não verificou conta. |
+| 7 | `remediation/lgpd-pades-2026-09-15` | [#52](https://github.com/trydavidqix/Lumenva/pull/52) | não criado | Vercel website `fail` — GitHub não verificou conta. |
+| 8 | `remediation/remaining-entitlements-operating-core-2026-09-15` | [#53](https://github.com/trydavidqix/Lumenva/pull/53) | não criado | Vercel CRM `fail` — deployment blocked; website `fail` — GitHub não verificou conta; Preview Comments `pass`. |
+| 9 | `remediation/wave2-agent-birth-2026-09-15` | [#54](https://github.com/trydavidqix/Lumenva/pull/54) | não criado | Vercel website `fail` — GitHub não verificou conta. |
+| 10 | `remediation/wave3-session-runtime-2026-09-15` | [#55](https://github.com/trydavidqix/Lumenva/pull/55) | não criado | Vercel website `fail` — GitHub não verificou conta. |
+| 11 | `remediation/waves-1-9-2026-09-15` | [#56](https://github.com/trydavidqix/Lumenva/pull/56) | não criado | Vercel website `fail` — GitHub não verificou conta; nenhum run `ci.yml`. |
+| 12 | `remediation/waves-6-9-2026-09-15` | [#57](https://github.com/trydavidqix/Lumenva/pull/57) | não criado | Vercel website `fail` — GitHub não verificou conta; nenhum run `ci.yml`. |
+| 13 | `remediation/waves-10-15-2026-09-15` | [#58](https://github.com/trydavidqix/Lumenva/pull/58) | não criado | Vercel website `fail` — GitHub não verificou conta; nenhum run `ci.yml`. |
+| 14 | `remediation/business-os-operating-core-2026-09-15` | [#59](https://github.com/trydavidqix/Lumenva/pull/59) | não criado | Vercel website `fail` — GitHub não verificou conta; nenhum run `ci.yml`. |
+| 15 | `remediation/business-os-reconcile-equivalence-2026-09-15` | [#60](https://github.com/trydavidqix/Lumenva/pull/60) | não criado | Vercel website `fail` — GitHub não verificou conta; nenhum run `ci.yml`. |
+| 16 | `remediation/business-os-acceptance-mcp-2026-09-15` | [#61](https://github.com/trydavidqix/Lumenva/pull/61) | não criado | Vercel website `fail` — GitHub não verificou conta; nenhum run `ci.yml`. |
+
+Diagnóstico objetivo: `gh api repos/trydavidqix/Lumenva/actions/permissions` retornou `enabled=false`, enquanto `gh api repos/trydavidqix/Lumenva/actions/workflows/ci.yml` retornou o workflow `ci` em estado `active`. Portanto o workflow existe e está ativo como definição, mas a execução de GitHub Actions está desabilitada no repositório. `gh run list --workflow ci.yml` não encontrou nenhum run novo após a abertura dos 16 PRs. Os checks Vercel são integrações externas e não substituem os gates de `ci.yml`; nenhum resultado Vercel foi usado para marcar testes do projeto como passados.
+
+Pendência administrativa do dono: habilitar GitHub Actions nas configurações do repositório (Settings → Actions → General) ou delegar essa ação a um administrador. Depois disso, os PRs já abertos deverão ser reexecutados/atualizados pelo GitHub; somente então registrar no ledger o URL e o resultado real de cada run. Nenhuma tentativa de habilitar Actions ou rerun foi feita.
+
 ## Verificação local sem DNS — evidência adicional
 
 Foi investigada a possibilidade de executar testes reais sem baixar dependências. Resultado objetivo:
