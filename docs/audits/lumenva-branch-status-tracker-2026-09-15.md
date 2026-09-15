@@ -332,6 +332,17 @@ Executar cada linha a partir da raiz do worktree/branch indicado. Cada linha é 
 
 Observação: os grupos que adicionaram testes de integração Postgres usam `test:db` como comando específico porque o runner prepara o banco descartável e aplica as migrações; os testes unitários direcionados são complementares quando listados. Estes 16 comandos não substituem os gates transversais de typecheck/lint/harness do handoff.
 
+### Resultados de execução Cloud — lote 1 (branches 1–4)
+
+| Branch | Tarefa Codex Cloud | Resultado real | Saída relevante / diagnóstico |
+|---|---|---|---|
+| `remediation/automation-identity-2026-09-15` | `task_e_6aa900f4be008324b2ba515195ae59b7` | `ERROR` | `codex cloud status`: `[ERROR] Run pnpm install and tests`; `no diff`; `attempt_total=1`. Nenhum output de `pnpm install`/teste foi disponibilizado. |
+| `remediation/ai-creator-commerce-2026-09-15` | `task_e_6aa90119580483249617e20ce1a98b6a` | `ERROR` | `codex cloud status`: `[ERROR] Run pnpm install and test commands`; `no diff`; `attempt_total=1`. Nenhum output de `pnpm install`/teste foi disponibilizado. |
+| `remediation/business-os-audit-stripe-2026-09-15` | `task_e_6aa9012c2b00832496f3a8c55d1402b7` | `ERROR` | `codex cloud status`: `[ERROR] Run pnpm install and vitest tests`; `no diff`; `attempt_total=1`. Nenhum output de `pnpm install`/Vitest foi disponibilizado. |
+| `remediation/business-os-cli-entitlements-2026-09-15` | `task_e_6aa90119fb6883248b444c9776a113f3` | `ERROR` | `codex cloud status`: `[ERROR] Run pnpm installation and tests`; `no diff`; `attempt_total=1`. Nenhum output de `pnpm install`/Vitest foi disponibilizado. |
+
+Diagnóstico de causa raiz: as quatro tarefas falharam no serviço Cloud antes de iniciar o comando solicitado; a CLI não expôs log de execução, e a sessão local que submeteu as tarefas registrou `credits.has_credits=false`, `balance=0` e `spend_control_reached=null`. Isso caracteriza indisponibilidade de créditos/entitlement do executor, não falha confirmada do código. Não foram feitas tentativas variantes. Os quatro grupos permanecem `teste real pendente` até o Cloud aceitar uma execução e devolver stdout/stderr.
+
 ## Verificação de limpeza sem alteração de conteúdo
 
 Em 2026-09-15 foi executado `git worktree list --porcelain`: todos os 16 worktrees de remediação e os 20 worktrees de etapas estão registrados; não há diretório `.worktree-*` órfão no workspace. A varredura de `git status --porcelain` em todos os worktrees encontrou somente a modificação preexistente `docs/Current-State.md`. Os diretórios `scratchpad-*` presentes em branches de Wave são arquivos versionados e foram preservados. A árvore `main` possui `.DS_Store`, `.obsidian/` e `Lumenva-Knowledge/` não versionados, fora do escopo desta tarefa; não foram tocados. Nenhum cleanup destrutivo foi executado.
