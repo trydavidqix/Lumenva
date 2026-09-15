@@ -679,3 +679,41 @@ Evidência de status: todas as 16 chamadas `codex cloud status` retornaram exit 
 com `[READY]` e `no diff`. Os logs/stdout dos gates devem ser lidos na interface
 web das tarefas se necessários; a CLI local não oferece `codex cloud logs`,
 `--json` ou saída de execução.
+## Diagnóstico do lockfile — `@next/eslint-plugin-next` — 2026-09-15
+
+O comando solicitado foi executado literalmente:
+
+```text
+$ git show HEAD:package.json | grep -A2 -B2 packageManager
+fatal: path 'package.json' does not exist in 'HEAD'
+```
+
+Este checkout é um workspace pnpm sem `package.json` na raiz. Os manifests com
+`packageManager` são `apps/crm/package.json:151` e `apps/site/package.json:5`,
+ambos `pnpm@12.3.4`. O workspace é definido em `pnpm-workspace.yaml:1-3`.
+
+A segunda busca foi executada sem alteração:
+
+```text
+apps/crm/package.json:120:    "@next/eslint-plugin-next": "16.3.0",
+pnpm-lock.yaml:277:      '@next/eslint-plugin-next':
+pnpm-lock.yaml:278:        specifier: 16.3.0
+pnpm-lock.yaml:279:        version: 16.3.0
+pnpm-lock.yaml:1675:  '@next/eslint-plugin-next@16.3.0':
+pnpm-lock.yaml:9786:  '@next/eslint-plugin-next@16.3.0(eslint@9.39.5(jiti@2.7.0))':
+```
+
+O importer `apps/crm` contém a mesma declaração exata do manifest. O lockfile
+também contém a resolução e a dependência transitiva de
+`eslint-config-next@16.3.0`; portanto `@next/eslint-plugin-next` **não está
+ausente nem desatualizado** no `pnpm-lock.yaml`. Não há evidência estática de que
+essa dependência seja a causa dos 16 gates Cloud.
+
+Não foi executado `pnpm install` sem `--frozen-lockfile`, conforme solicitado, e
+nenhum lockfile foi alterado. A recomendação é não regenerar o lockfile para este
+pacote. Se uma futura execução Cloud fornecer erro específico de frozen lockfile
+para outro importer/dependência, então deve ser aberta uma branch dedicada
+(por exemplo `fix/lockfile-<causa>`), executado `pnpm install` sem
+`--frozen-lockfile` em ambiente com rede real, revisado o diff e só depois
+reexecutados os 16 gates. O erro concreto do Cloud deve ser preservado antes de
+qualquer regeneração; sem ele, alterar o lockfile seria especulativo.
