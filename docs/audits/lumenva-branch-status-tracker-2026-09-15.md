@@ -869,3 +869,70 @@ A suíte Vitest não pôde ser executada localmente: `pnpm` tentou buscar pacote
 no `registry.npmjs.org`, mas o sandbox não resolve DNS. O CI real deve reexecutar
 `pnpm --filter lumenva-crm test:db` para confirmar a aplicação do baseline em
 Postgres; esse é o gate pendente de validação end-to-end.
+
+## Fases 5+ — diagnóstico e correções preparatórias (2026-09-15)
+
+### Env vars de integrações
+
+Os testes que falhavam com configuração ausente são integrações reais e não
+devem derrubar a suíte unitária quando o ambiente não oferece banco externo:
+
+| Arquivo | Guarda | Evidência |
+|---|---|---|
+| `apps/crm/lib/product-factory/build-plan-state.integration.test.ts` | `describe.skipIf(!process.env.BUILD_PLAN_DATABASE_URL)` | O teste usa exclusivamente `BUILD_PLAN_DATABASE_URL`; não há secret correspondente no `ci.yml`. |
+| `packages/operating-core/src/event-log-adapter.integration.test.ts` | `describe.skipIf(!process.env.DATABASE_URL)` | O teste abre `pg.Pool` com `DATABASE_URL`; o job unitário não configura essa variável. |
+
+`agent-definition-registry-pg.integration.test.ts`,
+`event-idempotency.integration.test.ts` e
+`scratchpad-wave1/resource-router-rls.integration.test.ts` já tinham guardas
+equivalentes; o último também foi alinhado com
+`RESOURCE_ROUTER_DATABASE_URL`. Docker-backed tests permanecem executáveis
+quando Docker existe: no CI há evidência de que o Docker chegou a iniciar,
+portanto não foram mascarados com skip.
+
+### POST do endpoint MCP
+
+`apps/crm/app/api/v1/mcp/tools/route.ts` tinha somente `GET`, embora os dois
+testes de execução importassem `POST`. O handler histórico foi restaurado e o
+teste `scratchpad-wave1/mcp-route-execution.test.ts` agora também mocka o
+receipt store de produção, evitando que a dependência de Postgres substitua o
+teste de equivalência HTTP/CLI/MCP. O teste `route-execution.test.ts` já tinha
+esse mock. A integração real continua em
+`scratchpad-wave1/route-receipt.integration.test.ts`.
+
+### Colisão de idempotência BrowserMesh
+
+`browsermesh_event_idempotency` possui duas unicidades: `(organization_id,
+idempotency_key)` e `(organization_id,event_id)`. O SQL anterior tratava
+somente a primeira com `ON CONFLICT (organization_id,idempotency_key)`, então
+uma repetição do mesmo evento com uma chave diferente lançava `23505` na
+constraint `browsermesh_event_idempotency_event_key`. O claim foi alterado
+para `ON CONFLICT DO NOTHING`, cobrindo ambas as identidades sem abrir uma
+segunda execução; o contrato unitário foi atualizado para exigir essa forma.
+
+### Manifest, baseline e navegação
+
+O bloco duplicado de `flywheel_distiller_proposals_type_check` foi consolidado
+no baseline com o vocabulário final; a entrada morta `/app/mobile-releases`
+foi removida de `lib/navigation/registry.ts`. As cinco migrations faltantes
+exigidas pelos testes foram restauradas do histórico e registradas no
+`MANIFEST.md`.
+
+A verificação estática real ainda encontra colisões históricas de nomes e
+timestamps entre migrations de waves paralelas:
+
+```text
+0163: hermes_source_registry, studio_editor, browsermesh_event_idempotency_rls
+0164: hermes_source_registry_rls, hermes_tool_loop_locks, asset_license_records
+0165: hermes_session_supersession, operating_core_receipts
+0166: psyche_watchdog_observations, studio_client_portal_tokens
+20260913010000: hermes_source_registry_rls, hermes_tool_loop_locks
+20260913150000: studio_client_portal_tokens, command_center_overview_rls
+20260913170000: asset_license_records, studio_reviewer_authorizations
+```
+
+Essas identidades já foram commitadas em migrations de waves diferentes; não
+foram renomeadas nem editadas nesta etapa. A correção definitiva exige uma
+decisão de versionamento/migração (renumerar arquivos que podem já ter sido
+aplicados), além do gate Postgres para confirmar o conjunto final. Isso é
+separado das correções seguras acima.

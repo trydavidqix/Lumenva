@@ -6974,8 +6974,10 @@ alter table flywheel_distiller_proposals
 alter table flywheel_distiller_proposals
   add constraint flywheel_distiller_proposals_type_check
   check (type in (
-    'playbook_bullet', 'golden_case', 'reentry_trigger', 'org_memory_entry',
-    'skill_change', 'routing_change', 'eval_case', 'operational_threshold'
+    'playbook_bullet','golden_case','reentry_trigger','org_memory_entry','skill_change',
+    'routing_change','eval_case','operational_threshold','prompt_change','workflow_change',
+    'agent_definition_change','model_policy_change','resource_route_change','memory_policy_change',
+    'context_policy_change','infra_change','strategy_change'
   ));
 
 -- RLS (mesmo shape do loop tenant_isolation_* do baseline).
@@ -10745,8 +10747,8 @@ alter table public.hermes_capability_identities enable row level security;
 drop policy if exists tenant_isolation_hermes_capability_identities_all on public.hermes_capability_identities;
 create policy tenant_isolation_hermes_capability_identities_all on public.hermes_capability_identities for all using (organization_id in (select * from public.fn_user_org_ids())) with check (organization_id in (select * from public.fn_user_org_ids()));
 
-alter table if exists public.flywheel_distiller_proposals drop constraint if exists flywheel_distiller_proposals_type_check;
-alter table if exists public.flywheel_distiller_proposals add constraint flywheel_distiller_proposals_type_check check (type in ('playbook_bullet','golden_case','reentry_trigger','org_memory_entry','skill_change','routing_change','eval_case','operational_threshold','prompt_change','workflow_change','agent_definition_change','model_policy_change','resource_route_change','memory_policy_change','context_policy_change','infra_change','strategy_change'));
+-- The final vocabulary is declared once above; later migrations extend that block
+-- in place instead of rebuilding the same constraint a second time.
 
 
 -- ---- Wave 4 BrowserMesh: replay claims and tenant RLS ----

@@ -211,6 +211,17 @@ aplica.
 | `20260915120000` | `0173_approval_store` | Persistência durável do contrato ApprovalStore: estado condicional por status, payload do pedido, timestamps e RLS tenant-scoped. |
 | `20260915121000` | `0174_approval_store_update_rls` | Restringe alterações de approval a manager da organização ou platform admin; membros comuns mantêm apenas leitura/inserção conforme 0173. |
 | `20260913170000` | `0164_asset_license_records` | Wave 8 Asset Intelligence: registry persistente de licenças/proveniência por tenant, com estados e expiração. |
+| `20260911100000` | `0161_entitlements_catalog` | Catálogo de módulos e fronteira de entitlement por tenant. |
+| `20260913000000` | `0163_hermes_source_registry` | Registry de fontes Hermes por tenant. |
+| `20260913010000` | `0164_hermes_source_registry_rls` | RLS do registry de fontes Hermes. |
+| `20260913150000` | `command_center_overview_rls` | RLS do estado persistente do Command Center. |
+| `20260915130000` | `0175_tenant_id_uuid_hardening` | Conversão segura de tenant identifiers textuais para UUID. |
+
+| `20260913030000` | `0166_psyche_watchdog_observations` | Watchdog observations persistidas por tenant. |
+| `20260913091000` | `operating_core_job_receipts_rls` | RLS dos receipts operacionais por tenant. |
+| `20260913130000` | `0163_studio_editor` | Estado persistente do Studio Editor, com RLS por organização. |
+| `20260913140000` | `0165_operating_core_receipts` | Receipts de execução do Operating Core, idempotentes por tenant. |
+| `20260913170000` | `studio_reviewer_authorizations` | Autorizações de reviewers do Studio por organização. |
 
 ## Reproducibility
 
