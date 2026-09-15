@@ -554,3 +554,32 @@ Portanto não foram encontrados novos candidatos reais ao padrão “policy tena
 ## Verificação de limpeza sem alteração de conteúdo
 
 Em 2026-09-15 foi executado `git worktree list --porcelain`: todos os 16 worktrees de remediação e os 20 worktrees de etapas estão registrados; não há diretório `.worktree-*` órfão no workspace. A varredura de `git status --porcelain` em todos os worktrees encontrou somente a modificação preexistente `docs/Current-State.md`. Os diretórios `scratchpad-*` presentes em branches de Wave são arquivos versionados e foram preservados. A árvore `main` possui `.DS_Store`, `.obsidian/` e `Lumenva-Knowledge/` não versionados, fora do escopo desta tarefa; não foram tocados. Nenhum cleanup destrutivo foi executado.
+## Harness de VPS Hetzner descartável — preparação offline — 2026-09-15
+
+Foi adicionado `scripts/ci/provision-test-vps.sh` na branch
+`remediation/remaining-entitlements-operating-core-2026-09-15`. O script não foi
+executado e não requer qualquer credencial persistida no repositório.
+
+| Item | Implementação | Estado / evidência |
+|---|---|---|
+| Credencial | Lê somente `HCLOUD_TOKEN` do ambiente; falha antes de qualquer operação se ausente | Pendente apenas do token do dono e da disponibilidade da CLI `hcloud` |
+| SSH temporário | Gera chave Ed25519 em `mktemp`, cria a chave no projeto via `hcloud ssh-key create --public-key-from-file` e remove-a no cleanup | Sem chave persistida; remoção protegida por `trap` |
+| VPS | `hcloud server create --name lumenva-test-<timestamp>-<pid> --type cx33 --image ubuntu-24.04 --location fsn1 --ssh-key <chave>` | Nome e tipo são descartáveis; não usa nem referencia `lumenva-crm` |
+| Prontidão | Consulta `hcloud server describe -o json`, extrai IPv4 com `jq` e aguarda `ssh-keyscan` | Limites de 60 tentativas, 5 segundos entre tentativas |
+| Execução remota | Instala Node 22, pnpm 12.3.4, clona a branch passada, executa `pnpm install --frozen-lockfile`, Vitest focado em Approval/RLS e `pnpm --filter lumenva-crm test:db` | Gate real ainda depende de credencial/rede na VPS |
+| Evidência | Toda a saída local é preservada em `/tmp/lumenva-test-vps/<server>.log` via `tee` antes da destruição | Caminho é impresso no início e no cleanup |
+| Destruição | `trap cleanup EXIT` executa `hcloud server delete` e `hcloud ssh-key delete` em sucesso ou falha | Falhas de cleanup são avisadas explicitamente; não há teardown silencioso |
+
+Validação local executada sem criar recursos: `bash -n scripts/ci/provision-test-vps.sh`
+retornou exit `0`; `git diff --check` também retornou exit `0`. A sintaxe das
+flags foi conferida na documentação oficial da CLI Hetzner: `server create`
+aceita `--name`, `--type`, `--image`, `--location`, `--ssh-key` e `-o json`, e
+`ssh-key create` aceita `--public-key-from-file`. O comando futuro, a partir da
+raiz do checkout e com a CLI instalada, será:
+
+```bash
+HCLOUD_TOKEN='token-do-dono' bash scripts/ci/provision-test-vps.sh <branch>
+```
+
+Nenhuma VPS foi criada, nenhum comando `hcloud` foi executado e nenhuma conexão
+SSH foi tentada nesta preparação.
