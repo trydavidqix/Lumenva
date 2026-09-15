@@ -7,7 +7,11 @@ import {
 } from '../autonomy/evidence';
 import type { ApprovalStore } from '../policies/approval';
 import { createApprovalRequest } from '../policies/approval';
-import type { AuthorizeModuleInput, AuthorizationDecision } from '@/lib/entitlements/authorize-module';
+import {
+  authorizeModule,
+  type AuthorizeModuleInput,
+  type AuthorizationDecision,
+} from '@/lib/entitlements/authorize-module';
 import {
   evaluateToolPolicy,
   type AgentAutonomyLevel,
@@ -17,7 +21,7 @@ import type { AgentToolDefinition } from './registry';
 
 export type ToolGatewayResult =
   | { kind: 'executed'; result: unknown }
-  | { kind: 'denied'; reason: string }
+  | { kind: 'denied'; reason: string; receipt?: AuthorizationDecision }
   | { kind: 'draft'; proposal: { toolId: string; args: unknown; idempotencyKey: string } }
   | { kind: 'pending_approval'; approvalId: string };
 
