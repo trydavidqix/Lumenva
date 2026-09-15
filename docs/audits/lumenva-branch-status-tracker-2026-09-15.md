@@ -192,6 +192,17 @@ O grupo depende de runner/credenciais externas para prova operacional; localment
 
 O grupo permanece aberto até typecheck/lint/testes no Codex Cloud; o conflito add/delete foi resolvido mantendo o adapter ausente no baseline, sem descarte de lógica existente.
 
+## Ledger de remediação — Acceptance/Event Adapter/MCP
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| business-os/wave-1-acceptance-2026-09-11 | Acceptance proofs | remediation/business-os-acceptance-mcp-2026-09-15 | aplicado, teste real pendente | commit 84bbe0b5; acceptance tests adicionados |
+| business-os/wave-1-event-adapter-2026-09-11 | Event Adapter | remediation/business-os-acceptance-mcp-2026-09-15 | aplicado, teste real pendente | commit 03ab1c8a; Postgres integration test e import corrigido |
+| business-os/wave-1-mcp-surface-2026-09-11 | MCP surface | remediation/business-os-acceptance-mcp-2026-09-15 | aplicado, teste real pendente | commit ae9ac418; catálogo Operating Core em linguagem simples |
+| business-os/wave-1-operating-core-2026-09-11 | Operating Core receipts | remediation/business-os-acceptance-mcp-2026-09-15 | aplicado, teste real pendente | commit a27b1815; receipt persistence test descartável |
+
+Validações locais do grupo: package_json=valid, conflict_markers=none e git diff --check=pass. Os testes Postgres/Vitest precisam ser executados no Codex Cloud.
+
 | wave10/mobile-compliance-guardian-2026-09-13 | Wave 10 Mobile Compliance | remediation/waves-10-15-2026-09-15 | aplicado, teste real pendente | commit 4d34220c; Mobile Releases registrado na navegação |
 | wave14-15/evals-autonomy-2026-09-12 | Wave 14–15 Evals | remediation/waves-10-15-2026-09-15 | já coberto pelo baseline | cherry-pick vazio após comparação; não houve alteração descartada |
 
