@@ -133,6 +133,17 @@ No ambiente Codex Cloud, por worktree/branch: pnpm install --frozen-lockfile; pn
 
 Até a execução desses comandos, nenhuma linha M/P é considerada tratada ou consolidada.
 
+## Ledger de remediação — Wave 6–9
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| wave6/studio-comercial-2026-09-12 | Wave 6 Studio | remediation/waves-6-9-2026-09-15 | já coberto pelo baseline | cherry-pick vazio após reconciliação |
+| wave7-8/studio-editor-2026-09-12 | Wave 7–8 Studio Editor | remediation/waves-6-9-2026-09-15 | aplicado, teste real pendente | commit 986a6230; testes de concorrência estabilizados |
+| wave8/asset-intelligence-2026-09-13 | Wave 8 Asset Intelligence | remediation/waves-6-9-2026-09-15 | aplicado, teste real pendente | commit a1db6ba0; registry, migration, baseline, RLS e integration test |
+| wave9/product-factory-2026-09-12 | Wave 9 Product Factory | remediation/waves-6-9-2026-09-15 | aplicado, teste real pendente | commit 4a817bbe; teste de concorrência do estado durável |
+
+O grupo permanece aberto até os testes reais no Codex Cloud. Validações locais: package_json=valid, conflict_markers=none, registry SQL presente com estados quotados e git diff --check=pass.
+
 ## Ledger de remediação — Wave 1–5
 
 | Branch original | Grupo | Branch isolada | Estado | Evidência |
