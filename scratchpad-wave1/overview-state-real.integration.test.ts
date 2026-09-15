@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Pool } from "../apps/crm/node_modules/pg";
-import { loadOverview, saveOverview } from "./overview-state-persistence";
+import { loadOverview, saveOverview } from "../apps/crm/lib/command-center/overview-state-persistence";
 
 let container = "";
 let admin: Pool;
