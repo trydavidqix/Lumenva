@@ -164,7 +164,7 @@ export function buildOverviewState(input: OverviewInput): OverviewState {
     generatedAt: input.generatedAt,
     activeAgents: input.agents
       .filter((agent) => agent.status === "ACTIVE")
-      .map(({ id, version, status }) => ({ id, version, status }))
+      .map(({ id, version }) => ({ id, version, status: "ACTIVE" as const }))
       .sort((left, right) => left.id.localeCompare(right.id)),
     accumulatedCost: { amount, currency },
     costEntries: input.costs
@@ -179,11 +179,11 @@ export function buildOverviewState(input: OverviewInput): OverviewState {
       .sort((left, right) => left.id.localeCompare(right.id)),
     pendingJobs: input.jobs
       .filter((job) => job.status === "PENDING")
-      .map(({ id, name, status }) => ({ id, name, status }))
+      .map(({ id, name }) => ({ id, name, status: "PENDING" as const }))
       .sort((left, right) => left.id.localeCompare(right.id)),
     pendingApprovals: input.approvals
       .filter((approval) => approval.status === "PENDING")
-      .map(({ id, action, requestedBy, status }) => ({ id, action, requestedBy, status }))
+      .map(({ id, action, requestedBy }) => ({ id, action, requestedBy, status: "PENDING" as const }))
       .sort((left, right) => left.id.localeCompare(right.id)),
     resolvedApprovals: input.approvals
       .filter((approval) => approval.status !== "PENDING")
@@ -191,7 +191,7 @@ export function buildOverviewState(input: OverviewInput): OverviewState {
         id,
         action,
         requestedBy,
-        status,
+        status: status as "APPROVED" | "DENIED",
         decidedBy: decidedBy as string,
         decidedAt: decidedAt as string,
       }))
