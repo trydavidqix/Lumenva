@@ -32,6 +32,7 @@ export interface ApprovalRequest {
 export interface ApprovalStore {
   save(request: ApprovalRequest): Promise<void>;
   load(id: string): Promise<ApprovalRequest | null>;
+  compareAndSet(id: string, expectedStatus: ApprovalStatus, next: ApprovalRequest): Promise<boolean>;
 }
 
 const executionLocks = new Map<string, Promise<void>>();
@@ -136,8 +137,9 @@ export async function decideApprovalRequest(
     ...(decision.reason === undefined ? {} : { decisionReason: decision.reason }),
   };
 
-  await store.save(next);
-  return next;
+  const committed = await store.compareAndSet(request.id, 'pending', next);
+  if (committed) return next;
+  return requireApproval(await store.load(approvalId), approvalId, guard);
 }
 
 export async function expireApprovalRequest(

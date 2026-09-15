@@ -37,6 +37,12 @@ function approvalStore(): ApprovalStore {
   return {
     async save(value) { rows.set(value.id, structuredClone(value)); },
     async load(id) { const value = rows.get(id); return value ? structuredClone(value) : null; },
+    async compareAndSet(id, expectedStatus, next) {
+      const current = rows.get(id);
+      if (!current || current.status !== expectedStatus) return false;
+      rows.set(id, structuredClone(next));
+      return true;
+    },
   };
 }
 

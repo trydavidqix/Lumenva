@@ -21,6 +21,12 @@ function memoryStore(): ApprovalStore & { rows: Map<string, ApprovalRequest> } {
       const row = rows.get(id);
       return row ? structuredClone(row) : null;
     },
+    async compareAndSet(id, expectedStatus, next) {
+      const current = rows.get(id);
+      if (!current || current.status !== expectedStatus) return false;
+      rows.set(id, structuredClone(next));
+      return true;
+    },
   };
 }
 
