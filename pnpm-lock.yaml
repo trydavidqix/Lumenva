@@ -76,6 +76,8 @@ importers:
         version: 6.0.3
   packages/operating-core: {}
   packages/prompt-compiler: {}
+  packages/skill-registry: {}
+  packages/tool-registry: {}
 
   apps/crm:
     dependencies:

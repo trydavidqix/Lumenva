@@ -357,6 +357,36 @@ Foi investigada a possibilidade de executar testes reais sem baixar dependência
 
 Conclusão: existe uma prova Node local útil e aprovada (12/12), mas não há runner Vitest nem banco local disponível. O lockfile inconsistente deve ser tratado como pré-condição dos 16 comandos Cloud; nenhum resultado Cloud foi marcado como sucesso com base nesta sondagem.
 
+### Atualização do lockfile e pré-condição Cloud
+
+Comparação dos cinco manifests de packages com `pnpm-lock.yaml`: `packages/agent-runtime`, `packages/prompt-compiler` e `packages/operating-core` já tinham importer; `packages/skill-registry` e `packages/tool-registry` estavam ausentes. Foram adicionados somente estes dois importers vazios, porque ambos declaram apenas `typecheck` e nenhuma dependência:
+
+```yaml
+  packages/skill-registry: {}
+  packages/tool-registry: {}
+```
+
+Evidência após a correção: `pnpm install --offline --frozen-lockfile --ignore-scripts` passou da validação de lockfile (`Lockfile is up to date, resolution step is skipped`) e falhou depois com `ERR_PNPM_NO_OFFLINE_META` para `@babel/helpers` no cache local. Não houve alteração de dependências de terceiros. O comando exato a executar no Codex Cloud antes dos 16 gates é:
+
+```bash
+pnpm install
+```
+
+Depois que esse install sem `--frozen-lockfile` concluir com sucesso e persistir qualquer metadata/ajuste necessário, executar os 16 comandos consolidados acima. O `pnpm install --offline --frozen-lockfile` não pode ser reportado como sucesso local enquanto o metadata de `@babel/helpers` não estiver no cache.
+
+## Diagnóstico de segurança — round-trip de senha com aspa simples
+
+O caso foi reproduzido sem rede e sem alterar produção. `install.sh:412` serializa valores com `envq`, produzindo para `se'nha` a linha válida de shell `SENHA='se'\''nha'`. Na releitura, `load_env` em `_common.sh:253-264` remove as aspas externas e tenta desfazer o escape na substituição da linha 263, mas o padrão não é a inversa byte-a-byte do formato emitido. A reprodução real devolveu:
+
+```text
+serialized: 53 45 4e 48 41 3d 27 73 65 27 5c 27 27 6e 68 61 27
+expected:   se'nha
+loaded:     se"'"nha
+loaded_bytes: 73 65 22 27 22 6e 68 61
+```
+
+Causa raiz: o encoder usa o escape POSIX `'''`, enquanto o decoder atual transforma a sequência em artefatos de aspas duplas (`"'"`) em vez de remover somente a camada sintática. Impacto confirmado: corrupção silenciosa de segredos com aspa simples, podendo causar falha de autenticação/connection string depois, longe do parser. O caminho `load_env` não usa `eval`/`source`, então esta reprodução não demonstrou execução de código; ainda assim é uma vulnerabilidade de integridade/secreto e qualquer consumidor que volte a interpretar o valor como shell ampliaria o risco. Correção deliberadamente não aplicada nesta etapa, conforme pedido; requer teste RED/GREEN dedicado para round-trip antes da implementação.
+
 ## Verificação de limpeza sem alteração de conteúdo
 
 Em 2026-09-15 foi executado `git worktree list --porcelain`: todos os 16 worktrees de remediação e os 20 worktrees de etapas estão registrados; não há diretório `.worktree-*` órfão no workspace. A varredura de `git status --porcelain` em todos os worktrees encontrou somente a modificação preexistente `docs/Current-State.md`. Os diretórios `scratchpad-*` presentes em branches de Wave são arquivos versionados e foram preservados. A árvore `main` possui `.DS_Store`, `.obsidian/` e `Lumenva-Knowledge/` não versionados, fora do escopo desta tarefa; não foram tocados. Nenhum cleanup destrutivo foi executado.
