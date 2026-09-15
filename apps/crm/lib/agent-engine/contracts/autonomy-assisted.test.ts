@@ -38,6 +38,7 @@ function input(
     approvalStore: {
       save: vi.fn(),
       load: vi.fn(),
+      compareAndSet: vi.fn(),
     },
     promotionDecision,
   };
