@@ -26,6 +26,8 @@ function databaseForCompareAndSet() {
       expect(table).toBe('approval_requests');
       const query = {
         update() { return query; },
+        insert() { return query; },
+        upsert() { return query; },
         select() { return query; },
         eq(column: string, value: unknown) {
           if (column === 'id') calls.push({ id: value });
@@ -46,6 +48,27 @@ function databaseForCompareAndSet() {
 }
 
 describe('SupabaseApprovalStore', () => {
+  it('carrega o payload persistido por id', async () => {
+    const db: ApprovalStoreDatabase = {
+      from(table) {
+        expect(table).toBe('approval_requests');
+        const query = {
+          update() { return query; },
+          insert() { return query; },
+          upsert() { return query; },
+          select() { return query; },
+          eq() { return query; },
+          async maybeSingle() {
+            return { data: { status: 'pending', payload: request }, error: null };
+          },
+        };
+        return query;
+      },
+    };
+
+    await expect(new SupabaseApprovalStore(db).load(request.id)).resolves.toEqual(request);
+  });
+
   it('returns one winner and false for the losing concurrent CAS', async () => {
     const { db, calls } = databaseForCompareAndSet();
     const store = new SupabaseApprovalStore(db);
