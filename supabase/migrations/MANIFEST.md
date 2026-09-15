@@ -207,6 +207,7 @@ aplica.
 | `20260913160000` | `0163_browsermesh_event_idempotency_rls` | Wave 4 BrowserMesh: RLS tenant-scoped para claims de replay e grants mínimos. |
 | `20260915090000` | `0170_tenant_rls_hardening` | Hardening da fronteira tenant para billing, Hermes, Studio e BrowserMesh: RLS fail-closed, cast seguro dos identificadores textuais e grants mínimos. |
 | `20260915100000` | `0171_content_asset_provenance` | Campos aditivos e opcionais de licença e proveniência estruturada para assets criativos, preservando assets legados. |
+| `20260915110000` | `0172_tenant_rls_entitlement_policy_fix` | Corrige o hardening 0170: remove policies tenant-all permissivas de billing e restaura writes de plano apenas para platform admin e eventos como append-only por tenant. |
 | `20260913170000` | `0164_asset_license_records` | Wave 8 Asset Intelligence: registry persistente de licenças/proveniência por tenant, com estados e expiração. |
 
 ## Reproducibility
