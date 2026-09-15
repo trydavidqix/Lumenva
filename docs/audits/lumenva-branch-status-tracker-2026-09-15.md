@@ -455,6 +455,39 @@ Causa raiz: o encoder usa o escape POSIX `'''`, enquanto o decoder antigo transf
 
 Checagem independente executada sem reprocessar F: `F_rows=44`, `sha_missing=0`, `ancestor_of_main=39`, `distinct_trees=37`, `duplicate_tree_groups=5`, `non_ancestor_F=5`, `non_ancestor_covered_by_duplicate_tree=5`, `non_ancestor_unexplained=0`. As 39 refs ancestrais não possuem divergência contra `origin/main`; as 5 restantes são integralmente cobertas por cinco grupos de árvores duplicadas já identificados. A classificação F permanece consistente e nenhuma F foi convertida em M/P.
 
+## Follow-up — ApprovalStore production wiring e shared-state scan — 2026-09-15
+
+### Resultado do wiring de produção
+
+Busca executada na branch `remediation/remaining-entitlements-operating-core-2026-09-15`:
+
+```bash
+rg -n -i "implements\s+ApprovalStore|ApprovalStore|createApprovalStore|approvalStore|approval_store" apps/crm/lib/agent-engine apps/crm/lib apps/crm/tests --glob '*.ts' --glob '*.mts' --glob '*.tsx'
+```
+
+Resultado: `ApprovalStore` aparece no contrato `apps/crm/lib/agent-engine/policies/approval.ts`, no gateway que recebe o port por injeção e em contratos/testes; não há `implements ApprovalStore`, factory, repository ou adapter de produção em `apps/crm/lib/agent-engine`/persistence/infra. O runtime de `apps/crm/lib/ai/agent-command/runtime.ts` possui outro `AgentCommandApprovalRepository`, com tabela e contrato distintos, portanto não foi tratado como implementação deste port.
+
+Conclusão: gap arquitetural real. O contrato agora exige CAS, mas ainda falta definir e implementar o wiring durável de produção (por exemplo, repository Postgres/Supabase e sua tabela). Nenhum adapter fictício foi criado. Pendência do dono/infra: definir o backend persistente e conectar esse port antes de habilitar approval em produção.
+
+### Varredura dos outros 15 worktrees de remediação
+
+Comando de triagem executado sem rede, comparando arquivos de produção alterados em cada branch contra `fec2d253` (HEAD real de `main`) e procurando leitura seguida de gravação:
+
+```bash
+for b in $(git for-each-ref --format='%(refname:short)' refs/heads/remediation); do ...; done
+```
+
+Os falsos positivos recorrentes em `agent-definition-registry-pg.integration.test.ts` foram descartados por serem testes de integração e não estado de approval. Candidatos concretos, não corrigidos nesta revisão:
+
+| Branch | Localização | Evidência | Por que é suspeito |
+|---|---|---|---|
+| `remediation/business-os-reconcile-equivalence-2026-09-15` | `apps/crm/lib/agent-engine/policies/approval.ts:119-139` | `await store.load(approvalId)` seguido de `await store.save(next)` | Snapshot `pending` pode ser decidido por duas chamadas concorrentes; branch não contém a correção CAS de `d0c4f13d`. |
+| `remediation/wave2-agent-birth-2026-09-15` | `apps/crm/lib/agent-engine/policies/approval.ts:119-139` | `await store.load(approvalId)` seguido de `await store.save(next)` | Mesmo padrão load-then-save sem transição condicional. |
+| `remediation/wave3-session-runtime-2026-09-15` | `apps/crm/lib/agent-engine/policies/approval.ts:119-139` | `await store.load(approvalId)` seguido de `await store.save(next)` | Mesmo padrão de decisão concorrente sem CAS. |
+| `remediation/wave3-session-runtime-2026-09-15` | `apps/crm/lib/agent-engine/session-runtime/service.ts:57-65` e `:74-82` | `snapshots.load(sessionId)` seguido de `snapshots.save(snapshot)` | `start()` pode criar o mesmo snapshot duas vezes; `apply()` também calcula e grava a partir de snapshot possivelmente obsoleto. A atomicidade do backend não está definida no `SessionSnapshotStore`. |
+
+Esses quatro registros são apenas candidatos documentados; não houve correção nem alteração nos 15 worktrees. A confirmação/mitigação exige contrato de CAS ou operação condicional no backend correspondente e testes concorrentes reais.
+
 ## Verificação de limpeza sem alteração de conteúdo
 
 Em 2026-09-15 foi executado `git worktree list --porcelain`: todos os 16 worktrees de remediação e os 20 worktrees de etapas estão registrados; não há diretório `.worktree-*` órfão no workspace. A varredura de `git status --porcelain` em todos os worktrees encontrou somente a modificação preexistente `docs/Current-State.md`. Os diretórios `scratchpad-*` presentes em branches de Wave são arquivos versionados e foram preservados. A árvore `main` possui `.DS_Store`, `.obsidian/` e `Lumenva-Knowledge/` não versionados, fora do escopo desta tarefa; não foram tocados. Nenhum cleanup destrutivo foi executado.
