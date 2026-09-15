@@ -209,6 +209,7 @@ aplica.
 | `20260915100000` | `0171_content_asset_provenance` | Campos aditivos e opcionais de licença e proveniência estruturada para assets criativos, preservando assets legados. |
 | `20260915110000` | `0172_tenant_rls_entitlement_policy_fix` | Corrige o hardening 0170: remove policies tenant-all permissivas de billing e restaura writes de plano apenas para platform admin e eventos como append-only por tenant. |
 | `20260915120000` | `0173_approval_store` | Persistência durável do contrato ApprovalStore: estado condicional por status, payload do pedido, timestamps e RLS tenant-scoped. |
+| `20260915121000` | `0174_approval_store_update_rls` | Restringe alterações de approval a manager da organização ou platform admin; membros comuns mantêm apenas leitura/inserção conforme 0173. |
 | `20260913170000` | `0164_asset_license_records` | Wave 8 Asset Intelligence: registry persistente de licenças/proveniência por tenant, com estados e expiração. |
 
 ## Reproducibility
