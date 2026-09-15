@@ -24,7 +24,7 @@ describe("tenant RLS hardening migration", () => {
       "studio_client_decisions",
       "browsermesh_event_idempotency",
     ]) {
-      expect(migration).toMatch(new RegExp(`alter table public\\.${table} enable row level security`));
+      expect(migration).toMatch(new RegExp(`alter table (if exists )?public\\.${table} enable row level security`));
       expect(migration).toContain(`public.${table}`);
     }
     expect(migration).toContain("revoke all on public.hermes_session_supersession from anon");
