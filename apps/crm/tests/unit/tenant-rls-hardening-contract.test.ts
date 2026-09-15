@@ -10,6 +10,10 @@ const correctiveMigration = readFileSync(
   resolve(process.cwd(), "../../supabase/migrations/20260915110000_0172_tenant_rls_entitlement_policy_fix.sql"),
   "utf8",
 );
+const tenantIdTypeMigration = readFileSync(
+  resolve(process.cwd(), "../../supabase/migrations/20260915130000_0175_tenant_id_uuid_hardening.sql"),
+  "utf8",
+);
 
 describe("tenant RLS hardening migration", () => {
   it("enables RLS and grants only authenticated/service_role on every recent tenant table", () => {
@@ -42,5 +46,15 @@ describe("tenant RLS hardening migration", () => {
     expect(correctiveMigration).toContain("entitlement_events_insert");
     expect(correctiveMigration).not.toMatch(/create policy\s+organization_plan_tenant_all/i);
     expect(correctiveMigration).not.toMatch(/create policy\s+entitlement_events_tenant_all/i);
+  });
+
+  it("converts legacy text tenant identifiers only after a UUID-safe preflight", () => {
+    expect(tenantIdTypeMigration).toContain("asset_license_records");
+    expect(tenantIdTypeMigration).toContain("browsermesh_event_idempotency");
+    expect(tenantIdTypeMigration).toMatch(
+      /alter column organization_id type uuid\s+using organization_id::uuid/i,
+    );
+    expect(tenantIdTypeMigration).toContain("!~*");
+    expect(tenantIdTypeMigration).toContain("raise exception");
   });
 });
