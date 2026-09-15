@@ -197,7 +197,13 @@ aplica.
 | `20260907100000` | `0158_content_os_editorial_persistence` | Content OS V1: research runs retomáveis, evidências com hash e estado de verificação, claims ligados a evidências, quality gates e revisões versionadas; todas tenant-aware, com RLS, índices de reconciliação, idempotência e triggers de coerência entre organizações. |
 | `20260907110000` | `0159_content_os_learning_idempotency` | Chave de idempotência tenant-aware para eventos de aprendizagem e detecção segura de content decay. |
 | `20260907120000` | `0160_ai_agent_command_approvals` | Nova Mode V1: aprovações duráveis de comandos do navegador, com idempotência por organização, expiração, estado de execução, RLS manager+ e guarda de coerência entre agente, versão e tenant. |
-| `20260913100000` | `0162_browsermesh_event_idempotency` | Wave 4 BrowserMesh: claims de replay por tenant, evento e chave de idempotência. |
+| `20260912120000` | `0162_stripe_entitlement_boundary` | Stripe billing boundary: colunas aditivas de provider e índices tenant-scoped para organization_plan e entitlement_events; sem remoção de dados. |
+| `20260913010000` | `0164_hermes_tool_loop_locks` | Locks duráveis de tool-loop do Hermes, com limite de iterações e expiração. |
+| `20260913020000` | `0165_hermes_session_supersession` | Estado durável de supersession de sessão Hermes por organização. |
+| `20260913050000` | `0168_client_portal_decisions` | Decisões do portal do cliente com evidências, receipt e chave primária composta por organização. |
+| `20260913100000` | `browsermesh_event_idempotency` | Wave 4 BrowserMesh: claims de replay por tenant, evento e chave de idempotência. |
+| `20260913120000` | `0169_hermes_tool_loop_locks_tenant_rls` | Completa o escopo tenant/RLS dos locks Hermes e mantém o backfill legado explícito. |
+| `20260913150000` | `0166_studio_client_portal_tokens` | Tokens duráveis do portal do cliente, com hash, expiração, uso único e RLS por organização. |
 | `20260913160000` | `0163_browsermesh_event_idempotency_rls` | Wave 4 BrowserMesh: RLS tenant-scoped para claims de replay e grants mínimos. |
 
 ## Reproducibility
@@ -216,4 +222,3 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 - **Integrations**: tenant_integrations, orders, nuvemshop_products
 - **Compliance**: lgpd_requests
 - **Ops**: incidents
-| `20260913130000` | `0163_hermes_learning_os` | Hermes Unified Learning OS: tenant-safe append-only research experiments, outcomes and capability identities with RLS; extends the governed Flywheel proposal type allowlist. |
