@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { Pool } from "pg";
+import { Pool } from "../apps/crm/node_modules/pg";
 import { ensureResourceRouterStore, loadWorkers, persistWorker, routeResourcePersisted, routeResourcePersistedOnce } from "./resource-router-persistence";
 
 let pool: Pool;

@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { Pool } from "pg";
+import { Pool } from "../apps/crm/node_modules/pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 const orgA = "11111111-1111-4111-8111-111111111111";
