@@ -583,3 +583,66 @@ HCLOUD_TOKEN='token-do-dono' bash scripts/ci/provision-test-vps.sh <branch>
 
 Nenhuma VPS foi criada, nenhum comando `hcloud` foi executado e nenhuma conexão
 SSH foi tentada nesta preparação.
+## Achado #4 — alinhamento de `organization_id` para UUID — 2026-09-15
+
+O achado foi confirmado por inspeção estática. As migrations exatas são
+`20260913100000_browsermesh_event_idempotency.sql` (BrowserMesh, linha 1) e
+`20260913170000_0164_asset_license_records.sql` (Asset Intelligence, linha 1).
+Ambas declaram `organization_id text not null`: linhas 3 e 2, respectivamente.
+Em contraste, `supabase/baseline.sql:1771-1773` declara
+`public.organizations.id` como `uuid`; o padrão das tabelas tenant relacionadas
+também é `organization_id uuid ... references public.organizations(id)`, por
+exemplo `supabase/migrations/20260429110000_0018_lgpd_redaction_queue.sql:8`.
+
+Há evidência adicional de que a inconsistência não é apenas nominal: a migration
+`20260915090000_0170_tenant_rls_hardening.sql:35-38` precisa fazer
+`organization_id::uuid` na policy de `browsermesh_event_idempotency`, enquanto a
+policy original de `asset_license_records` em
+`20260913170000_0164_asset_license_records.sql:14-16` compara `text` diretamente
+com `fn_user_org_ids()` (UUID). A existência de cast explícito no hardening e o
+tipo divergente do catálogo confirmam uma inconsistência real de schema. Não foi
+assumido que comparação implícita resolve o problema: casts de policy podem
+falhar em runtime quando uma linha contém valor não conversível.
+
+### Remediação preparada
+
+Foi criada, sem editar migrations anteriores,
+`supabase/migrations/20260915130000_0175_tenant_id_uuid_hardening.sql`.
+
+1. Um bloco `DO` conta previamente valores `NULL`, com espaços ou fora do formato
+   UUID canônico em cada tabela e aborta com `check_violation` antes de qualquer
+   `ALTER TABLE` se encontrar algum.
+2. Em seguida, converte cada coluna com
+   `alter column organization_id type uuid using organization_id::uuid`.
+
+O preflight torna a migration fail-safe para dados inválidos, mas a segurança do
+cast **não pode ser confirmada sem executar a consulta contra Postgres real**.
+O gate futuro deve rodar a migration em um banco descartável e registrar as
+contagens/resultado; não houve execução SQL nesta sessão.
+
+### TDD e evidência
+
+O teste `apps/crm/tests/unit/tenant-rls-hardening-contract.test.ts` foi atualizado
+antes da migration para exigir a existência de 0175, ambos os `ALTER COLUMN`, as
+duas guardas `!~*` e os dois `raise exception`. RED foi confirmado pelo comando:
+
+```text
+RED: expected migration missing (test contract cannot pass yet)
+exit 1
+```
+
+Após criar a migration, o contrato estático real executou e retornou:
+
+```text
+GREEN: UUID tenant migration static contract passed
+```
+
+Também passaram `bash`/Node do contrato estático e `git diff --check`. O Vitest
+não foi executado porque o runner/dependências continuam ausentes neste sandbox;
+isso não foi marcado como teste verde. Commits separados:
+
+| Etapa | Commit |
+|---|---|
+| Teste RED/contrato | `d8ea110f` |
+| Migration corretiva | `5d6bfa96` |
+| Documentação deste achado | pendente neste commit |
