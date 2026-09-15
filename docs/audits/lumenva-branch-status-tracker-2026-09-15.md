@@ -213,6 +213,15 @@ Validações locais do grupo: package_json=valid, conflict_markers=none e git di
 
 Conflitos de definitions/index foram integrados manualmente, preservando exports existentes e adicionando os contratos novos. Validações locais: cinco package.json válidos, conflict_markers=none e git diff --check=pass; typecheck/Vitest reais pendentes no Codex Cloud.
 
+## Ledger de remediação — Wave 3 Session Runtime
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| business-os/wave-3-session-runtime | Session Runtime core | remediation/wave3-session-runtime-2026-09-15 | aplicado, teste real pendente | commit 05467b15; context/model locks e testes |
+| business-os/wave-3-session-runtime-mvp-2026-09-09 | Session Runtime service | remediation/wave3-session-runtime-2026-09-15 | aplicado, teste real pendente | commit 1d41987a; providers/service e testes |
+
+Validações locais: package.json de agent-runtime, prompt-compiler e CRM válidos, conflict_markers=none e git diff --check=pass. Typecheck/Vitest reais pendentes no Codex Cloud.
+
 ## Ledger de remediação — Reconcile/Equivalence
 
 | Branch original | Grupo | Branch isolada | Estado | Evidência |
