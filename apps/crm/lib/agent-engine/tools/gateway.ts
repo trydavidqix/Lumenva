@@ -264,6 +264,8 @@ export interface WrapToolSetWithGatewayOptions {
   definitions: ReadonlyMap<string, AgentToolDefinition>;
   approvalStore: ApprovalStore | null;
   idempotencyKeyFor: (toolId: string, args: unknown) => string;
+  /** Supplies the central authorization contract for each registered tool. */
+  entitlementFor?: (tool: AgentToolDefinition) => AuthorizeModuleInput;
 }
 
 export function wrapToolSetWithGateway(tools: ToolSetLike, options: WrapToolSetWithGatewayOptions): ToolSetLike {
@@ -295,6 +297,7 @@ export function wrapToolSetWithGateway(tools: ToolSetLike, options: WrapToolSetW
           args,
           idempotencyKey: options.idempotencyKeyFor(toolId, args),
           approvalStore: options.approvalStore,
+          entitlement: options.entitlementFor?.(metadata),
           execute: () => originalExecute(args, executeOptions),
         });
       },

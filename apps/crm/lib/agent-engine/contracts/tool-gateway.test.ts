@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { AgentToolDefinition } from '../tools/registry';
+import type { AuthorizeModuleInput } from '@/lib/entitlements/authorize-module';
 import {
   executeThroughToolGateway,
   wrapToolSetWithGateway,
@@ -35,17 +36,52 @@ const baseContext = {
   agentPolicy: {},
 };
 
+function entitlementFor(toolDefinition: AgentToolDefinition): AuthorizeModuleInput {
+  return {
+    requestId: `request:${toolDefinition.id}`,
+    policyVersion: 'entitlements.v1',
+    module: {
+      id: toolDefinition.id,
+      version: '1',
+      dependencies: [],
+      conflicts: [],
+      requiredCapabilities: [],
+      allowedRoles: ['agent'],
+      risk: 'P4',
+      requiresApproval: false,
+    },
+    tenant: {
+      organizationId: baseContext.organizationId,
+      rlsOrganizationId: baseContext.organizationId,
+      rlsAllowed: true,
+      plan: 'standard',
+      entitledModules: [toolDefinition.id],
+    },
+    actor: {
+      actorId: baseContext.agentId,
+      organizationId: baseContext.organizationId,
+      role: 'agent',
+      capabilities: [],
+    },
+    enabledModules: [],
+    maxRisk: 'P4',
+    approval: { required: false, approved: false },
+  };
+}
+
 describe('Agent OS Tool Gateway', () => {
   it('executa R0/R1 permitido e nunca deixa o modelo sobrepor a policy', async () => {
     const execute = vi.fn().mockResolvedValue({ ok: true });
 
+    const selectedTool = tool('r1_reversible_write');
     const result = await executeThroughToolGateway({
       ...baseContext,
-      tool: tool('r1_reversible_write'),
+      tool: selectedTool,
       args: { stage: 'qualified' },
       idempotencyKey: 'idem-1',
       execute,
       approvalStore: null,
+      entitlement: entitlementFor(selectedTool),
     });
 
     expect(result).toEqual({ kind: 'executed', result: { ok: true } });
@@ -58,13 +94,15 @@ describe('Agent OS Tool Gateway', () => {
     const load = vi.fn();
     const compareAndSet = vi.fn();
 
+    const selectedTool = tool('r2_external_communication', { id: 'send_message' });
     const result = await executeThroughToolGateway({
       ...baseContext,
-      tool: tool('r2_external_communication', { id: 'send_message' }),
+      tool: selectedTool,
       args: { body: 'Olá' },
       idempotencyKey: 'idem-send-1',
       execute,
       approvalStore: { save, load, compareAndSet },
+      entitlement: entitlementFor(selectedTool),
     });
 
     expect(result.kind).toBe('pending_approval');
@@ -75,14 +113,16 @@ describe('Agent OS Tool Gateway', () => {
   it('R4 é negado antes de qualquer execute', async () => {
     const execute = vi.fn();
 
+    const selectedTool = tool('r4_destructive_admin');
     const result = await executeThroughToolGateway({
       ...baseContext,
       autonomyLevel: 'autopilot_expanded',
-      tool: tool('r4_destructive_admin'),
+      tool: selectedTool,
       args: {},
       idempotencyKey: 'idem-r4',
       execute,
       approvalStore: null,
+      entitlement: entitlementFor(selectedTool),
     });
 
     expect(result).toEqual({ kind: 'denied', reason: 'r4_requires_human' });
@@ -110,6 +150,7 @@ describe('Agent OS Tool Gateway', () => {
         ]),
         approvalStore: null,
         idempotencyKeyFor: () => 'idem-mcp-1',
+        entitlementFor,
       },
     );
 
