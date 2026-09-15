@@ -4,7 +4,7 @@
 
 Fonte: snapshot exato de refs persistido em docs/audits/lumenva-branch-audit-2026-09-15.md. origin/main verificado em fec2d25348d357e9091c2d5e11fbfd7ee7427208.
 
-A auditoria declara 102 branches divergentes, porém suas linhas exatas de implementação somam 103: o quadro-resumo informa 11 refs f6, enquanto o snapshot contém 12 (incluindo f6-lgpd-export-2026-09-10). Esta inconsistência fica preservada; nenhuma ref foi omitida. Pendência do dono: confirmar se a contagem oficial deve ser 102 ou 103.
+A auditoria declara 102 branches divergentes, porém suas linhas exatas de implementação somam 103. A causa foi identificada: o quadro-resumo agrupa `f6/*` como 11 refs, mas o snapshot também contém a ref standalone `f6-lgpd-export-2026-09-10`; ela não é ancestral de `origin/main` (SHA `e770c2e1a638fff60715d5fd79410af50586e06e`) e portanto é uma divergência real, não erro de ancestry nem duplicata de árvore. As outras 11 refs `f6/*` incluem ancestrais de `origin/main` e não aumentam o conjunto divergente; a linha standalone foi corretamente classificada como M e tratada no grupo LGPD/PAdES. Assim, 102 é a contagem divergente pretendida pelo resumo somente se essa ref standalone for omitida; para o snapshot exato, a contagem auditável é 103. Pendência do dono: confirmar qual convenção de contagem será a oficial, sem omitir a ref.
 
 Classificação determinística: F = SHA ancestral de origin/main, árvore duplicada no snapshot ou marcador explícito de cópia/v2/scratch; M = diff divergente com até 20 arquivos e ao menos um teste/spec; P = demais diffs divergentes. M não significa merge/teste aprovado: é apenas candidato a verificação e consolidação.
 
