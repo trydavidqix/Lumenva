@@ -3,15 +3,15 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const migration = readFileSync(
-  resolve(process.cwd(), "../../supabase/migrations/20260915090000_0170_tenant_rls_hardening.sql"),
+  resolve(process.cwd(), "supabase/migrations/20260915090000_0170_tenant_rls_hardening.sql"),
   "utf8",
 );
 const correctiveMigration = readFileSync(
-  resolve(process.cwd(), "../../supabase/migrations/20260915110000_0172_tenant_rls_entitlement_policy_fix.sql"),
+  resolve(process.cwd(), "supabase/migrations/20260915110000_0172_tenant_rls_entitlement_policy_fix.sql"),
   "utf8",
 );
 const tenantIdTypeMigration = readFileSync(
-  resolve(process.cwd(), "../../supabase/migrations/20260915130000_0175_tenant_id_uuid_hardening.sql"),
+  resolve(process.cwd(), "supabase/migrations/20260915130000_0175_tenant_id_uuid_hardening.sql"),
   "utf8",
 );
 
