@@ -133,6 +133,16 @@ No ambiente Codex Cloud, por worktree/branch: pnpm install --frozen-lockfile; pn
 
 Até a execução desses comandos, nenhuma linha M/P é considerada tratada ou consolidada.
 
+## Ledger de remediação — LGPD/PAdES
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| f6-lgpd-export-2026-09-10 | LGPD export | remediation/lgpd-pades-2026-09-15 | já coberto pelo baseline, teste real pendente | cherry-pick e770c2e1 redundante; endpoint ZIP/JSON atual preservado |
+| f6/lgpd-zip-manifest-2026-09-10 | LGPD manifest | remediation/lgpd-pades-2026-09-15 | já coberto pelo baseline, teste real pendente | cherry-pick 706caf3e redundante; export-package atual inclui verificação |
+| f6/pades-scaffold-2026-09-10 | PAdES | remediation/lgpd-pades-2026-09-15 | já coberto pelo baseline, teste real pendente | cherry-pick ed4a5252 redundante; signer fail-closed e fixture já presentes |
+
+O grupo não é fechado sem executar test:pades/typecheck no Codex Cloud. Validações locais package_json=valid, conflict_markers=none e git diff --check=pass.
+
 ## Ledger de remediação — Customer 360
 
 | Branch original | Grupo | Branch isolada | Estado | Evidência |
