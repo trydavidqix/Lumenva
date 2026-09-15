@@ -145,6 +145,9 @@ Até a execução desses comandos, nenhuma linha M/P é considerada tratada ou c
 
 O subgrupo permanece aberto até Vitest/typecheck no Codex Cloud. Validações locais: package_json=valid, conflict_markers=none e git diff --check=pass.
 
+| wave10/mobile-compliance-guardian-2026-09-13 | Wave 10 Mobile Compliance | remediation/waves-10-15-2026-09-15 | aplicado, teste real pendente | commit 4d34220c; Mobile Releases registrado na navegação |
+| wave14-15/evals-autonomy-2026-09-12 | Wave 14–15 Evals | remediation/waves-10-15-2026-09-15 | já coberto pelo baseline | cherry-pick vazio após comparação; não houve alteração descartada |
+
 ## Ledger de remediação — Wave 6–9
 
 | Branch original | Grupo | Branch isolada | Estado | Evidência |
