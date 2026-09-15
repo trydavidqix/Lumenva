@@ -83,7 +83,7 @@ function fakeStateStore(row?: BuildPlanStateRow): BuildPlanStateStore {
       current = { id: "state-1", status: "RUNNING", attempts: 1, blocked_at: null };
       return current;
     },
-    finish: async (_tenant, _plan, _step, status) => {
+    finish: async (_tenant: string, _plan: string, _step: string, status: string) => {
       if (current) current = { ...current, status };
     },
   } as unknown as BuildPlanStateStore;
