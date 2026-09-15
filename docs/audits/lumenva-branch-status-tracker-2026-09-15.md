@@ -203,6 +203,17 @@ O grupo permanece aberto até typecheck/lint/testes no Codex Cloud; o conflito a
 
 Validações locais do grupo: package_json=valid, conflict_markers=none e git diff --check=pass. Os testes Postgres/Vitest precisam ser executados no Codex Cloud.
 
+## Ledger de remediação — Reconcile/Equivalence
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| business-os/phase-1-baseline-reconcile-2026-09-11 | Baseline reconcile | remediation/business-os-reconcile-equivalence-2026-09-15 | já coberto pelo baseline | cherry-pick a668 vazio; migration policy já presente |
+| business-os/wave-1-operating-core-equivalence-2026-09-11 | Operating Core equivalence | remediation/business-os-reconcile-equivalence-2026-09-15 | já coberto pelo baseline | cherry-pick 0da vazio; MCP route test já presente |
+| business-os/wave-1-operating-core-cli-2026-09-11 | Operating Core CLI | remediation/business-os-reconcile-equivalence-2026-09-15 | já coberto pelo baseline | cherry-pick c8 vazio; CLI coverage já incorporada |
+| business-os/wave-1-policy-edges-2026-09-11 | Policy edges | remediation/business-os-reconcile-equivalence-2026-09-15 | aplicado, teste real pendente | commit d8e324d3; compare-and-set e teste concorrente de approval |
+
+O grupo permanece aberto até Vitest/Postgres/typecheck no Codex Cloud; validações locais package_json=valid, conflict_markers=none e git diff --check=pass.
+
 | wave10/mobile-compliance-guardian-2026-09-13 | Wave 10 Mobile Compliance | remediation/waves-10-15-2026-09-15 | aplicado, teste real pendente | commit 4d34220c; Mobile Releases registrado na navegação |
 | wave14-15/evals-autonomy-2026-09-12 | Wave 14–15 Evals | remediation/waves-10-15-2026-09-15 | já coberto pelo baseline | cherry-pick vazio após comparação; não houve alteração descartada |
 
