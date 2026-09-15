@@ -1,5 +1,5 @@
-import { certifyAgentDefinition, type AgentBirthAuthorityStore, type AgentDefinition, type AgentDefinitionApproval, type AgentDefinitionOrigin } from "./agent-definition";
-import type { AuthorityQueryable } from "./agent-birth-authority-store";
+import { certifyAgentDefinition, type AgentDefinition, type AgentDefinitionApproval, type AgentDefinitionOrigin } from "./agent-definition";
+import type { AgentBirthAuthorityStore, AuthorityQueryable } from "./agent-birth-authority-store";
 
 export type DurableRegistryInput = { definition: unknown; origin: AgentDefinitionOrigin; expectedTenantId: string; approval?: AgentDefinitionApproval; authorityStore: AgentBirthAuthorityStore };
 
