@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { Pool } from "pg";
+import { Pool } from "../apps/crm/node_modules/pg";
 import { recordEditorEval, recordVariantMix } from "./studio-editor-repository";
 import type { EditorEvalRun, VariantMix } from "./studio-editor";
 
