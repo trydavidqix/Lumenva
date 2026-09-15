@@ -27,8 +27,9 @@ describe("tenant RLS hardening migration", () => {
       expect(migration).toMatch(new RegExp(`alter table (if exists )?public\\.${table} enable row level security`));
       expect(migration).toContain(`public.${table}`);
     }
-    expect(migration).toContain("revoke all on public.hermes_session_supersession from anon");
-    expect(migration).toContain("revoke all on public.studio_client_decisions from anon");
+    const revokeAnon = migration.match(/revoke all on ([\s\S]*?) from anon;/i)?.[1] ?? "";
+    expect(revokeAnon).toContain("public.hermes_session_supersession");
+    expect(revokeAnon).toContain("public.studio_client_decisions");
   });
 
   it("fails closed for reads and writes, including text tenant identifiers", () => {

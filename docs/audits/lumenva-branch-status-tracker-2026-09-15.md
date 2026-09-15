@@ -936,3 +936,69 @@ foram renomeadas nem editadas nesta etapa. A correção definitiva exige uma
 decisão de versionamento/migração (renumerar arquivos que podem já ter sido
 aplicados), além do gate Postgres para confirmar o conjunto final. Isso é
 separado das correções seguras acima.
+
+## Reconstituição da varredura de imports quebrados e Grupo A (2026-09-15)
+
+A varredura original registrou `COUNT 39`. A reexecução reproduzível nesta
+branch, após os arquivos canônicos já restaurados em etapas anteriores,
+encontrou 37 referências ainda não resolvidas localmente. A diferença de duas
+referências é registrada como drift do próprio inventário perdido: o resultado
+bruto original não foi versionado e não pode ser reconstruído com segurança
+como linhas distintas sem inventar dados. Os 37 resultados atuais foram
+classificados abaixo por causa, sem contar duas vezes o mesmo arquivo/caminho.
+
+### Resultado por causa e evidência histórica
+
+| Categoria | Quantidade atual | Status | Evidência |
+|---|---:|---|---|
+| Import `../apps/crm/node_modules/pg` | 17 | Dependência externa/caminho de ambiente; nenhum commit de módulo restaurável | `node` scanner de imports; `git log --all -- '*node_modules/pg*'` não retornou caminho versionado |
+| `consent-registry` | 1 | Restaurável; canonical adicionado | `git show 52166070:apps/crm/lib/integrations/consent-registry.ts` |
+| `overview-state-persistence` | 2 | Restaurável; canonical já presente | `git show 586b3750:apps/crm/lib/command-center/overview-state-persistence.ts` |
+| `gateway-projection` | 2 | Restaurável; canonical adicionado | `git show ca6776f7:apps/crm/lib/memory/gateway-projection.ts` |
+| `no-progress-watchdog` | 3 | Restaurável; canonical adicionado | `git show 98411f3f:apps/crm/lib/psycheos/no-progress-watchdog.ts` |
+| `resource-router` | 2 | Restaurável; canonical presente | `git show 48b56ddf:apps/crm/lib/memory/resource-router.ts` |
+| Queue e contratos canônicos | 7 | Restaurável por correção de caminho; arquivos existem no repo | `apps/crm/lib/agent-engine/queue/queue.ts`, `apps/crm/lib/agent-engine/evals/contracts.ts`, `apps/crm/lib/agent-engine/product-agents/contracts.ts` |
+| Referências que são false positive do scanner | 3 | Nenhuma restauração necessária | `wave1-acceptance` usa caminho `.js` resolvido pelo pacote; `escalacao-ciclo` contém caminho em template; imports duplicados de `metrics` foram alinhados |
+
+Os cinco módulos explicitamente pedidos têm histórico restaurável; nenhum deles
+precisa ser escrito do zero. Os imports foram apontados para os caminhos
+canônicos em `apps/crm`. O arquivo atual de
+`scratchpad-wave13/source-registry.test.ts` foi relido: ele importa apenas
+`../apps/crm/lib/memory/source-registry` e não contém import de `pg`; portanto
+não foi alterado por causa do erro histórico de `pg` do CI.
+
+### Grupo A — diagnóstico e correção preparada
+
+**Affect Ledger.** A implementação de produção já usa chave primária
+`(organization_id, agent_id, session_id, event_id)` e
+`ON CONFLICT (...) DO NOTHING RETURNING`, portanto a idempotência do ledger
+está correta. O double-count reproduzido pelo teste não vinha da policy RLS:
+o harness executava `select set_config(...)` junto com cada SELECT/INSERT e
+parseava também a linha retornada por `set_config` como se fosse um evento.
+Isso adicionava uma linha fantasma no resultado após o restart. A correção
+preparada usa bloco `DO ... PERFORM set_config(...)`, que não emite linha para
+`parseRows`, preservando o teste real de persistência/idempotência.
+
+**Tenant RLS.** A migration `20260915090000_0170_tenant_rls_hardening.sql`
+já revoga anon explicitamente para ambas as tabelas, em uma única instrução
+multilinha:
+`revoke all on public.organization_plan, public.entitlement_events,
+public.hermes_session_supersession, public.studio_client_decisions, ... from
+anon;`. A falha era uma asserção textual rígida que exigia cada tabela como
+instrução isolada. O teste preparado extrai a lista da instrução e verifica a
+presença dos dois nomes, sem relaxar a exigência de REVOKE.
+
+### Evidência de validação
+
+```text
+git diff --check                         -> PASS
+tenant revoke contract static            -> PASS
+affect harness suppresses set_config     -> PASS
+docker --version                         -> command not found
+pnpm ... vitest ...                      -> não executável localmente; pnpm tentou registry.npmjs.org e falhou por DNS
+```
+
+A confirmação end-to-end do Affect Ledger permanece dependente do CI/Docker.
+As mudanças desta seção estão preparadas, mas ainda não foram adicionadas ou
+commitadas; `docs/Current-State.md` permanece fora do escopo e não deve ser
+staged.
