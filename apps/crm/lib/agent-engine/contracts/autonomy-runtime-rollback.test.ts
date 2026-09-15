@@ -3,6 +3,26 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AgentAutonomyLevel } from '../policies/engine';
 import { executeThroughToolGateway } from '../tools/gateway';
 import type { AgentToolDefinition } from '../tools/registry';
+import type { AuthorizeModuleInput } from '../../entitlements/authorize-module';
+
+function entitlementFor(toolDefinition: AgentToolDefinition, requestId: string): AuthorizeModuleInput {
+  return {
+    requestId, policyVersion: 'entitlements.v1',
+    module: { id: toolDefinition.id, version: '1.0.0', dependencies: [], conflicts: [], requiredCapabilities: [], allowedRoles: ['agent'], risk: 'P1', requiresApproval: false },
+    tenant: { organizationId: 'org-a', rlsOrganizationId: 'org-a', rlsAllowed: true, plan: 'test', entitledModules: [toolDefinition.id] },
+    actor: { actorId: 'agent-a', organizationId: 'org-a', role: 'agent', capabilities: [] }, enabledModules: [], maxRisk: 'P4', approval: { required: false, approved: false },
+  };
+}
+import type { AuthorizeModuleInput } from '../../entitlements/authorize-module';
+
+function entitlementFor(toolDefinition: AgentToolDefinition, requestId: string): AuthorizeModuleInput {
+  return {
+    requestId, policyVersion: 'entitlements.v1',
+    module: { id: toolDefinition.id, version: '1.0.0', dependencies: [], conflicts: [], requiredCapabilities: [], allowedRoles: ['agent'], risk: 'P1', requiresApproval: false },
+    tenant: { organizationId: 'org-a', rlsOrganizationId: 'org-a', rlsAllowed: true, plan: 'test', entitledModules: [toolDefinition.id] },
+    actor: { actorId: 'agent-a', organizationId: 'org-a', role: 'agent', capabilities: [] }, enabledModules: [], maxRisk: 'P4', approval: { required: false, approved: false },
+  };
+}
 
 const reversibleTool: AgentToolDefinition = {
   id: 'crm.contact.update',
@@ -32,6 +52,8 @@ async function run(runtimeState: RuntimeState) {
   const result = await executeThroughToolGateway({
     organizationId: 'org-a', agentId: 'agent-a', runId: 'run-a', autonomyLevel: 'assisted', promotionDecision,
     runtimeAutonomyResolver, tool: reversibleTool, args: { name: 'A' }, idempotencyKey: 'idem-1', execute, approvalStore: null,
+    entitlement: entitlementFor(reversibleTool, 'idem-1'),
+    entitlement: entitlementFor(reversibleTool, 'idem-1'),
   });
   return { result, execute, runtimeAutonomyResolver };
 }

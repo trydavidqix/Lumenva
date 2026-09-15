@@ -5,6 +5,7 @@ import { evaluateToolPolicy } from "../../lib/agent-engine/policies/engine";
 import { createKernelToolGatewayPort, executeThroughToolGateway } from "../../lib/agent-engine/tools/gateway";
 import { createToolRegistry, type AgentToolDefinition } from "../../lib/agent-engine/tools/registry";
 import type { ResolvedKernelExecution } from "../../lib/agent-engine/kernel/contracts";
+import type { AuthorizeModuleInput, ModuleRiskTier } from "../../lib/entitlements/authorize-module";
 
 class MemoryApprovalStore implements ApprovalStore {
   readonly records = new Map<string, ApprovalRequest>();
@@ -34,6 +35,18 @@ function tool(overrides: Partial<AgentToolDefinition> = {}): AgentToolDefinition
     timeoutMs: 30_000,
     maxRetries: 2,
     ...overrides,
+  };
+}
+
+function entitlementFor(toolDefinition: AgentToolDefinition, requestId: string): AuthorizeModuleInput {
+  const risk: ModuleRiskTier = {
+    r0_read: "P0", r1_reversible_write: "P1", r2_external_communication: "P2", r3_sensitive_commercial: "P3", r4_destructive_admin: "P4",
+  }[toolDefinition.risk];
+  return {
+    requestId, policyVersion: "entitlements.v1",
+    module: { id: toolDefinition.id, version: "1.0.0", dependencies: [], conflicts: [], requiredCapabilities: [], allowedRoles: ["agent"], risk, requiresApproval: false },
+    tenant: { organizationId: "org-a", rlsOrganizationId: "org-a", rlsAllowed: true, plan: "test", entitledModules: [toolDefinition.id] },
+    actor: { actorId: "agent-a", organizationId: "org-a", role: "agent", capabilities: [] }, enabledModules: [], maxRisk: "P4", approval: { required: false, approved: false },
   };
 }
 
@@ -115,6 +128,7 @@ describe("converged policy and Tool Gateway", () => {
       idempotencyKey: "run-a:step-1:update",
       execute,
       approvalStore: null,
+      entitlement: entitlementFor(tool({ id: "update_lead_state", risk: "r1_reversible_write" }), "run-a:step-1:update"),
     });
 
     expect(result).toEqual({ kind: "denied", reason: "tenant_kill_switch" });
@@ -129,6 +143,7 @@ describe("converged policy and Tool Gateway", () => {
       registry,
       approvalStore: approvals,
       executeTool,
+      entitlementFor: (definition) => entitlementFor(definition, "run-a:step-1:send"),
     });
 
     const result = await gateway.execute({

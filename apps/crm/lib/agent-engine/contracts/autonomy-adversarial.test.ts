@@ -14,6 +14,38 @@ import {
 } from '../policies/approval';
 import { executeThroughToolGateway } from '../tools/gateway';
 import type { AgentToolDefinition } from '../tools/registry';
+import type { AuthorizeModuleInput, ModuleRiskTier } from '../../entitlements/authorize-module';
+
+function entitlementFor(toolDefinition: AgentToolDefinition, requestId: string): AuthorizeModuleInput {
+  const risk: ModuleRiskTier = {
+    r0_read: 'P0', r1_reversible_write: 'P1', r2_external_communication: 'P2', r3_sensitive_commercial: 'P3', r4_destructive_admin: 'P4',
+  }[toolDefinition.risk];
+  return {
+    requestId, policyVersion: 'entitlements.v1',
+    module: { id: toolDefinition.id, version: '1.0.0', dependencies: [], conflicts: [], requiredCapabilities: [], allowedRoles: ['agent'], risk, requiresApproval: false },
+    tenant: { organizationId: 'org-a', rlsOrganizationId: 'org-a', rlsAllowed: true, plan: 'test', entitledModules: [toolDefinition.id] },
+    actor: { actorId: 'agent-a', organizationId: 'org-a', role: 'agent', capabilities: [] }, enabledModules: [], maxRisk: 'P4', approval: { required: false, approved: false },
+  };
+}
+import type { AuthorizeModuleInput, ModuleRiskTier } from '../../entitlements/authorize-module';
+
+function entitlementFor(toolDefinition: AgentToolDefinition, requestId: string): AuthorizeModuleInput {
+  const risk: ModuleRiskTier = {
+    r0_read: 'P0',
+    r1_reversible_write: 'P1',
+    r2_external_communication: 'P2',
+    r3_sensitive_commercial: 'P3',
+    r4_destructive_admin: 'P4',
+  }[toolDefinition.risk];
+  return {
+    requestId,
+    policyVersion: 'entitlements.v1',
+    module: { id: toolDefinition.id, version: '1.0.0', dependencies: [], conflicts: [], requiredCapabilities: [], allowedRoles: ['agent'], risk, requiresApproval: false },
+    tenant: { organizationId: 'org-a', rlsOrganizationId: 'org-a', rlsAllowed: true, plan: 'test', entitledModules: [toolDefinition.id] },
+    actor: { actorId: 'agent-a', organizationId: 'org-a', role: 'agent', capabilities: [] },
+    enabledModules: [], maxRisk: 'P4', approval: { required: false, approved: false },
+  };
+}
 
 function tool(id: string, risk: AgentToolDefinition['risk']): AgentToolDefinition {
   return {
@@ -96,6 +128,7 @@ describe('Phase 5 autonomy adversarial matrix', () => {
       organizationId: 'org-a', agentId: 'agent-a', autonomyLevel: 'assisted',
       promotionDecision: { kind: 'allow', evidenceRef: 'eval-good' },
       tool: r4, args: {}, idempotencyKey: 'r4-1', execute, approvalStore: null,
+      entitlement: entitlementFor(r4, 'r4-1'),
     });
     expect(result).toEqual({ kind: 'denied', reason: 'r4_requires_human' });
     expect(execute).not.toHaveBeenCalled();
@@ -110,6 +143,7 @@ describe('Phase 5 autonomy adversarial matrix', () => {
         level: 'assisted', globalEnabled: false, tenantEnabled: true, agentEnabled: true, capabilityEnabled: true,
       }; } },
       tool: r1, args: {}, idempotencyKey: 'kill-1', execute, approvalStore: null,
+      entitlement: entitlementFor(r1, 'kill-1'),
     });
     expect(result).toEqual({ kind: 'denied', reason: 'global_kill_switch' });
     expect(execute).not.toHaveBeenCalled();
@@ -155,6 +189,7 @@ describe('Phase 5 autonomy adversarial matrix', () => {
       }; } },
       autonomyEvidenceRecorder: recorder,
       tool: r1, args: {}, idempotencyKey: 'e-1', execute: vi.fn(), approvalStore: null,
+      entitlement: entitlementFor(r1, 'e-1'),
     });
     expect(result).toEqual({ kind: 'denied', reason: 'capability_kill_switch' });
     expect(recorder.record).toHaveBeenCalledWith({

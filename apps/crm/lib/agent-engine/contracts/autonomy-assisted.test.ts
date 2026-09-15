@@ -3,6 +3,19 @@ import { describe, expect, it, vi } from 'vitest';
 import type { PromotionDecision } from '../autonomy/promotion';
 import { executeThroughToolGateway } from '../tools/gateway';
 import type { AgentToolDefinition } from '../tools/registry';
+import type { AuthorizeModuleInput, ModuleRiskTier } from '../../entitlements/authorize-module';
+
+function entitlementFor(toolDefinition: AgentToolDefinition, requestId: string): AuthorizeModuleInput {
+  const risk: ModuleRiskTier = {
+    r0_read: 'P0', r1_reversible_write: 'P1', r2_external_communication: 'P2', r3_sensitive_commercial: 'P3', r4_destructive_admin: 'P4',
+  }[toolDefinition.risk];
+  return {
+    requestId, policyVersion: 'entitlements.v1',
+    module: { id: toolDefinition.id, version: '1.0.0', dependencies: [], conflicts: [], requiredCapabilities: [], allowedRoles: ['agent'], risk, requiresApproval: false },
+    tenant: { organizationId: 'org-a', rlsOrganizationId: 'org-a', rlsAllowed: true, plan: 'test', entitledModules: [toolDefinition.id] },
+    actor: { actorId: 'agent-a', organizationId: 'org-a', role: 'agent', capabilities: [] }, enabledModules: [], maxRisk: 'P4', approval: { required: false, approved: false },
+  };
+}
 
 function tool(risk: AgentToolDefinition['risk']): AgentToolDefinition {
   const hasSideEffect = risk !== 'r0_read';
@@ -41,6 +54,7 @@ function input(
       compareAndSet: vi.fn(),
     },
     promotionDecision,
+    entitlement: entitlementFor(tool(risk), `idem-${risk}`),
   };
 }
 

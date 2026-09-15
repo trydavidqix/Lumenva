@@ -10,6 +10,18 @@ import {
 } from '../policies/approval';
 import { executeThroughToolGateway } from '../tools/gateway';
 import type { AgentToolDefinition } from '../tools/registry';
+import type { AuthorizeModuleInput, ModuleRiskTier } from '../../entitlements/authorize-module';
+
+function entitlementFor(toolDefinition: AgentToolDefinition, requestId: string): AuthorizeModuleInput {
+  const risk: ModuleRiskTier = { r0_read: 'P0', r1_reversible_write: 'P1', r2_external_communication: 'P2', r3_sensitive_commercial: 'P3', r4_destructive_admin: 'P4' }[toolDefinition.risk];
+  return { requestId, policyVersion: 'entitlements.v1', module: { id: toolDefinition.id, version: '1.0.0', dependencies: [], conflicts: [], requiredCapabilities: [], allowedRoles: ['agent'], risk, requiresApproval: false }, tenant: { organizationId: 'org-a', rlsOrganizationId: 'org-a', rlsAllowed: true, plan: 'test', entitledModules: [toolDefinition.id] }, actor: { actorId: 'agent-a', organizationId: 'org-a', role: 'agent', capabilities: [] }, enabledModules: [], maxRisk: 'P4', approval: { required: false, approved: false } };
+}
+import type { AuthorizeModuleInput, ModuleRiskTier } from '../../entitlements/authorize-module';
+
+function entitlementFor(toolDefinition: AgentToolDefinition, requestId: string): AuthorizeModuleInput {
+  const risk: ModuleRiskTier = { r0_read: 'P0', r1_reversible_write: 'P1', r2_external_communication: 'P2', r3_sensitive_commercial: 'P3', r4_destructive_admin: 'P4' }[toolDefinition.risk];
+  return { requestId, policyVersion: 'entitlements.v1', module: { id: toolDefinition.id, version: '1.0.0', dependencies: [], conflicts: [], requiredCapabilities: [], allowedRoles: ['agent'], risk, requiresApproval: false }, tenant: { organizationId: 'org-a', rlsOrganizationId: 'org-a', rlsAllowed: true, plan: 'test', entitledModules: [toolDefinition.id] }, actor: { actorId: 'agent-a', organizationId: 'org-a', role: 'agent', capabilities: [] }, enabledModules: [], maxRisk: 'P4', approval: { required: false, approved: false } };
+}
 
 function tool(id: string, risk: AgentToolDefinition['risk']): AgentToolDefinition {
   return {
@@ -79,7 +91,7 @@ describe('Agent OS Phase 5 end-to-end release gate', () => {
     const result = await executeThroughToolGateway({
       organizationId: 'org-a', agentId: 'agent-a', runId: 'run-shadow', traceId: 'trace-shadow', correlationId: 'corr-shadow',
       autonomyLevel: 'shadow', autonomyEvidenceRecorder: recorder,
-      tool: r0, args: {}, idempotencyKey: '', execute: read, approvalStore: null,
+      tool: r0, args: {}, idempotencyKey: '', execute: read, approvalStore: null, entitlement: entitlementFor(r0, 'run-shadow'),
     });
     expect(result).toEqual({ kind: 'executed', result: { contact: 'synthetic' } });
     expect(read).toHaveBeenCalledTimes(1);
@@ -98,7 +110,7 @@ describe('Agent OS Phase 5 end-to-end release gate', () => {
     const result = await executeThroughToolGateway({
       organizationId: 'org-a', agentId: 'agent-a', runId: 'run-draft', traceId: 'trace-draft', correlationId: 'corr-draft',
       autonomyLevel: 'draft', autonomyEvidenceRecorder: recorder,
-      tool: r1, args: { x: 1 }, idempotencyKey: 'idem-draft', execute, approvalStore: null,
+      tool: r1, args: { x: 1 }, idempotencyKey: 'idem-draft', execute, approvalStore: null, entitlement: entitlementFor(r1, 'run-draft'),
     });
     expect(result.kind).toBe('draft');
     expect(execute).not.toHaveBeenCalled();
@@ -116,7 +128,7 @@ describe('Agent OS Phase 5 end-to-end release gate', () => {
     const result = await executeThroughToolGateway({
       organizationId: 'org-a', agentId: 'agent-a', runId: 'run-r1', traceId: 'trace-r1', correlationId: 'corr-r1',
       autonomyLevel: 'assisted', promotionDecision: { kind: 'allow', evidenceRef: evidence.ref }, autonomyEvidenceRecorder: recorder,
-      tool: r1, args: {}, idempotencyKey: 'r1-key', execute, approvalStore: null,
+      tool: r1, args: {}, idempotencyKey: 'r1-key', execute, approvalStore: null, entitlement: entitlementFor(r1, 'run-r1'),
     });
     expect(result).toEqual({ kind: 'executed', result: { ok: true } });
     expect(execute).toHaveBeenCalledTimes(1);
@@ -128,7 +140,7 @@ describe('Agent OS Phase 5 end-to-end release gate', () => {
     const denied = vi.fn();
     expect(await executeThroughToolGateway({
       organizationId: 'org-a', agentId: 'agent-a', autonomyLevel: 'assisted',
-      tool: r1, args: {}, idempotencyKey: 'r1-no-eval', execute: denied, approvalStore: null,
+      tool: r1, args: {}, idempotencyKey: 'r1-no-eval', execute: denied, approvalStore: null, entitlement: entitlementFor(r1, 'run-r1-no-eval'),
     })).toEqual({ kind: 'denied', reason: 'promotion_evidence_required' });
     expect(denied).not.toHaveBeenCalled();
   });
@@ -139,7 +151,7 @@ describe('Agent OS Phase 5 end-to-end release gate', () => {
       const result = await executeThroughToolGateway({
         organizationId: 'org-a', agentId: 'agent-a', runId: `run-${toolDefinition.id}`,
         autonomyLevel: 'assisted', promotionDecision: { kind: 'allow', evidenceRef: evidence.ref },
-        tool: toolDefinition, args: {}, idempotencyKey: `key-${toolDefinition.id}`, execute: vi.fn(), approvalStore: approvals,
+        tool: toolDefinition, args: {}, idempotencyKey: `key-${toolDefinition.id}`, execute: vi.fn(), approvalStore: approvals, entitlement: entitlementFor(toolDefinition, `run-${toolDefinition.id}`),
       });
       expect(result.kind).toBe('pending_approval');
     }
@@ -147,7 +159,7 @@ describe('Agent OS Phase 5 end-to-end release gate', () => {
     const destructive = vi.fn();
     expect(await executeThroughToolGateway({
       organizationId: 'org-a', agentId: 'agent-a', autonomyLevel: 'assisted', promotionDecision: { kind: 'allow', evidenceRef: evidence.ref },
-      tool: r4, args: {}, idempotencyKey: 'r4-key', execute: destructive, approvalStore: null,
+      tool: r4, args: {}, idempotencyKey: 'r4-key', execute: destructive, approvalStore: null, entitlement: entitlementFor(r4, 'run-r4'),
     })).toEqual({ kind: 'denied', reason: 'r4_requires_human' });
     expect(destructive).not.toHaveBeenCalled();
   });
@@ -171,7 +183,7 @@ describe('Agent OS Phase 5 end-to-end release gate', () => {
     const result = await executeThroughToolGateway({
       organizationId: 'org-a', agentId: 'agent-a', autonomyLevel: 'assisted', promotionDecision: { kind: 'allow', evidenceRef: evidence.ref },
       runtimeAutonomyResolver: { async resolve() { return { level: 'assisted', globalEnabled: false, tenantEnabled: true, agentEnabled: true, capabilityEnabled: true }; } },
-      tool: r1, args: {}, idempotencyKey: 'kill-key', execute, approvalStore: null,
+      tool: r1, args: {}, idempotencyKey: 'kill-key', execute, approvalStore: null, entitlement: entitlementFor(r1, 'run-kill'),
     });
     expect(result).toEqual({ kind: 'denied', reason: 'global_kill_switch' });
     expect(execute).not.toHaveBeenCalled();
@@ -181,7 +193,7 @@ describe('Agent OS Phase 5 end-to-end release gate', () => {
     const execute = vi.fn().mockResolvedValue({ ok: true });
     expect(await executeThroughToolGateway({
       organizationId: 'org-a', agentId: 'agent-a', autonomyLevel: 'autopilot_low_risk',
-      tool: r1, args: {}, idempotencyKey: 'synthetic-autopilot', execute, approvalStore: null,
+      tool: r1, args: {}, idempotencyKey: 'synthetic-autopilot', execute, approvalStore: null, entitlement: entitlementFor(r1, 'run-autopilot'),
     })).toEqual({ kind: 'executed', result: { ok: true } });
     expect(execute).toHaveBeenCalledTimes(1);
     expect(authorizeAutonomyPromotion({

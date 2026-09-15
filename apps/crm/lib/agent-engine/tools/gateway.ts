@@ -220,6 +220,7 @@ export function createKernelToolGatewayPort(input: {
   registry: { get(toolId: string): AgentToolDefinition | null | undefined };
   approvalStore: ApprovalStore | null;
   executeTool: (tool: AgentToolDefinition, args: unknown) => Promise<unknown> | unknown;
+  entitlementFor?: (tool: AgentToolDefinition) => AuthorizeModuleInput;
 }) {
   return {
     async execute(request: {
@@ -240,6 +241,7 @@ export function createKernelToolGatewayPort(input: {
         idempotencyKey: request.idempotencyKey,
         execute: () => input.executeTool(definition, request.args),
         approvalStore: input.approvalStore,
+        entitlement: input.entitlementFor?.(definition),
       });
       if (result.kind === 'pending_approval') {
         return { kind: 'approval_required' as const, reason: 'approval_required', approvalId: result.approvalId };
