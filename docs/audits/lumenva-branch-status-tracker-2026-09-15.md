@@ -646,3 +646,36 @@ isso não foi marcado como teste verde. Commits separados:
 | Teste RED/contrato | `d8ea110f` |
 | Migration corretiva | `5d6bfa96` |
 | Documentação deste achado | pendente neste commit |
+## Execuções Codex Cloud — lote disparado em 2026-09-15
+
+As 16 tarefas abaixo foram submetidas individualmente com `codex cloud exec`,
+usando exatamente os comandos da seção consolidada. Cada submissão retornou exit
+`0` e uma URL `chatgpt.com/codex/tasks/...`. A consulta posterior de cada ID via
+`codex cloud status <task_id>` retornou `[READY] ...` e `no diff`. `[READY]` é o
+status da tarefa Cloud; não substitui stdout detalhado dos gates, que esta versão
+da CLI não expõe.
+
+| # | Branch | Comando | task_id | Status observado |
+|---:|---|---|---|---|
+| 1 | `remediation/automation-identity-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm test:unit` | `task_e_6aa920834d14832495605bb45b1726b6` | `[READY]`, no diff |
+| 2 | `remediation/ai-creator-commerce-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm test:unit` | `task_e_6aa9209152e483248916d5df7a1b2a78` | `[READY]`, no diff |
+| 3 | `remediation/business-os-audit-stripe-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm exec vitest run --config vitest.config.ts lib/billing/stripe-contract.test.ts lib/billing/stripe-route-contract.test.ts` | `task_e_6aa920a2deb08324882062e190005c19` | `[READY]`, no diff |
+| 4 | `remediation/business-os-cli-entitlements-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm exec vitest run --config vitest.config.ts lib/entitlements/boundary.test.ts lib/cli/lumenva.test.ts lib/mcp/tools/entitlements.test.ts` | `task_e_6aa920b180b48324b6108951fb106bc7` | `[READY]`, no diff |
+| 5 | `remediation/customer360-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm test:fast` | `task_e_6aa920bf66ec8324b4a6528c8e9140f4` | `[READY]`, no diff |
+| 6 | `remediation/entitlements-billing-migrations-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm test:db` | `task_e_6aa920cda7f48324b4e1f901d9d629e8` | `[READY]`, no diff |
+| 7 | `remediation/lgpd-pades-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm test:pades` | `task_e_6aa920dd578883249e0369d4315660d6` | `[READY]`, no diff |
+| 8 | `remediation/remaining-entitlements-operating-core-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm exec vitest run --config vitest.config.ts lib/agent-engine/tools/entitlement-dispatch.test.ts lib/agent-engine/product-agents/birth.test.ts` | `task_e_6aa920eb716083248fa7ffdeaf695deb` | `[READY]`, no diff |
+| 9 | `remediation/wave2-agent-birth-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm exec vitest run --config vitest.config.ts lib/agent-engine/agent-birth/agent-definition-registry-pg.integration.test.ts` | `task_e_6aa92109ac088324a1bea49f71d2efe9` | `[READY]`, no diff |
+| 10 | `remediation/wave3-session-runtime-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm exec vitest run --config vitest.config.ts lib/agent-engine/session-runtime/service.test.ts && pnpm --filter @lumenva/agent-runtime typecheck` | `task_e_6aa921192b408324ba6e662d996f45b2` | `[READY]`, no diff |
+| 11 | `remediation/waves-1-9-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm test:db` | `task_e_6aa921289e2c832486c8e169d634e1fc` | `[READY]`, no diff |
+| 12 | `remediation/waves-6-9-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm test:db` | `task_e_6aa9213737948324aedb5a50c7660402` | `[READY]`, no diff |
+| 13 | `remediation/waves-10-15-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm exec vitest run --config vitest.config.ts tests/unit/product-factory-delivery.test.ts lib/memory/resource-router.test.ts` | `task_e_6aa92147d40c8324ac8f81b181659980` | `[READY]`, no diff |
+| 14 | `remediation/business-os-operating-core-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm test:unit` | `task_e_6aa9215600488324b4081a3f673e5052` | `[READY]`, no diff |
+| 15 | `remediation/business-os-reconcile-equivalence-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm exec vitest run --config vitest.config.ts lib/agent-engine/contracts/wave1-policy-edges.test.ts` | `task_e_6aa92162bd748324b3c8b4ad9a3bab88` | `[READY]`, no diff |
+| 16 | `remediation/business-os-acceptance-mcp-2026-09-15` | `pnpm install --frozen-lockfile && pnpm --filter lumenva-crm test:db` | `task_e_6aa9216f25d08324bca6871fc43c72c0` | `[READY]`, no diff |
+
+Evidência de submissão: todas as chamadas `codex cloud exec` retornaram exit `0`.
+Evidência de status: todas as 16 chamadas `codex cloud status` retornaram exit `0`
+com `[READY]` e `no diff`. Os logs/stdout dos gates devem ser lidos na interface
+web das tarefas se necessários; a CLI local não oferece `codex cloud logs`,
+`--json` ou saída de execução.
