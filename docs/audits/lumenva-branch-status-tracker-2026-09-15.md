@@ -1028,3 +1028,31 @@ approvals foi corrigido para aplicar esse SQL antes de `ensureOverviewStore`.
 O import dinâmico de `pg` em `scratchpad-wave13/source-registry.test.ts` foi
 alinhado ao padrão já validado no repositório:
 `../apps/crm/node_modules/pg`.
+
+### Estado real das migrations colidentes — investigação 2026-09-16
+
+Foi verificada a disponibilidade de um ambiente Supabase real antes de
+qualquer renumeração. O resultado foi negativo nesta sessão:
+
+| Verificação | Resultado real |
+|---|---|
+| Variáveis do ambiente (`env` filtrado por `SUPABASE`, `DATABASE`, `POSTGRES`, `PG`) | Nenhuma presente. |
+| `.env`/credenciais no checkout | Não há `.env` preenchido; somente exemplos versionados. |
+| `supabase/config.toml` | `project_id = "deskcomm-crm"`, `api_url = "http://127.0.0.1:54321"`; configuração local, não endpoint remoto. |
+| GitHub Actions secrets/variables | `gh secret list` e `gh variable list` não produziram entradas; nenhum acesso de banco foi encontrado no CI. |
+| `supabase projects list` | Não retornou dentro do sandbox; não forneceu evidência de projeto acessível. Nenhum recurso foi alterado. |
+
+Não foi possível consultar `supabase_migrations.schema_migrations` em produção
+ou staging, portanto não há evidência de que qualquer versão colidente tenha
+sido aplicada em ambiente real. A alegação de que é seguro renumerar ainda não
+foi feita: o próximo passo autorizado deve ser obter uma conexão/credencial
+explícita e consultar o estado aplicado antes de alterar nomes.
+
+O CI `35072052333` confirmou que o MANIFEST registra as migrations, mas ainda
+falha somente nas colisões existentes no checkout:
+
+- Números: `0163`, `0164`, `0165`, `0166`, `0168`.
+- Timestamps: `20260913010000`, `20260913020000`, `20260913150000` e
+  `20260913170000` conforme a saída completa do teste.
+
+Nenhum arquivo de migration foi renomeado ou editado nesta investigação.
