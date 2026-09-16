@@ -54,3 +54,34 @@ DELETE https://api.hetzner.cloud/v1/servers/166228238
 Usar o token de API somente de forma protegida; nunca registrá-lo nesta nota ou no Git.
 
 > **NÃO USAR ESSA VPS PRA PRODUÇÃO.**
+
+## GitHub Actions Self-Hosted Runner
+
+- **Repositório:** `trydavidqix/Lumenva` (privado)
+- **Nome do runner:** `lumenva-disposable-test-vps`
+- **Label dedicado:** `self-hosted-lumenva-disposable`
+- **Agente:** Actions Runner `2.337.0`, instalado em `/opt/actions-runner`
+- **Serviço:** systemd, habilitado e ativo após reboot/desconexão SSH
+- **Usuário do serviço:** `github-runner` (não root)
+- **Workflow de teste:** `.github/workflows/self-hosted-runner-smoke.yml`, disparo manual (`workflow_dispatch`)
+
+O runner foi instalado com o pacote oficial `actions/runner` e o SHA-256 do arquivo foi verificado antes da extração. O pipeline de produção (`.github/workflows/ci.yml`) não foi alterado.
+
+### Parar ou remover
+
+Na VPS, para parar temporariamente:
+
+```bash
+sudo systemctl stop actions.runner.trydavidqix-Lumenva.lumenva-disposable-test-vps.service
+```
+
+Para remover o serviço e o registro do GitHub:
+
+```bash
+cd /opt/actions-runner
+sudo ./svc.sh stop
+sudo ./svc.sh uninstall
+sudo -u github-runner ./config.sh remove --token '<novo-token-de-remoção>'
+```
+
+O token de remoção deve ser gerado somente no momento da remoção pela API de runners do repositório. Não armazená-lo nesta nota, na VPS ou no Git.

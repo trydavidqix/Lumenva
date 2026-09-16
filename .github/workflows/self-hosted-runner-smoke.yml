@@ -1,0 +1,19 @@
+name: Self-hosted runner smoke test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: [self-hosted, self-hosted-lumenva-disposable]
+    timeout-minutes: 5
+    steps:
+      - name: Verify disposable runner identity
+        run: |
+          set -eu
+          test "$(hostname)" = "lumenva-disposable-test-vps"
+          test "$(uname -s)" = "Linux"
+          printf 'SELF_HOSTED_RUNNER_OK hostname=%s user=%s\n' "$(hostname)" "$(id -un)"
