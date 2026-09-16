@@ -9,7 +9,7 @@ export class PostgresWakeEventStore {
   /** One insert is the replay gate; an empty RETURNING means this event was already processed. */
   async claim(event: WakeEvent): Promise<WakeEventClaim | undefined> {
     const result = await this.db.query<WakeEventClaim>(
-      `insert into public.browsermesh_event_idempotency (organization_id,event_id,idempotency_key,status) values ($1,$2,$3,'CLAIMED') on conflict (organization_id,idempotency_key) do nothing returning id,organization_id,event_id,idempotency_key,status`,
+      `insert into public.browsermesh_event_idempotency (organization_id,event_id,idempotency_key,status) values ($1,$2,$3,'CLAIMED') on conflict do nothing returning id,organization_id,event_id,idempotency_key,status`,
       [event.organization_id, event.event_id, event.idempotency_key],
     );
     return result.rows[0];
