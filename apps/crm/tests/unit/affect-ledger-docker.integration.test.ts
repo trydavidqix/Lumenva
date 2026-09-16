@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { Pool } from "../apps/crm/node_modules/pg";
+import { Pool } from "pg";
 import { PostgresAffectLedger } from "@/lib/psycheos/affect-ledger-pg";
 
 const exec = promisify(execFile);
