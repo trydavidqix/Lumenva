@@ -15,6 +15,7 @@ describe("Command Center persisted costs and approvals", () => {
     const url = `postgres://postgres:postgres@127.0.0.1:${port}/postgres`;
     for (let attempt = 0; attempt < 40; attempt += 1) { try { const probe = new Pool({ connectionString: url }); await probe.query("select 1"); await probe.end(); break; } catch { await new Promise((resolve) => setTimeout(resolve, 200)); } }
     pool = new Pool({ connectionString: url });
+    await pool.query("CREATE OR REPLACE FUNCTION public.fn_user_org_ids() RETURNS SETOF text LANGUAGE sql STABLE AS $$ SELECT unnest(string_to_array(current_setting('app.org_ids', true), ',')) $$");
     await pool.query(await readFile(join(process.cwd(), "supabase/migrations/20260913150000_command_center_overview_rls.sql"), "utf8"));
     await ensureOverviewStore(pool);
   });
