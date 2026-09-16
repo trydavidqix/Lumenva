@@ -6,7 +6,7 @@
     "node --check tools/maestri-context-gateway/hooks/guard-large-output.mjs",
     "git diff --check"
   ],
-  "tests": "node --test tools/maestri-context-gateway/test/*.test.mjs: 13 passed, 0 failed",
+  "tests": "node --test tools/maestri-context-gateway/test/*.test.mjs: 14 passed, 0 failed",
   "global_install": "completed after timestamped backup",
   "remaining": ["new interactive Claude/Codex session behavior requires a fresh session to validate"]
 }

@@ -29,7 +29,7 @@ async function atomicJson(path, value) {
   await rename(tmp, path);
 }
 
-export function taskDir(id, root = ROOT) { return join(root, 'tasks', id); }
+export function taskDir(id, root = ROOT) { assertTaskId(id); return join(root, 'tasks', id); }
 export function statePath(id, root = ROOT) { return join(taskDir(id, root), 'state.json'); }
 export function evidencePath(id, root = ROOT) { return join(taskDir(id, root), 'evidence'); }
 
@@ -38,7 +38,12 @@ export async function saveState(state, root = ROOT) {
 }
 
 export async function loadState(id, root = ROOT) {
+  assertTaskId(id);
   return JSON.parse(await readFile(statePath(id, root), 'utf8'));
+}
+
+export function assertTaskId(id) {
+  if (typeof id !== 'string' || !/^[A-Za-z0-9._-]+$/.test(id) || id === '.' || id === '..') throw new Error('invalid task_id');
 }
 
 export function compactResult(state) {
@@ -69,6 +74,7 @@ export async function dispatch(input, root = ROOT) {
 }
 
 export async function ingest(event, root = ROOT) {
+  assertTaskId(event.task_id);
   if (!event.task_id || !event.event_id || !event.state) throw new Error('event requires task_id, event_id and state');
   if (!INTERNAL.has(event.state)) throw new Error(`invalid internal state: ${event.state}`);
   const encoded = JSON.stringify(event);
@@ -105,6 +111,7 @@ export async function waitForTerminal(id, root = ROOT, timeoutMs = 0) {
 }
 
 export async function sliceEvidence(id, type = 'manifest', lines = 80, root = ROOT) {
+  assertTaskId(id);
   const base = join(root, 'tasks', id);
   const names = type === 'validation' ? ['validation.json'] : type === 'ci' ? ['evidence', 'ci.log'] : type === 'tests' ? ['evidence', 'tests.log'] : ['manifest.json'];
   const path = join(base, ...names);
