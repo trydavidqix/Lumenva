@@ -13,3 +13,17 @@ and event-driven without claiming unsupported live integration.
 
 Global configuration is installed from this source only after backup and
 validation. Secrets and managed auth files remain outside Git.
+
+## Bootstrap
+
+From this worktree, after creating the timestamped backup:
+
+```sh
+node tools/install-global.mjs
+mcg doctor --json
+```
+
+The installer is additive for Claude, installs only the new namespaced skills
+and output style, and leaves the existing Codex `config.toml`, Codex rules,
+Claude plugins, managed auth and secret files untouched. Hooks start in
+observe mode. Re-run the command after updating this canonical source.
