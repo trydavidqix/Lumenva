@@ -26,7 +26,11 @@ export class PostgresNoProgressWatchdog {
         `SELECT cycle, no_progress_cycles FROM ${this.table} WHERE organization_id=$1 AND job_id=$2 ORDER BY cycle DESC LIMIT 1 FOR UPDATE`,
         [this.organizationId, observation.jobId],
       );
-      if (latest.rows[0] && observation.cycle <= latest.rows[0].cycle) throw new RangeError("cycle must increase monotonically");
+      // The replay probe can run before a concurrent insert commits while this
+      // latest-row probe runs after it. The same cycle is therefore a valid
+      // replay, not a monotonicity violation; let the primary-key conflict
+      // path below return the persisted winner. Only an older cycle is invalid.
+      if (latest.rows[0] && observation.cycle < latest.rows[0].cycle) throw new RangeError("cycle must increase monotonically");
       const noProgressCycles = observation.progressed ? 0 : (latest.rows[0]?.no_progress_cycles ?? 0) + 1;
       const status = noProgressCycles >= 3 ? "AT_RISK" : "ON_TRACK";
       try {
