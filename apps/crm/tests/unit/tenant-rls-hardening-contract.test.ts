@@ -16,11 +16,12 @@ describe("tenant RLS hardening migration", () => {
       "studio_client_decisions",
       "browsermesh_event_idempotency",
     ]) {
-      expect(migration).toMatch(new RegExp(`alter table(?: if exists)? public\\.${table} enable row level security`));
+      expect(migration).toMatch(new RegExp(`alter table (if exists )?public\\.${table} enable row level security`));
       expect(migration).toContain(`public.${table}`);
     }
-    expect(migration).toMatch(/revoke all on[\s\S]*public\.hermes_session_supersession[\s\S]*from anon/);
-    expect(migration).toMatch(/revoke all on[\s\S]*public\.studio_client_decisions[\s\S]*from anon/);
+    const anonRevoke = migration.match(/revoke all on ([\s\S]*?) from anon;/i)?.[1] ?? "";
+    expect(anonRevoke).toContain("public.hermes_session_supersession");
+    expect(anonRevoke).toContain("public.studio_client_decisions");
   });
 
   it("fails closed for reads and writes, including text tenant identifiers", () => {
