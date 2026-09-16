@@ -1002,3 +1002,29 @@ A confirmação end-to-end do Affect Ledger permanece dependente do CI/Docker.
 As mudanças desta seção estão preparadas, mas ainda não foram adicionadas ou
 commitadas; `docs/Current-State.md` permanece fora do escopo e não deve ser
 staged.
+
+### CI 35016151829 — Grupo C/D/E
+
+O log real do CI confirmou que a correção anterior do Affect Ledger não foi
+suficiente: `proves restart persistence, idempotency, append-only and tenant
+isolation` ainda recebeu dois registros. A análise do fluxo mostrou que o
+harness implementa `pool.connect()` com um novo processo `docker exec psql` em
+cada `query`; portanto `BEGIN`, `set_config`, `INSERT` e `COMMIT` não
+compartilham a mesma conexão/transação. O fix preparado substitui esse harness
+por um `pg.Pool` real, preservando a conexão/transação por chamada e mantendo
+PostgreSQL/RLS reais; não houve novo ajuste cego de parsing.
+
+As três migrations ausentes foram encontradas e restauradas exatamente de
+histórico:
+
+| Arquivo | Commit histórico |
+|---|---|
+| `20260913110000_contact_consents.sql` | `cac060b3` |
+| `20260913020000_0165_hermes_memory_gateway.sql` | `79d6c958` |
+| `20260913030200_0168_psyche_watchdog_requesters.sql` | `a6852314` |
+
+`command_center_overview_rls.sql` já estava versionado; o teste de costs/
+approvals foi corrigido para aplicar esse SQL antes de `ensureOverviewStore`.
+O import dinâmico de `pg` em `scratchpad-wave13/source-registry.test.ts` foi
+alinhado ao padrão já validado no repositório:
+`../apps/crm/node_modules/pg`.

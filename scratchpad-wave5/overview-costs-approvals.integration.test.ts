@@ -1,4 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { Pool } from "../apps/crm/node_modules/pg";
 import { ensureOverviewStore, loadOverview, saveOverview } from "../apps/crm/lib/command-center/overview-state-persistence";
 
@@ -13,6 +15,7 @@ describe("Command Center persisted costs and approvals", () => {
     const url = `postgres://postgres:postgres@127.0.0.1:${port}/postgres`;
     for (let attempt = 0; attempt < 40; attempt += 1) { try { const probe = new Pool({ connectionString: url }); await probe.query("select 1"); await probe.end(); break; } catch { await new Promise((resolve) => setTimeout(resolve, 200)); } }
     pool = new Pool({ connectionString: url });
+    await pool.query(await readFile(join(process.cwd(), "supabase/migrations/20260913150000_command_center_overview_rls.sql"), "utf8"));
     await ensureOverviewStore(pool);
   });
   afterAll(async () => { await pool?.end(); if (container) { const { execFileSync } = await import("node:child_process"); execFileSync("docker", ["rm", "-f", container]); } });
