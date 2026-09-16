@@ -9,6 +9,14 @@ export const TASKS = join(ROOT, 'tasks');
 export const INBOX = join(ROOT, 'events', 'inbox');
 export const TERMINAL = new Set(['DONE', 'BLOCKED_OWNER']);
 const INTERNAL = new Set(['CREATED', 'DISPATCHED', 'WORKING', 'TESTING', 'BUILDING', 'CI_RUNNING', 'RETRYING', 'APPROVAL_REQUIRED', 'BLOCKED', 'SECURITY_RISK', 'FAILED_FINAL', 'DONE', 'CANCELLED']);
+const SECRET_KEY = /pass(word)?|token|secret|private[_-]?key|api[_-]?key|authorization|cookie/i;
+
+function redact(value, key = '') {
+  if (SECRET_KEY.test(key)) return '[REDACTED]';
+  if (Array.isArray(value)) return value.map(item => redact(item));
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([name, item]) => [name, redact(item, name)]));
+  return value;
+}
 
 export async function ensureLayout(root = ROOT) {
   for (const path of [root, join(root, 'config'), join(root, 'state'), join(root, 'tasks'), join(root, 'events', 'inbox'), join(root, 'logs')]) await mkdir(path, { recursive: true, mode: 0o700 });
@@ -63,17 +71,20 @@ export async function dispatch(input, root = ROOT) {
 export async function ingest(event, root = ROOT) {
   if (!event.task_id || !event.event_id || !event.state) throw new Error('event requires task_id, event_id and state');
   if (!INTERNAL.has(event.state)) throw new Error(`invalid internal state: ${event.state}`);
+  const encoded = JSON.stringify(event);
+  if (Buffer.byteLength(encoded, 'utf8') > 1024 * 1024) throw new Error('event exceeds 1 MiB limit');
   const state = JSON.parse(await readFile(join(root, 'tasks', event.task_id, 'state.json'), 'utf8'));
   if (state.last_event_id === event.event_id || (event.sequence != null && state.last_sequence != null && event.sequence <= state.last_sequence)) return { deduped: true, state };
   const updated = { ...state, internal_state: event.state, external_state: event.external_state || (event.state === 'DONE' ? 'DONE' : event.state === 'BLOCKED' ? 'BLOCKED_OWNER' : null), last_event_id: event.event_id, last_sequence: event.sequence ?? state.last_sequence, updated_at: new Date().toISOString(), result: event.result ?? state.result, validation: event.validation ?? state.validation, commit: event.commit ?? state.commit, blocker: event.blocker ?? state.blocker, owner_needed: event.owner_needed ?? state.owner_needed };
   await saveState(updated, root);
-  await appendFile(join(root, 'tasks', event.task_id, 'events.jsonl'), `${JSON.stringify(event)}\n`, { mode: 0o600 });
+  const safeEvent = redact(event);
+  await appendFile(join(root, 'tasks', event.task_id, 'events.jsonl'), `${JSON.stringify(safeEvent)}\n`, { mode: 0o600 });
   if (updated.external_state === 'DONE' || updated.external_state === 'BLOCKED_OWNER') {
     await atomicJson(join(root, 'tasks', event.task_id, 'result.json'), compactResult(updated));
     await atomicJson(join(root, 'tasks', event.task_id, 'validation.json'), { validation: updated.validation || null, recorded_at: updated.updated_at });
     await atomicJson(join(root, 'tasks', event.task_id, 'manifest.json'), { task_id: event.task_id, status: updated.external_state, result: 'result.json', validation: 'validation.json', changes: 'changes.json', evidence: { events: 'events.jsonl', directory: 'evidence/' } });
   }
-  if (event.evidence) await atomicJson(join(root, 'tasks', event.task_id, 'evidence', `${event.event_id}.json`), event.evidence);
+  if (event.evidence) await atomicJson(join(root, 'tasks', event.task_id, 'evidence', `${event.event_id}.json`), redact(event.evidence));
   return { deduped: false, state: updated };
 }
 
