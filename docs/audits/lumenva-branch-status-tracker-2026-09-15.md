@@ -203,6 +203,25 @@ O grupo permanece aberto até typecheck/lint/testes no Codex Cloud; o conflito a
 
 Validações locais do grupo: package_json=valid, conflict_markers=none e git diff --check=pass. Os testes Postgres/Vitest precisam ser executados no Codex Cloud.
 
+## Ledger de remediação — Wave 2 Agent Birth
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| business-os/wave-2-agent-birth-prompt | Agent Birth prompt | remediation/wave2-agent-birth-2026-09-15 | aplicado, teste real pendente | merge 5dee6046, prompt compiler 3861bf78; certification/prompt tests |
+| business-os/wave-2-agent-migration-2026-09-11 | Agent Birth migration | remediation/wave2-agent-birth-2026-09-15 | aplicado, teste real pendente | commit d2bd8cb4; birth.ts/test.ts e definitions reconciliados |
+| business-os/wave-2-certification-2026-09-11 | Agent Birth certification | remediation/wave2-agent-birth-2026-09-15 | aplicado, teste real pendente | commit d597cfbd; registries skill/tool/agent-runtime e guardrails |
+
+Conflitos de definitions/index foram integrados manualmente, preservando exports existentes e adicionando os contratos novos. Validações locais: cinco package.json válidos, conflict_markers=none e git diff --check=pass; typecheck/Vitest reais pendentes no Codex Cloud.
+
+## Ledger de remediação — Wave 3 Session Runtime
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| business-os/wave-3-session-runtime | Session Runtime core | remediation/wave3-session-runtime-2026-09-15 | aplicado, teste real pendente | commit 05467b15; context/model locks e testes |
+| business-os/wave-3-session-runtime-mvp-2026-09-09 | Session Runtime service | remediation/wave3-session-runtime-2026-09-15 | aplicado, teste real pendente | commit 1d41987a; providers/service e testes |
+
+Validações locais: package.json de agent-runtime, prompt-compiler e CRM válidos, conflict_markers=none e git diff --check=pass. Typecheck/Vitest reais pendentes no Codex Cloud.
+
 ## Ledger de remediação — Reconcile/Equivalence
 
 | Branch original | Grupo | Branch isolada | Estado | Evidência |
