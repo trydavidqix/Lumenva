@@ -42,7 +42,7 @@ describe("Wave 8 persistent asset license registry", () => {
       const fresh = new pg.Pool({ connectionString: tenantUrl });
       try { await fresh.query("select set_config('app.org_ids', 'org-a', false)"); await expect(new PostgresLayerLicenseStore(fresh).loadForTenant("org-a", "lic-a")).resolves.toMatchObject({ source_id: "source-a" }); } finally { await fresh.end(); }
       await expect(store.loadForTenant("org-a", "lic-b")).resolves.toBeNull();
-      await expect(approveLayerReuseFromStore(manifest, { organizationId: "org-a", targetSemanticTags: ["headline"], approvalId: approval.approval_id }, { loadForTenant: (organizationId, approvalId) => Promise.resolve(organizationId === approval.organizationId && approvalId === approval.approval_id ? approval : null) }, (licenseRef) => store.loadForTenant("org-a", licenseRef))).resolves.toMatchObject([{ authorization: "APPROVED_FOR_REUSE" }]);
+      await expect(approveLayerReuseFromStore(manifest, { organizationId: "org-a", targetSemanticTags: ["headline"], approvalId: approval.approval_id }, { loadForTenant: (organizationId: string, approvalId: string) => Promise.resolve(organizationId === approval.organizationId && approvalId === approval.approval_id ? approval : null) }, (licenseRef: string) => store.loadForTenant("org-a", licenseRef))).resolves.toMatchObject([{ authorization: "APPROVED_FOR_REUSE" }]);
       await expect(tenant.query("insert into public.asset_license_records (organization_id,license_ref,source_id,owner_id,status) values ('org-b','cross','source-b','owner-b','VERIFIED')")).rejects.toMatchObject({ code: "42501" });
     } finally { await tenant.end(); }
   }, 60_000);
