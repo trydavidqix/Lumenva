@@ -41,7 +41,10 @@ try {
     const inbox = `${ROOT}/events/inbox`;
     const lockPath = `${ROOT}/state/daemon.pid`;
     let lock;
-    try { lock = await open(lockPath, 'wx', 0o600); await lock.writeFile(`${process.pid}\n`); } catch { throw new Error('daemon already running or stale lock exists'); }
+    try { lock = await open(lockPath, 'wx', 0o600); } catch {
+      try { const previousPid = Number((await readFile(lockPath, 'utf8')).trim()); process.kill(previousPid, 0); } catch (error) { if (error.code !== 'ESRCH') throw new Error('daemon already running'); await unlink(lockPath).catch(() => {}); lock = await open(lockPath, 'wx', 0o600); }
+    }
+    await lock.writeFile(`${process.pid}\n`);
     const consume = async () => {
       for (const name of await readdir(inbox)) {
         if (!name.endsWith('.json')) continue;
@@ -50,8 +53,10 @@ try {
       }
     };
     await consume();
-    const watcher = watch(inbox, () => { void consume(); });
-    const shutdown = async () => { watcher.close(); await lock.close(); await unlink(lockPath).catch(() => {}); process.exit(0); };
+    let watcher;
+    const shutdown = async (code = 0) => { watcher?.close(); await lock.close(); await unlink(lockPath).catch(() => {}); process.exit(code); };
+    try { watcher = watch(inbox, () => { void consume(); }); } catch (error) { await shutdown(1); throw error; }
+    watcher.on('error', error => { process.stderr.write(`mcg daemon: ${error.message}\n`); void shutdown(1); });
     process.on('SIGTERM', () => { void shutdown(); });
     process.on('SIGINT', () => { void shutdown(); });
     await new Promise(() => {});
