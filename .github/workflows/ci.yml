@@ -24,9 +24,6 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Typecheck
-        run: pnpm --filter lumenva-crm typecheck
-
       - name: Lint
         run: pnpm --filter lumenva-crm lint
 
@@ -44,23 +41,43 @@ jobs:
       - name: Harness consistency
         run: pnpm --filter lumenva-crm test:harness && pnpm --filter lumenva-crm harness:check
 
-      - name: Unit tests
-        run: pnpm --filter lumenva-crm test:unit
-
-      - name: Site typecheck
-        run: pnpm --filter lumenva-website typecheck
-
       - name: Site lint
         run: pnpm --filter lumenva-website lint
-
-      - name: Site tests
-        run: pnpm --filter lumenva-website test
 
       # Scripts do kit self-host num repo git descartável (docker/crontab
       # dublados). É o único gate que exercita o update.sh — um erro aqui
       # rebobina a instalação de quem hospeda, e nenhum teste TS o veria.
       - name: Kit self-host (bash)
         run: pnpm --filter lumenva-crm test:shell
+
+  verify-heavy:
+    runs-on: [self-hosted, self-hosted-lumenva-disposable]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.3.4
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm --filter lumenva-crm typecheck
+
+      - name: Unit tests
+        run: pnpm --filter lumenva-crm test:unit
+
+      - name: Site typecheck
+        run: pnpm --filter lumenva-website typecheck
+
+      - name: Site tests
+        run: pnpm --filter lumenva-website test
 
   # Gate de isolamento multi-tenant + invariantes de governança.
   # Job separado de propósito: roda em paralelo ao verify (não atrasa o feedback
