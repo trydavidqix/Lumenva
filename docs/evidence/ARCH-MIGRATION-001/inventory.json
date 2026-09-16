@@ -1,0 +1,32 @@
+{
+  "date": "2026-09-16",
+  "project_root": "/Users/david/Desktop/CRM",
+  "implementation_worktree": "/Users/david/Desktop/CRM/.worktree-arch-ceo-mcg-2026-09-16",
+  "base": "origin/main@fec2d25348d357e9091c2d5e11fbfd7ee7427208",
+  "codex": {
+    "binary": "/Users/david/.local/bin/codex",
+    "config": "present",
+    "agents_dir": "absent_before_migration",
+    "global_agents": "absent_before_migration",
+    "rules": ["default.rules"],
+    "hooks_json": "absent_before_migration"
+  },
+  "claude": {
+    "binary": "/usr/local/bin/claude",
+    "claude_md": "present",
+    "settings": "present",
+    "rules_dir": "absent_before_migration",
+    "skills_dir": "present",
+    "output_styles": ["carioca-operator.md"],
+    "hooks_dir": "absent_before_migration",
+    "managed_auth_files": "present_and_not_modified"
+  },
+  "maestri": {
+    "binary": "session_path_discovered",
+    "connection": "OK",
+    "connected_agents": ["Claude Code"],
+    "event_feed_or_websocket_cli": "not_exposed_by_installed_cli"
+  },
+  "mcg": { "binary": "absent_before_migration", "existing_implementation": "not_found" },
+  "secrets": { "auth_and_secret_values": "not_read_or_copied" }
+}
