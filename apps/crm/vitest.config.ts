@@ -40,6 +40,10 @@ export default defineConfig({
       // o vitest acabava coletando specs Playwright de até 10 worktrees, travando a suíte.
       "**/.worktrees/**",
       "**/.claude/worktrees/**",
+      // Scratchpads are historical wave experiments, not part of the CRM unit
+      // gate. Their PostgreSQL integration tests have their own harness and
+      // require external database/container setup.
+      "scratchpad-*/**",
       "apps/site/**",
       "workers/voice-worker/**",
       "apps/site/**",

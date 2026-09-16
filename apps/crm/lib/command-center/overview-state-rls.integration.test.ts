@@ -34,7 +34,7 @@ describe("Command Center overview RLS (real PostgreSQL)", () => {
     await admin.query("CREATE ROLE authenticated NOLOGIN");
     await admin.query("CREATE ROLE command_center_rls_test LOGIN PASSWORD 'test-role' NOSUPERUSER NOBYPASSRLS IN ROLE authenticated");
     await admin.query("CREATE OR REPLACE FUNCTION public.fn_user_org_ids() RETURNS SETOF text LANGUAGE sql STABLE AS $$ SELECT unnest(string_to_array(current_setting('app.org_ids', true), ',')) $$");
-    await admin.query(await readFile(join(process.cwd(), "supabase/migrations/20260913150000_command_center_overview_rls.sql"), "utf8"));
+    await admin.query(await readFile(join(process.cwd(), "supabase/migrations/20260913150002_command_center_overview_rls.sql"), "utf8"));
   }, 30_000);
 
   afterAll(async () => {
