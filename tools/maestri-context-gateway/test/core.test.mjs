@@ -55,3 +55,7 @@ test('evidence redacts secret-shaped fields before persistence', async () => {
   const stored = await readFile(join(dir, 'tasks', 'task-6', 'events.jsonl'), 'utf8');
   assert.doesNotMatch(stored, /do-not-store/); assert.match(stored, /REDACTED/); assert.match(stored, /safe/); assert.doesNotMatch(JSON.stringify(await loadState('task-6', dir)), /do-not-store/);
 });
+
+test('task paths reject traversal identifiers', async () => {
+  const dir = await root(); await assert.rejects(() => dispatch({ task_id: '../escape' }, dir), /invalid task_id/); await assert.rejects(() => loadState('../escape', dir), /invalid task_id/); await assert.rejects(() => sliceEvidence('../escape', 'manifest', 1, dir), /invalid task_id/);
+});
