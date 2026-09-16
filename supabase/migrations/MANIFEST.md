@@ -198,33 +198,33 @@ aplica.
 | `20260907110000` | `0159_content_os_learning_idempotency` | Chave de idempotência tenant-aware para eventos de aprendizagem e detecção segura de content decay. |
 | `20260907120000` | `0160_ai_agent_command_approvals` | Nova Mode V1: aprovações duráveis de comandos do navegador, com idempotência por organização, expiração, estado de execução, RLS manager+ e guarda de coerência entre agente, versão e tenant. |
 | `20260912120000` | `0162_stripe_entitlement_boundary` | Stripe billing boundary: colunas aditivas de provider e índices tenant-scoped para organization_plan e entitlement_events; sem remoção de dados. |
-| `20260913010000` | `0164_hermes_tool_loop_locks` | Locks duráveis de tool-loop do Hermes, com limite de iterações e expiração. |
-| `20260913020000` | `0165_hermes_session_supersession` | Estado durável de supersession de sessão Hermes por organização. |
+| `20260913010001` | `0176_hermes_tool_loop_locks` | Locks duráveis de tool-loop do Hermes, com limite de iterações e expiração. |
+| `20260913020001` | `0177_hermes_session_supersession` | Estado durável de supersession de sessão Hermes por organização. |
 | `20260913020000` | `0165_hermes_memory_gateway` | Persistência do gateway de memória Hermes por organização, com RLS e idempotência. |
 | `20260913030200` | `0168_psyche_watchdog_requesters` | Registry tenant-scoped de requesters autorizados a reroute do watchdog. |
-| `20260913050000` | `0168_client_portal_decisions` | Decisões do portal do cliente com evidências, receipt e chave primária composta por organização. |
+| `20260913050000` | `0178_client_portal_decisions` | Decisões do portal do cliente com evidências, receipt e chave primária composta por organização. |
 | `20260913100000` | `browsermesh_event_idempotency` | Wave 4 BrowserMesh: claims de replay por tenant, evento e chave de idempotência. |
 | `20260913110000` | `contact_consents` | Registry persistente de consentimentos por organização, com RLS e revogação. |
 | `20260913120000` | `0169_hermes_tool_loop_locks_tenant_rls` | Completa o escopo tenant/RLS dos locks Hermes e mantém o backfill legado explícito. |
-| `20260913150000` | `0166_studio_client_portal_tokens` | Tokens duráveis do portal do cliente, com hash, expiração, uso único e RLS por organização. |
-| `20260913160000` | `0163_browsermesh_event_idempotency_rls` | Wave 4 BrowserMesh: RLS tenant-scoped para claims de replay e grants mínimos. |
+| `20260913150001` | `0181_studio_client_portal_tokens` | Tokens duráveis do portal do cliente, com hash, expiração, uso único e RLS por organização. |
+| `20260913160000` | `0182_browsermesh_event_idempotency_rls` | Wave 4 BrowserMesh: RLS tenant-scoped para claims de replay e grants mínimos. |
 | `20260915090000` | `0170_tenant_rls_hardening` | Hardening da fronteira tenant para billing, Hermes, Studio e BrowserMesh: RLS fail-closed, cast seguro dos identificadores textuais e grants mínimos. |
 | `20260915100000` | `0171_content_asset_provenance` | Campos aditivos e opcionais de licença e proveniência estruturada para assets criativos, preservando assets legados. |
 | `20260915110000` | `0172_tenant_rls_entitlement_policy_fix` | Corrige o hardening 0170: remove policies tenant-all permissivas de billing e restaura writes de plano apenas para platform admin e eventos como append-only por tenant. |
 | `20260915120000` | `0173_approval_store` | Persistência durável do contrato ApprovalStore: estado condicional por status, payload do pedido, timestamps e RLS tenant-scoped. |
 | `20260915121000` | `0174_approval_store_update_rls` | Restringe alterações de approval a manager da organização ou platform admin; membros comuns mantêm apenas leitura/inserção conforme 0173. |
-| `20260913170000` | `0164_asset_license_records` | Wave 8 Asset Intelligence: registry persistente de licenças/proveniência por tenant, com estados e expiração. |
+| `20260913170001` | `0183_asset_license_records` | Wave 8 Asset Intelligence: registry persistente de licenças/proveniência por tenant, com estados e expiração. |
 | `20260911100000` | `0161_entitlements_catalog` | Catálogo de módulos e fronteira de entitlement por tenant. |
 | `20260913000000` | `0163_hermes_source_registry` | Registry de fontes Hermes por tenant. |
 | `20260913010000` | `0164_hermes_source_registry_rls` | RLS do registry de fontes Hermes. |
-| `20260913150000` | `command_center_overview_rls` | RLS do estado persistente do Command Center. |
+| `20260913150001` | `command_center_overview_rls` | RLS do estado persistente do Command Center. |
 | `20260915130000` | `0175_tenant_id_uuid_hardening` | Conversão segura de tenant identifiers textuais para UUID. |
 
 | `20260913030000` | `0166_psyche_watchdog_observations` | Watchdog observations persistidas por tenant. |
 | `20260913091000` | `operating_core_job_receipts_rls` | RLS dos receipts operacionais por tenant. |
-| `20260913130000` | `0163_studio_editor` | Estado persistente do Studio Editor, com RLS por organização. |
-| `20260913140000` | `0165_operating_core_receipts` | Receipts de execução do Operating Core, idempotentes por tenant. |
-| `20260913170000` | `studio_reviewer_authorizations` | Autorizações de reviewers do Studio por organização. |
+| `20260913130000` | `0179_studio_editor` | Estado persistente do Studio Editor, com RLS por organização. |
+| `20260913140000` | `0180_operating_core_receipts` | Receipts de execução do Operating Core, idempotentes por tenant. |
+| `20260913170002` | `studio_reviewer_authorizations` | Autorizações de reviewers do Studio por organização. |
 
 ## Reproducibility
 

@@ -1056,3 +1056,34 @@ falha somente nas colisões existentes no checkout:
   `20260913170000` conforme a saída completa do teste.
 
 Nenhum arquivo de migration foi renomeado ou editado nesta investigação.
+
+### Renumeração das migrations colidentes — preparação 2026-09-16
+
+A consulta read-only ao Supabase real confirmou que nenhum dos timestamps
+colidentes foi aplicado no ambiente `prod` do projeto `Lumenva AI Ecosystem`.
+Foi então preservado o primeiro arquivo de cada slot e renomeados somente os
+duplicados posteriores. O conteúdo SQL não foi alterado; apenas o prefixo de
+identidade/ordenação mudou:
+
+| Nome antigo | Nome novo |
+|---|---|
+| `20260913010000_0164_hermes_tool_loop_locks.sql` | `20260913010001_0176_hermes_tool_loop_locks.sql` |
+| `20260913020000_0165_hermes_session_supersession.sql` | `20260913020001_0177_hermes_session_supersession.sql` |
+| `20260913050000_0168_client_portal_decisions.sql` | `20260913050000_0178_client_portal_decisions.sql` |
+| `20260913130000_0163_studio_editor.sql` | `20260913130000_0179_studio_editor.sql` |
+| `20260913140000_0165_operating_core_receipts.sql` | `20260913140000_0180_operating_core_receipts.sql` |
+| `20260913150000_0166_studio_client_portal_tokens.sql` | `20260913150001_0181_studio_client_portal_tokens.sql` |
+| `20260913150000_command_center_overview_rls.sql` | `20260913150001_command_center_overview_rls.sql` |
+| `20260913160000_0163_browsermesh_event_idempotency_rls.sql` | `20260913160000_0182_browsermesh_event_idempotency_rls.sql` |
+| `20260913170000_0164_asset_license_records.sql` | `20260913170001_0183_asset_license_records.sql` |
+| `20260913170000_studio_reviewer_authorizations.sql` | `20260913170002_studio_reviewer_authorizations.sql` |
+
+Os primeiros arquivos dos slots duplicados (`hermes_source_registry_rls`,
+`hermes_memory_gateway`, `psyche_watchdog_observations`, `psyche_watchdog_requesters`,
+`asset_license_records` e `studio_client_portal_tokens`, conforme a ordem
+cronológica/lexical documentada) foram mantidos quando isso preservou a
+identidade já existente; os nomes do MANIFEST foram atualizados para os nove
+arquivos efetivamente renomeados. O detector estático pós-mudança deve provar
+zero números e zero timestamps duplicados. Vitest não foi executável localmente
+porque `node_modules/.bin/vitest` não existe; o gate recomendado é:
+`pnpm --filter lumenva-crm exec vitest run tests/unit/manifest-x-migrations.test.ts`.
