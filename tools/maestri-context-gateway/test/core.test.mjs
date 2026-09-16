@@ -51,7 +51,7 @@ test('one gateway root isolates multiple projects without coupling task state', 
 
 test('evidence redacts secret-shaped fields before persistence', async () => {
   const dir = await root(); await dispatch({ task_id: 'task-6' }, dir);
-  await ingest({ task_id: 'task-6', event_id: 'evt-6', state: 'DONE', evidence: { api_key: 'do-not-store', summary: 'safe' } }, dir);
+  await ingest({ task_id: 'task-6', event_id: 'evt-6', state: 'DONE', result: 'completed', evidence: { api_key: 'do-not-store', summary: 'safe' } }, dir);
   const stored = await readFile(join(dir, 'tasks', 'task-6', 'events.jsonl'), 'utf8');
-  assert.doesNotMatch(stored, /do-not-store/); assert.match(stored, /REDACTED/); assert.match(stored, /safe/);
+  assert.doesNotMatch(stored, /do-not-store/); assert.match(stored, /REDACTED/); assert.match(stored, /safe/); assert.doesNotMatch(JSON.stringify(await loadState('task-6', dir)), /do-not-store/);
 });
