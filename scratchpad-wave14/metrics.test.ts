@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { decidePhase4Gate } from "./metrics";
-import type { AgentEvalResult } from "./contracts";
+import type { AgentEvalResult } from "../apps/crm/lib/agent-engine/evals/contracts";
 
 const completeSupervisorResult: AgentEvalResult = {
   caseId: "case-1",

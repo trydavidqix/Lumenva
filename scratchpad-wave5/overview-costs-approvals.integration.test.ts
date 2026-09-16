@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Pool } from "pg";
-import { ensureOverviewStore, loadOverview, saveOverview } from "./overview-state-persistence";
+import { ensureOverviewStore, loadOverview, saveOverview } from "../apps/crm/lib/command-center/overview-state-persistence";
 
 let pool: Pool;
 let container = "";

@@ -133,6 +133,42 @@ No ambiente Codex Cloud, por worktree/branch: pnpm install --frozen-lockfile; pn
 
 Até a execução desses comandos, nenhuma linha M/P é considerada tratada ou consolidada.
 
+## Ledger de remediação — Wave 10–15
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| wave10/mobile-delivery-2026-09-13 | Wave 10 Delivery | remediation/waves-10-15-2026-09-15 | aplicado, teste real pendente | commit 4d19b14d; delivery gate persistido e testes adicionados |
+| wave11/consent-registry-2026-09-12 | Wave 11 Consent | remediation/waves-10-15-2026-09-15 | já coberto pelo baseline | cherry-pick vazio após comparação |
+| wave12/marketing-content-2026-09-13 | Wave 12 Content | remediation/waves-10-15-2026-09-15 | aplicado, teste real pendente | commit c5ba644c; TOCTOU consent integration test adicionado |
+| wave13/source-registry-rls-proof-2026-09-13 | Wave 13 Source Registry | remediation/waves-10-15-2026-09-15 | aplicado, teste real pendente | commit 8a365c90; RLS integration test adicionado |
+| wave15/resource-router-2026-09-13 | Wave 15 Resource Router | remediation/waves-10-15-2026-09-15 | aplicado, teste real pendente | commit 48b56ddf; router e teste de input malformado adicionados |
+
+O subgrupo permanece aberto até Vitest/typecheck no Codex Cloud. Validações locais: package_json=valid, conflict_markers=none e git diff --check=pass.
+
+## Ledger de remediação — Business OS / Operating Core
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| business-os/wave-1-agent-contracts-2026-09-11 | Operating Core contracts | remediation/business-os-operating-core-2026-09-15 | aplicado, teste real pendente | commit eb4bce20; contratos e testes adicionados |
+| business-os/wave-1-job-engine-events-2026-09-11 | Operating Core events | remediation/business-os-operating-core-2026-09-15 | aplicado, teste real pendente | commit d98c3b59; reconciliação manual preservou claim persistido e validação tenant |
+| business-os/wave-1-operating-core-evidence-2026-09-11 | Evidence policy | remediation/business-os-operating-core-2026-09-15 | aplicado, teste real pendente | commit 7ed0ed20; evidence policy/approval foundations adicionados |
+
+O subgrupo permanece aberto até os testes reais no Codex Cloud. Validações locais: package_json=valid, conflict_markers=none e git diff --check=pass.
+
+## Ledger de remediação — Business OS audit/Stripe
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| business-os/phase-0-audit | Phase 0 audit | remediation/business-os-audit-stripe-2026-09-15 | aplicado, revisão/teste real pendente | commits b1f7ca9e, b2d2891f e de847d3c; nove mapas de arquitetura restaurados |
+| business-os/phase-0-audit-docs-2026-09-11 | Phase 0 docs | remediation/business-os-audit-stripe-2026-09-15 | aplicado, revisão/teste real pendente | conteúdo documental incorporado em de847d3c |
+| business-os/phase-3-contract-security-2026-09-12 | Stripe contract | remediation/business-os-audit-stripe-2026-09-15 | aplicado, teste real pendente | commit bc72da78; contratos e testes provider-free |
+| business-os/phase-3-stripe-security-2026-09-12 | Stripe security | remediation/business-os-audit-stripe-2026-09-15 | aplicado, teste real pendente | commit bb3fc0fc; route/browser contracts e audit doc |
+
+O grupo permanece aberto até typecheck/lint/testes no Codex Cloud. Conflitos foram comparados: o conflito Stripe era apenas formatação/comentário; os documentos ausentes foram recuperados por conteúdo do merge tree, sem descarte lógico.
+
+| wave10/mobile-compliance-guardian-2026-09-13 | Wave 10 Mobile Compliance | remediation/waves-10-15-2026-09-15 | aplicado, teste real pendente | commit 4d34220c; Mobile Releases registrado na navegação |
+| wave14-15/evals-autonomy-2026-09-12 | Wave 14–15 Evals | remediation/waves-10-15-2026-09-15 | já coberto pelo baseline | cherry-pick vazio após comparação; não houve alteração descartada |
+
 ## Ledger de remediação — Wave 6–9
 
 | Branch original | Grupo | Branch isolada | Estado | Evidência |
@@ -192,3 +228,16 @@ O grupo permanece aberto até o Codex Cloud executar os testes e typecheck; as v
 | business-os/phase-1-http-2026-09-11 | Migrations | remediation/entitlements-billing-migrations-2026-09-15 | aplicado, teste real pendente | commit cf511bbc; declaração .mjs.d.ts restaurada |
 
 O grupo não é considerado fechado: a execução local de pnpm tentou resolver pacotes em registry.npmjs.org e falhou repetidamente por DNS. Gate obrigatório no Codex Cloud: pnpm install --frozen-lockfile e, depois, os comandos completos desta página.
+
+## Auditoria adicional — Business OS audit/Stripe
+
+| Verificação | Resultado |
+|---|---|
+| Branch auditada | `remediation/business-os-audit-stripe-2026-09-15` @ `60be644d` |
+| Drift de imports relativos inicial | 35 ocorrências detectadas por scanner estático de resolução de módulos |
+| Módulos históricos restauráveis | 14 arquivos restaurados a partir de `6e0a13fa`, `35064424`, `47802c2b`, `28a63f94`, `d3a77113`, `586b3750`, `750b0920`, `e901ad98` e `8084af09`; nenhum foi inventado |
+| Imports acionáveis após restauração | 0; a única ocorrência restante está dentro de uma string de fixture que gera código de teste, não é import executado pela branch |
+| Validação estática | `git diff --check` passou para as alterações desta unidade |
+| Typecheck/lint local | Não executados até o fim: não há `node_modules` nos worktrees e `pnpm --offline` tentou acessar `registry.npmjs.org`, bloqueado por DNS |
+
+As restaurações preservam os caminhos canônicos do CRM: consent registry, gateway projection, no-progress watchdog, agent definition/authority/registry, layer manifest, Stripe webhook contract, overview state/persistence, build-plan state store, source registry, studio context pack, operating-core adapters e fixture de entitlements. O gate real de typecheck/lint/Vitest permanece pendente no CI/Codex Cloud.
