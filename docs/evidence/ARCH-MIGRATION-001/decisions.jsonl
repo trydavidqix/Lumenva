@@ -1,0 +1,5 @@
+{"decision":"runtime","value":"Node 22 built-ins","reason":"already available, dependency-free, suitable for local persistent CLI/daemon"}
+{"decision":"maestri_adapter","value":"explicit structured inbox","reason":"installed Maestri CLI has healthy connection but no documented feed/WebSocket command; no endpoint invented"}
+{"decision":"global_codex_config","value":"leave config.toml unchanged","reason":"current schema has no validated developer_instructions key; constitution lives in AGENTS.md/agent file"}
+{"decision":"guards","value":"observe-only","reason":"safe rollout before enforcement; hooks never block legitimate Claude usage"}
+{"decision":"secrets","value":"outside Git","reason":"managed auth and secret values were not read, copied, or versioned"}

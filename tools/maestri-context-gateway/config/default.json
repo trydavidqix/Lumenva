@@ -1,0 +1,13 @@
+{
+  "root": "~/.lumenva/maestri-context-gateway",
+  "mode": "observe",
+  "maestri": {
+    "cli": "maestri",
+    "event_feed": "explicit-inbox",
+    "live_feed_verified": false
+  },
+  "security": {
+    "redact_secrets": true,
+    "file_mode": "0600"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "backup_root": "/Users/david/.lumenva/backups/ARCH-MIGRATION-001-20260916",
+  "files": [
+    "codex-config.toml",
+    "codex-default.rules",
+    "claude-CLAUDE.md",
+    "claude-settings.json",
+    "claude-output-style-carioca-operator.md"
+  ],
+  "secrets": "no auth or secret files copied"
+}
