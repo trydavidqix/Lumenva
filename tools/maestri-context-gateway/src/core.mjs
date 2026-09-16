@@ -76,7 +76,8 @@ export async function ingest(event, root = ROOT) {
   const state = JSON.parse(await readFile(join(root, 'tasks', event.task_id, 'state.json'), 'utf8'));
   if (state.last_event_id === event.event_id || (event.sequence != null && state.last_sequence != null && event.sequence <= state.last_sequence)) return { deduped: true, state };
   const safeEvent = redact(event);
-  const updated = { ...state, internal_state: safeEvent.state, external_state: safeEvent.external_state || (safeEvent.state === 'DONE' ? 'DONE' : safeEvent.state === 'BLOCKED' ? 'BLOCKED_OWNER' : null), last_event_id: safeEvent.event_id, last_sequence: safeEvent.sequence ?? state.last_sequence, updated_at: new Date().toISOString(), result: safeEvent.result ?? state.result, validation: safeEvent.validation ?? state.validation, commit: safeEvent.commit ?? state.commit, blocker: safeEvent.blocker ?? state.blocker, owner_needed: safeEvent.owner_needed ?? state.owner_needed };
+  const externalState = safeEvent.external_state || (safeEvent.state === 'DONE' ? 'DONE' : safeEvent.state === 'BLOCKED' ? 'BLOCKED_OWNER' : null);
+  const updated = { ...state, internal_state: safeEvent.state, external_state: externalState, last_event_id: safeEvent.event_id, last_sequence: safeEvent.sequence ?? state.last_sequence, updated_at: new Date().toISOString(), result: safeEvent.result ?? state.result, validation: safeEvent.validation ?? state.validation, commit: safeEvent.commit ?? state.commit, blocker: safeEvent.blocker ?? state.blocker, owner_needed: safeEvent.owner_needed ?? state.owner_needed, result_reference: externalState === 'DONE' || externalState === 'BLOCKED_OWNER' ? `${event.task_id}/result.json` : state.result_reference };
   await saveState(updated, root);
   await appendFile(join(root, 'tasks', event.task_id, 'events.jsonl'), `${JSON.stringify(safeEvent)}\n`, { mode: 0o600 });
   if (updated.external_state === 'DONE' || updated.external_state === 'BLOCKED_OWNER') {
