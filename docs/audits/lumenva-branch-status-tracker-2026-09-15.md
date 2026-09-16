@@ -228,3 +228,16 @@ O grupo permanece aberto até o Codex Cloud executar os testes e typecheck; as v
 | business-os/phase-1-http-2026-09-11 | Migrations | remediation/entitlements-billing-migrations-2026-09-15 | aplicado, teste real pendente | commit cf511bbc; declaração .mjs.d.ts restaurada |
 
 O grupo não é considerado fechado: a execução local de pnpm tentou resolver pacotes em registry.npmjs.org e falhou repetidamente por DNS. Gate obrigatório no Codex Cloud: pnpm install --frozen-lockfile e, depois, os comandos completos desta página.
+
+## Auditoria adicional — Business OS audit/Stripe
+
+| Verificação | Resultado |
+|---|---|
+| Branch auditada | `remediation/business-os-audit-stripe-2026-09-15` @ `60be644d` |
+| Drift de imports relativos inicial | 35 ocorrências detectadas por scanner estático de resolução de módulos |
+| Módulos históricos restauráveis | 14 arquivos restaurados a partir de `6e0a13fa`, `35064424`, `47802c2b`, `28a63f94`, `d3a77113`, `586b3750`, `750b0920`, `e901ad98` e `8084af09`; nenhum foi inventado |
+| Imports acionáveis após restauração | 0; a única ocorrência restante está dentro de uma string de fixture que gera código de teste, não é import executado pela branch |
+| Validação estática | `git diff --check` passou para as alterações desta unidade |
+| Typecheck/lint local | Não executados até o fim: não há `node_modules` nos worktrees e `pnpm --offline` tentou acessar `registry.npmjs.org`, bloqueado por DNS |
+
+As restaurações preservam os caminhos canônicos do CRM: consent registry, gateway projection, no-progress watchdog, agent definition/authority/registry, layer manifest, Stripe webhook contract, overview state/persistence, build-plan state store, source registry, studio context pack, operating-core adapters e fixture de entitlements. O gate real de typecheck/lint/Vitest permanece pendente no CI/Codex Cloud.

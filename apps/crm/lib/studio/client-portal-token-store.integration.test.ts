@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
-import { Pool } from "../../../../apps/crm/node_modules/pg";
+import { Pool } from "pg";
 import { createPostgresClientPortalTokenStore } from "./client-portal-token-store";
 import type { ClientPortalToken } from "./project-spec";
 
