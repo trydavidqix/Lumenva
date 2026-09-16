@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { createRequire } from "node:module";
+import { resolve } from "node:path";
 
 import { registerSource, createPostgresSourceRegistry, type SourceRecord } from "../apps/crm/lib/memory/source-registry";
 
@@ -34,7 +36,7 @@ describe("Hermes Source Registry", () => {
   it("persiste, reconstrói e serializa concorrência no Postgres", async () => {
     const url = process.env.SOURCE_REGISTRY_DATABASE_URL;
     if (!url) return;
-    const { Pool } = await import("pg");
+    const { Pool } = createRequire(resolve(process.cwd(), "apps/crm/package.json"))("pg") as typeof import("pg");
     const pool = new Pool({ connectionString: url });
     await pool.query(`CREATE TABLE IF NOT EXISTS hermes_source_registry_test (
       organization_id text NOT NULL, source_id text NOT NULL, uri text NOT NULL, title text NOT NULL,

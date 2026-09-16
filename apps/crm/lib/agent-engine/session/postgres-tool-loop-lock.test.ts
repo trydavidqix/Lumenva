@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { PostgresToolLoopLockStore } from "./postgres-tool-loop-lock";
 
-describe("Postgres ToolLoopLock CAS", () => {
+const describeIfDatabase = process.env.SESSION_DATABASE_URL ? describe : describe.skip;
+
+describeIfDatabase("Postgres ToolLoopLock CAS", () => {
   it("serializa duas instâncias concorrentes e isola tenants", async () => {
     const url = process.env.SESSION_DATABASE_URL;
     if (!url) throw new Error("SESSION_DATABASE_URL is required for this integration test");

@@ -9,7 +9,9 @@ let container = "";
 const orgA = "11111111-1111-1111-1111-111111111111";
 const orgB = "22222222-2222-2222-2222-222222222222";
 
-describe("Studio reviewer authorization registry", () => {
+const describeIfDatabase = process.env.STUDIO_REVIEWER_DATABASE_URL ? describe : describe.skip;
+
+describeIfDatabase("Studio reviewer authorization registry", () => {
   beforeAll(async () => {
     const { execFileSync } = await import("node:child_process");
     container = execFileSync("docker", ["run", "-d", "--rm", "-e", "POSTGRES_PASSWORD=test", "-p", "0:5432", "postgres:16"], { encoding: "utf8" }).trim();
