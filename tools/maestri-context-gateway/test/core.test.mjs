@@ -17,7 +17,7 @@ test('ingest deduplicates events and normalizes terminal states', async () => {
   const dir = await root(); await dispatch({ task_id: 'task-2' }, dir);
   const event = { task_id: 'task-2', event_id: 'evt-1', sequence: 1, state: 'DONE', result: 'ok' };
   assert.equal((await ingest(event, dir)).deduped, false); assert.equal((await ingest(event, dir)).deduped, true);
-  assert.equal((await loadState('task-2', dir)).external_state, 'DONE');
+  assert.equal((await loadState('task-2', dir)).external_state, 'DONE'); assert.equal((await loadState('task-2', dir)).result_reference, 'task-2/result.json');
 });
 
 test('wait is silent until DONE and returns a compact handoff', async () => {
