@@ -15,7 +15,8 @@ try {
   if (command === 'doctor') {
     const nodeMajor = Number(process.versions.node.split('.')[0]);
     const maestri = spawnSync(process.env.MAESTRI_CLI || 'maestri', ['debug'], { encoding: 'utf8', timeout: 5000 });
-    print({ root: ROOT, node: process.versions.node, node_ok: nodeMajor >= 22, storage: 'ok', maestri: maestri.status === 0 ? 'available' : 'unavailable', maestri_connection: maestri.stdout?.includes('Connection: OK') ? 'ok' : 'unknown', event_feed: 'not_exposed_by_installed_cli', auth: 'not inspected' });
+    const maestriOutput = `${maestri.stdout || ''}\n${maestri.stderr || ''}`;
+    print({ root: ROOT, node: process.versions.node, node_ok: nodeMajor >= 22, storage: 'ok', maestri: maestri.status === 0 ? 'available' : 'unavailable', maestri_connection: maestriOutput.includes('Connection: OK') ? 'ok' : 'unknown', event_feed: 'not_exposed_by_installed_cli', auth: 'not inspected' });
   } else if (command === 'dispatch') {
     const file = value('--file');
     const input = file ? JSON.parse(await readFile(file, 'utf8')) : JSON.parse(await new Promise((resolve, reject) => { let s = ''; process.stdin.on('data', d => s += d); process.stdin.on('end', () => resolve(s)); process.stdin.on('error', reject); }));
