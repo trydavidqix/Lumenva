@@ -28,7 +28,7 @@ describe("Client portal token store RLS", () => {
     await admin.query("GRANT USAGE ON SCHEMA auth TO authenticated");
     await admin.query("GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated");
     await admin.query("GRANT EXECUTE ON FUNCTION public.fn_user_org_ids() TO authenticated");
-    await admin.query(readFileSync("supabase/migrations/20260913150000_0166_studio_client_portal_tokens.sql", "utf8"));
+    await admin.query(readFileSync("supabase/migrations/20260913150001_0181_studio_client_portal_tokens.sql", "utf8"));
     await admin.query("INSERT INTO public.studio_client_portal_tokens (token_id, project_id, organization_id, token_hash, scope, expires_at, created_by) VALUES ('00000000-0000-0000-0000-000000000001', 'project-1', '11111111-1111-1111-1111-111111111111', repeat('a', 64), 'VIEW', '2099-01-01', 'owner')");
     await admin.query("INSERT INTO public.user_organizations VALUES ('00000000-0000-0000-0000-000000000099', '11111111-1111-1111-1111-111111111111', NULL)");
     authenticated = new Pool({ connectionString: url.replace("postgres:postgres", "authenticated:authenticated") });

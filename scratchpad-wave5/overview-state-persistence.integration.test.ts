@@ -32,7 +32,7 @@ describe("command center overview postgres persistence", () => {
     pool = new Pool({ connectionString });
     await pool.query("CREATE OR REPLACE FUNCTION public.fn_user_org_ids() RETURNS SETOF text LANGUAGE sql STABLE AS $$ SELECT unnest(string_to_array(current_setting('app.org_ids', true), ',')) $$");
     await pool.query("CREATE ROLE authenticated NOLOGIN");
-    await pool.query(await readFile(join(process.cwd(), "supabase/migrations/20260913150000_command_center_overview_rls.sql"), "utf8"));
+    await pool.query(await readFile(join(process.cwd(), "supabase/migrations/20260913150002_command_center_overview_rls.sql"), "utf8"));
     await ensureOverviewStore(pool);
   }, 30_000);
   afterAll(async () => { await pool?.end(); if (container) { const { execFileSync } = await import("node:child_process"); execFileSync("docker", ["rm", "-f", container]); } });

@@ -217,7 +217,7 @@ aplica.
 | `20260911100000` | `0161_entitlements_catalog` | Catálogo de módulos e fronteira de entitlement por tenant. |
 | `20260913000000` | `0163_hermes_source_registry` | Registry de fontes Hermes por tenant. |
 | `20260913010000` | `0164_hermes_source_registry_rls` | RLS do registry de fontes Hermes. |
-| `20260913150001` | `command_center_overview_rls` | RLS do estado persistente do Command Center. |
+| `20260913150002` | `command_center_overview_rls` | RLS do estado persistente do Command Center. |
 | `20260915130000` | `0175_tenant_id_uuid_hardening` | Conversão segura de tenant identifiers textuais para UUID. |
 
 | `20260913030000` | `0166_psyche_watchdog_observations` | Watchdog observations persistidas por tenant. |

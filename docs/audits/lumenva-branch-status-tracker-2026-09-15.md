@@ -1073,7 +1073,7 @@ identidade/ordenação mudou:
 | `20260913130000_0163_studio_editor.sql` | `20260913130000_0179_studio_editor.sql` |
 | `20260913140000_0165_operating_core_receipts.sql` | `20260913140000_0180_operating_core_receipts.sql` |
 | `20260913150000_0166_studio_client_portal_tokens.sql` | `20260913150001_0181_studio_client_portal_tokens.sql` |
-| `20260913150000_command_center_overview_rls.sql` | `20260913150001_command_center_overview_rls.sql` |
+| `20260913150000_command_center_overview_rls.sql` | `20260913150002_command_center_overview_rls.sql` |
 | `20260913160000_0163_browsermesh_event_idempotency_rls.sql` | `20260913160000_0182_browsermesh_event_idempotency_rls.sql` |
 | `20260913170000_0164_asset_license_records.sql` | `20260913170001_0183_asset_license_records.sql` |
 | `20260913170000_studio_reviewer_authorizations.sql` | `20260913170002_studio_reviewer_authorizations.sql` |

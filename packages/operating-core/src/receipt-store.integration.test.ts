@@ -54,7 +54,7 @@ describe("Wave 1 receipt Postgres integration", () => {
     await admin.query("create role service_role nologin");
     await admin.query("create role receipt_test login password 'receipt-test' nosuperuser nobypassrls in role authenticated");
     await admin.query("create or replace function public.fn_user_org_ids() returns setof uuid language sql stable as $$ select unnest(string_to_array(current_setting('app.org_ids', true), ','))::uuid $$");
-    await admin.query(await readFile(join(process.cwd(), "supabase/migrations/20260913140000_0165_operating_core_receipts.sql"), "utf8"));
+    await admin.query(await readFile(join(process.cwd(), "supabase/migrations/20260913140000_0180_operating_core_receipts.sql"), "utf8"));
   }, 30_000);
 
   afterAll(async () => {

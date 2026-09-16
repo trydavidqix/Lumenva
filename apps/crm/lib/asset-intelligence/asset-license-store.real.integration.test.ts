@@ -27,7 +27,7 @@ describe("Wave 8 persistent asset license registry", () => {
     await admin.query("create role service_role nologin");
     await admin.query("create role asset_license_test login password 'asset-license-test' nosuperuser nobypassrls in role authenticated");
     await admin.query("create or replace function public.fn_user_org_ids() returns setof text language sql stable as $$ select unnest(string_to_array(current_setting('app.org_ids', true), ',')) $$");
-    await admin.query(readFileSync("supabase/migrations/20260913170000_0164_asset_license_records.sql", "utf8"));
+    await admin.query(readFileSync("supabase/migrations/20260913170001_0183_asset_license_records.sql", "utf8"));
     await admin.query("insert into public.asset_license_records (organization_id,license_ref,source_id,owner_id,status,expires_at) values ('org-a','lic-a','source-a','owner-a','VERIFIED','2099-01-01T00:00:00Z'),('org-b','lic-b','source-b','owner-b','VERIFIED','2099-01-01T00:00:00Z')");
     tenantUrl = `postgres://asset_license_test:asset-license-test@127.0.0.1:${port}/postgres`;
   }, 60_000);

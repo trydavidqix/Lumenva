@@ -31,7 +31,7 @@ describe("Wave 4 BrowserMesh replay claims against real Postgres RLS", () => {
     await admin.query("create role browsermesh_test login password 'browsermesh-test' nosuperuser nobypassrls in role authenticated");
     await admin.query("create or replace function public.fn_user_org_ids() returns setof text language sql stable as $$ select unnest(string_to_array(current_setting('app.org_ids', true), ',')) $$");
     await admin.query(readFileSync("supabase/migrations/20260913100000_browsermesh_event_idempotency.sql", "utf8"));
-    await admin.query(readFileSync("supabase/migrations/20260913160000_0163_browsermesh_event_idempotency_rls.sql", "utf8"));
+    await admin.query(readFileSync("supabase/migrations/20260913160000_0182_browsermesh_event_idempotency_rls.sql", "utf8"));
     await admin.query("insert into public.browsermesh_event_idempotency (organization_id,event_id,idempotency_key,status) values ('org-b','event-b','replay-b','CLAIMED')");
     tenantUrl = `postgres://browsermesh_test:browsermesh-test@127.0.0.1:${port}/postgres`;
   }, 60_000);

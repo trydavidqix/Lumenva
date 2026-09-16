@@ -23,7 +23,7 @@ describe("Studio Editor RLS", () => {
     await admin.query("CREATE ROLE service_role NOLOGIN");
     await admin.query("GRANT USAGE ON SCHEMA public TO authenticated");
     await admin.query("GRANT EXECUTE ON FUNCTION public.fn_user_org_ids() TO authenticated");
-    await admin.query(readFileSync("supabase/migrations/20260913130000_0163_studio_editor.sql", "utf8"));
+    await admin.query(readFileSync("supabase/migrations/20260913130000_0179_studio_editor.sql", "utf8"));
     await admin.query("INSERT INTO public.studio_canvas_documents (organization_id,session_id,canvas_id,project_id,version,viewport,layers,editor_state,created_by) VALUES ($1,'session-a','canvas-a','project-a',1,'{}','[]','DRAFT','owner')", [orgA]);
     authenticated = new Pool({ connectionString: url.replace("postgres:test", "authenticated:authenticated") });
     await authenticated.query(`SET app.org_ids = '${orgA}'`);
