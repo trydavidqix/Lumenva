@@ -1,7 +1,9 @@
 {
   "task_id": "ARCH-MIGRATION-001",
-  "status": "IN_PROGRESS",
-  "result": "Phase 0 audited; versioned MCG V1 and global configuration prepared.",
+  "status": "BLOCKED_OWNER",
+  "result": "Claude CEO policy, Codex Executor policy, MCG V1 CLI/daemon/evidence store, observe-only guards and global installation are implemented and validated.",
+  "blocker": "The installed Maestri runtime exposes synchronous ask/check and one connected Claude Code agent, but no executor target plus event feed/WebSocket needed to validate the live CEO-to-Codex transport end to end.",
+  "owner_needed": "Connect/register the intended Codex Executor target in Maestri and provide/authorize its real event/result transport contract.",
   "inventory": "inventory.json",
   "backups": "backups.json",
   "decisions": "decisions.jsonl",
