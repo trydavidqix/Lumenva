@@ -1,6 +1,9 @@
 name: Self-hosted runner smoke test
 
 on:
+  push:
+    branches:
+      - remediation/business-os-acceptance-mcp-2026-09-15
   workflow_dispatch:
 
 permissions:
