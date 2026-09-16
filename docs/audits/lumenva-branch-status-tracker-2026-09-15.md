@@ -241,3 +241,12 @@ O grupo não é considerado fechado: a execução local de pnpm tentou resolver 
 | Typecheck/lint local | Não executados até o fim: não há `node_modules` nos worktrees e `pnpm --offline` tentou acessar `registry.npmjs.org`, bloqueado por DNS |
 
 As restaurações preservam os caminhos canônicos do CRM: consent registry, gateway projection, no-progress watchdog, agent definition/authority/registry, layer manifest, Stripe webhook contract, overview state/persistence, build-plan state store, source registry, studio context pack, operating-core adapters e fixture de entitlements. O gate real de typecheck/lint/Vitest permanece pendente no CI/Codex Cloud.
+
+### Ciclo CI — 2026-09-16
+
+Run real: `35106766261` ([GitHub Actions](https://github.com/trydavidqix/Lumenva/actions/runs/35106766261)) terminou com `failure` nos jobs `verify` e `invariants`.
+
+- `verify`: a configuração de heap foi aplicada e o OOM desapareceu; o typecheck avançou até erros de drift/tipos em `stripe-browser-state`, export do checkout, `AuditAction`, `health` status, fixtures `DispatchWorker`/`WakeWorker`, lock date, `action-bus`, `reverse-design`, `source-registry`, consent publication, affect ledger e delivery fixture.
+- `invariants`: o baseline avançou além do erro `CLAIMED` e falhou em `operator does not exist: text = uuid` em `supabase/baseline.sql:10768`, confirmando que o baseline desta branch ainda não incorpora a correção de tenant UUID.
+
+Correções históricas correspondentes foram preparadas nesta branch, sem editar migrations: contratos/adapters ausentes restaurados, imports alinhados, fixtures tipadas, narrowing corrigido, `AuditAction` canônico e baseline/CI já corrigidos. A validação local completa continua indisponível por ausência de `node_modules`; o próximo gate é CI real após commit.
