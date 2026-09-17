@@ -7,11 +7,13 @@
 - **Nome:** `lumenva-disposable-test-vps`
 - **ID Hetzner:** `166228238`
 - **IP:** `91.99.214.199`
-- **Tipo:** `cx23`
+- **Tipo:** `cx33`
+- **Recursos:** 4 vCPU, 8 GB RAM, 80 GB NVMe
 - **Região:** `fsn1`
 - **Imagem:** `ubuntu-24.04`
 - **Data de criação:** `2026-09-16`
 - **Status:** criada e em execução
+- **Swap:** arquivo `/swapfile` de 4 GB, habilitado no boot
 
 ## Propósito
 
@@ -61,11 +63,15 @@ Usar o token de API somente de forma protegida; nunca registrá-lo nesta nota ou
 - **Nome do runner:** `lumenva-disposable-test-vps`
 - **Label dedicado:** `self-hosted-lumenva-disposable`
 - **Agente:** Actions Runner `2.337.0`, instalado em `/opt/actions-runner`
+- **Node heap do job pesado:** `--max-old-space-size=6144`
+- **Custo Hetzner:** `€8,49/mês` líquido (`€10,4427/mês` bruto pela API, sem IPv4); `€0,0136/h` líquido
 - **Serviço:** systemd, habilitado e ativo após reboot/desconexão SSH
 - **Usuário do serviço:** `github-runner` (não root)
 - **Workflow de teste:** `.github/workflows/self-hosted-runner-smoke.yml`, disparo manual (`workflow_dispatch`)
 
 O runner foi instalado com o pacote oficial `actions/runner` e o SHA-256 do arquivo foi verificado antes da extração. O pipeline de produção (`.github/workflows/ci.yml`) não foi alterado.
+
+O teste de migração na branch de staging eliminou o OOM do Typecheck após o resize para `cx33` e o aumento do heap do Node. A execução ainda falha em erros reais de TypeScript existentes na base; nenhuma correção de código foi feita como parte desta migração.
 
 ### Parar ou remover
 
