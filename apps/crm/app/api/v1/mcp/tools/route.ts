@@ -19,6 +19,10 @@ import { z } from "zod";
 
 import { ok, fail } from "@/lib/api/wrappers";
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
+import { McpAuthError, validateBearerToken } from "@/lib/mcp/auth";
+import { invokeLumenvaCommand } from "@/lib/cli/lumenva";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { recordHttpExecutionReceipt } from "@/lib/mcp/http-execution-receipt-store";
 import { allTools } from "@/lib/mcp/tools";
 import { TOOL_CATALOG } from "@/lib/mcp/tools/catalog";
 import { juntarCatalogoComHandlers } from "@/lib/mcp/tools/catalogo-servido";
@@ -55,4 +59,37 @@ export async function GET(_req: NextRequest): Promise<Response> {
   }));
 
   return ok({ tools }, { requestId });
+}
+
+export async function POST(req: NextRequest): Promise<Response> {
+  const requestId = req.headers.get("x-request-id")?.trim() || randomUUID();
+  try {
+    const auth = await validateBearerToken(req.headers.get("authorization"));
+    const body = await req.json() as { toolName?: unknown; args?: unknown; organizationId?: unknown };
+    if (body.organizationId !== undefined && body.organizationId !== auth.organizationId) {
+      return fail("forbidden_tenant", "Tenant mismatch.", 403, { requestId });
+    }
+    if (typeof body.toolName !== "string" || !body.toolName.trim() || !body.args || typeof body.args !== "object" || Array.isArray(body.args)) {
+      return fail("invalid_request", "toolName and object args are required.", 400, { requestId });
+    }
+    const result = await invokeLumenvaCommand({
+      command: { toolName: body.toolName, args: body.args as Record<string, unknown> },
+      auth,
+      requestId,
+      supabase: createAdminClient(),
+    });
+    await recordHttpExecutionReceipt({
+      organizationId: auth.organizationId,
+      requestId,
+      toolName: body.toolName,
+      actorId: auth.actor.id,
+      outcome: "SUCCEEDED",
+      result,
+      evidence: { source: "mcp_http", tool: body.toolName },
+    });
+    return ok({ result }, { requestId });
+  } catch (error) {
+    if (error instanceof McpAuthError) return fail("mcp_error", error.message, error.httpStatus, { requestId });
+    return fail("mcp_error", error instanceof Error ? error.message : String(error), 400, { requestId });
+  }
 }

@@ -197,6 +197,7 @@ aplica.
 | `20260907100000` | `0158_content_os_editorial_persistence` | Content OS V1: research runs retomáveis, evidências com hash e estado de verificação, claims ligados a evidências, quality gates e revisões versionadas; todas tenant-aware, com RLS, índices de reconciliação, idempotência e triggers de coerência entre organizações. |
 | `20260907110000` | `0159_content_os_learning_idempotency` | Chave de idempotência tenant-aware para eventos de aprendizagem e detecção segura de content decay. |
 | `20260907120000` | `0160_ai_agent_command_approvals` | Nova Mode V1: aprovações duráveis de comandos do navegador, com idempotência por organização, expiração, estado de execução, RLS manager+ e guarda de coerência entre agente, versão e tenant. |
+| `20260911100000` | `0161_entitlements_catalog` | Catálogo de planos e entitlements por organização. |
 | `20260912120000` | `0162_stripe_entitlement_boundary` | Stripe billing boundary: colunas aditivas de provider e índices tenant-scoped para organization_plan e entitlement_events; sem remoção de dados. |
 | `20260913010000` | `0164_hermes_tool_loop_locks` | Locks duráveis de tool-loop do Hermes, com limite de iterações e expiração. |
 | `20260913020000` | `0165_hermes_session_supersession` | Estado durável de supersession de sessão Hermes por organização. |
@@ -207,6 +208,7 @@ aplica.
 | `20260913160000` | `0163_browsermesh_event_idempotency_rls` | Wave 4 BrowserMesh: RLS tenant-scoped para claims de replay e grants mínimos. |
 | `20260915090000` | `0170_tenant_rls_hardening` | Hardening da fronteira tenant para billing, Hermes, Studio e BrowserMesh: RLS fail-closed, cast seguro dos identificadores textuais e grants mínimos. |
 | `20260915100000` | `0171_content_asset_provenance` | Campos aditivos e opcionais de licença e proveniência estruturada para assets criativos, preservando assets legados. |
+| `20260913170000` | `0173_asset_license_records` | Wave 8 Asset Intelligence: registry persistente de licenças/proveniência por tenant, com estados e expiração. |
 
 ## Reproducibility
 
