@@ -43,7 +43,7 @@ function pool(organizationId: string) {
   };
 }
 function parseRows(output: string): Array<Record<string, unknown>> {
-  return output ? output.split("\n").filter(Boolean).map((line) => {
+  return output ? output.split("\n").filter((line) => line.includes("\t")).map((line) => {
     const [organization_id, agent_id, session_id, event_id, at_ms, pleasure, arousal, dominance] = line.split("\t");
     return { organization_id, agent_id, session_id, event_id, at_ms, pleasure: Number(pleasure), arousal: Number(arousal), dominance: Number(dominance) };
   }) : [];
@@ -69,4 +69,10 @@ describe("Wave 16 affect ledger with real PostgreSQL and RLS", () => {
     expect(await new PostgresAffectLedger(pool(orgB) as never, orgB).read("agent", "session")).toHaveLength(0);
     await expect(psql("update psyche_affect_events set pleasure=0 where event_id='event-1'", "app_user")).rejects.toThrow(/append-only|permission/i);
   }, 120_000);
+});
+
+describe("affect ledger docker output parsing", () => {
+  it("ignores command result lines without row separators", () => {
+    expect(parseRows("org-a\norg-a\tagent\tsession\tevent-1\t1000\t0.7\t-0.2\t0.4")).toHaveLength(1);
+  });
 });
