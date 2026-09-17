@@ -1,6 +1,6 @@
-import type { ProductAgentId } from '../product-agents/contracts';
-import { PRODUCT_AGENT_IDS } from '../product-agents/contracts';
-import type { AgentEvalResult, EvalAssertionKind } from './contracts';
+import type { ProductAgentId } from '../apps/crm/lib/agent-engine/product-agents/contracts';
+import { PRODUCT_AGENT_IDS } from '../apps/crm/lib/agent-engine/product-agents/contracts';
+import type { AgentEvalResult, EvalAssertionKind } from '../apps/crm/lib/agent-engine/evals/contracts';
 
 export interface AgentEvalMetrics {
   agentId: ProductAgentId;
