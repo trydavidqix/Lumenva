@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createContextPack } from "./context-pack";
+import { createContextPack } from "../apps/crm/lib/studio/context-pack";
 import { StudioEditorStore, type LayerRef } from "./studio-editor";
 
 const layer: LayerRef = {
