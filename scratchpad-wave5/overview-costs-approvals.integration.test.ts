@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { Pool } from "pg";
 import { ensureOverviewStore, loadOverview, saveOverview } from "../apps/crm/lib/command-center/overview-state-persistence";
 
@@ -16,7 +17,7 @@ describe("Command Center persisted costs and approvals", () => {
     pool = new Pool({ connectionString: url });
     await pool.query("CREATE OR REPLACE FUNCTION public.fn_user_org_ids() RETURNS SETOF text LANGUAGE sql STABLE AS $$ SELECT unnest(string_to_array(current_setting('app.org_ids', true), ',')) $$");
     await pool.query("CREATE ROLE authenticated NOLOGIN");
-    await pool.query(await readFile("supabase/migrations/20260917100900_0183_command_center_overview_rls.sql", "utf8"));
+    await pool.query(await readFile(join(process.cwd(), "supabase/migrations/20260917100900_0183_command_center_overview_rls.sql"), "utf8"));
     await ensureOverviewStore(pool);
   });
   afterAll(async () => { await pool?.end(); if (container) { const { execFileSync } = await import("node:child_process"); execFileSync("docker", ["rm", "-f", container]); } });
