@@ -16,6 +16,7 @@ vi.mock("@/lib/mcp/auth", async () => {
 });
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn(() => supabase) }));
 vi.mock("@/lib/mcp/audit", () => ({ auditMcpToolCall: audit }));
+vi.mock("@/lib/mcp/http-execution-receipt-store", () => ({ recordHttpExecutionReceipt: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("@/lib/auth/server", () => ({ loadAuthUser: vi.fn(), resolveActiveOrg: vi.fn() }));
 
 import { POST } from "@/app/api/v1/mcp/tools/route";
