@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const route = readFileSync(resolve(process.cwd(), "app/api/v1/stripe/webhook/route.ts"), "utf8");
+const route = readFileSync(resolve(process.cwd(), "apps/crm/app/api/v1/stripe/webhook/route.ts"), "utf8");
 
 describe("Stripe route safety contract", () => {
   it("keeps the raw processor error server-side and returns canonical envelopes", () => {

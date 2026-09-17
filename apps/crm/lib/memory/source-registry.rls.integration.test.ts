@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 
 describe("Hermes Source Registry RLS (real PostgreSQL)", () => {
-   it("persiste via migration e isola tenants com role sem BYPASSRLS", async () => {
+  it("persiste via migration e isola tenants com role sem BYPASSRLS", async () => {
     const container = execFileSync("docker", ["run", "--rm", "-d", "-e", "POSTGRES_PASSWORD=postgres", "-p", "0:5432", "postgres:16"], { encoding: "utf8" }).trim();
     try {
       const port = execFileSync("docker", ["port", container, "5432/tcp"], { encoding: "utf8" }).trim().split(":").pop();
