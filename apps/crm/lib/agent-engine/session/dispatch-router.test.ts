@@ -53,7 +53,7 @@ describe("DispatchRouter", () => {
   });
 
   it("denies workers whose available flag is undefined", () => {
-    expect(dispatchRoute(task, [{ ...workers[0], available: undefined as unknown as boolean }], policy)).toEqual({ decision: "DENY", reason: "NO_CAPABLE_WORKER" });
+    expect(dispatchRoute(task, [{ ...workers[0]!, available: undefined as unknown as boolean }], policy)).toEqual({ decision: "DENY", reason: "NO_CAPABLE_WORKER" });
   });
 
   it("fails closed when no worker has the required capability", () => {
@@ -61,7 +61,7 @@ describe("DispatchRouter", () => {
   });
 
   it("fails closed for tenant or policy mismatch", () => {
-    expect(dispatchRoute(task, [{ ...workers[0], organization_id: "org-2" }], policy)).toEqual({ decision: "DENY", reason: "NO_CAPABLE_WORKER" });
+    expect(dispatchRoute(task, [{ ...workers[0]!, organization_id: "org-2" }], policy)).toEqual({ decision: "DENY", reason: "NO_CAPABLE_WORKER" });
     expect(dispatchRoute(task, workers, { ...policy, allowed_worker_ids: ["worker-c"] })).toEqual({ decision: "DENY", reason: "NO_POLICY_MATCH" });
   });
 });
