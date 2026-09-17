@@ -209,6 +209,17 @@ aplica.
 | `20260915090000` | `0170_tenant_rls_hardening` | Hardening da fronteira tenant para billing, Hermes, Studio e BrowserMesh: RLS fail-closed, cast seguro dos identificadores textuais e grants mínimos. |
 | `20260915100000` | `0171_content_asset_provenance` | Campos aditivos e opcionais de licença e proveniência estruturada para assets criativos, preservando assets legados. |
 | `20260913170000` | `0173_asset_license_records` | Wave 8 Asset Intelligence: registry persistente de licenças/proveniência por tenant, com estados e expiração. |
+| `20260917100000` | `0174_hermes_source_registry` | Wave 13: registry persistente de fontes Hermes por tenant. |
+| `20260917100100` | `0175_hermes_source_registry_rls` | RLS tenant-scoped para o registry de fontes Hermes. |
+| `20260917100200` | `0176_hermes_memory_gateway` | Persistência tenant-scoped do gateway de memória Hermes. |
+| `20260917100300` | `0177_psyche_watchdog_observations` | Observações persistentes do watchdog sem progresso. |
+| `20260917100400` | `0178_psyche_watchdog_requesters` | Registry tenant-scoped de requesters autorizados do watchdog. |
+| `20260917100500` | `0179_operating_core_job_receipts_rls` | RLS tenant-scoped para receipts de jobs do Operating Core. |
+| `20260917100600` | `0180_contact_consents` | Registro tenant-scoped de consentimentos de contato. |
+| `20260917100700` | `0181_studio_editor` | Estado persistente e RLS do Studio Editor. |
+| `20260917100800` | `0182_operating_core_receipts` | Receipts de execução tenant-scoped do Operating Core. |
+| `20260917100900` | `0183_command_center_overview_rls` | Estado persistente e RLS do Command Center. |
+| `20260917101000` | `0184_studio_reviewer_authorizations` | Autorizações persistentes de revisores do Studio. |
 
 ## Reproducibility
 

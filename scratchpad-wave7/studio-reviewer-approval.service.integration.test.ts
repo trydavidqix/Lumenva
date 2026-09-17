@@ -24,7 +24,7 @@ describe("Studio approval service authority", () => {
     await admin.query("CREATE ROLE service_role NOLOGIN");
     await admin.query("GRANT USAGE ON SCHEMA public TO authenticated, service_role");
     await admin.query("GRANT EXECUTE ON FUNCTION public.fn_user_org_ids() TO authenticated");
-    await admin.query(readFileSync("supabase/migrations/20260913170000_studio_reviewer_authorizations.sql", "utf8"));
+    await admin.query(readFileSync("supabase/migrations/20260917101000_0184_studio_reviewer_authorizations.sql", "utf8"));
     await registerReviewer(admin, { organizationId: org, reviewerId: "reviewer-a", role: "owner" });
     await registerReviewer(admin, { organizationId: otherOrg, reviewerId: "reviewer-b", role: "owner" });
     tenant = new Pool({ connectionString: url.replace("postgres:test", "authenticated:authenticated") });

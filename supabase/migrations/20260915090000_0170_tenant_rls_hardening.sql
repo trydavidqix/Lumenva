@@ -48,10 +48,12 @@ create policy hermes_tool_loop_locks_tenant_all on public.hermes_tool_loop_locks
   with check (tenant_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
     and tenant_id::uuid in (select public.fn_user_org_ids()));
 
-revoke all on public.organization_plan, public.entitlement_events,
-  public.hermes_session_supersession, public.studio_client_decisions,
-  public.browsermesh_event_idempotency, public.hermes_tool_loop_locks
-  from anon;
+revoke all on public.organization_plan from anon;
+revoke all on public.entitlement_events from anon;
+revoke all on public.hermes_session_supersession from anon;
+revoke all on public.studio_client_decisions from anon;
+revoke all on public.browsermesh_event_idempotency from anon;
+revoke all on public.hermes_tool_loop_locks from anon;
 grant select, insert, update, delete on public.organization_plan, public.entitlement_events,
   public.hermes_session_supersession, public.studio_client_decisions,
   public.browsermesh_event_idempotency, public.hermes_tool_loop_locks to authenticated;

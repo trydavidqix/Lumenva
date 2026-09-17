@@ -33,8 +33,8 @@ describe("Hermes Source Registry RLS", () => {
     await admin.query("GRANT EXECUTE ON FUNCTION auth.uid() TO public");
     await admin.query("CREATE TABLE IF NOT EXISTS public.user_organizations (user_id uuid NOT NULL, organization_id uuid NOT NULL, revoked_at timestamptz)");
     await admin.query("CREATE OR REPLACE FUNCTION public.fn_user_org_ids() RETURNS SETOF uuid LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$ SELECT organization_id FROM public.user_organizations WHERE user_id = auth.uid() AND revoked_at IS NULL $$");
-    await admin.query(readFileSync("supabase/migrations/20260913000000_0163_hermes_source_registry.sql", "utf8"));
-    await admin.query(readFileSync("supabase/migrations/20260913010000_0164_hermes_source_registry_rls.sql", "utf8"));
+    await admin.query(readFileSync("supabase/migrations/20260917100000_0174_hermes_source_registry.sql", "utf8"));
+    await admin.query(readFileSync("supabase/migrations/20260917100100_0175_hermes_source_registry_rls.sql", "utf8"));
     await admin.query("DROP ROLE IF EXISTS hermes_rls_test");
     await admin.query("CREATE ROLE hermes_rls_test LOGIN PASSWORD 'hermes-test'");
     await admin.query("GRANT USAGE ON SCHEMA public TO hermes_rls_test");
