@@ -75,3 +75,9 @@ describe("Wave 16 affect ledger with real PostgreSQL and RLS", () => {
     ).rejects.toThrow(/append-only|permission/i);
   }, 120_000);
 });
+
+describe("affect ledger docker output parsing", () => {
+  it("ignores command result lines without row separators", () => {
+    expect(parseRows("org-a\norg-a\tagent\tsession\tevent-1\t1000\t0.7\t-0.2\t0.4")).toHaveLength(1);
+  });
+});
