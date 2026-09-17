@@ -55,5 +55,12 @@ export default defineConfig({
       "apps/crm/scripts/*.test.mjs",
     ],
   },
-  resolve: { alias: { "@": path.resolve(__dirname, ".") } },
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "."),
+      // Root-level scratchpad integration specs resolve from the workspace root,
+      // while pg is declared by the CRM package in this pnpm workspace.
+      pg: path.resolve(__dirname, "node_modules/pg"),
+    },
+  },
 });

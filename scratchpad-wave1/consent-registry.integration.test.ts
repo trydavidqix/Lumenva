@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Pool } from "pg";
-import { PostgresConsentRegistry } from "./consent-registry";
+import { PostgresConsentRegistry } from "../apps/crm/lib/integrations/consent-registry";
 
 let container = "";
 let admin: Pool;
