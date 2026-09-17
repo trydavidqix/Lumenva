@@ -1,5 +1,5 @@
 import type { QueryResultRow } from "pg";
-import type { Queryable } from "../agent-engine/queue/queue";
+import type { Queryable } from "../apps/crm/lib/agent-engine/queue/queue";
 import type { AIEditProposal, CanvasDocument, EditorEvalRun, VariantMix } from "./studio-editor";
 
 type StudioRow = QueryResultRow & Record<string, unknown>;
