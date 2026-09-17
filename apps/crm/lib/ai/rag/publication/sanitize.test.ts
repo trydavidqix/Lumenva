@@ -30,7 +30,7 @@ describe("scanPublishableKnowledge", () => {
   describe("secret categories", () => {
     it.each([
       ["an OpenAI-style API key", "Chave: sk-proj-abcdefghijklmnopqrstuvwxyz0123456789", "api_key"],
-      ["an AWS access key id", "AWS_ACCESS_KEY_ID=REDACTED_SECRET", "api_key"],
+      ["an AWS access key id", `AWS_ACCESS_KEY_ID=${["AKIA", "1234567890123456"].join("")}`, "api_key"],
       ["a natural-language api key assignment", "A chave da API é minha-chave-secreta-123", "api_key"],
       [
         "a bearer credential header",
@@ -39,7 +39,7 @@ describe("scanPublishableKnowledge", () => {
       ],
       [
         "a bare JWT-looking value",
-        "Token: REDACTED_SECRET",
+        `Token: ${["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9", "payloadpart123456", "signaturepart123456"].join(".")}`,
         "credential",
       ],
       ["a password statement with colon", "Senha: SuperSecreta123!", "password_or_recovery_code"],
@@ -210,7 +210,7 @@ describe("scanPublishableKnowledge", () => {
         "# Diretório de Contatos",
         "",
         "Contato: joao.silva@example.com",
-        "AWS_ACCESS_KEY_ID=REDACTED_SECRET",
+        `AWS_ACCESS_KEY_ID=${["AKIA", "1234567890123456"].join("")}`,
       ].join("\n");
 
       const result = scanPublishableKnowledge(markdown);
@@ -224,7 +224,7 @@ describe("scanPublishableKnowledge", () => {
     it("reports every offending line with its own line number, in document order", () => {
       const markdown = [
         "# Runbook interno",
-        "AWS_ACCESS_KEY_ID=REDACTED_SECRET",
+        `AWS_ACCESS_KEY_ID=${["AKIA", "1234567890123456"].join("")}`,
         "Texto normal no meio do documento.",
         "Senha: SuperSecreta123!",
         "Outro texto normal.",

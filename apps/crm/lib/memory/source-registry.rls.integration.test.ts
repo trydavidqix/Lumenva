@@ -30,7 +30,7 @@ describe("Hermes Source Registry RLS (real PostgreSQL)", () => {
           await client.query("INSERT INTO public.hermes_source_registry (organization_id,source_id,uri,title,owner,license,version,source_type) VALUES ('org-a','s-a','https://a.example','A','owner','CC-BY','1','approved_internal')");
           await client.query("SET app.org_ids='org-b'");
           expect((await client.query("SELECT organization_id FROM public.hermes_source_registry WHERE organization_id='org-a'")).rows).toEqual([]);
-          await expect(client.query("INSERT INTO public.hermes_source_registry (organization_id,source_id,uri,title,owner,license,version,source_type) VALUES ('org-a','s-b','https://b.example','B','owner','CC-BY','1','approved_internal'")).rejects.toMatchObject({ code: "42501" });
+          await expect(client.query("INSERT INTO public.hermes_source_registry (organization_id,source_id,uri,title,owner,license,version,source_type) VALUES ('org-a','s-b','https://b.example','B','owner','CC-BY','1','approved_internal')")).rejects.toMatchObject({ code: "42501" });
         } finally { client.release(); await tenant.end(); }
       } finally { await admin.query(`DROP ROLE IF EXISTS ${role}`).catch(() => undefined); await admin.end(); }
     } finally { execFileSync("docker", ["rm", "-f", container], { stdio: "ignore" }); }
