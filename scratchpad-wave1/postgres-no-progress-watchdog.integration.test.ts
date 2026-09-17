@@ -26,7 +26,7 @@ describe("Postgres No-Progress Watchdog (real RLS)", () => {
     await admin.query("CREATE ROLE authenticated NOLOGIN");
     await admin.query("CREATE ROLE watchdog_test LOGIN PASSWORD 'watchdog-test' NOSUPERUSER NOBYPASSRLS IN ROLE authenticated");
     await admin.query("CREATE OR REPLACE FUNCTION public.fn_user_org_ids() RETURNS SETOF text LANGUAGE SQL STABLE AS $$ SELECT unnest(string_to_array(current_setting('app.org_ids', true), ',')) $$");
-    await admin.query(readFileSync("supabase/migrations/20260913030000_0166_psyche_watchdog_observations.sql", "utf8"));
+    await admin.query(readFileSync("supabase/migrations/20260917100300_0177_psyche_watchdog_observations.sql", "utf8"));
   });
 
   afterAll(async () => { await admin?.end(); if (container) execFileSync("docker", ["rm", "-f", container], { stdio: "ignore" }); });
