@@ -68,7 +68,7 @@ describe.skipIf(!dockerAvailable)("Wave 16 affect ledger with real PostgreSQL an
     const restarted = new PostgresAffectLedger(pool(orgA) as never, orgA);
     expect(await restarted.read("agent", "session")).toHaveLength(1);
     expect(await new PostgresAffectLedger(pool(orgB) as never, orgB).read("agent", "session")).toHaveLength(0);
-    await expect(psql("update psyche_affect_events set pleasure=0 where event_id='event-1'", "app_user")).rejects.toThrow(/append-only|permission/i);
+    await expect(psql("select set_config('app.organization_id'," + quote(orgA) + ",true); update psyche_affect_events set pleasure=0 where event_id='event-1'", "app_user")).rejects.toThrow(/append-only|permission/i);
   }, 120_000);
 });
 
