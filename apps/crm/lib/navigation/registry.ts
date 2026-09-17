@@ -478,15 +478,6 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     sidebar: true,
   },
   {
-    href: "/app/mobile-releases",
-    label: "Mobile Releases",
-    description: "Auditorias de App Store e Play Store ligadas ao build, com evidências e bloqueios de release.",
-    icon: ShieldCheck,
-    group: "analise",
-    minRole: "manager",
-    sidebar: true,
-  },
-  {
     href: "/app/audit",
     label: "Audit Log",
     description: "Quem fez o quê, quando — o histórico que não se apaga.",
