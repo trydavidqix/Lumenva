@@ -37,13 +37,22 @@ A chave privada não deve ser commitada, publicada ou incluída nesta nota.
 
 **Caminho:** `/infrastructure/disposable-test-vps` no ambiente `dev`.
 
-Após o login, armazenar no Infisical:
+Secrets armazenados no Infisical:
 
 - `DISPOSABLE_VPS_SSH_PRIVATE_KEY`
 - `DISPOSABLE_VPS_IP`
 - `DISPOSABLE_VPS_NAME`
 - `DISPOSABLE_VPS_ID`
 - `DISPOSABLE_VPS_PURPOSE`
+- `HETZNER_API_TOKEN`
+
+O token Hetzner não é exibido nesta nota.
+
+## Resize
+
+- **Pedido:** `cx43` — 8 vCPU, 16 GB RAM, aproximadamente €16/mês.
+- **Estado:** pendente; a API retornou `resource_unavailable` para `fsn1`.
+- **Configuração atual:** `cx33` — 4 vCPU, 8 GB RAM.
 
 ## Destruição
 
