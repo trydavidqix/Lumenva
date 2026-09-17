@@ -70,8 +70,7 @@ describe("POST /api/v1/billing/checkout with real PostgreSQL", () => {
     process.env.STRIPE_CHECKOUT_STATE_SECRET = SECRET;
     vi.mocked(requireRole).mockResolvedValue({ ok: true, user: { id: "user-real" } as never, org: { orgId: ORG, role: "admin" } as never });
     vi.mocked(authorizeModule).mockReturnValue({ decision: "ALLOW" } as never);
-    vi.spyOn(stripeCheckoutAdapter, "resolvePrice").mockResolvedValue({ lookupKey: "lumenva_premium_monthly_eur", unitAmountCents: 19_900, currency: "eur", interval: "month" });
-    vi.spyOn(stripeCheckoutAdapter, "createCheckoutSession").mockResolvedValue({ sessionId: "cs_real", url: "https://checkout.example/cs_real" });
+    vi.spyOn(stripeCheckoutAdapter, "createCheckoutSession").mockResolvedValue({ sessionId: "cs_real", url: "https://checkout.example/cs_real", price: { lookupKey: "lumenva_premium_monthly_eur", unitAmountCents: 19_900, currency: "eur", interval: "month" } });
     const body = { plan_slug: "premium", checkout_state: createCheckoutState({ organizationId: ORG, planSlug: "premium", nonce: "real-pg-replica-nonce", issuedAtUnix: Math.floor(Date.now() / 1000) }, SECRET), success_url: "https://example.test/success", cancel_url: "https://example.test/cancel" };
     vi.mocked(createClient).mockReset().mockResolvedValueOnce(realDb("pool-a") as never).mockResolvedValueOnce(realDb("pool-b") as never);
     const { POST } = await import("./route");
