@@ -18,7 +18,7 @@ describe("Operating Core job receipts RLS", () => {
     await ensureJobReceiptStore(admin);
     await admin.query("CREATE OR REPLACE FUNCTION public.fn_user_org_ids() RETURNS SETOF text LANGUAGE sql STABLE AS $$ SELECT unnest(string_to_array(current_setting('app.org_ids', true), ',')) $$");
     await admin.query("CREATE ROLE authenticated LOGIN PASSWORD 'authenticated' NOSUPERUSER NOBYPASSRLS");
-    await admin.query(readFileSync("supabase/migrations/20260913091000_operating_core_job_receipts_rls.sql", "utf8"));
+    await admin.query(readFileSync("supabase/migrations/20260917100500_0179_operating_core_job_receipts_rls.sql", "utf8"));
     await admin.query("GRANT USAGE ON SCHEMA public TO authenticated");
     await admin.query("GRANT EXECUTE ON FUNCTION public.fn_user_org_ids() TO authenticated");
     await admin.query("INSERT INTO public.operating_core_job_receipts (receipt_id, organization_id, job_id, event_id, outcome, evidence) VALUES ('receipt-a', 'org-a', 'job-1', 'event-1', 'completed', '{\"exitCode\":0}')");
