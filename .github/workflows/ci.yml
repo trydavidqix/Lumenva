@@ -52,7 +52,7 @@ jobs:
 
   verify-heavy:
     runs-on: [self-hosted, self-hosted-lumenva-disposable]
-    timeout-minutes: 30
+    timeout-minutes: 50
     env:
       NODE_OPTIONS: --max-old-space-size=6144
     steps:
