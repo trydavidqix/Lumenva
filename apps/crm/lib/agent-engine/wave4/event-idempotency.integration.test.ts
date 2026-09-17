@@ -3,11 +3,10 @@ import { describe, expect, it } from "vitest";
 import { PostgresWakeEventStore } from "./event-idempotency";
 import { dispatchWakeEvent, signWakeEvent, WakeActorRegistry, type WakePolicy, type WakeWorker } from "./event-wake";
 
-describe("BrowserMesh event idempotency against real Postgres", () => {
+const databaseUrl = process.env.DATABASE_URL;
+describe.skipIf(!databaseUrl)("BrowserMesh event idempotency against real Postgres", () => {
   it("allows one concurrent wake and rejects the replay after a new store instance", async () => {
-    const databaseUrl = process.env.DATABASE_URL;
-    if (!databaseUrl) throw new Error("DATABASE_URL is required for this integration test");
-    const pool = new pg.Pool({ connectionString: databaseUrl });
+    const pool = new pg.Pool({ connectionString: databaseUrl! });
     const secret = "fixture-shared-secret";
     const event = signWakeEvent({ event_id: "event-real-1", organization_id: "org-real-1", actor_id: "actor-real-1", actor_capabilities: ["browser.open"], required_capability: "browser.open", idempotency_key: "event-real-1-replay", payload: { url: "https://example.test" } }, secret);
     const workers: WakeWorker[] = [{ worker_id: "worker-real-1", agent_id: "agent-real-1", organization_id: "org-real-1", capabilities: ["browser.open"], available: true }];
