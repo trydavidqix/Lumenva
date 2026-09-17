@@ -17,7 +17,7 @@ const requestSchema = z.object({
 const BILLING_MODULE = { id: "billing_checkout", version: "1", dependencies: [], conflicts: [], requiredCapabilities: [], allowedRoles: ["admin"], risk: "P3" as const, requiresApproval: false };
 
 /** Runtime provider seam. Stripe CLI/MCP owns the real adapter; absent means fail-closed. */
-let stripeCheckoutAdapter: StripeCheckoutAdapter = {
+export let stripeCheckoutAdapter: StripeCheckoutAdapter = {
   async createCheckoutSession() { throw new StripeCheckoutError("adapter_unavailable", "Stripe checkout adapter is not configured"); },
 };
 
