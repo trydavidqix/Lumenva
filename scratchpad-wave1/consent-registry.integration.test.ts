@@ -18,6 +18,7 @@ describe("Postgres Consent Registry (real RLS)", () => {
     adminUrl = `postgres://postgres:test@127.0.0.1:${port}/postgres`;
     await waitForPostgres(adminUrl);
     admin = new Pool({ connectionString: adminUrl });
+    await admin.query("CREATE TABLE public.organizations (id uuid PRIMARY KEY)");
     await admin.query("CREATE ROLE authenticated NOLOGIN");
     await admin.query("CREATE ROLE consent_test LOGIN PASSWORD 'consent-test' NOSUPERUSER NOBYPASSRLS IN ROLE authenticated");
     await admin.query("CREATE OR REPLACE FUNCTION public.fn_user_org_ids() RETURNS SETOF text LANGUAGE SQL STABLE AS $$ SELECT unnest(string_to_array(current_setting('app.org_ids', true), ',')) $$");
