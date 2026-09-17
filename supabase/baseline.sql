@@ -6966,18 +6966,6 @@ create table if not exists org_memory_entries (
 create index if not exists idx_org_memory_entries_org_status
   on org_memory_entries (organization_id, status, created_at);
 
--- Agent OS Phase 6 — Learning Flywheel proposal types. Idempotent forward-fix
--- preserving the legacy distiller/org-memory values while allowing the closed
--- Phase 6 proposal vocabulary in fresh installs and clone updates.
-alter table flywheel_distiller_proposals
-  drop constraint if exists flywheel_distiller_proposals_type_check;
-alter table flywheel_distiller_proposals
-  add constraint flywheel_distiller_proposals_type_check
-  check (type in (
-    'playbook_bullet', 'golden_case', 'reentry_trigger', 'org_memory_entry',
-    'skill_change', 'routing_change', 'eval_case', 'operational_threshold'
-  ));
-
 -- RLS (mesmo shape do loop tenant_isolation_* do baseline).
 do $$
 declare t text;
@@ -10755,7 +10743,7 @@ create table if not exists public.browsermesh_event_idempotency (
   organization_id text not null,
   event_id text not null,
   idempotency_key text not null,
-  status text not null check (status in (CLAIMED)),
+  status text not null check (status in ('CLAIMED')),
   claimed_at timestamptz not null default now(),
   constraint browsermesh_event_idempotency_org_key unique (organization_id, idempotency_key),
   constraint browsermesh_event_idempotency_event_key unique (organization_id, event_id)
