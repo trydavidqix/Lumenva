@@ -6,7 +6,7 @@ export class ActorRegistry {
   private readonly actors = new Map<string, AuthorizedActor>();
   constructor(actors: readonly AuthorizedActor[] = []) { for (const actor of actors) this.actors.set(`${actor.organization_id}:${actor.actor_id}`, { ...actor, capabilities: [...actor.capabilities] }); }
   get(organizationId: string, actorId: string): AuthorizedActor | undefined { return this.actors.get(`${organizationId}:${actorId}`); }
-  authorize(organizationId: string, actorId: string, actionType: string): boolean { const actor = this.get(organizationId, actorId); return Boolean(actor?.enabled !== false && actor.capabilities.includes(actionType)); }
+  authorize(organizationId: string, actorId: string, actionType: string): boolean { const actor = this.get(organizationId, actorId); return actor !== undefined && actor.enabled !== false && actor.capabilities.includes(actionType); }
 }
 export type BrowserMeshWorker = { worker_id: string; agent_id: string; organization_id: string; capabilities: string[]; allowlisted_action_types: string[] };
 export type ActionEvidence = { action_id: string; assignment_id: string; worker_id: string; action_type: string; result: unknown; persisted_at: string };
