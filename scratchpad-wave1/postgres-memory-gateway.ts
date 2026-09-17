@@ -1,5 +1,5 @@
-import type { Queryable } from "../agent-engine/queue/queue";
-import type { MemoryGateway, MemoryRecord } from "./gateway-projection";
+import type { Queryable } from "../apps/crm/lib/agent-engine/queue/queue";
+import type { MemoryGateway, MemoryRecord } from "../apps/crm/lib/memory/gateway-projection";
 
 type Row = {
   organization_id: string;

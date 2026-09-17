@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { Pool } from "pg";
-import { createContextPack } from "./context-pack";
+import { createContextPack } from "../apps/crm/lib/studio/context-pack";
 import { StudioEditorStore } from "./studio-editor";
 import { assertAuthorizedReviewer, registerReviewer } from "./studio-reviewer-registry";
 
