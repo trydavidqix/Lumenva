@@ -37,10 +37,12 @@ describe("POST /api/v1/billing/checkout integration", () => {
   });
 
   it("rejects a body organization outside the active tenant", async () => {
+    state.order = [];
     state.decision = "ALLOW";
     state.adapter.mockClear();
     const response = await POST(request({ plan_slug: "basic", organization_id: "org-other", success_url: "https://app.test/success", cancel_url: "https://app.test/cancel" }));
     expect(response.status).toBe(403);
+    expect(state.order).toEqual([]);
     expect(state.adapter).not.toHaveBeenCalled();
   });
 });
