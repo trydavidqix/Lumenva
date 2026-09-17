@@ -26,7 +26,7 @@ function pool(organizationId: string) {
               ") ON CONFLICT (organization_id,agent_id,session_id,event_id) DO NOTHING RETURNING organization_id,agent_id,session_id,event_id,at_ms,pleasure,arousal,dominance;";
             return { rows: parseRows(await psql("select set_config('app.organization_id'," + quote(organizationId) + ",true);" + sql, "app_user")) as T[] };
           }
-          if (text.startsWith("SELECT organization_id")) {
+          if (text.startsWith("SELECT organization_id") && values.length === 4) {
             const sql = "SELECT organization_id,agent_id,session_id,event_id,at_ms,pleasure,arousal,dominance FROM psyche_affect_events WHERE organization_id=" + quote(values[0]) + " AND agent_id=" + quote(values[1]) + " AND session_id=" + quote(values[2]) + " AND event_id=" + quote(values[3]) + ";";
             return { rows: parseRows(await psql("select set_config('app.organization_id'," + quote(organizationId) + ",true);" + sql, "app_user")) as T[] };
           }
