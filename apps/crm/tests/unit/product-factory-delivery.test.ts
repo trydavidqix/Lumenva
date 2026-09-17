@@ -68,7 +68,7 @@ describe("Wave 10 delivery gates", () => {
   });
   it("records FAILED when the delivery action throws", async () => {
     let finished: string | undefined;
-    const store = { ...fakeStateStore(), finish: async (_tenant: string, _plan: string, _step: string, status: string) => { finished = status; } } as unknown as BuildPlanStateStore;
+    const store = { ...fakeStateStore(), finish: async (_tenant: string, _plan: string, _step: string, status: "FAILED" | "SUCCEEDED" | "BLOCKED") => { finished = status; } } as unknown as BuildPlanStateStore;
     await expect(executeDeliveryWithGate({ ...deliveryPlan, status: "APPROVED" }, artifact, evidence, store, async () => { throw new Error("provider_failed"); })).rejects.toThrow("provider_failed");
     expect(finished).toBe("FAILED");
   });
