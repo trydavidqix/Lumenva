@@ -660,7 +660,7 @@ describe("secret-containing document is blocked pre-ingestion", () => {
     const vaultDir = newTempDir("obsidian-vault-secret-");
     const outputDir = newTempDir("obsidian-out-secret-");
 
-    const secret = "REDACTED_SECRET";
+    const secret = ["AKIA", "1234567890123456"].join("");
     const notePath = writeObsidianNote(vaultDir, {
       status: "PUBLISHED",
       sourceId: "secret-leak",
