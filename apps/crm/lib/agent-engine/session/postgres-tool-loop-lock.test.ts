@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { PostgresToolLoopLockStore } from "./postgres-tool-loop-lock";
 
-describe("Postgres ToolLoopLock CAS", () => {
+const databaseUrl = process.env.SESSION_DATABASE_URL;
+describe.skipIf(!databaseUrl)("Postgres ToolLoopLock CAS", () => {
   it("serializa duas instâncias concorrentes e isola tenants", async () => {
-    const url = process.env.SESSION_DATABASE_URL;
-    if (!url) throw new Error("SESSION_DATABASE_URL is required for this integration test");
+    const url = databaseUrl!;
     const { Pool } = await import("pg");
     const admin = new Pool({ connectionString: url });
     const tenantA = new Pool({ connectionString: url.replace("postgres:test@", "tenant_a_user:test@"), options: "-c app.org_ids=tenant-a" });

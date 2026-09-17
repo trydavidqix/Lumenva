@@ -4,11 +4,11 @@ import { describe, expect, it } from "vitest";
 import { loadWorkers, persistWorker, routeResourcePersisted } from "./resource-router-persistence";
 
 const migration = join(process.cwd(), "supabase/migrations/20260913160000_resource_router_rls.sql");
-describe("Resource Router RLS (real PostgreSQL)", () => {
+const databaseUrl = process.env.RESOURCE_ROUTER_DATABASE_URL;
+describe.skipIf(!databaseUrl)("Resource Router RLS (real PostgreSQL)", () => {
   it("isola workers por tenant com role sem BYPASSRLS", async () => {
-    const url = process.env.RESOURCE_ROUTER_DATABASE_URL;
-    if (!url) throw new Error("RESOURCE_ROUTER_DATABASE_URL_required");
-    const { Pool } = await import("pg"); const admin = new Pool({ connectionString: url }); const role = "resource_router_rls_test";
+    const url = databaseUrl!;
+    const { Pool } = await import("../apps/crm/node_modules/pg"); const admin = new Pool({ connectionString: url }); const role = "resource_router_rls_test";
     try {
       await admin.query(`DROP ROLE IF EXISTS ${role}`); await admin.query("DROP ROLE IF EXISTS authenticated");
       await admin.query("CREATE ROLE authenticated NOLOGIN"); await admin.query(`CREATE ROLE ${role} LOGIN PASSWORD 'test-role' NOSUPERUSER NOBYPASSRLS IN ROLE authenticated`);
