@@ -46,3 +46,7 @@ config_file = "agents/reviewer.toml"
 [agents.docs_researcher]
 description = "Documentation specialist that verifies APIs, framework behavior, and release notes."
 config_file = "agents/docs-researcher.toml"
+
+[agents.ai_platform_architect]
+description = "Principal Agentic AI Platform Architect for Lumenva: agent architecture, model/resource routing, evals, Outcome OS, protocols, security, economics, and implementation."
+config_file = "agents/ai-platform-architect.toml"
