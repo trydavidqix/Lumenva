@@ -207,8 +207,10 @@ aplica.
 | `20260913160000` | `0163_browsermesh_event_idempotency_rls` | Wave 4 BrowserMesh: RLS tenant-scoped para claims de replay e grants mínimos. |
 | `20260915090000` | `0170_tenant_rls_hardening` | Hardening da fronteira tenant para billing, Hermes, Studio e BrowserMesh: RLS fail-closed, cast seguro dos identificadores textuais e grants mínimos. |
 | `20260915100000` | `0171_content_asset_provenance` | Campos aditivos e opcionais de licença e proveniência estruturada para assets criativos, preservando assets legados. |
+| `20260911100000` | `0161_entitlements_catalog` | Catálogo de planos e entitlements por organização. |
+| `20260913170000` | `0173_asset_license_records` | Wave 8 Asset Intelligence: registry persistente de licenças/proveniência por tenant, com estados e expiração. |
 | `20260918150000` | `0172_customer360_pii` | Customer 360 CPF encryption/decryption RPCs. Key is private; access is role-gated and audited, with deny-by-default ACL. |
-| `20260918160000` | `0173_customer360_merge` | Transactional Customer 360 contact merge: manager-only, actor-bound, tenant-checked, conversation-safe, and atomic. |
+| `20260918160000` | `0174_customer360_merge` | Transactional Customer 360 contact merge: manager-only, actor-bound, tenant-checked, conversation-safe, and atomic. |
 
 ## Reproducibility
 

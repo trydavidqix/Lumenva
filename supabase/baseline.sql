@@ -6966,18 +6966,6 @@ create table if not exists org_memory_entries (
 create index if not exists idx_org_memory_entries_org_status
   on org_memory_entries (organization_id, status, created_at);
 
--- Agent OS Phase 6 — Learning Flywheel proposal types. Idempotent forward-fix
--- preserving the legacy distiller/org-memory values while allowing the closed
--- Phase 6 proposal vocabulary in fresh installs and clone updates.
-alter table flywheel_distiller_proposals
-  drop constraint if exists flywheel_distiller_proposals_type_check;
-alter table flywheel_distiller_proposals
-  add constraint flywheel_distiller_proposals_type_check
-  check (type in (
-    'playbook_bullet', 'golden_case', 'reentry_trigger', 'org_memory_entry',
-    'skill_change', 'routing_change', 'eval_case', 'operational_threshold'
-  ));
-
 -- RLS (mesmo shape do loop tenant_isolation_* do baseline).
 do $$
 declare t text;
@@ -10755,7 +10743,7 @@ create table if not exists public.browsermesh_event_idempotency (
   organization_id text not null,
   event_id text not null,
   idempotency_key text not null,
-  status text not null check (status in (CLAIMED)),
+  status text not null check (status in ('CLAIMED')),
   claimed_at timestamptz not null default now(),
   constraint browsermesh_event_idempotency_org_key unique (organization_id, idempotency_key),
   constraint browsermesh_event_idempotency_event_key unique (organization_id, event_id)
@@ -10794,8 +10782,8 @@ declare v_org uuid; v_cipher bytea; k text := private.fn_cpf_key();
 begin
   select organization_id, cpf_encrypted into v_org, v_cipher from public.contacts where id = p_contact_id;
   if v_org is null then raise exception 'contact not found'; end if;
-  if not (exists (select 1 from public.fn_user_org_ids() o where o.organization_id = v_org) or public.fn_is_platform_admin()) then raise exception 'forbidden_org'; end if;
-  if not public.fn_role_at_least(v_org, 'manager') and not public.fn_is_platform_admin() then raise exception 'forbidden_role'; end if;
+  if auth.role() <> 'service_role' and not (exists (select 1 from public.fn_user_org_ids() o where o.organization_id = v_org) or public.fn_is_platform_admin()) then raise exception 'forbidden_org'; end if;
+  if auth.role() <> 'service_role' and not public.fn_role_at_least(v_org, 'manager') and not public.fn_is_platform_admin() then raise exception 'forbidden_role'; end if;
   if v_cipher is null then return null; end if;
   if k is null or length(k) < 32 then raise exception 'CPF encryption key unavailable'; end if;
   insert into public.api_audit_log (organization_id, action, actor_user_id, resource_type, resource_id, metadata, bypassed_rls)
@@ -10803,23 +10791,23 @@ begin
     jsonb_build_object('purpose', nullif(left(coalesce(p_purpose, ''), 200), '')), false);
   return pgp_sym_decrypt(v_cipher, k);
 end; $$;
-revoke all on function public.encrypt_cpf(text) from public, anon;
-revoke all on function public.decrypt_cpf(uuid, text) from public, anon;
-grant execute on function public.encrypt_cpf(text) to authenticated, service_role;
-grant execute on function public.decrypt_cpf(uuid, text) to authenticated, service_role;
+revoke all on function public.encrypt_cpf(text) from public, anon, authenticated;
+revoke all on function public.decrypt_cpf(uuid, text) from public, anon, authenticated;
+grant execute on function public.encrypt_cpf(text) to service_role;
+grant execute on function public.decrypt_cpf(uuid, text) to service_role;
 
 -- ---- Customer 360 transactional merge (migration 0173) ----
 create or replace function public.merge_contacts(p_primary_id uuid, p_loser_ids uuid[], p_actor_user_id uuid, p_queue_id uuid)
 returns jsonb language plpgsql security definer set search_path = public, pg_temp as $$
 declare v_org uuid; v_candidates uuid[]; v_conv record; v_canonical_conv uuid; v_count integer;
 begin
-  if auth.uid() is distinct from p_actor_user_id then raise exception 'actor mismatch'; end if;
+  if auth.role() <> 'service_role' and auth.uid() is distinct from p_actor_user_id then raise exception 'actor mismatch'; end if;
   if p_primary_id is null or coalesce(cardinality(p_loser_ids), 0) = 0 then raise exception 'invalid merge'; end if;
   if p_primary_id = any(p_loser_ids) then raise exception 'primary in losers'; end if;
   if cardinality(p_loser_ids) <> (select count(distinct id) from unnest(p_loser_ids) as id) then raise exception 'duplicate loser'; end if;
   select organization_id, candidates into v_org, v_candidates from public.merge_queue where id = p_queue_id and status = 'pending' for update;
   if not found then raise exception 'merge queue item not found'; end if;
-  if not public.fn_role_at_least(v_org, 'manager') then raise exception 'forbidden_role'; end if;
+  if auth.role() <> 'service_role' and not public.fn_role_at_least(v_org, 'manager') then raise exception 'forbidden_role'; end if;
   if not (p_primary_id = any(v_candidates) and p_loser_ids <@ v_candidates) then raise exception 'contact not in queue'; end if;
   perform 1 from public.contacts where organization_id = v_org and id = any(array_append(p_loser_ids, p_primary_id)) for update;
   select count(*) into v_count from public.contacts where organization_id = v_org and id = any(array_append(p_loser_ids, p_primary_id));
@@ -10849,7 +10837,7 @@ begin
   return jsonb_build_object('organization_id', v_org, 'primary_id', p_primary_id, 'loser_ids', p_loser_ids);
 end; $$;
 revoke all on function public.merge_contacts(uuid, uuid[], uuid, uuid) from public, anon, authenticated;
-grant execute on function public.merge_contacts(uuid, uuid[], uuid, uuid) to authenticated, service_role;
+grant execute on function public.merge_contacts(uuid, uuid[], uuid, uuid) to service_role;
 -- ---- Wave 8 Asset Intelligence: persistent license/provenance registry ----
 create table if not exists public.asset_license_records (
   organization_id text not null,

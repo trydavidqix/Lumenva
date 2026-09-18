@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { fail, ok } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { validateMergeAction } from "@/lib/contacts/merge";
 
 export async function GET(): Promise<Response> {
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const primaryId = action.value.primary_id;
   const losers = action.value.loser_ids;
   if (!primaryId || losers.length === 0 || !item.candidates.includes(primaryId) || losers.some((v) => !item.candidates.includes(v) || v === primaryId)) return fail("invalid_merge", "Primary/losers inválidos.", 422, { requestId });
-  const { data, error } = await supabase.rpc("merge_contacts" as never, { p_primary_id: primaryId, p_loser_ids: losers, p_actor_user_id: authz.user.id, p_queue_id: id } as never);
+  const { data, error } = await createAdminClient().rpc("merge_contacts" as never, { p_primary_id: primaryId, p_loser_ids: losers, p_actor_user_id: authz.user.id, p_queue_id: id } as never);
   if (error) return fail("merge_failed", error.message, 500, { requestId });
   return ok({ action: "merged", id, result: data }, { requestId });
 }

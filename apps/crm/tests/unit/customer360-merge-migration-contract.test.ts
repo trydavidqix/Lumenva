@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 
 const migration = readFileSync(
-  "supabase/migrations/20260918160000_0173_customer360_merge.sql",
+  "supabase/migrations/20260918160000_0174_customer360_merge.sql",
   "utf8",
 );
 
@@ -18,6 +18,6 @@ describe("Customer 360 merge migration", () => {
     expect(migration).toContain("update public.crm_leads");
     expect(migration).toContain("update public.messages");
     expect(migration).toMatch(/revoke all on function public\.merge_contacts\(uuid, uuid\[\], uuid, uuid\) from public, anon, authenticated/);
-    expect(migration).toMatch(/grant execute on function public\.merge_contacts\(uuid, uuid\[\], uuid, uuid\) to authenticated/);
+    expect(migration).toMatch(/grant execute on function public\.merge_contacts\(uuid, uuid\[\], uuid, uuid\) to service_role/);
   });
 });

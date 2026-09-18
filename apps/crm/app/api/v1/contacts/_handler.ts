@@ -13,6 +13,7 @@ import { ApiError } from "@/lib/api/types";
 import type { Actor, HandlerCtx } from "@/lib/api/handlers/types";
 import { audit } from "@/lib/audit";
 import { hashCpf, encryptCpfSql } from "@/lib/contacts/cpf";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Contact } from "@/lib/types/contacts";
 import type {
   ContactCreate,
@@ -237,7 +238,7 @@ export async function getContactHandler(
     if (rank < ROLE_RANK.manager!) {
       cpfDecryptDenied = true;
     } else {
-      const { data: dec, error: decErr } = await supabase.rpc("decrypt_cpf", {
+      const { data: dec, error: decErr } = await createAdminClient().rpc("decrypt_cpf", {
         p_contact_id: input.contactId,
         p_purpose: input.decryptPurpose,
       });
@@ -302,7 +303,7 @@ export async function createContactHandler(
 
   if (input.cpf) {
     insertRow.cpf_hash = hashCpf(input.cpf);
-    const enc = await encryptCpfSql(supabase, input.cpf);
+    const enc = await encryptCpfSql(createAdminClient(), input.cpf);
     if (enc) insertRow.cpf_encrypted = enc;
   }
 
@@ -418,7 +419,7 @@ export async function patchContactHandler(
   if (input.consent !== undefined) patch.consent = input.consent;
   if (input.cpf !== undefined) {
     patch.cpf_hash = hashCpf(input.cpf);
-    const enc = await encryptCpfSql(supabase, input.cpf);
+    const enc = await encryptCpfSql(createAdminClient(), input.cpf);
     if (enc) patch.cpf_encrypted = enc;
   }
 

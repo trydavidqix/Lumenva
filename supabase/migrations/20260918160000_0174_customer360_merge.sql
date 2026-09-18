@@ -18,7 +18,7 @@ declare
   v_canonical_conv uuid;
   v_count integer;
 begin
-  if auth.uid() is distinct from p_actor_user_id then
+  if auth.role() <> 'service_role' and auth.uid() is distinct from p_actor_user_id then
     raise exception 'actor mismatch';
   end if;
   if p_primary_id is null or coalesce(cardinality(p_loser_ids), 0) = 0 then
@@ -39,7 +39,7 @@ begin
   if not found then
     raise exception 'merge queue item not found';
   end if;
-  if not public.fn_role_at_least(v_org, 'manager') then
+  if auth.role() <> 'service_role' and not public.fn_role_at_least(v_org, 'manager') then
     raise exception 'forbidden_role';
   end if;
   if not (p_primary_id = any(v_candidates) and p_loser_ids <@ v_candidates) then
@@ -129,4 +129,4 @@ end;
 $$;
 
 revoke all on function public.merge_contacts(uuid, uuid[], uuid, uuid) from public, anon, authenticated;
-grant execute on function public.merge_contacts(uuid, uuid[], uuid, uuid) to authenticated, service_role;
+grant execute on function public.merge_contacts(uuid, uuid[], uuid, uuid) to service_role;

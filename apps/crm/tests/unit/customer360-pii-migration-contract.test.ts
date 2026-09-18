@@ -11,7 +11,9 @@ describe("Customer 360 PII migration", () => {
     expect(migration).toContain("create or replace function public.encrypt_cpf");
     expect(migration).toContain("create or replace function public.decrypt_cpf");
     expect(migration).toContain("raise exception 'CPF encryption key unavailable'");
-    expect(migration).toMatch(/revoke all on function public\.decrypt_cpf\(uuid, text\) from public, anon/);
-    expect(migration).toMatch(/grant execute on function public\.decrypt_cpf\(uuid, text\) to authenticated, service_role/);
+    expect(migration).toMatch(/revoke all on function public\.encrypt_cpf\(text\) from public, anon, authenticated/);
+    expect(migration).toMatch(/grant execute on function public\.encrypt_cpf\(text\) to service_role/);
+    expect(migration).toMatch(/revoke all on function public\.decrypt_cpf\(uuid, text\) from public, anon, authenticated/);
+    expect(migration).toMatch(/grant execute on function public\.decrypt_cpf\(uuid, text\) to service_role/);
   });
 });

@@ -65,7 +65,7 @@ begin
   if v_org is null then
     raise exception 'contact not found';
   end if;
-  if not (
+  if auth.role() <> 'service_role' and not (
     exists (select 1 from public.fn_user_org_ids() o where o.organization_id = v_org)
     or public.fn_is_platform_admin()
   ) then
@@ -91,7 +91,7 @@ begin
 end;
 $$;
 
-revoke all on function public.encrypt_cpf(text) from public, anon;
-revoke all on function public.decrypt_cpf(uuid, text) from public, anon;
-grant execute on function public.encrypt_cpf(text) to authenticated, service_role;
-grant execute on function public.decrypt_cpf(uuid, text) to authenticated, service_role;
+revoke all on function public.encrypt_cpf(text) from public, anon, authenticated;
+revoke all on function public.decrypt_cpf(uuid, text) from public, anon, authenticated;
+grant execute on function public.encrypt_cpf(text) to service_role;
+grant execute on function public.decrypt_cpf(uuid, text) to service_role;
