@@ -26,7 +26,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm --dir apps/crm build
+        # CI verify already runs typecheck, lint, and unit tests. This job measures production build.
+        run: pnpm --dir apps/crm build:webpack
         env:
           NEXT_TELEMETRY_DISABLED: "1"
           SENTRY_DSN: ""
