@@ -739,3 +739,14 @@
 - Mapa único publicado em `docs/architecture/DOMAIN-SOURCES-OF-TRUTH.md`.
 - Evidência: Agents 82/82, Memory 143/143, Content 11/11; sem duplicata funcional
   confirmada que justificasse rewrite ou remoção de feature.
+
+## 2026-09-18 — recuperação de módulos históricos e typecheck
+
+- Recuperados do commit histórico `e3be44ab` os adapters `PostgresAffectLedger` e
+  `evaluatePromotionGate`, ausentes em `origin/main` apesar de consumidores/testes
+  presentes. Reuso seletivo evitou cherry-pick de branch mista.
+- Corrigidos contratos adjacentes: CAS lock, actor narrowing, fixtures no-indexed,
+  import de `pg` e conflict target do BrowserMesh idempotency.
+- Evidência: typecheck global verde; testes recuperados/relacionados 22/22 verdes.
+  Testes que exigem Docker ou `SESSION_DATABASE_URL` permanecem condicionados à
+  infraestrutura externa ausente nesta máquina.
