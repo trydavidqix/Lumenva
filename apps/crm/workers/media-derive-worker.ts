@@ -12,6 +12,7 @@ import { modelCapabilities } from "@/lib/agent-engine/edge/llm/capabilities";
 import { resolveOrgLlmConfig, type LlmEdgeConfig } from "@/lib/agent-engine/edge/llm/credentials";
 import { createDefaultRegistry } from "@/lib/agent-engine/edge/llm/providers";
 import { createPool } from "@/lib/agent-engine/db/pool";
+import { EVENT_LOG_MAX_ATTEMPTS } from "@/lib/event-log/drain";
 import type { EventRow, HandlerResult } from "@/lib/event-log/dispatcher";
 import { deriveMediaText, type DeriveDeps } from "@/lib/messaging/media/derive";
 import { TIPOS_DERIVAVEIS } from "@/lib/messaging/media/derivable";
@@ -21,7 +22,7 @@ import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const MEDIA_DERIVE_CONSUMER_KEY = "media_derive_v1";
-const DRAIN_MAX_ATTEMPTS = 5; // espelho de lib/event-log/drain.ts
+const DRAIN_MAX_ATTEMPTS = EVENT_LOG_MAX_ATTEMPTS;
 
 // Lista compartilhada com o drain do turno — ver lib/messaging/media/derivable.ts.
 

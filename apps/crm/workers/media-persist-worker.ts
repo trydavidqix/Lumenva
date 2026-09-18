@@ -11,18 +11,18 @@
  * reprocessar).
  */
 import type { EventRow, HandlerResult } from "@/lib/event-log/dispatcher";
+import { EVENT_LOG_MAX_ATTEMPTS } from "@/lib/event-log/drain";
 import { storagePathFor } from "@/lib/messaging/media/types";
 import { fetchWahaMedia } from "@/lib/messaging/media/waha-source";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const MEDIA_PERSIST_CONSUMER_KEY = "media_persist_v1";
-// Espelha MAX_ATTEMPTS de lib/event-log/drain.ts (não exportado de lá).
 // `row.attempts` chega ao handler como a contagem ANTES do incremento do
 // drain; o drain dead-letra quando `row.attempts + 1 >= DRAIN_MAX_ATTEMPTS`,
 // ou seja, a última tentativa que o drain ainda vai permitir é
 // `row.attempts === DRAIN_MAX_ATTEMPTS - 1`.
-const DRAIN_MAX_ATTEMPTS = 5;
+const DRAIN_MAX_ATTEMPTS = EVENT_LOG_MAX_ATTEMPTS;
 
 interface MessageMediaRow {
   id: string;

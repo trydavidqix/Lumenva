@@ -1,5 +1,9 @@
 # Fases — gov-loop (Governança de Atendimento)
 
+> Operating Core consolidado em `docs/architecture/OPERATING-CORE.md`: `event_log`
+> é o bus de fatos e `job_queue` é a única fila durável de execução. Novos epics
+> não devem criar outro scheduler, worker runtime ou queue genérica.
+
 > Loop de construção do épico de governança de atendimento do DeskcommCRM.
 > Máquina portada do vendaval-loop; doutrina de DOMÍNIO soberana é o `CLAUDE.md`
 > deste repo (+ `docs/specs/`). Este plano só governa PROCESSO (maker≠checker,
