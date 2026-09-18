@@ -710,3 +710,10 @@
   Sem mudança de coluna ou remoção de dados.
 - Evidência: `pnpm --dir apps/crm test:db` verde — INSTALL, UPDATE, 79 arquivos,
   513 testes passados, 1 skip.
+
+## 2026-09-18 — Jobs/Workflows — política de retry única
+
+- `event-log/drain.ts` agora exporta `EVENT_LOG_MAX_ATTEMPTS`; handlers de mídia
+  deixam de manter cópias locais do limite de dead-letter.
+- Evidência: testes de agent drain e worker passaram (10/10); `git diff --check`
+  passou. Nenhuma semântica de retry foi alterada.
