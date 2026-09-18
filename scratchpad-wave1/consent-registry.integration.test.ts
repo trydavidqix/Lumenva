@@ -35,7 +35,7 @@ describe("Postgres Consent Registry (real RLS)", () => {
     const pool = new Pool({ connectionString: url });
     const client = await pool.connect();
     try {
-      await client.query("SET app.org_ids = $1", [ORG_A]);
+      await client.query("SELECT set_config('app.org_ids', $1, false)", [ORG_A]);
       const registry = new PostgresConsentRegistry(client);
       const input = { consent_id: "consent-1", organization_id: ORG_A, subject_ref: "contact-1", purpose: "support", channel: "email" as const, source_refs: ["form-1"], evidence_refs: ["event-1"], granted_at: new Date(Date.now() - 1_000).toISOString(), retention_until: new Date(Date.now() + 86_400_000).toISOString() };
       await expect(registry.register(input)).resolves.toMatchObject({ status: "GRANTED", organization_id: ORG_A });
@@ -46,7 +46,7 @@ describe("Postgres Consent Registry (real RLS)", () => {
     const restarted = new Pool({ connectionString: url });
     const restartedClient = await restarted.connect();
     try {
-      await restartedClient.query("SET app.org_ids = $1", [ORG_A]);
+      await restartedClient.query("SELECT set_config('app.org_ids', $1, false)", [ORG_A]);
       const registry = new PostgresConsentRegistry(restartedClient);
       await expect(registry.get(ORG_A, "consent-1")).resolves.toMatchObject({ status: "GRANTED" });
       await registry.revoke(ORG_A, "consent-1", "2026-09-13T11:00:00.000Z");
@@ -56,7 +56,7 @@ describe("Postgres Consent Registry (real RLS)", () => {
     const cross = new Pool({ connectionString: url });
     const crossClient = await cross.connect();
     try {
-      await crossClient.query("SET app.org_ids = $1", [ORG_B]);
+      await crossClient.query("SELECT set_config('app.org_ids', $1, false)", [ORG_B]);
       const registry = new PostgresConsentRegistry(crossClient);
       await expect(registry.get(ORG_B, "consent-1")).resolves.toBeUndefined();
       expect(await registry.canContact(ORG_B, "contact-1", "email", "support")).toBe(false);
