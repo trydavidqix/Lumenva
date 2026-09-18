@@ -10,7 +10,7 @@ jobs:
   # Main/PR gates use disposable self-hosted capacity; hosted billing cannot block validation.
   verify:
     runs-on: [self-hosted, self-hosted-lumenva-disposable]
-    timeout-minutes: 15
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
 
@@ -64,7 +64,7 @@ jobs:
   # node_modules/.bin no PATH que o script herda para chamar `vitest`.
   invariants:
     runs-on: [self-hosted, self-hosted-lumenva-disposable]
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
 

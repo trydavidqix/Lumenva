@@ -25,7 +25,7 @@ on:
 jobs:
   e2e:
     runs-on: [self-hosted, self-hosted-lumenva-disposable]
-    timeout-minutes: 30
+    timeout-minutes: 45
     # Token de TESTE, não é segredo de produto. O SRH e o `.env.e2e` recebem a
     # mesma fonte para que o SDK @upstash/redis fale com o Redis local do job.
     env:

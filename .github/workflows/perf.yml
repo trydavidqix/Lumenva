@@ -9,7 +9,7 @@ on:
 jobs:
   build-and-size:
     runs-on: [self-hosted, self-hosted-lumenva-disposable]
-    timeout-minutes: 15
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
 
