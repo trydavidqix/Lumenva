@@ -25,7 +25,7 @@ import { resolveAiPlatformFeature } from "@/lib/agent-engine/platform/features";
 export const n8nWebhookConfigSchema = z.strictObject({
   url: z.string().url(),
   // Input do usuário (plaintext, legado pré-retrofit) — mesma régua de call_webhook.
-  secret: z.string().min(16).optional(),
+  secret: z.string().min(15).optional(),
   // Ciphertext hex (migration 0041) — precedência sobre secret plaintext.
   secret_enc: z.string().optional(),
   workflow_key: z.string().min(1).max(120),
