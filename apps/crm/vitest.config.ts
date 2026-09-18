@@ -17,7 +17,7 @@ export default defineConfig({
     // depois); só para de cronometrar a lentidão da máquina como se fosse
     // asserção. Caso que precisa de mais (abrir processo filho) declara o seu.
     testTimeout: 15_000,
-    setupFiles: ["./tests/setup/vitest.setup.ts"],
+    setupFiles: [path.resolve(__dirname, "tests/setup/vitest.setup.ts")],
     globals: true,
     coverage: { provider: "v8", reporter: ["text", "html"] },
     // tests/journeys/** roda no Playwright (jornada de baseline dos canais), igual
