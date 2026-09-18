@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PostgresAffectLedger } from "@/lib/psycheos/affect-ledger-pg";
 
 const exec = promisify(execFile);
-const dockerAvailable = spawnSync("docker", ["info"], { stdio: "ignore" }).status === 0;
+const dockerAvailable = process.env.RUN_DOCKER_INTEGRATION === "1" && spawnSync("docker", ["info"], { stdio: "ignore" }).status === 0;
 const container = `wave16-affect-pg-${process.pid}`;
 const orgA = "org-a";
 const orgB = "org-b";
