@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { Pool } from "pg";
-import { createPostgresSourceRegistry, type SourceInput } from "./source-registry";
+import { createPostgresSourceRegistry, type SourceInput } from "../apps/crm/lib/memory/source-registry";
 
 let admin: Pool;
 let tenant: Pool;
