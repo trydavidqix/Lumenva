@@ -7,6 +7,7 @@ on:
     branches: [main]
 
 jobs:
+  # Main/PR gates use disposable self-hosted capacity; hosted billing cannot block validation.
   verify:
     runs-on: [self-hosted, self-hosted-lumenva-disposable]
     timeout-minutes: 15
