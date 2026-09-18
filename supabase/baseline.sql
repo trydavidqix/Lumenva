@@ -10740,7 +10740,7 @@ alter table if exists public.flywheel_distiller_proposals add constraint flywhee
 -- ---- Wave 4 BrowserMesh: replay claims and tenant RLS ----
 create table if not exists public.browsermesh_event_idempotency (
   id uuid primary key default gen_random_uuid(),
-  organization_id uuid not null,
+  organization_id text not null,
   event_id text not null,
   idempotency_key text not null,
   status text not null check (status in ('CLAIMED')),
@@ -10759,7 +10759,7 @@ grant all on public.browsermesh_event_idempotency to service_role;
 
 -- ---- Wave 8 Asset Intelligence: persistent license/provenance registry ----
 create table if not exists public.asset_license_records (
-  organization_id uuid not null,
+  organization_id text not null,
   license_ref text not null,
   source_id text not null,
   owner_id text not null,
@@ -10772,7 +10772,7 @@ create table if not exists public.asset_license_records (
 alter table public.asset_license_records enable row level security;
 drop policy if exists asset_license_records_tenant_all on public.asset_license_records;
 create policy asset_license_records_tenant_all on public.asset_license_records for all to authenticated
-  using (organization_id in (select public.fn_user_org_ids()))
-  with check (organization_id in (select public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()::text))
+  with check (organization_id in (select public.fn_user_org_ids()::text));
 grant select on public.asset_license_records to authenticated;
 grant all on public.asset_license_records to service_role;
