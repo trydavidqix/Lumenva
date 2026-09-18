@@ -9,6 +9,7 @@ import { strToU8, zipSync } from "fflate";
 import type { NextRequest } from "next/server";
 
 import { fail, ok } from "@/lib/api/wrappers";
+import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { collectExportData } from "@/lib/lgpd/export-collector";
@@ -37,7 +38,18 @@ export async function GET(
   if (parsed.data.format === "pdf") return fail("export_pdf_unavailable", "PDF PAdES ainda requer configuração F6 de assinatura e Storage.", 501, { requestId });
 
   const payload = await collectExportData({ organizationId: authz.org.orgId, requestId: id, contactId: request.contact_id, externalCustomerId: request.external_customer_id });
-  if (parsed.data.format === "json") return ok({ request_id: id, status: request.status, format: "json", signed: false, delivery: "not_configured", data: payload }, { requestId });
+  if (parsed.data.format === "json") {
+    await audit({
+      action: "lgpd.export_generated",
+      actorUserId: authz.user.id,
+      organizationId: authz.org.orgId,
+      resourceType: "lgpd_request",
+      resourceId: id,
+      requestId,
+      metadata: { format: "json", signed_pades: false, delivery: "direct_download" },
+    });
+    return ok({ request_id: id, status: request.status, format: "json", signed: false, delivery: "not_configured", data: payload }, { requestId });
+  }
 
   const generatedAt = payload.generated_at;
   const manifest = lgpdExportPackageSchema.parse({ version: "f6", request_id: id, generated_at: generatedAt, signed_pades: false, files: [
@@ -47,6 +59,15 @@ export async function GET(
   const dataJson = JSON.stringify(payload, null, 2);
   const manifestJson = JSON.stringify(manifest, null, 2);
   const zip = zipSync({ "data.json": strToU8(dataJson), "manifest.json": strToU8(manifestJson) });
+  await audit({
+    action: "lgpd.export_generated",
+    actorUserId: authz.user.id,
+    organizationId: authz.org.orgId,
+    resourceType: "lgpd_request",
+    resourceId: id,
+    requestId,
+    metadata: { format: "zip", signed_pades: false, delivery: "direct_download", size_bytes: zip.byteLength },
+  });
   return new Response(zip, { status: 200, headers: {
     "content-type": "application/zip",
     "content-disposition": `attachment; filename="lgpd-${id}.zip"`,
