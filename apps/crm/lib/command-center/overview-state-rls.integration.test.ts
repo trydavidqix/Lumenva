@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Pool } from "pg";
@@ -23,7 +23,9 @@ async function waitForPostgres(connectionString: string): Promise<void> {
   throw new Error("postgres_query_not_ready");
 }
 
-describe("Command Center overview RLS (real PostgreSQL)", () => {
+const dockerAvailable = spawnSync("docker", ["version"], { stdio: "ignore" }).status === 0;
+
+describe.skipIf(!dockerAvailable)("Command Center overview RLS (real PostgreSQL)", () => {
   beforeAll(async () => {
     container = execFileSync("docker", ["run", "--rm", "-d", "-e", "POSTGRES_PASSWORD=test", "-p", "127.0.0.1::5432", "postgres:16"], { encoding: "utf8" }).trim();
     const port = execFileSync("docker", ["port", container, "5432/tcp"], { encoding: "utf8" }).trim().match(/:(\d+)$/)?.[1];

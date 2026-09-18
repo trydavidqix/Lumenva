@@ -1,8 +1,10 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 
-describe("Hermes Source Registry RLS (real PostgreSQL)", () => {
+const dockerAvailable = spawnSync("docker", ["version"], { stdio: "ignore" }).status === 0;
+
+describe.skipIf(!dockerAvailable)("Hermes Source Registry RLS (real PostgreSQL)", () => {
   it("persiste via migration e isola tenants com role sem BYPASSRLS", async () => {
     const container = execFileSync("docker", ["run", "--rm", "-d", "-e", "POSTGRES_PASSWORD=postgres", "-p", "0:5432", "postgres:16"], { encoding: "utf8" }).trim();
     try {
