@@ -57,7 +57,7 @@ import {
   reapExpiredJobs,
   type JobKind,
   type JobRow,
-} from '@/lib/agent-engine/queue/queue';
+} from '@/lib/operating-core';
 
 export interface JobHandlerContext {
   workerId: string;

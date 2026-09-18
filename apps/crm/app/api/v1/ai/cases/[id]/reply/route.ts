@@ -34,7 +34,7 @@ import {
 import { performHumanHandoff } from "@/lib/agent-engine/agent/human-handoff";
 import { getRequestPool } from "@/lib/agent-engine/db/request-pool";
 import { createLogger } from "@/lib/agent-engine/obs/logger";
-import { enqueueJob } from "@/lib/agent-engine/queue/queue";
+import { enqueueJob } from "@/lib/operating-core";
 import { audit } from "@/lib/audit";
 import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
