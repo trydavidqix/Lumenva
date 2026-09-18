@@ -19,8 +19,8 @@ describe("Hermes Source Registry RLS (real PostgreSQL)", () => {
         await admin.query(`CREATE ROLE ${role} LOGIN PASSWORD 'test-role' NOSUPERUSER NOBYPASSRLS`);
         await admin.query("CREATE OR REPLACE FUNCTION public.fn_user_org_ids() RETURNS SETOF text LANGUAGE sql STABLE AS $$ SELECT unnest(string_to_array(current_setting('app.org_ids', true), ',')) $$");
         const root = `${process.cwd()}/supabase/migrations`;
-        await admin.query(await readFile(`${root}/20260917100000_185_hermes_source_registry.sql`, "utf8"));
-        await admin.query(await readFile(`${root}/20260917100100_186_hermes_source_registry_rls.sql`, "utf8"));
+        await admin.query(await readFile(`${root}/20260917100000_0185_hermes_source_registry.sql`, "utf8"));
+        await admin.query(await readFile(`${root}/20260917100100_0186_hermes_source_registry_rls.sql`, "utf8"));
         await admin.query(`GRANT USAGE ON SCHEMA public TO ${role}`);
         await admin.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON public.hermes_source_registry TO ${role}`);
         const tenant = new Pool({ connectionString: url.replace("postgres:postgres@", `${role}:test-role@`) });
@@ -30,7 +30,7 @@ describe("Hermes Source Registry RLS (real PostgreSQL)", () => {
           await client.query("INSERT INTO public.hermes_source_registry (organization_id,source_id,uri,title,owner,license,version,source_type) VALUES ('org-a','s-a','https://a.example','A','owner','CC-BY','1','approved_internal')");
           await client.query("SET app.org_ids='org-b'");
           expect((await client.query("SELECT organization_id FROM public.hermes_source_registry WHERE organization_id='org-a'")).rows).toEqual([]);
-          await expect(client.query("INSERT INTO public.hermes_source_registry (organization_id,source_id,uri,title,owner,license,version,source_type) VALUES ('org-a','s-b','https://b.example','B','owner','CC-BY','1','approved_internal'")).rejects.toMatchObject({ code: "42501" });
+          await expect(client.query("INSERT INTO public.hermes_source_registry (organization_id,source_id,uri,title,owner,license,version,source_type) VALUES ('org-a','s-b','https://b.example','B','owner','CC-BY','1','approved_internal')")).rejects.toMatchObject({ code: "42501" });
         } finally { client.release(); await tenant.end(); }
       } finally { await admin.query(`DROP ROLE IF EXISTS ${role}`).catch(() => undefined); await admin.end(); }
     } finally { execFileSync("docker", ["rm", "-f", container], { stdio: "ignore" }); }
