@@ -32,6 +32,8 @@ const ROLE_RANK: Record<string, number> = {
   admin: 4,
 };
 
+const CONSENT_PURPOSES = ["marketing", "transactional", "profiling"] as const;
+
 interface CursorPayload {
   last_activity_at: string | null;
   created_at: string;
@@ -451,9 +453,37 @@ export async function patchContactHandler(
       p_metadata: { request_id: ctx.requestId, ...a.metadataActor },
       p_organization_id: contact.organization_id,
     })
-    .then(({ error }) => {
+   .then(({ error }) => {
       if (error) console.error("[contacts.patch] emit_event failed", error.message);
     });
+
+  if (input.consent !== undefined) {
+    // Log only canonical purpose names. Never copy consent evidence or values
+    // into the audit/event payload: those fields may contain free-form PII.
+    const purposes = CONSENT_PURPOSES.filter((purpose) => purpose in input.consent!);
+    await supabase
+      .rpc("emit_event", {
+        p_event_type: "lgpd.consent_changed",
+        p_entity_kind: "contact",
+        p_entity_id: contact.id,
+        p_payload: { purposes },
+        p_metadata: { request_id: ctx.requestId, ...a.metadataActor },
+        p_organization_id: contact.organization_id,
+      })
+      .then(({ error }) => {
+        if (error) console.error("[contacts.patch] consent event failed", error.message);
+      });
+
+    await audit({
+      action: "lgpd.consent_changed",
+      actorUserId: a.actorUserId,
+      organizationId: contact.organization_id,
+      resourceType: "contact",
+      resourceId: contact.id,
+      requestId: ctx.requestId,
+      metadata: { ...a.metadataActor, purposes },
+    });
+  }
 
   if (input.tags !== undefined) {
     const prevTags: string[] = (existing as { tags?: string[] }).tags ?? [];
