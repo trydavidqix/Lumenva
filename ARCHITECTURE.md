@@ -3,6 +3,7 @@
 > Visão de 1 página. Profundidade vive em `docs/specs/` e `docs/stories/epics/MASTER.md`.
 > Mapa de toda a documentação: [`docs/index.md`](docs/index.md).
 > Estado real de implementação (o que está pronto vs. incompleto): [`docs/current-state.md`](docs/current-state.md).
+> Source of truth por domínio: [`docs/architecture/DOMAIN-SOURCES-OF-TRUTH.md`](docs/architecture/DOMAIN-SOURCES-OF-TRUTH.md).
 
 ## Camadas
 
@@ -80,6 +81,17 @@ request → proxy.ts (X-Request-Id, x-pathname; isPublicPath? → bypass;
 **Turno do agente de IA:** inbound WhatsApp → HMAC + idempotência → `event_log` →
 worker → `runAgentTurn` (RAG + tools MCP) → guardrails before-send → adapter WAHA →
 handoff humano se gatilho. Diagrama: [`docs/architecture/agent-turn.html`](docs/architecture/agent-turn.html).
+
+## Operating Core: event log, jobs, and runtime
+
+Canonical map: [`docs/architecture/OPERATING-CORE.md`](docs/architecture/OPERATING-CORE.md).
+
+- `event_log` is the append-only domain-event source and generic consumer ledger.
+- `job_queue` is the single durable execution queue for agent, follow-up, watchdog,
+  flywheel, case-reply, and operator jobs.
+- `cron_jobs` stores schedules only; the scheduler enqueues into `job_queue`.
+- `apps/crm/workers/agent-worker/main.ts` is the runtime composition root.
+- `apps/crm/lib/operating-core/index.ts` is the canonical application import boundary.
 
 ## Event log + workers
 
