@@ -13,7 +13,7 @@ import {
 } from "@/lib/event-log/dispatcher";
 import { logger } from "@/lib/logger";
 
-const MAX_ATTEMPTS = 5;
+export const EVENT_LOG_MAX_ATTEMPTS = 5;
 
 export interface DrainSummary {
   scanned: number;
@@ -97,7 +97,7 @@ export async function drainEventLog(
       summary.retried += 1;
     } else if (errors.length) {
       const attempts = row.attempts + 1;
-      const dead = attempts >= MAX_ATTEMPTS;
+      const dead = attempts >= EVENT_LOG_MAX_ATTEMPTS;
       await admin
         .from("event_log")
         .update({

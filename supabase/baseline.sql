@@ -6966,6 +6966,18 @@ create table if not exists org_memory_entries (
 create index if not exists idx_org_memory_entries_org_status
   on org_memory_entries (organization_id, status, created_at);
 
+-- Agent OS Phase 6 — Learning Flywheel proposal types. Idempotent forward-fix
+-- preserving the legacy distiller/org-memory values while allowing the closed
+-- Phase 6 proposal vocabulary in fresh installs and clone updates.
+alter table flywheel_distiller_proposals
+  drop constraint if exists flywheel_distiller_proposals_type_check;
+alter table flywheel_distiller_proposals
+  add constraint flywheel_distiller_proposals_type_check
+  check (type in (
+    'playbook_bullet', 'golden_case', 'reentry_trigger', 'org_memory_entry',
+    'skill_change', 'routing_change', 'eval_case', 'operational_threshold'
+  ));
+
 -- RLS (mesmo shape do loop tenant_isolation_* do baseline).
 do $$
 declare t text;
@@ -10752,108 +10764,7 @@ alter table public.browsermesh_event_idempotency enable row level security;
 drop policy if exists browsermesh_event_idempotency_tenant_all on public.browsermesh_event_idempotency;
 create policy browsermesh_event_idempotency_tenant_all on public.browsermesh_event_idempotency
   for all to authenticated
-  using (organization_id::uuid in (select public.fn_user_org_ids()))
-  with check (organization_id::uuid in (select public.fn_user_org_ids()));
-grant select, insert on public.browsermesh_event_idempotency to authenticated;
-grant all on public.browsermesh_event_idempotency to service_role;
-
--- ---- Customer 360 CPF encryption boundary (migration 0172) ----
-create or replace function private.fn_cpf_key() returns text
-language sql security definer set search_path = private, pg_temp as $$
-  select coalesce(nullif(current_setting('app.cpf_key', true), ''),
-    (select value from private.app_secrets where name = 'cpf_encryption_key'));
-$$;
-revoke all on function private.fn_cpf_key() from public;
-
-create or replace function public.encrypt_cpf(p_plaintext text) returns bytea
-language plpgsql security definer
-set search_path = public, private, extensions, pg_temp as $$
-declare k text := private.fn_cpf_key(); digits text := regexp_replace(coalesce(p_plaintext, ''), '\D', '', 'g');
-begin
-  if length(digits) <> 11 then raise exception 'invalid CPF'; end if;
-  if k is null or length(k) < 32 then raise exception 'CPF encryption key unavailable'; end if;
-  return pgp_sym_encrypt(digits, k, 'cipher-algo=aes256');
-end; $$;
-
-create or replace function public.decrypt_cpf(p_contact_id uuid, p_purpose text default null) returns text
-language plpgsql security definer
-set search_path = public, private, extensions, pg_temp as $$
-declare v_org uuid; v_cipher bytea; k text := private.fn_cpf_key();
-begin
-  select organization_id, cpf_encrypted into v_org, v_cipher from public.contacts where id = p_contact_id;
-  if v_org is null then raise exception 'contact not found'; end if;
-  if auth.role() <> 'service_role' and not (exists (select 1 from public.fn_user_org_ids() o where o.organization_id = v_org) or public.fn_is_platform_admin()) then raise exception 'forbidden_org'; end if;
-  if auth.role() <> 'service_role' and not public.fn_role_at_least(v_org, 'manager') and not public.fn_is_platform_admin() then raise exception 'forbidden_role'; end if;
-  if v_cipher is null then return null; end if;
-  if k is null or length(k) < 32 then raise exception 'CPF encryption key unavailable'; end if;
-  insert into public.api_audit_log (organization_id, action, actor_user_id, resource_type, resource_id, metadata, bypassed_rls)
-  values (v_org, 'contact.cpf_decrypted', auth.uid(), 'contact', p_contact_id,
-    jsonb_build_object('purpose', nullif(left(coalesce(p_purpose, ''), 200), '')), false);
-  return pgp_sym_decrypt(v_cipher, k);
-end; $$;
-revoke all on function public.encrypt_cpf(text) from public, anon, authenticated;
-revoke all on function public.decrypt_cpf(uuid, text) from public, anon, authenticated;
-grant execute on function public.encrypt_cpf(text) to service_role;
-grant execute on function public.decrypt_cpf(uuid, text) to service_role;
-
--- ---- Customer 360 transactional merge (migration 0173) ----
-create or replace function public.merge_contacts(p_primary_id uuid, p_loser_ids uuid[], p_actor_user_id uuid, p_queue_id uuid)
-returns jsonb language plpgsql security definer set search_path = public, pg_temp as $$
-declare v_org uuid; v_candidates uuid[]; v_conv record; v_canonical_conv uuid; v_count integer;
-begin
-  if auth.role() <> 'service_role' and auth.uid() is distinct from p_actor_user_id then raise exception 'actor mismatch'; end if;
-  if p_primary_id is null or coalesce(cardinality(p_loser_ids), 0) = 0 then raise exception 'invalid merge'; end if;
-  if p_primary_id = any(p_loser_ids) then raise exception 'primary in losers'; end if;
-  if cardinality(p_loser_ids) <> (select count(distinct id) from unnest(p_loser_ids) as id) then raise exception 'duplicate loser'; end if;
-  select organization_id, candidates into v_org, v_candidates from public.merge_queue where id = p_queue_id and status = 'pending' for update;
-  if not found then raise exception 'merge queue item not found'; end if;
-  if auth.role() <> 'service_role' and not public.fn_role_at_least(v_org, 'manager') then raise exception 'forbidden_role'; end if;
-  if not (p_primary_id = any(v_candidates) and p_loser_ids <@ v_candidates) then raise exception 'contact not in queue'; end if;
-  perform 1 from public.contacts where organization_id = v_org and id = any(array_append(p_loser_ids, p_primary_id)) for update;
-  select count(*) into v_count from public.contacts where organization_id = v_org and id = any(array_append(p_loser_ids, p_primary_id));
-  if v_count <> cardinality(p_loser_ids) + 1 then raise exception 'cross tenant or missing contact'; end if;
-  if exists (select 1 from public.contacts where organization_id = v_org and id = any(array_append(p_loser_ids, p_primary_id)) and (is_anonymized or is_merged_into is not null)) then raise exception 'contact not mergeable'; end if;
-  for v_conv in select id, channel_session_id, is_group, group_chat_id from public.conversations where organization_id = v_org and contact_id = any(p_loser_ids) order by id for update loop
-    select id into v_canonical_conv from public.conversations where organization_id = v_org and contact_id = p_primary_id and channel_session_id = v_conv.channel_session_id and is_group = v_conv.is_group and group_chat_id is not distinct from v_conv.group_chat_id limit 1 for update;
-    if v_canonical_conv is not null then
-      update public.messages set conversation_id = v_canonical_conv where organization_id = v_org and conversation_id = v_conv.id;
-      update public.ai_agent_runs set conversation_id = v_canonical_conv where organization_id = v_org and conversation_id = v_conv.id;
-      update public.ai_invocations set conversation_id = v_canonical_conv where organization_id = v_org and conversation_id = v_conv.id;
-      delete from public.conversations where id = v_conv.id and organization_id = v_org;
-    else
-      update public.conversations set contact_id = p_primary_id, updated_at = now() where id = v_conv.id and organization_id = v_org;
-    end if;
-    v_canonical_conv := null;
-  end loop;
-  update public.messages set contact_id = p_primary_id where organization_id = v_org and contact_id = any(p_loser_ids);
-  update public.ai_agent_runs set contact_id = p_primary_id where organization_id = v_org and contact_id = any(p_loser_ids);
-  update public.crm_lead_activities set contact_id = p_primary_id where organization_id = v_org and contact_id = any(p_loser_ids);
-  update public.crm_leads set contact_id = p_primary_id where organization_id = v_org and contact_id = any(p_loser_ids);
-  update public.lgpd_requests set contact_id = p_primary_id where organization_id = v_org and contact_id = any(p_loser_ids);
-  update public.orders set contact_id = p_primary_id where organization_id = v_org and contact_id = any(p_loser_ids);
-  update public.crm_lead_links set target_id = p_primary_id where organization_id = v_org and target_kind = 'contact' and target_id = any(p_loser_ids);
-  update public.contacts set is_merged_into = p_primary_id, merged_at = now(), updated_at = now() where organization_id = v_org and id = any(p_loser_ids);
-  update public.merge_queue set status = 'resolved', resolved_by_user_id = p_actor_user_id, resolved_at = now(), resolution = jsonb_build_object('primary_id', p_primary_id, 'loser_ids', p_loser_ids) where id = p_queue_id and organization_id = v_org and status = 'pending';
-  return jsonb_build_object('organization_id', v_org, 'primary_id', p_primary_id, 'loser_ids', p_loser_ids);
-end; $$;
-revoke all on function public.merge_contacts(uuid, uuid[], uuid, uuid) from public, anon, authenticated;
-grant execute on function public.merge_contacts(uuid, uuid[], uuid, uuid) to service_role;
--- ---- Wave 8 Asset Intelligence: persistent license/provenance registry ----
-create table if not exists public.asset_license_records (
-  organization_id text not null,
-  license_ref text not null,
-  source_id text not null,
-  owner_id text not null,
-  status text not null check (status in ('REGISTERED','VERIFIED','SUPERSEDED','REVOKED')),
-  expires_at timestamptz,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  primary key (organization_id, license_ref)
-);
-alter table public.asset_license_records enable row level security;
-drop policy if exists asset_license_records_tenant_all on public.asset_license_records;
-create policy asset_license_records_tenant_all on public.asset_license_records for all to authenticated
   using (organization_id in (select public.fn_user_org_ids()::text))
   with check (organization_id in (select public.fn_user_org_ids()::text));
-grant select on public.asset_license_records to authenticated;
-grant all on public.asset_license_records to service_role;
+grant select, insert on public.browsermesh_event_idempotency to authenticated;
+grant all on public.browsermesh_event_idempotency to service_role;

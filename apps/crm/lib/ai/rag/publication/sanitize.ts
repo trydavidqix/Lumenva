@@ -49,8 +49,7 @@ const API_KEY_NATURAL_ASSIGNMENT = new RegExp(
 );
 const API_KEY_LIKE_VALUE =
   /\b(?:sk|rk|pk|ghp|gho|ghu|ghs|ghr|github_pat|xox[baprs])[-_][A-Za-z0-9_-]{10,}\b|\b(?:AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35})\b/;
-const ENV_API_KEY_ASSIGNMENT =
-  /\b(?:AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|GITHUB_TOKEN)\s*=\s*\S+/i;
+const ENV_SECRET_ASSIGNMENT = /\b(?:AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|GITHUB_TOKEN)\s*=\s*\S+/i;
 const TOKEN_ASSIGNMENT = /\btoken\b\s*(?:=|:|é|is)\s*\S+/iu;
 
 const BEARER_TOKEN = /\bbearer\s+\S+/iu;
@@ -164,7 +163,7 @@ function scanLine(line: string): string | null {
   }
   if (
     API_KEY_LIKE_VALUE.test(line) ||
-    ENV_API_KEY_ASSIGNMENT.test(line) ||
+    ENV_SECRET_ASSIGNMENT.test(line) ||
     matchesGatedAssignment(API_KEY_STRICT_ASSIGNMENT, line) ||
     matchesGatedAssignment(API_KEY_NATURAL_ASSIGNMENT, line)
   ) {
