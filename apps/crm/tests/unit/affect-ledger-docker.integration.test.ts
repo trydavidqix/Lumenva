@@ -1,9 +1,11 @@
 import { execFile } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { promisify } from "node:util";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PostgresAffectLedger } from "@/lib/psycheos/affect-ledger-pg";
 
 const exec = promisify(execFile);
+const dockerAvailable = spawnSync("docker", ["info"], { stdio: "ignore" }).status === 0;
 const container = `wave16-affect-pg-${process.pid}`;
 const orgA = "org-a";
 const orgB = "org-b";
@@ -49,7 +51,7 @@ function parseRows(output: string): Array<Record<string, unknown>> {
   }) : [];
 }
 
-describe("Wave 16 affect ledger with real PostgreSQL and RLS", () => {
+describe.skipIf(!dockerAvailable)("Wave 16 affect ledger with real PostgreSQL and RLS", () => {
   beforeAll(async () => {
     await exec("docker", ["run", "-d", "--rm", "--name", container, "-e", "POSTGRES_PASSWORD=test", "-e", "POSTGRES_DB=test", "postgres:16"]);
     for (let i = 0; i < 60; i += 1) {
