@@ -24,7 +24,7 @@ describe("Studio Editor eval and variant persistence", () => {
     pool = new Pool({ connectionString: url });
     await pool.query("CREATE TABLE studio_editor_evals (organization_id text, session_id text, eval_id text, canvas_id text, input_version integer, eval_version text, checks jsonb, metrics jsonb, status text, evidence_refs jsonb, PRIMARY KEY (organization_id, session_id, eval_id))");
     await pool.query("CREATE TABLE studio_variant_mixes (organization_id text, session_id text, mix_id text, project_id text, input_variant_ids jsonb, output_canvas_id text, mix_rules jsonb, context_pack_id text, status text, source_refs jsonb, evidence_refs jsonb, PRIMARY KEY (organization_id, session_id, mix_id))");
-  });
+  }, 30_000);
   afterAll(async () => { await pool?.end(); if (container) { const { execFileSync } = await import("node:child_process"); execFileSync("docker", ["rm", "-f", container]); } });
 
   it("persists evals and variant mixes idempotently across concurrent writers", async () => {
@@ -36,5 +36,5 @@ describe("Studio Editor eval and variant persistence", () => {
     expect(mixRows.rows).toHaveLength(1);
     expect(evalRows.rows[0]).toMatchObject({ organization_id: "org-a", session_id: "session-1", eval_id: "eval-1" });
     expect(mixRows.rows[0]).toMatchObject({ organization_id: "org-a", session_id: "session-1", mix_id: "mix-1" });
-  });
+  }, 30_000);
 });

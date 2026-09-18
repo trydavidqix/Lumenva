@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Pool } from "pg";
-import { NoProgressWatchdog } from "./no-progress-watchdog";
+import { NoProgressWatchdog } from "../apps/crm/lib/psycheos/no-progress-watchdog";
 import { PostgresWatchdogRequesterRegistry, requestRerouteFromRegistry } from "./postgres-watchdog-authorization";
 
 let container = "";
@@ -22,7 +22,7 @@ describe("Watchdog requester registry (real Postgres RLS)", () => {
     await admin.query("CREATE ROLE authenticated NOLOGIN");
     await admin.query("CREATE ROLE watchdog_auth_test LOGIN PASSWORD 'watchdog-auth-test' NOSUPERUSER NOBYPASSRLS IN ROLE authenticated");
     await admin.query("CREATE OR REPLACE FUNCTION public.fn_user_org_ids() RETURNS SETOF text LANGUAGE SQL STABLE AS $$ SELECT unnest(string_to_array(current_setting('app.org_ids', true), ',')) $$");
-    await admin.query(readFileSync("supabase/migrations/20260913030200_0168_psyche_watchdog_requesters.sql", "utf8"));
+    await admin.query(readFileSync("supabase/migrations/20260917100400_0178_psyche_watchdog_requesters.sql", "utf8"));
   });
   afterAll(async () => { await admin?.end(); if (container) execFileSync("docker", ["rm", "-f", container], { stdio: "ignore" }); });
 

@@ -1,4 +1,4 @@
-import { routeResource, type ResourceRoute, type ResourceTask, type Worker } from "./resource-router";
+import { routeResource, type ResourceRoute, type ResourceTask, type Worker } from "../apps/crm/lib/memory/resource-router";
 
 type Queryable = { query<T = Record<string, unknown>>(text: string, values?: readonly unknown[]): Promise<{ rows: T[] }> };
 

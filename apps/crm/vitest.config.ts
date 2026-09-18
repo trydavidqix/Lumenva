@@ -40,6 +40,10 @@ export default defineConfig({
       // o vitest acabava coletando specs Playwright de até 10 worktrees, travando a suíte.
       "**/.worktrees/**",
       "**/.claude/worktrees/**",
+      // Scratchpad wave suites are standalone review/integration artifacts.
+      // They are not part of the CRM unit gate and may depend on root-level
+      // packages or a database that the unit job does not provide.
+      "**/scratchpad-*/**",
       "apps/site/**",
       "workers/voice-worker/**",
       "apps/site/**",
