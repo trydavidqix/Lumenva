@@ -3,7 +3,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { PREMIUM_MODULE_SLUGS, PREMIUM_PLAN_SLUG, PREMIUM_TEST_TENANTS } from "../fixtures/entitlements-premium";
 
-const migration = readFileSync(join(process.cwd(), "apps/crm/supabase/migrations/20260911100000_0161_entitlements_catalog.sql"), "utf8");
+const repoRoot = process.cwd().endsWith(join("apps", "crm")) ? join(process.cwd(), "../..") : process.cwd();
+const migration = readFileSync(join(repoRoot, "supabase/migrations/20260911100000_0161_entitlements_catalog.sql"), "utf8");
 
 describe("entitlements migration contract", () => {
   it("defines the catalog, tenant assignment and append-only idempotent events", () => {
