@@ -17,4 +17,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter lumenva-crm lint
       - run: pnpm --filter lumenva-crm typecheck
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
       - run: pnpm --filter lumenva-crm test:f2-f3
