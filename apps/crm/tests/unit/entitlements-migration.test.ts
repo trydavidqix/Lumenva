@@ -22,7 +22,7 @@ describe("entitlements migration contract", () => {
     expect(migration).toContain("on conflict (organization_id) do update");
     expect(migration).toContain("'" + PREMIUM_PLAN_SLUG + "'");
     for (const tenant of PREMIUM_TEST_TENANTS) expect(migration).toContain(tenant);
-    for (const module of PREMIUM_MODULE_SLUGS) expect(migration).toContain("'" + module + "'");
+    for (const moduleSlug of PREMIUM_MODULE_SLUGS) expect(migration).toContain("'" + moduleSlug + "'");
     expect(PREMIUM_TEST_TENANTS).toHaveLength(2);
     expect(migration).not.toMatch(/(api[_ -]?key|secret[[:space:]]*[:=]|password[[:space:]]*[:=]|token[[:space:]]*[:=])/i);
   });
