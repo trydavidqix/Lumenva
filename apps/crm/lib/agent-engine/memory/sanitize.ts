@@ -19,6 +19,8 @@ const CVV_STATEMENT =
   /\b(?:cvv|cvc|security[ -]?code|c[oó]digo\s+de\s+seguran[cç]a)\b\s*(?:(?:=|:|é|is)\s*)?\d{3,4}\b/iu;
 const INTERNAL_SECRET_VARIABLE =
   /\b(?:[A-Z][A-Z0-9]*_)*(?:API_?KEY|ACCESS_TOKEN|REFRESH_TOKEN|AUTH_TOKEN|CLIENT_SECRET|PRIVATE_KEY|DATABASE_PASSWORD|DB_PASSWORD|SESSION_TOKEN|SESSION_KEY|SECRET)\b/i;
+const ENV_SECRET_ASSIGNMENT = /\b(?:AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|GITHUB_TOKEN)\s*=\s*\S+/i;
+const TOKEN_ASSIGNMENT = /\btoken\b\s*(?:=|:|é|is)\s*\S+/iu;
 const CREDENTIAL_ASSIGNMENT =
   /\b(?:token|access[_ -]?token|refresh[_ -]?token|auth(?:orization)?[_ -]?token|client[_ -]?secret|private[_ -]?key)\b\s*(?:=|:|é|is)\s*\S+/iu;
 const CARD_NUMBER_CANDIDATE = /(?<!\d)(?:\d[ -]?){13,19}(?!\d)/;
@@ -49,6 +51,12 @@ export function sanitizeMemoryCandidate(input: {
 
   if (API_KEY_ASSIGNMENT.test(text) || API_KEY_LIKE_VALUE.test(text)) {
     return { allowed: false, reason: "api_key" };
+  }
+  if (ENV_SECRET_ASSIGNMENT.test(text)) {
+    return { allowed: false, reason: "api_key" };
+  }
+  if (TOKEN_ASSIGNMENT.test(text)) {
+    return { allowed: false, reason: "credential" };
   }
   if (BEARER_CREDENTIAL.test(text) || JWT_LIKE_VALUE.test(text)) {
     return { allowed: false, reason: "credential" };

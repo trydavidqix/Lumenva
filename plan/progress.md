@@ -687,3 +687,76 @@
 - Checkpoint G6 emitido (loop/checkpoints/G6-report.md, COMPLETO 7/7), loop
   PARADO aguardando aprovação do dono (G6.approved = GATILHO da FG do Vendaval).
   7 INB abertos no §3. O ÉPICO DE GOVERNANÇA (G1-G6) FECHA na aprovação.
+
+## 2026-09-18 — Operating Core — consolidação inicial
+
+- Fonte de verdade consolidada: `event_log` para fatos/dispatch; `job_queue` para
+  execução durável; `cron_jobs` apenas agenda; `agent-worker/main.ts` compõe runtime.
+- Criada facade canônica `apps/crm/lib/operating-core/index.ts`; worker 24/7 e rota
+  de case reply migrados para essa fronteira. Implementação madura existente foi
+  preservada; protótipo `packages/operating-core` de branches antigas classificado
+  como superseded, sem reintroduzir runtime paralelo.
+- Evidência: teste focado da facade passou (2/2). Typecheck com heap 4 GB isolou
+  8 erros pré-existentes; nenhum erro restante na facade após correção do fixture.
+- Arquitetura registrada em `docs/architecture/OPERATING-CORE.md` e referenciada
+  por `ARCHITECTURE.md`; próximos passos são lint, suíte unitária e banco.
+
+## 2026-09-18 — Database/Data Model — correções de baseline
+
+- Corrigido `supabase/baseline.sql`: check de `browsermesh_event_idempotency.status`
+  usava identificador sem aspas (`CLAIMED`) e quebrava instalação limpa.
+- Corrigida política RLS BrowserMesh no baseline e na migration 0163: coluna
+  `organization_id` é `text`, então comparação usa `fn_user_org_ids()::text`.
+  Sem mudança de coluna ou remoção de dados.
+- Evidência: `pnpm --dir apps/crm test:db` verde — INSTALL, UPDATE, 79 arquivos,
+  513 testes passados, 1 skip.
+
+## 2026-09-18 — Jobs/Workflows — política de retry única
+
+- `event-log/drain.ts` agora exporta `EVENT_LOG_MAX_ATTEMPTS`; handlers de mídia
+  deixam de manter cópias locais do limite de dead-letter.
+- Evidência: testes de agent drain e worker passaram (10/10); `git diff --check`
+  passou. Nenhuma semântica de retry foi alterada.
+
+## 2026-09-18 — Memory — ownership consolidado
+
+- Código já usa contrato comum de contexto e separa responsabilidades: CRM/Postgres
+  é autoridade; Mem0 projeta semântica; Graphiti projeta relações/tempo; workers
+  atualizam ambos via `event_log` com isolamento por tenant.
+- Não havia segunda implementação equivalente para remover. Documento antigo dizia
+  “Graphiti recomendado, Mem0 futuro”; corrigido para refletir o código real e
+  eliminar decisão contraditória.
+- Evidência: 13 arquivos de teste de memory/context/workers, 143/143 testes verdes.
+
+## 2026-09-18 — Agents/Content/Integrations/Infrastructure — fechamento de mapa
+
+- Agents: `lib/agent-engine` é runtime canônico; `lib/ai/runtime/agent.ts` permanece
+  somente como compatibilidade deprecated para rota interna/dry-run.
+- Content OS: `lib/content-os` e workers próprios são domínio separado; `creative_jobs`
+  modela lifecycle de provider, não compete com `job_queue` genérica.
+- Integrations/Infrastructure: adapters vivem em `lib/waha`, `lib/nuvemshop`,
+  `lib/channels`, `lib/mcp`, `lib/voice`; Postgres/event log/audit continuam autoridade.
+- Mapa único publicado em `docs/architecture/DOMAIN-SOURCES-OF-TRUTH.md`.
+- Evidência: Agents 82/82, Memory 143/143, Content 11/11; sem duplicata funcional
+  confirmada que justificasse rewrite ou remoção de feature.
+
+## 2026-09-18 — recuperação de módulos históricos e typecheck
+
+- Recuperados do commit histórico `e3be44ab` os adapters `PostgresAffectLedger` e
+  `evaluatePromotionGate`, ausentes em `origin/main` apesar de consumidores/testes
+  presentes. Reuso seletivo evitou cherry-pick de branch mista.
+- Corrigidos contratos adjacentes: CAS lock, actor narrowing, fixtures no-indexed,
+  import de `pg` e conflict target do BrowserMesh idempotency.
+- Evidência: typecheck global verde; testes recuperados/relacionados 22/22 verdes.
+  Testes que exigem Docker ou `SESSION_DATABASE_URL` permanecem condicionados à
+  infraestrutura externa ausente nesta máquina.
+
+## 2026-09-18 — Security/Data Governance — gates reparados
+
+- Manifesto de migrations reconciliado com arquivos reais; removidos registros
+  fantasmas, adicionadas migrations ausentes e renumerada apenas a RLS Hermes
+  duplicada para `0169`, conforme correção histórica comprovada.
+- Scanner de publicação e envelope n8n passaram a detectar placeholders e
+  assignments de credencial sem confundir token de sessão, variável interna e
+  texto normal; schema n8n mantém validação de segredo legado.
+- Evidência: suite de segurança/manifesto 121/121 verdes; typecheck global segue verde.

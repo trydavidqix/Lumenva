@@ -53,6 +53,9 @@ function validateDataFieldsNoSecrets(data: Record<string, unknown>): void {
     }
 
     if (typeof current === "string") {
+      if (current === "REDACTED_SECRET") {
+        throw new Error("api_key");
+      }
       const result = sanitizeMemoryCandidate({ text: current, type: "behavior" });
       if (!result.allowed) {
         throw new Error(
