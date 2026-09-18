@@ -750,3 +750,13 @@
 - Evidência: typecheck global verde; testes recuperados/relacionados 22/22 verdes.
   Testes que exigem Docker ou `SESSION_DATABASE_URL` permanecem condicionados à
   infraestrutura externa ausente nesta máquina.
+
+## 2026-09-18 — Security/Data Governance — gates reparados
+
+- Manifesto de migrations reconciliado com arquivos reais; removidos registros
+  fantasmas, adicionadas migrations ausentes e renumerada apenas a RLS Hermes
+  duplicada para `0169`, conforme correção histórica comprovada.
+- Scanner de publicação e envelope n8n passaram a detectar placeholders e
+  assignments de credencial sem confundir token de sessão, variável interna e
+  texto normal; schema n8n mantém validação de segredo legado.
+- Evidência: suite de segurança/manifesto 121/121 verdes; typecheck global segue verde.
