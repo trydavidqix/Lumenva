@@ -8,7 +8,15 @@
 - Original mirror backup: `/Users/david/Desktop/Lumenva-secret-remediation-20260918-mirror.git`.
 - Infisical lookup used project ID `cab856e8-5f22-4967-bcb3-ded28628314f`.
 
-The 193 branch refs are clean. A fresh mirror also exposes 80 GitHub-managed `refs/pull/*` refs containing the pre-rewrite findings. GitHub rejected updates to those hidden refs. Public visibility remains blocked until GitHub purges or regenerates those pull-request refs.
+The 193 branch refs are clean. The legacy repository still contains 80 GitHub-managed `refs/pull/*` refs with pre-rewrite findings; GitHub rejected updates to those hidden refs. The legacy repository remains private. The canonical repository is isolated from those refs and has no pull-request refs.
+
+## Repository migration
+
+- Legacy repository: `trydavidqix/Lumenva-Legacy`, private.
+- Canonical repository: `trydavidqix/Lumenva`.
+- Canonical repository currently contains 193 cleaned branches and no pull-request refs.
+- All registered local worktrees now use the canonical repository as `origin`.
+- Runner `lumenva-disposable-test-vps` was re-registered against the canonical repository with label `self-hosted-lumenva-disposable` and verified online.
 
 ## Local worktree synchronization
 
