@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "source_of_truth": "This queue is populated only after Maestro audits a branch and confirms it is not active in another worktree.",
+  "tasks": []
+}
