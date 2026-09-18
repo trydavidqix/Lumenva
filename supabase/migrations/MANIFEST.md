@@ -197,6 +197,29 @@ aplica.
 | `20260907100000` | `0158_content_os_editorial_persistence` | Content OS V1: research runs retomáveis, evidências com hash e estado de verificação, claims ligados a evidências, quality gates e revisões versionadas; todas tenant-aware, com RLS, índices de reconciliação, idempotência e triggers de coerência entre organizações. |
 | `20260907110000` | `0159_content_os_learning_idempotency` | Chave de idempotência tenant-aware para eventos de aprendizagem e detecção segura de content decay. |
 | `20260907120000` | `0160_ai_agent_command_approvals` | Nova Mode V1: aprovações duráveis de comandos do navegador, com idempotência por organização, expiração, estado de execução, RLS manager+ e guarda de coerência entre agente, versão e tenant. |
+| `20260911100000` | `0161_entitlements_catalog` | Catálogo de planos e entitlements por organização. |
+| `20260912120000` | `0162_stripe_entitlement_boundary` | Stripe billing boundary: colunas aditivas de provider e índices tenant-scoped para organization_plan e entitlement_events; sem remoção de dados. |
+| `20260913010000` | `0164_hermes_tool_loop_locks` | Locks duráveis de tool-loop do Hermes, com limite de iterações e expiração. |
+| `20260913020000` | `0165_hermes_session_supersession` | Estado durável de supersession de sessão Hermes por organização. |
+| `20260913050000` | `0168_client_portal_decisions` | Decisões do portal do cliente com evidências, receipt e chave primária composta por organização. |
+| `20260913100000` | `browsermesh_event_idempotency` | Wave 4 BrowserMesh: claims de replay por tenant, evento e chave de idempotência. |
+| `20260913120000` | `0169_hermes_tool_loop_locks_tenant_rls` | Completa o escopo tenant/RLS dos locks Hermes e mantém o backfill legado explícito. |
+| `20260913150000` | `0166_studio_client_portal_tokens` | Tokens duráveis do portal do cliente, com hash, expiração, uso único e RLS por organização. |
+| `20260913160000` | `0163_browsermesh_event_idempotency_rls` | Wave 4 BrowserMesh: RLS tenant-scoped para claims de replay e grants mínimos. |
+| `20260915090000` | `0170_tenant_rls_hardening` | Hardening da fronteira tenant para billing, Hermes, Studio e BrowserMesh: RLS fail-closed, cast seguro dos identificadores textuais e grants mínimos. |
+| `20260915100000` | `0171_content_asset_provenance` | Campos aditivos e opcionais de licença e proveniência estruturada para assets criativos, preservando assets legados. |
+| `20260913170000` | `0173_asset_license_records` | Wave 8 Asset Intelligence: registry persistente de licenças/proveniência por tenant, com estados e expiração. |
+| `20260917100000` | `0174_hermes_source_registry` | Wave 13: registry persistente de fontes Hermes por tenant. |
+| `20260917100100` | `0175_hermes_source_registry_rls` | RLS tenant-scoped para o registry de fontes Hermes. |
+| `20260917100200` | `0176_hermes_memory_gateway` | Persistência tenant-scoped do gateway de memória Hermes. |
+| `20260917100300` | `0177_psyche_watchdog_observations` | Observações persistentes do watchdog sem progresso. |
+| `20260917100400` | `0178_psyche_watchdog_requesters` | Registry tenant-scoped de requesters autorizados do watchdog. |
+| `20260917100500` | `0179_operating_core_job_receipts_rls` | RLS tenant-scoped para receipts de jobs do Operating Core. |
+| `20260917100600` | `0180_contact_consents` | Registro tenant-scoped de consentimentos de contato. |
+| `20260917100700` | `0181_studio_editor` | Estado persistente e RLS do Studio Editor. |
+| `20260917100800` | `0182_operating_core_receipts` | Receipts de execução tenant-scoped do Operating Core. |
+| `20260917100900` | `0183_command_center_overview_rls` | Estado persistente e RLS do Command Center. |
+| `20260917101000` | `0184_studio_reviewer_authorizations` | Autorizações persistentes de revisores do Studio. |
 
 ## Reproducibility
 
@@ -214,11 +237,3 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 - **Integrations**: tenant_integrations, orders, nuvemshop_products
 - **Compliance**: lgpd_requests
 - **Ops**: incidents
-| `20260912120000` | `0162_stripe_entitlement_boundary` | Stripe entitlement boundary and tenant-safe billing state. |
-| `20260913010000` | `0164_hermes_tool_loop_locks` | Hermes tool-loop lock state with tenant isolation. |
-| `20260913020000` | `0165_hermes_session_supersession` | Hermes session supersession state. |
-| `20260913050000` | `0168_client_portal_decisions` | Client portal decision records. |
-| `20260913100000` | `browsermesh_event_idempotency` | BrowserMesh replay claims table. |
-| `20260913120000` | `0169_hermes_tool_loop_locks_tenant_rls` | Hermes tool-loop lock tenant RLS hardening. |
-| `20260913150000` | `0166_studio_client_portal_tokens` | Studio client portal token storage. |
-| `20260913160000` | `0163_browsermesh_event_idempotency_rls` | BrowserMesh replay claims tenant RLS and grants. |

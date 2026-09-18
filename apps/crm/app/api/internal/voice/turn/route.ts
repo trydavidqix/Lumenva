@@ -89,7 +89,13 @@ export async function POST(req: NextRequest): Promise<Response> {
     });
     return ok(result, { requestId });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "voice_turn_failed";
-    return fail("voice_turn_failed", message, 500, { requestId });
+    const rawMessage = error instanceof Error ? error.message : "";
+    console.error("[voice.turn] internal failure", { requestId, message: rawMessage });
+    const safeMessage = new Set([
+      "voice_agent_unresolved",
+      "voice_delivery_not_authorized",
+      "voice_agent_output_not_speakable",
+    ]).has(rawMessage) ? rawMessage : "Não foi possível processar o turno de voz.";
+    return fail("voice_turn_failed", safeMessage, 500, { requestId });
   }
 }

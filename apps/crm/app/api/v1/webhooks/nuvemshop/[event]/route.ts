@@ -19,6 +19,7 @@ import { audit } from "@/lib/audit";
 import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { slugToEvent } from "@/lib/nuvemshop/config";
+import { parseNuvemshopWebhookPayload } from "@/lib/schemas/nuvemshop-webhook";
 import { verifyNuvemshopWebhook } from "@/lib/ecommerce/feature-flag";
 
 export const dynamic = "force-dynamic";
@@ -53,24 +54,11 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
   }
 
   const rawBody = await req.text();
-  // ─── Este cast segue aqui de propósito — leia antes de "completar" a classe ─
-  //
-  // Os webhooks de CANAL trocaram o cast por
-  // um schema Zod: lá o tipo errado virava exceção engolida com 200 no fio, ou
-  // mensagem de cliente descartada em silêncio. Aqui não: o único campo lido
-  // antes do lookup é `store_id`, por `String(body.store_id)` — que não lança
-  // para nenhum tipo —, e um valor torto vira `missing store_id` ou uma loja que
-  // não existe, que já é 400/404 barulhento.
-  //
-  // Risco diferente, então conserto diferente, e não no mesmo PR: a issue #237 é
-  // "Zod nos webhooks de CANAL". Fica escrito para que ninguém leia o repo e
-  // conclua que todo webhook aqui confere o corpo — este não confere.
-  let body: NuvemshopPayload;
-  try {
-    body = JSON.parse(rawBody) as NuvemshopPayload;
-  } catch {
-    return fail("invalid_request", "invalid_json", 400);
+  const parsed = parseNuvemshopWebhookPayload(rawBody);
+  if (!parsed.success) {
+    return fail("invalid_request", parsed.code, 400);
   }
+  const body = parsed.data as NuvemshopPayload;
 
   const storeId = body.store_id !== undefined ? String(body.store_id) : "";
   if (!storeId) {

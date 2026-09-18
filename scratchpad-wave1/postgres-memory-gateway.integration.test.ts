@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Pool } from "pg";
-import { rebuildProjectionViaGateway, type MemoryRecord } from "./gateway-projection";
+import { rebuildProjectionViaGateway, type MemoryRecord } from "../apps/crm/lib/memory/gateway-projection";
 import { createPostgresMemoryGateway } from "./postgres-memory-gateway";
 
 const orgA = "org-a";
@@ -46,7 +46,7 @@ describe("Postgres Memory Gateway (real RLS)", () => {
     await admin.query("CREATE ROLE authenticated NOLOGIN");
     await admin.query("CREATE ROLE memory_gateway_test LOGIN PASSWORD 'memory-test' NOSUPERUSER NOBYPASSRLS IN ROLE authenticated");
     await admin.query("CREATE OR REPLACE FUNCTION public.fn_user_org_ids() RETURNS SETOF text LANGUAGE SQL STABLE AS $$ SELECT unnest(string_to_array(current_setting('app.org_ids', true), ',')) $$");
-    await admin.query(readFileSync("supabase/migrations/20260913020000_0165_hermes_memory_gateway.sql", "utf8"));
+    await admin.query(readFileSync("supabase/migrations/20260917100200_0176_hermes_memory_gateway.sql", "utf8"));
   });
 
   afterAll(async () => {

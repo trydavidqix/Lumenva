@@ -65,6 +65,7 @@ catalogs:
       version: 4.6.5
 
 importers:
+  packages/operating-core: {}
 
   .: {}
 
