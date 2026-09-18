@@ -120,7 +120,7 @@ export async function GET(_request: NextRequest): Promise<Response> {
       ...results,
     };
 
-    console.log(`[flywheel-cron] completed: ${JSON.stringify(summary)}`);
+    console.info(`[flywheel-cron] completed: ${JSON.stringify(summary)}`);
     return ok(summary);
   } catch (error) {
     console.error(
