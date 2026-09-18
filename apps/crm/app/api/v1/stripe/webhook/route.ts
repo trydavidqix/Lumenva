@@ -16,7 +16,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return ok(result, { requestId });
   } catch (error) {
     const message = error instanceof Error ? error.message : "stripe webhook rejected";
+    console.error(`[stripe-webhook] rejected request ${requestId}: ${message}`);
     const status = /signature|event envelope|event data|event object|event id\/type|unsupported event/i.test(message) ? 400 : /organization|plan|entitlement/i.test(message) ? 422 : 500;
-    return fail(status === 400 ? "validation_failed" : status === 422 ? "unprocessable_entity" : "internal_error", message, status, { requestId });
+    const safeMessage = status === 400
+      ? "Invalid Stripe webhook."
+      : status === 422
+        ? "Stripe event is not applicable to an active organization entitlement."
+        : "Stripe webhook unavailable.";
+    return fail(status === 400 ? "validation_failed" : status === 422 ? "unprocessable_entity" : "internal_error", safeMessage, status, { requestId });
   }
 }

@@ -107,3 +107,31 @@ export function authorizeAutonomyPromotion(input: {
 
   return { kind: 'allow', evidenceRef: input.promotionDecision.evidenceRef };
 }
+
+export interface AutonomyPromotionWorkflowResult {
+  decision: PromotionDecision;
+  authorization: PromotionAuthorization;
+}
+
+/** Evaluate evidence and authorize one governed promotion step without side effects. */
+export function runAutonomyPromotionWorkflow(input: {
+  evidence: AutonomyEvalEvidence | null;
+  nowMs: number;
+  thresholds: PromotionThresholds;
+  actor: PromotionActor;
+  currentLevel: AgentAutonomyLevel;
+  desiredLevel: AgentAutonomyLevel;
+}): AutonomyPromotionWorkflowResult {
+  const decision = evaluateAutonomyPromotion({
+    evidence: input.evidence,
+    nowMs: input.nowMs,
+    thresholds: input.thresholds,
+  });
+  const authorization = authorizeAutonomyPromotion({
+    actor: input.actor,
+    currentLevel: input.currentLevel,
+    desiredLevel: input.desiredLevel,
+    promotionDecision: decision,
+  });
+  return { decision, authorization };
+}

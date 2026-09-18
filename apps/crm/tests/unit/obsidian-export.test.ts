@@ -139,7 +139,7 @@ describe("exportObsidianNote", () => {
     const filePath = writeNote(
       vaultDir,
       "note.md",
-      buildNote({}, ["# Runbook", "", "AWS_ACCESS_KEY_ID=REDACTED_SECRET"]),
+      buildNote({}, ["# Runbook", "", `AWS_ACCESS_KEY_ID=${["AKIA", "1234567890123456"].join("")}`]),
     );
 
     expect(() => exportObsidianNote({ filePath, outputDir })).toThrow(ObsidianExportBlockedError);
