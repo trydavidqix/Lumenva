@@ -199,13 +199,14 @@ aplica.
 | `20260907120000` | `0160_ai_agent_command_approvals` | Nova Mode V1: aprovações duráveis de comandos do navegador, com idempotência por organização, expiração, estado de execução, RLS manager+ e guarda de coerência entre agente, versão e tenant. |
 | `20260911100000` | `0161_entitlements_catalog` | Catálogo de planos e entitlements por organização. |
 | `20260912120000` | `0162_stripe_entitlement_boundary` | Stripe billing boundary: colunas aditivas de provider e índices tenant-scoped para organization_plan e entitlement_events; sem remoção de dados. |
-| `20260913010000` | `0164_hermes_tool_loop_locks` | Locks duráveis de tool-loop do Hermes, com limite de iterações e expiração. |
+| `20260913010100` | `0167_hermes_tool_loop_locks` | Locks duráveis de tool-loop do Hermes, com limite de iterações e expiração. |
 | `20260913020000` | `0165_hermes_session_supersession` | Estado durável de supersession de sessão Hermes por organização. |
 | `20260913050000` | `0168_client_portal_decisions` | Decisões do portal do cliente com evidências, receipt e chave primária composta por organização. |
 | `20260913100000` | `browsermesh_event_idempotency` | Wave 4 BrowserMesh: claims de replay por tenant, evento e chave de idempotência. |
 | `20260913120000` | `0169_hermes_tool_loop_locks_tenant_rls` | Completa o escopo tenant/RLS dos locks Hermes e mantém o backfill legado explícito. |
 | `20260913150000` | `0166_studio_client_portal_tokens` | Tokens duráveis do portal do cliente, com hash, expiração, uso único e RLS por organização. |
-| `20260913160000` | `0163_browsermesh_event_idempotency_rls` | Wave 4 BrowserMesh: RLS tenant-scoped para claims de replay e grants mínimos. |
+| `20260913150002` | `command_center_overview_rls` | RLS do estado persistente do Command Center. |
+| `20260913160000` | `0172_browsermesh_event_idempotency_rls` | Wave 4 BrowserMesh: RLS tenant-scoped para claims de replay e grants mínimos. |
 | `20260915090000` | `0170_tenant_rls_hardening` | Hardening da fronteira tenant para billing, Hermes, Studio e BrowserMesh: RLS fail-closed, cast seguro dos identificadores textuais e grants mínimos. |
 | `20260915100000` | `0171_content_asset_provenance` | Campos aditivos e opcionais de licença e proveniência estruturada para assets criativos, preservando assets legados. |
 | `20260913170000` | `0173_asset_license_records` | Wave 8 Asset Intelligence: registry persistente de licenças/proveniência por tenant, com estados e expiração. |
@@ -218,10 +219,7 @@ aplica.
 | `20260917100600` | `0191_contact_consents` | Registro de consentimentos de contato. |
 | `20260917100700` | `0192_studio_editor` | Estado durável do editor Studio. |
 | `20260917100800` | `0193_operating_core_receipts` | Execution receipts idempotentes com RLS. |
-| `20260917100900` | `0194_command_center_overview_rls` | RLS do estado do command center. |
 | `20260917101000` | `0195_studio_reviewer_authorizations` | Autorizações de revisão Studio. |
-| `20260918150000` | `0172_customer360_pii` | Customer 360 CPF encryption/decryption RPCs. |
-| `20260918160000` | `0174_customer360_merge` | Merge transacional de contatos Customer 360. |
 
 ## Reproducibility
 

@@ -19,15 +19,14 @@ describe("tenant RLS hardening migration", () => {
       expect(migration).toMatch(new RegExp(`alter table (if exists )?public\\.${table} enable row level security`));
       expect(migration).toContain(`public.${table}`);
     }
-    const anonRevoke = migration.match(/revoke all on ([\s\S]*?) from anon;/i)?.[1] ?? "";
-    expect(anonRevoke).toContain("public.hermes_session_supersession");
-    expect(anonRevoke).toContain("public.studio_client_decisions");
+    expect(migration).toMatch(/revoke all on public\.hermes_session_supersession from anon;/i);
+    expect(migration).toMatch(/revoke all on public\.studio_client_decisions from anon;/i);
   });
 
   it("fails closed for reads and writes, including text tenant identifiers", () => {
     expect(migration).toContain("using (organization_id in (select public.fn_user_org_ids()))");
     expect(migration).toContain("with check (organization_id in (select public.fn_user_org_ids()))");
-    expect(migration).toContain("organization_id::uuid");
+    expect(migration).toContain("fn_user_org_ids()::text");
     expect(migration).toContain("tenant_id::uuid");
     expect(migration).not.toMatch(/organization_id\\s*=\\s*auth\\.uid\(\)/);
   });
