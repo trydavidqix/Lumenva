@@ -209,6 +209,19 @@ aplica.
 | `20260915090000` | `0170_tenant_rls_hardening` | Hardening da fronteira tenant para billing, Hermes, Studio e BrowserMesh: RLS fail-closed, cast seguro dos identificadores textuais e grants mínimos. |
 | `20260915100000` | `0171_content_asset_provenance` | Campos aditivos e opcionais de licença e proveniência estruturada para assets criativos, preservando assets legados. |
 | `20260913170000` | `0173_asset_license_records` | Wave 8 Asset Intelligence: registry persistente de licenças/proveniência por tenant, com estados e expiração. |
+| `20260917100000` | `0185_hermes_source_registry` | Hermes source registry por tenant. |
+| `20260917100100` | `0186_hermes_source_registry_rls` | RLS fail-closed do Hermes source registry. |
+| `20260917100200` | `0187_hermes_memory_gateway` | Projeção de memória Hermes por tenant. |
+| `20260917100300` | `0188_psyche_watchdog_observations` | Observações duráveis do watchdog. |
+| `20260917100400` | `0189_psyche_watchdog_requesters` | Requesters autorizados do watchdog com RLS. |
+| `20260917100500` | `0190_operating_core_job_receipts_rls` | RLS dos job receipts do operating core. |
+| `20260917100600` | `0191_contact_consents` | Registro de consentimentos de contato. |
+| `20260917100700` | `0192_studio_editor` | Estado durável do editor Studio. |
+| `20260917100800` | `0193_operating_core_receipts` | Execution receipts idempotentes com RLS. |
+| `20260917100900` | `0194_command_center_overview_rls` | RLS do estado do command center. |
+| `20260917101000` | `0195_studio_reviewer_authorizations` | Autorizações de revisão Studio. |
+| `20260918150000` | `0172_customer360_pii` | Customer 360 CPF encryption/decryption RPCs. |
+| `20260918160000` | `0174_customer360_merge` | Merge transacional de contatos Customer 360. |
 
 ## Reproducibility
 
