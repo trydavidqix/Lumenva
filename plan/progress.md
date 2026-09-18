@@ -700,3 +700,13 @@
   8 erros pré-existentes; nenhum erro restante na facade após correção do fixture.
 - Arquitetura registrada em `docs/architecture/OPERATING-CORE.md` e referenciada
   por `ARCHITECTURE.md`; próximos passos são lint, suíte unitária e banco.
+
+## 2026-09-18 — Database/Data Model — correções de baseline
+
+- Corrigido `supabase/baseline.sql`: check de `browsermesh_event_idempotency.status`
+  usava identificador sem aspas (`CLAIMED`) e quebrava instalação limpa.
+- Corrigida política RLS BrowserMesh no baseline e na migration 0163: coluna
+  `organization_id` é `text`, então comparação usa `fn_user_org_ids()::text`.
+  Sem mudança de coluna ou remoção de dados.
+- Evidência: `pnpm --dir apps/crm test:db` verde — INSTALL, UPDATE, 79 arquivos,
+  513 testes passados, 1 skip.
