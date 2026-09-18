@@ -10,5 +10,5 @@ CREATE TABLE IF NOT EXISTS public.psyche_watchdog_observations (
 );
 ALTER TABLE public.psyche_watchdog_observations ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS psyche_watchdog_observations_tenant_all ON public.psyche_watchdog_observations;
-CREATE POLICY psyche_watchdog_observations_tenant_all ON public.psyche_watchdog_observations FOR ALL TO authenticated USING (organization_id IN (SELECT public.fn_user_org_ids()::text)) WITH CHECK (organization_id IN (SELECT public.fn_user_org_ids()::text));
+CREATE POLICY psyche_watchdog_observations_tenant_all ON public.psyche_watchdog_observations FOR ALL TO authenticated USING (organization_id IN (SELECT public.fn_user_org_ids())) WITH CHECK (organization_id IN (SELECT public.fn_user_org_ids()));
 GRANT SELECT, INSERT, UPDATE ON public.psyche_watchdog_observations TO authenticated;

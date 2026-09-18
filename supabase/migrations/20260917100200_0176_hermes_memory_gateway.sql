@@ -14,5 +14,5 @@ CREATE TABLE IF NOT EXISTS public.hermes_memory_records (
 );
 ALTER TABLE public.hermes_memory_records ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS hermes_memory_records_tenant_all ON public.hermes_memory_records;
-CREATE POLICY hermes_memory_records_tenant_all ON public.hermes_memory_records FOR ALL TO authenticated USING (organization_id IN (SELECT public.fn_user_org_ids()::text)) WITH CHECK (organization_id IN (SELECT public.fn_user_org_ids()::text));
+CREATE POLICY hermes_memory_records_tenant_all ON public.hermes_memory_records FOR ALL TO authenticated USING (organization_id IN (SELECT public.fn_user_org_ids())) WITH CHECK (organization_id IN (SELECT public.fn_user_org_ids()));
 GRANT SELECT, INSERT, UPDATE ON public.hermes_memory_records TO authenticated;

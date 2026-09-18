@@ -3,6 +3,6 @@ DROP POLICY IF EXISTS operating_core_job_receipts_tenant_isolation ON public.ope
 CREATE POLICY operating_core_job_receipts_tenant_isolation
   ON public.operating_core_job_receipts
   FOR ALL TO authenticated
-  USING (organization_id IN (SELECT public.fn_user_org_ids()::text))
-  WITH CHECK (organization_id IN (SELECT public.fn_user_org_ids()::text));
+  USING (organization_id IN (SELECT public.fn_user_org_ids()))
+  WITH CHECK (organization_id IN (SELECT public.fn_user_org_ids()));
 GRANT SELECT, INSERT ON public.operating_core_job_receipts TO authenticated;
