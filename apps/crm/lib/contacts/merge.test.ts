@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildMergePlan, pickPrimary, validateMergeAction } from "./merge";
+import { contactsAfterCursor } from "@/app/api/v1/contacts/_handler";
 
 describe("Customer 360 merge contract", () => {
   it("ranks primary by completeness, dates, then UUID", () => {
@@ -20,6 +21,17 @@ describe("Customer 360 merge contract", () => {
       ok: true, value: { action: "merge", primary_id: "a", loser_ids: ["b"] },
     });
     expect(validateMergeAction({ action: "merge", primary_id: "a", loser_ids: ["a"] })).toEqual({ ok: false, reason: "primary_in_losers" });
+  });
+});
+
+describe("contact cursor contract", () => {
+  it("uses the complete sort tuple, including null activity ordering", () => {
+    expect(contactsAfterCursor({ last_activity_at: "2026-02-01T00:00:00Z", created_at: "2026-01-01T00:00:00Z", id: "b" })).toBe(
+      "last_activity_at.lt.2026-02-01T00:00:00Z,and(last_activity_at.eq.2026-02-01T00:00:00Z,created_at.lt.2026-01-01T00:00:00Z),and(last_activity_at.eq.2026-02-01T00:00:00Z,created_at.eq.2026-01-01T00:00:00Z,id.lt.b),last_activity_at.is.null",
+    );
+    expect(contactsAfterCursor({ last_activity_at: null, created_at: "2026-01-01T00:00:00Z", id: "b" })).toBe(
+      "created_at.lt.2026-01-01T00:00:00Z,and(created_at.eq.2026-01-01T00:00:00Z,id.lt.b)",
+    );
   });
 });
 
