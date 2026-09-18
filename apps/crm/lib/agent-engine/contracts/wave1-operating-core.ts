@@ -247,7 +247,7 @@ export function reduceState(state: SessionState, input: unknown): StateReducerRe
 }
 
 export function replaySession(snapshot: SessionSnapshot, events: readonly SessionEvent[]): SessionState {
-  let state = { ...snapshot.state, knownFacts: { ...snapshot.state.knownFacts } };
+  const state = { ...snapshot.state, knownFacts: { ...snapshot.state.knownFacts } };
   for (const event of events) {
     if (event.sessionId !== snapshot.sessionId) continue;
     if (event.kind === 'fact.learned') {
