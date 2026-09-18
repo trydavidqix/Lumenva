@@ -1,13 +1,13 @@
 # Arquitetura de memória do DeskcommCRM/Lumenva
 
-**Status:** recomendação de design, 2026-09-02  
-**Escopo:** quatro camadas de memória, sem religar ou alterar infraestrutura nesta entrega.
+**Status:** fonte canônica do domínio Memory, consolidada em 2026-09-18
+**Escopo:** ownership de memória relacional, semântica Mem0, grafo temporal Graphiti e memória de projeto.
 
 ## Decisão executiva
 
-Manter a memória do orquestrador em Markdown versionado/local (com índice e handoff), manter o CRM relacional como fonte de verdade para identidade, consentimento, mensagens e atividades, e usar um único serviço de memória semântica por instalação para as camadas de produto. A recomendação é **Graphiti/Neo4j como grafo temporal para fatos e relações** e **Mem0 apenas se a equipe confirmar que precisa da extração/consolidação pronta de memórias**; não usar os dois como fontes concorrentes.
+Manter a memória do orquestrador em Markdown versionado/local (com índice e handoff), manter o CRM relacional como fonte de verdade para identidade, consentimento, mensagens e atividades, usar Mem0 para projeções semânticas de preferências e Graphiti para relações/episódios temporais. Os dois serviços têm responsabilidades distintas e nunca são fontes concorrentes do mesmo registro.
 
-Os containers existentes devem permanecer parados até existir um contrato de dados, healthcheck, backup, retenção e teste cross-tenant. **Não religar agora.** O MCP `memory` local também não deve ser fonte de verdade: a falha de inicialização torna-o inadequado para continuidade operacional.
+Mem0 e Graphiti só entram no caminho por feature flag e provider configurado. O MCP `memory` local não é fonte de verdade nem provider de produto.
 
 ## Evidência recente
 
@@ -80,6 +80,16 @@ MemoryRecord {
 ```
 
 Chaves de isolamento: `organization_id` validado no gateway + `group_id` determinístico. Toda operação deve ser idempotente por `(organization_id, source_id, extractor_version, kind)`; retries não duplicam episódios.
+
+## Ownership operacional
+
+- CRM/Postgres: autoridade para fatos, identidade, consentimento, mensagens, atividades, auditoria e apagamento.
+- Mem0: projeção semântica por contacto/tenant; não autoriza mutação CRM.
+- Graphiti: projeção temporal/relacional por namespace; não autoriza mutação CRM.
+- `apps/crm/lib/agent-engine/context/provider.ts`: contrato de leitura e fusão de providers.
+- `apps/crm/lib/agent-engine/memory/port.ts`: contrato de memória semântica e cliente Mem0.
+- `apps/crm/lib/agent-engine/graph/graphiti-client.ts`: contrato Graphiti.
+- `apps/crm/workers/memory-projection.handler.ts` e `graph-projection.handler.ts`: projeções idempotentes via `event_log`.
 
 ## Escolha tecnológica
 

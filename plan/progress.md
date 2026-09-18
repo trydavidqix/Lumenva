@@ -717,3 +717,13 @@
   deixam de manter cópias locais do limite de dead-letter.
 - Evidência: testes de agent drain e worker passaram (10/10); `git diff --check`
   passou. Nenhuma semântica de retry foi alterada.
+
+## 2026-09-18 — Memory — ownership consolidado
+
+- Código já usa contrato comum de contexto e separa responsabilidades: CRM/Postgres
+  é autoridade; Mem0 projeta semântica; Graphiti projeta relações/tempo; workers
+  atualizam ambos via `event_log` com isolamento por tenant.
+- Não havia segunda implementação equivalente para remover. Documento antigo dizia
+  “Graphiti recomendado, Mem0 futuro”; corrigido para refletir o código real e
+  eliminar decisão contraditória.
+- Evidência: 13 arquivos de teste de memory/context/workers, 143/143 testes verdes.
