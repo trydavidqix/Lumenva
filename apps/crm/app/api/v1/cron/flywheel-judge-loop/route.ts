@@ -16,7 +16,7 @@
  * - Returns summary
  */
 
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { env } from "@/lib/env";
 import { persistFollowupOutcomes } from "@/lib/agent-engine/flywheel/outcome-collector";
@@ -29,7 +29,7 @@ export const runtime = "nodejs";
 // a correção é fazer upgrade do plano, não subir este número de novo.
 export const maxDuration = 300;
 
-export async function GET(request: NextRequest): Promise<Response> {
+export async function GET(_request: NextRequest): Promise<Response> {
   const startTime = Date.now();
 
   // Auth via INTERNAL_SECRET (shared with all crons)
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       .eq("is_deleted", false);
 
     if (orgsError || !orgs) {
-      console.error(`[flywheel-cron] error listing orgs: ${orgsError?.message}`);
+      console.warn(`[flywheel-cron] error listing orgs: ${orgsError?.message}`);
       return fail("internal_error", "Failed to list organizations", 500);
     }
 
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     for (const org of orgs) {
       try {
         const orgId = org.id;
-        console.log(`[flywheel-cron] checking org ${orgId}`);
+        console.info(`[flywheel-cron] checking org ${orgId}`);
 
         // Query latest judge verdicts to find run_id
         const { data: verdicts, error: verdictError } = await admin
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
         if (!verdicts || verdicts.length === 0) {
           results.skipped_runs++;
-          console.log(`[flywheel-cron] skipped org ${orgId} (no verdicts)`);
+          console.info(`[flywheel-cron] skipped org ${orgId} (no verdicts)`);
           continue;
         }
 
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest): Promise<Response> {
           );
           results.total_outcomes += total;
           results.successful_runs++;
-          console.log(`[flywheel-cron] persisted outcomes for org ${orgId}: ${total} total`);
+          console.info(`[flywheel-cron] persisted outcomes for org ${orgId}: ${total} total`);
         } else {
           results.skipped_runs++;
         }

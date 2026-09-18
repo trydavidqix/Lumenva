@@ -47,7 +47,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   if (!parsed.success) {
     return fail("validation_failed", "Campos inválidos.", 422, { requestId, details: parsed.error.flatten() });
   }
-  const { lead_id, pipeline_id } = parsed.data;
+  const { lead_id } = parsed.data;
 
   const feature = await resolveAiPlatformFeature({
     organizationId: activeOrg.orgId,
