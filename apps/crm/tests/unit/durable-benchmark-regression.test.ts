@@ -30,7 +30,7 @@ describe('Phase 7 benchmark evidence', () => {
   it('is deterministic except for caller-supplied timestamp and code SHA', () => {
     const input = {
       generatedAt: '2026-08-18T12:00:00.000Z',
-      codeSha: 'REDACTED_SECRETREDACTED_SECRET01234567',
+      codeSha: '0000000000000000000000000000000000000000',
       prerequisiteSatisfied: true,
       engines: [engine('current', true), engine('inngest', true), engine('vercel_workflow', true)],
     } as const;
@@ -43,7 +43,7 @@ describe('Phase 7 benchmark evidence', () => {
   it('returns INCOMPLETE when the real SHADOW/ASSISTED prerequisite is absent', () => {
     const evidence = buildPhase7BenchmarkEvidence({
       generatedAt: '2026-08-18T12:00:00.000Z',
-      codeSha: 'REDACTED_SECRETREDACTED_SECRET01234567',
+      codeSha: '0000000000000000000000000000000000000000',
       prerequisiteSatisfied: false,
       engines: [engine('current', true), engine('inngest', true), engine('vercel_workflow', true)],
     });
@@ -54,7 +54,7 @@ describe('Phase 7 benchmark evidence', () => {
   it('rejects secret-looking values and customer PII before serialization', () => {
     const evidence = buildPhase7BenchmarkEvidence({
       generatedAt: '2026-08-18T12:00:00.000Z',
-      codeSha: 'REDACTED_SECRETREDACTED_SECRET01234567',
+      codeSha: '0000000000000000000000000000000000000000',
       prerequisiteSatisfied: true,
       engines: [engine('current', true), engine('inngest', true), engine('vercel_workflow', true)],
       reasons: ['token=sk-test-secret'],
@@ -66,7 +66,7 @@ describe('Phase 7 benchmark evidence', () => {
   it('rejects non-synthetic organization identifiers embedded in evidence', () => {
     const evidence = buildPhase7BenchmarkEvidence({
       generatedAt: '2026-08-18T12:00:00.000Z',
-      codeSha: 'REDACTED_SECRETREDACTED_SECRET01234567',
+      codeSha: '0000000000000000000000000000000000000000',
       prerequisiteSatisfied: true,
       engines: [engine('current', true), engine('inngest', true), engine('vercel_workflow', true)],
       reasons: ['organization_id=customer-org-123'],
