@@ -22,7 +22,7 @@ describe("Postgres Consent Registry (real RLS)", () => {
     await admin.query("CREATE ROLE authenticated NOLOGIN");
     await admin.query("CREATE ROLE consent_test LOGIN PASSWORD 'consent-test' NOSUPERUSER NOBYPASSRLS IN ROLE authenticated");
     await admin.query("CREATE OR REPLACE FUNCTION public.fn_user_org_ids() RETURNS SETOF text LANGUAGE SQL STABLE AS $$ SELECT unnest(string_to_array(current_setting('app.org_ids', true), ',')) $$");
-    await admin.query(readFileSync("supabase/migrations/20260917100600_0180_contact_consents.sql", "utf8"));
+    await admin.query(readFileSync("supabase/migrations/20260917100600_191_contact_consents.sql", "utf8"));
   });
 
   afterAll(async () => { await admin?.end(); if (container) execFileSync("docker", ["rm", "-f", container], { stdio: "ignore" }); });
