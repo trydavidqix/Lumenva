@@ -29,7 +29,7 @@ export const runtime = "nodejs";
 // a correção é fazer upgrade do plano, não subir este número de novo.
 export const maxDuration = 300;
 
-export async function GET(_request: NextRequest): Promise<Response> {
+export async function GET(request: NextRequest): Promise<Response> {
   const startTime = Date.now();
 
   // Auth via INTERNAL_SECRET (shared with all crons)
