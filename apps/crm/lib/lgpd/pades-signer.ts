@@ -45,8 +45,11 @@ export function verifyPdfSignature(buffer: Buffer, p12Fixture?: Buffer): PadesVe
 }
 
 export function isPadesConfigured(): boolean {
-  const key = process.env.LGPD_SIGNING_KEY;
-  return Boolean(key && key.length > 10);
+  // A secret alone cannot sign or verify a PDF. The approved PAdES backend is
+  // not present in this build, so report the capability as unavailable and
+  // keep the export warning/banner honest. Re-enable this only together with
+  // the real signer implementation and its verification path.
+  return false;
 }
 
 function sha256Hex(buffer: Buffer): string {

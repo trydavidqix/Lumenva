@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { existsSync } from "node:fs";
-import { loadP12Fixture, isApprovedTestP12, verifyPdfSignature } from "@/lib/lgpd/pades-signer";
+import { isPadesConfigured, loadP12Fixture, isApprovedTestP12, verifyPdfSignature } from "@/lib/lgpd/pades-signer";
+
+afterEach(() => vi.unstubAllEnvs());
 
 describe("PAdES scaffold", () => {
   it("carrega e identifica a fixture PKCS#12 de teste", () => {
@@ -14,5 +16,10 @@ describe("PAdES scaffold", () => {
     expect(verifyPdfSignature(Buffer.from("%PDF-test"), fixture)).toEqual({ valid: false, reason: "signature_backend_unavailable" });
     expect(verifyPdfSignature(Buffer.from("%PDF-test"), Buffer.from("wrong-fixture"))).toEqual({ valid: false, reason: "invalid_fixture" });
     expect(verifyPdfSignature(Buffer.alloc(0), fixture)).toEqual({ valid: false, reason: "empty_document" });
+  });
+
+  it("não trata a presença da chave como backend PAdES configurado", () => {
+    vi.stubEnv("LGPD_SIGNING_KEY", "configured-but-unsupported");
+    expect(isPadesConfigured()).toBe(false);
   });
 });
