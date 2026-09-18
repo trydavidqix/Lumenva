@@ -61,6 +61,13 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Instalar dependência do runner
+        run: |
+          if ! command -v unzip >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y unzip
+          fi
+
       - name: Aguardar Redis REST do E2E
         working-directory: apps/crm
         run: |

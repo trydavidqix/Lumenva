@@ -25,6 +25,8 @@ jobs:
 
       - name: Typecheck
         run: pnpm --dir apps/crm typecheck
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
 
       - name: Lint
         run: pnpm --dir apps/crm lint

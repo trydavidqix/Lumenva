@@ -30,6 +30,7 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: "1"
           SENTRY_DSN: ""
+          NODE_OPTIONS: --max-old-space-size=4096
 
       - name: Report bundle sizes
         run: |
