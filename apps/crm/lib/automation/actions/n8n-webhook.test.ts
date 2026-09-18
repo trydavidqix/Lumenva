@@ -77,7 +77,7 @@ describe("executeN8nWebhook", () => {
   it("n8nWebhookConfigSchema aceita url/workflow_key + secret OU secret_enc, rejeita chaves desconhecidas", () => {
     expect(n8nWebhookConfigSchema.safeParse({ url: "https://x.com/h", workflow_key: "wf-1" }).success).toBe(true);
     expect(
-      n8nWebhookConfigSchema.safeParse({ url: "https://x.com/h", workflow_key: "wf-1", secret: "***REMOVED***" })
+      n8nWebhookConfigSchema.safeParse({ url: "https://x.com/h", workflow_key: "wf-1", secret: "***REMOVED_SECRET***" })
         .success,
     ).toBe(true);
     expect(
