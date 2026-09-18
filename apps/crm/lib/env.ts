@@ -302,6 +302,13 @@ const schema = z.object({
   // O <PublicEnvScript/> injeta os valores em runtime.
   APP_NAME: z.string().optional().default(""),
   APP_LOGO_URL: z.string().optional().default(""),
+  // Public runtime feature flag. It is intentionally typed here so the
+  // PublicEnvScript cannot bypass the validated environment contract.
+  CONVERSATION_ARCHIVE_V1: z
+    .enum(["true", "false"])
+    .optional()
+    .default("false")
+    .transform((v) => v === "true"),
 });
 
 let parsed = schema.safeParse(process.env);

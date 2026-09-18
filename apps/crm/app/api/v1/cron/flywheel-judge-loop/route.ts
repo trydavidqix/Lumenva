@@ -16,10 +16,11 @@
  * - Returns summary
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { env } from "@/lib/env";
 import { persistFollowupOutcomes } from "@/lib/agent-engine/flywheel/outcome-collector";
+import { fail, ok } from "@/lib/api/wrappers";
 
 export const runtime = "nodejs";
 // Teto do plano Hobby da Vercel é 300s (2026-08-22: todo deploy production
@@ -28,13 +29,13 @@ export const runtime = "nodejs";
 // a correção é fazer upgrade do plano, não subir este número de novo.
 export const maxDuration = 300;
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<Response> {
   const startTime = Date.now();
 
   // Auth via INTERNAL_SECRET (shared with all crons)
   const secret = request.headers.get("x-internal-secret");
   if (secret !== env.INTERNAL_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return fail("unauthorized", "Unauthorized", 401);
   }
 
   const admin = createAdminClient();
@@ -47,11 +48,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       .eq("is_deleted", false);
 
     if (orgsError || !orgs) {
-      console.error(`[flywheel-cron] error listing orgs: ${orgsError?.message}`);
-      return NextResponse.json(
-        { error: "Failed to list organizations" },
-        { status: 500 },
-      );
+      console.warn(`[flywheel-cron] error listing orgs: ${orgsError?.message}`);
+      return fail("internal_error", "Failed to list organizations", 500);
     }
 
     const results = {
@@ -68,7 +66,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     for (const org of orgs) {
       try {
         const orgId = org.id;
-        console.log(`[flywheel-cron] checking org ${orgId}`);
+        console.info(`[flywheel-cron] checking org ${orgId}`);
 
         // Query latest judge verdicts to find run_id
         const { data: verdicts, error: verdictError } = await admin
@@ -86,7 +84,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
         if (!verdicts || verdicts.length === 0) {
           results.skipped_runs++;
-          console.log(`[flywheel-cron] skipped org ${orgId} (no verdicts)`);
+          console.info(`[flywheel-cron] skipped org ${orgId} (no verdicts)`);
           continue;
         }
 
@@ -102,7 +100,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           );
           results.total_outcomes += total;
           results.successful_runs++;
-          console.log(`[flywheel-cron] persisted outcomes for org ${orgId}: ${total} total`);
+          console.info(`[flywheel-cron] persisted outcomes for org ${orgId}: ${total} total`);
         } else {
           results.skipped_runs++;
         }
@@ -122,12 +120,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       ...results,
     };
 
-    console.log(`[flywheel-cron] completed: ${JSON.stringify(summary)}`);
-    return NextResponse.json(summary);
+    console.info(`[flywheel-cron] completed: ${JSON.stringify(summary)}`);
+    return ok(summary);
   } catch (error) {
     console.error(
       `[flywheel-cron] fatal error: ${error instanceof Error ? error.message : String(error)}`,
     );
-    return NextResponse.json({ error: "Flywheel loop failed" }, { status: 500 });
+    return fail("internal_error", "Flywheel loop failed", 500);
   }
 }

@@ -9,6 +9,7 @@ export type AuthorizationDenyReason =
   | "capability_missing"
   | "role_denied"
   | "risk_exceeds_policy"
+  | "risk_contract_invalid"
   | "approval_required"
   | "approval_invalid"
   | "authorization_contract_invalid";
@@ -115,7 +116,11 @@ export function denyAuthorizationContract(input: AuthorizeModuleInput): Authoriz
 
 export function authorizeModule(input: AuthorizeModuleInput): AuthorizationDecision {
   const checks: AuthorizationCheck[] = [];
-  if (!validContract(input.module) || !isRiskTier(input.maxRisk)) return deny(input, "authorization_contract_invalid", checks);
+  if (!validContract(input.module)) return deny(input, "authorization_contract_invalid", checks);
+  if (!isRiskTier(input.maxRisk)) {
+    checks.push({ stage: "risk", result: "FAIL", reason: "risk_contract_invalid" });
+    return deny(input, "risk_contract_invalid", checks);
+  }
 
   if (!input.tenant.rlsAllowed || input.tenant.rlsOrganizationId !== input.tenant.organizationId || input.actor.organizationId !== input.tenant.organizationId) {
     checks.push({ stage: "tenant_rls", result: "FAIL", reason: "tenant_rls_denied" });
@@ -152,6 +157,10 @@ export function authorizeModule(input: AuthorizeModuleInput): AuthorizationDecis
   }
   checks.push({ stage: "capability_role", result: "PASS" });
 
+  if (!isRiskTier(input.module.risk)) {
+    checks.push({ stage: "risk", result: "FAIL", reason: "risk_contract_invalid" });
+    return deny(input, "risk_contract_invalid", checks);
+  }
   if (riskRank(input.module.risk) > riskRank(input.maxRisk)) {
     checks.push({ stage: "risk", result: "FAIL", reason: "risk_exceeds_policy" });
     return deny(input, "risk_exceeds_policy", checks);

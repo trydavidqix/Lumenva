@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Pool } from "pg";
-import { PostgresConsentRegistry } from "./consent-registry";
+import { PostgresConsentRegistry } from "../apps/crm/lib/integrations/consent-registry";
 
 let container = "";
 let admin: Pool;
@@ -18,10 +18,12 @@ describe("Postgres Consent Registry (real RLS)", () => {
     adminUrl = `postgres://postgres:test@127.0.0.1:${port}/postgres`;
     await waitForPostgres(adminUrl);
     admin = new Pool({ connectionString: adminUrl });
+    await admin.query("CREATE TABLE public.organizations (id uuid PRIMARY KEY)");
+    await admin.query("INSERT INTO public.organizations (id) VALUES ('00000000-0000-4000-8000-000000000001'), ('00000000-0000-4000-8000-000000000002')");
     await admin.query("CREATE ROLE authenticated NOLOGIN");
     await admin.query("CREATE ROLE consent_test LOGIN PASSWORD 'consent-test' NOSUPERUSER NOBYPASSRLS IN ROLE authenticated");
-    await admin.query("CREATE OR REPLACE FUNCTION public.fn_user_org_ids() RETURNS SETOF text LANGUAGE SQL STABLE AS $$ SELECT unnest(string_to_array(current_setting('app.org_ids', true), ',')) $$");
-    await admin.query(readFileSync("supabase/migrations/20260913110000_contact_consents.sql", "utf8"));
+    await admin.query("CREATE OR REPLACE FUNCTION public.fn_user_org_ids() RETURNS SETOF uuid LANGUAGE SQL STABLE AS $$ SELECT unnest(string_to_array(current_setting('app.org_ids', true), ','))::uuid $$");
+    await admin.query(readFileSync("supabase/migrations/20260917100600_0180_contact_consents.sql", "utf8"));
   });
 
   afterAll(async () => { await admin?.end(); if (container) execFileSync("docker", ["rm", "-f", container], { stdio: "ignore" }); });
@@ -31,32 +33,32 @@ describe("Postgres Consent Registry (real RLS)", () => {
     const pool = new Pool({ connectionString: url });
     const client = await pool.connect();
     try {
-      await client.query("SET app.org_ids = 'org-a'");
+      await client.query("SET app.org_ids = '00000000-0000-4000-8000-000000000001'");
       const registry = new PostgresConsentRegistry(client);
-      const input = { consent_id: "consent-1", organization_id: "org-a", subject_ref: "contact-1", purpose: "support", channel: "email" as const, source_refs: ["form-1"], evidence_refs: ["event-1"], granted_at: new Date(Date.now() - 1_000).toISOString(), retention_until: new Date(Date.now() + 86_400_000).toISOString() };
-      await expect(registry.register(input)).resolves.toMatchObject({ status: "GRANTED", organization_id: "org-a" });
-      expect(await registry.canContact("org-a", "contact-1", "email", "support")).toBe(true);
-      expect(await registry.canContact("org-a", "contact-1", "voice", "support")).toBe(false);
+      const input = { consent_id: "consent-1", organization_id: "00000000-0000-4000-8000-000000000001", subject_ref: "contact-1", purpose: "support", channel: "email" as const, source_refs: ["form-1"], evidence_refs: ["event-1"], granted_at: new Date(Date.now() - 1_000).toISOString(), retention_until: new Date(Date.now() + 86_400_000).toISOString() };
+      await expect(registry.register(input)).resolves.toMatchObject({ status: "GRANTED", organization_id: "00000000-0000-4000-8000-000000000001" });
+      expect(await registry.canContact("00000000-0000-4000-8000-000000000001", "contact-1", "email", "support")).toBe(true);
+      expect(await registry.canContact("00000000-0000-4000-8000-000000000001", "contact-1", "voice", "support")).toBe(false);
     } finally { client.release(); await pool.end(); }
 
     const restarted = new Pool({ connectionString: url });
     const restartedClient = await restarted.connect();
     try {
-      await restartedClient.query("SET app.org_ids = 'org-a'");
+      await restartedClient.query("SET app.org_ids = '00000000-0000-4000-8000-000000000001'");
       const registry = new PostgresConsentRegistry(restartedClient);
-      await expect(registry.get("org-a", "consent-1")).resolves.toMatchObject({ status: "GRANTED" });
-      await registry.revoke("org-a", "consent-1", "2026-09-13T11:00:00.000Z");
-      expect(await registry.canContact("org-a", "contact-1", "email", "support")).toBe(false);
+      await expect(registry.get("00000000-0000-4000-8000-000000000001", "consent-1")).resolves.toMatchObject({ status: "GRANTED" });
+      await registry.revoke("00000000-0000-4000-8000-000000000001", "consent-1", "2026-09-13T11:00:00.000Z");
+      expect(await registry.canContact("00000000-0000-4000-8000-000000000001", "contact-1", "email", "support")).toBe(false);
     } finally { restartedClient.release(); await restarted.end(); }
 
     const cross = new Pool({ connectionString: url });
     const crossClient = await cross.connect();
     try {
-      await crossClient.query("SET app.org_ids = 'org-b'");
+      await crossClient.query("SET app.org_ids = '00000000-0000-4000-8000-000000000002'");
       const registry = new PostgresConsentRegistry(crossClient);
-      await expect(registry.get("org-b", "consent-1")).resolves.toBeUndefined();
-      expect(await registry.canContact("org-b", "contact-1", "email", "support")).toBe(false);
-      const crossUpdate = await crossClient.query("UPDATE public.contact_consents SET status='GRANTED' WHERE organization_id='org-a' AND consent_id='consent-1'");
+      await expect(registry.get("00000000-0000-4000-8000-000000000002", "consent-1")).resolves.toBeUndefined();
+      expect(await registry.canContact("00000000-0000-4000-8000-000000000002", "contact-1", "email", "support")).toBe(false);
+      const crossUpdate = await crossClient.query("UPDATE public.contact_consents SET status='GRANTED' WHERE organization_id='00000000-0000-4000-8000-000000000001' AND consent_id='consent-1'");
       expect(crossUpdate.rowCount).toBe(0);
     } finally { crossClient.release(); await cross.end(); }
   });

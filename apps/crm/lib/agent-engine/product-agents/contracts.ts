@@ -8,6 +8,22 @@ export const PRODUCT_AGENT_IDS = [
   'governance_judge',
 ] as const;
 
+/** Customer-facing agents. Kept separate from control-plane evaluators. */
+export const CUSTOMER_PRODUCT_AGENT_IDS = [
+  'supervisor',
+  'atendimento',
+  'sales',
+  'retention',
+  'escalation',
+  'crm_operator',
+] as const;
+
+/** Control-plane agents never enter customer conversation dispatch. */
+export const CONTROL_AGENT_IDS = ['governance_judge'] as const;
+
+export type CustomerProductAgentId = (typeof CUSTOMER_PRODUCT_AGENT_IDS)[number];
+export type ControlAgentId = (typeof CONTROL_AGENT_IDS)[number];
+
 export type ProductAgentId = (typeof PRODUCT_AGENT_IDS)[number];
 
 export const SUPERVISOR_TARGET_AGENT_IDS = [
@@ -41,10 +57,20 @@ export type SupervisorHandoffValidation =
     };
 
 const PRODUCT_AGENT_ID_SET = new Set<string>(PRODUCT_AGENT_IDS);
+const CUSTOMER_PRODUCT_AGENT_ID_SET = new Set<string>(CUSTOMER_PRODUCT_AGENT_IDS);
+const CONTROL_AGENT_ID_SET = new Set<string>(CONTROL_AGENT_IDS);
 const SUPERVISOR_TARGET_AGENT_ID_SET = new Set<string>(SUPERVISOR_TARGET_AGENT_IDS);
 
 export function isProductAgentId(value: unknown): value is ProductAgentId {
   return typeof value === 'string' && PRODUCT_AGENT_ID_SET.has(value);
+}
+
+export function isCustomerProductAgentId(value: unknown): value is CustomerProductAgentId {
+  return typeof value === 'string' && CUSTOMER_PRODUCT_AGENT_ID_SET.has(value);
+}
+
+export function isControlAgentId(value: unknown): value is ControlAgentId {
+  return typeof value === 'string' && CONTROL_AGENT_ID_SET.has(value);
 }
 
 export function isSupervisorTargetAgentId(value: unknown): value is SupervisorTargetAgentId {

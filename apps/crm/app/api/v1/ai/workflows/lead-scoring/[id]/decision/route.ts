@@ -24,10 +24,6 @@ const decisionSchema = z.discriminatedUnion("decision", [
   z.object({ decision: z.literal("edit"), reason: z.string().max(1000).optional() }),
 ]);
 
-interface InterruptibleResult {
-  __interrupt__?: unknown[];
-}
-
 function auditActionFor(decision: "approve" | "reject" | "edit"): AuditAction {
   if (decision === "approve") return "workflow.approved";
   if (decision === "reject") return "workflow.rejected";
@@ -136,9 +132,8 @@ export async function POST(
   const graph = buildLeadScoringGraph();
   const config = { configurable: { thread_id: run.thread_id, db, supabase: admin, llmCfg } };
 
-  let result: InterruptibleResult;
   try {
-    result = (await graph.invoke(new Command({ resume: { decision } }), config)) as InterruptibleResult;
+    await graph.invoke(new Command({ resume: { decision } }), config);
   } catch (error) {
     return fail("internal_error", error instanceof Error ? error.message : "workflow resume failed", 500, {
       requestId,

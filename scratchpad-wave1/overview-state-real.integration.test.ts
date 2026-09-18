@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Pool } from "pg";
-import { loadOverview, saveOverview } from "./overview-state-persistence";
+import { loadOverview, saveOverview } from "../apps/crm/lib/command-center/overview-state-persistence";
 
 let container = "";
 let admin: Pool;
@@ -22,7 +22,7 @@ describe("Command Center overview persistence (real RLS)", () => {
     await admin.query("CREATE ROLE authenticated NOLOGIN");
     await admin.query("CREATE ROLE command_center_test LOGIN PASSWORD 'command-center-test' NOSUPERUSER NOBYPASSRLS IN ROLE authenticated");
     await admin.query("CREATE OR REPLACE FUNCTION public.fn_user_org_ids() RETURNS SETOF text LANGUAGE SQL STABLE AS $$ SELECT unnest(string_to_array(current_setting('app.org_ids', true), ',')) $$");
-    await admin.query(readFileSync("supabase/migrations/20260913150000_command_center_overview_rls.sql", "utf8"));
+    await admin.query(readFileSync("supabase/migrations/20260917100900_0183_command_center_overview_rls.sql", "utf8"));
   });
   afterAll(async () => { await admin?.end(); if (container) execFileSync("docker", ["rm", "-f", container], { stdio: "ignore" }); });
 

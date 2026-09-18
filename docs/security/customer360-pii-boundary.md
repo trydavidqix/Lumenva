@@ -1,12 +1,5 @@
-# Customer 360: fronteira de segurança e PII
+# Customer 360: security and PII boundary
 
-Auditoria estática provider-free da superfície Customer 360 (EPIC-05/09/10).
-Não altera schema canónico nem migrations.
+Static provider-free review for EPIC-05/09/10. Contact handlers must scope every query by organization_id; CPF decryption requires manager+; MCP output excludes plaintext CPF; MergeDialog remains mutation-disabled until the authorized transactional endpoint exists.
 
-- Contacts filtrado por organization_id do contexto confiável.
-- decrypt_cpf condicionado a role manager ou superior.
-- Ferramentas MCP não retornam CPF em plaintext.
-- MergeDialog permanece read-only até endpoint manager+ com transação, auditoria e evento.
-
-A auditoria estática não prova RLS real, transação de merge, Storage, email,
-MFA ou providers; esses gates ficam para fixtures/ambientes autorizados.
+This note does not claim database RLS, SQL atomicity, Storage, email, MFA, or provider proof. Those require an authorized fixture environment.

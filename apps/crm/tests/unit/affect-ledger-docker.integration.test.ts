@@ -1,9 +1,11 @@
 import { execFile } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { promisify } from "node:util";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PostgresAffectLedger } from "@/lib/psycheos/affect-ledger-pg";
 
 const exec = promisify(execFile);
+const dockerAvailable = process.env.RUN_DOCKER_INTEGRATION === "1" && spawnSync("docker", ["info"], { stdio: "ignore" }).status === 0;
 const container = `wave16-affect-pg-${process.pid}`;
 const orgA = "org-a";
 const orgB = "org-b";
@@ -26,7 +28,7 @@ function pool(organizationId: string) {
               ") ON CONFLICT (organization_id,agent_id,session_id,event_id) DO NOTHING RETURNING organization_id,agent_id,session_id,event_id,at_ms,pleasure,arousal,dominance;";
             return { rows: parseRows(await psql("select set_config('app.organization_id'," + quote(organizationId) + ",true);" + sql, "app_user")) as T[] };
           }
-          if (text.startsWith("SELECT organization_id")) {
+          if (text.startsWith("SELECT organization_id") && values.length === 4) {
             const sql = "SELECT organization_id,agent_id,session_id,event_id,at_ms,pleasure,arousal,dominance FROM psyche_affect_events WHERE organization_id=" + quote(values[0]) + " AND agent_id=" + quote(values[1]) + " AND session_id=" + quote(values[2]) + " AND event_id=" + quote(values[3]) + ";";
             return { rows: parseRows(await psql("select set_config('app.organization_id'," + quote(organizationId) + ",true);" + sql, "app_user")) as T[] };
           }
@@ -43,13 +45,13 @@ function pool(organizationId: string) {
   };
 }
 function parseRows(output: string): Array<Record<string, unknown>> {
-  return output ? output.split("\n").filter(Boolean).map((line) => {
+  return output ? output.split("\n").filter((line) => line.includes("\t")).map((line) => {
     const [organization_id, agent_id, session_id, event_id, at_ms, pleasure, arousal, dominance] = line.split("\t");
     return { organization_id, agent_id, session_id, event_id, at_ms, pleasure: Number(pleasure), arousal: Number(arousal), dominance: Number(dominance) };
   }) : [];
 }
 
-describe("Wave 16 affect ledger with real PostgreSQL and RLS", () => {
+describe.skipIf(!dockerAvailable)("Wave 16 affect ledger with real PostgreSQL and RLS", () => {
   beforeAll(async () => {
     await exec("docker", ["run", "-d", "--rm", "--name", container, "-e", "POSTGRES_PASSWORD=test", "-e", "POSTGRES_DB=test", "postgres:16"]);
     for (let i = 0; i < 60; i += 1) {
@@ -67,6 +69,12 @@ describe("Wave 16 affect ledger with real PostgreSQL and RLS", () => {
     const restarted = new PostgresAffectLedger(pool(orgA) as never, orgA);
     expect(await restarted.read("agent", "session")).toHaveLength(1);
     expect(await new PostgresAffectLedger(pool(orgB) as never, orgB).read("agent", "session")).toHaveLength(0);
-    await expect(psql("update psyche_affect_events set pleasure=0 where event_id='event-1'", "app_user")).rejects.toThrow(/append-only|permission/i);
+    await expect(psql("select set_config('app.organization_id'," + quote(orgA) + ",true); update psyche_affect_events set pleasure=0 where event_id='event-1'", "app_user")).rejects.toThrow(/append-only|permission/i);
   }, 120_000);
+});
+
+describe("affect ledger docker output parsing", () => {
+  it("ignores command result lines without row separators", () => {
+    expect(parseRows("org-a\norg-a\tagent\tsession\tevent-1\t1000\t0.7\t-0.2\t0.4")).toHaveLength(1);
+  });
 });

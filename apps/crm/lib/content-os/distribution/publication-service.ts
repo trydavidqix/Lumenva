@@ -37,6 +37,25 @@ export type CreatePublicationInput = {
 export type PublishContentInput = CreatePublicationInput & {
   title: string;
   body: Record<string, unknown>;
+  likenessRefs?: readonly string[];
+  consentRequirements?: readonly PublicationConsentRequirement[];
+};
+
+export type PublicationConsentRequirement = {
+  consent_id: string;
+  subject_ref: string;
+  channel: "whatsapp" | "email" | "voice";
+  purpose: string;
+  likeness_ref?: string;
+};
+
+export type PublicationConsentRecord = {
+  consent_id: string;
+  organization_id: string;
+  status: "GRANTED" | "REVOKED" | "EXPIRED" | "UNKNOWN";
+  granted_at?: string | null;
+  revoked_at?: string | null;
+  retention_until?: string | null;
 };
 
 export type PublishContentRepository = {
@@ -44,6 +63,8 @@ export type PublishContentRepository = {
   findPublishGate(organizationId: string, contentItemId: string): Promise<{ status: string } | null>;
   updateContentItem(input: { organizationId: string; contentItemId: string; title: string; body: Record<string, unknown>; status: "scheduled" | "published" }): Promise<void>;
   createPublicationJob(input: CreatePublicationInput): Promise<{ job: PublicationJob; reused: boolean }>;
+  findConsent?: (organizationId: string, consentId: string) => Promise<PublicationConsentRecord | null>;
+  publishWithConsent?: (input: { organizationId: string; contentItemId: string; title: string; body: Record<string, unknown>; consentIds: readonly string[] }) => Promise<void>;
 };
 
 export class PublicationQualityGateError extends Error {
@@ -58,15 +79,48 @@ export class PublicationValidationError extends Error {
   readonly code = "publication_not_publishable";
 }
 
+export class PublicationConsentError extends Error {
+  readonly code = "publication_consent_required";
+}
+
+async function assertPublicationConsent(repository: PublishContentRepository, input: PublishContentInput): Promise<void> {
+  const likenessRefs = input.likenessRefs ?? [];
+  const requirements = input.consentRequirements ?? [];
+  if (likenessRefs.length === 0 && requirements.length === 0) return;
+  if (!repository.findConsent || requirements.length === 0) {
+    throw new PublicationConsentError("Active consent is required for generated likeness publication.");
+  }
+  const now = Date.now();
+  for (const requirement of requirements) {
+    if (requirement.likeness_ref && !likenessRefs.includes(requirement.likeness_ref)) {
+      throw new PublicationConsentError("Consent does not cover the generated likeness reference.");
+    }
+    const consent = await repository.findConsent(input.organizationId, requirement.consent_id);
+    if (!consent || consent.organization_id !== input.organizationId || consent.status !== "GRANTED") {
+      throw new PublicationConsentError("Active consent is required for generated likeness publication.");
+    }
+    if (consent.granted_at && Date.parse(consent.granted_at) > now) throw new PublicationConsentError("Consent is not active yet.");
+    if (consent.revoked_at && Date.parse(consent.revoked_at) <= now) throw new PublicationConsentError("Consent has been revoked.");
+    if (consent.retention_until && Date.parse(consent.retention_until) <= now) throw new PublicationConsentError("Consent has expired.");
+  }
+}
+
 /** Final local publisher. It never calls a CMS or provider directly. */
 export async function publishContentItem(repository: PublishContentRepository, input: PublishContentInput): Promise<{ job: PublicationJob; reused: boolean }> {
+  const requirements = input.consentRequirements ?? [];
   const item = await repository.findContentItem(input.organizationId, input.contentItemId);
   if (!item || item.organizationId !== input.organizationId) throw new PublicationValidationError("Content item not found for this organization.");
   const gate = await repository.findPublishGate(input.organizationId, input.contentItemId);
   if (!gate || gate.status !== "passed") throw new PublicationQualityGateError("Content item cannot be published without a passed publish quality gate.");
+  await assertPublicationConsent(repository, input);
   // The local item is scheduled until the worker confirms the remote side
   // effect; never claim `published` before that confirmation.
-  await repository.updateContentItem({ organizationId: input.organizationId, contentItemId: input.contentItemId, title: input.title, body: input.body, status: "scheduled" });
+  if (requirements.length > 0) {
+    if (!repository.publishWithConsent) throw new PublicationConsentError("Atomic consent publication is unavailable.");
+    await repository.publishWithConsent({ organizationId: input.organizationId, contentItemId: input.contentItemId, title: input.title, body: input.body, consentIds: requirements.map((requirement) => requirement.consent_id) });
+  } else {
+    await repository.updateContentItem({ organizationId: input.organizationId, contentItemId: input.contentItemId, title: input.title, body: input.body, status: "scheduled" });
+  }
   return repository.createPublicationJob(input);
 }
 

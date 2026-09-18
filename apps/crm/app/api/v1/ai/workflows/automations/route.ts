@@ -119,7 +119,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   );
 }
 
-export async function GET(request: NextRequest): Promise<Response> {
+export async function GET(_request: NextRequest): Promise<Response> {
   const requestId = randomUUID();
   const authz = await requireRole("viewer", { requestId, resource: "ai_workflow_runs" });
   if (!authz.ok) return authz.response;

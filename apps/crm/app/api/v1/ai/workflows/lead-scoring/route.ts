@@ -47,7 +47,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   if (!parsed.success) {
     return fail("validation_failed", "Campos inválidos.", 422, { requestId, details: parsed.error.flatten() });
   }
-  const { lead_id, pipeline_id } = parsed.data;
+  const { lead_id } = parsed.data;
 
   const feature = await resolveAiPlatformFeature({
     organizationId: activeOrg.orgId,
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   );
 }
 
-export async function GET(request: NextRequest): Promise<Response> {
+export async function GET(_request: NextRequest): Promise<Response> {
   const requestId = randomUUID();
   const authz = await requireRole("viewer", { requestId, resource: "ai_workflow_runs" });
   if (!authz.ok) return authz.response;
