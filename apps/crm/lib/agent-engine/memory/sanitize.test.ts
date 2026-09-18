@@ -28,6 +28,16 @@ describe("sanitizeMemoryCandidate", () => {
     expect(result.allowed).toBe(false);
   });
 
+  it.each([
+    ["a redacted API secret fixture", "REDACTED_SECRET"],
+    ["an AWS access-key assignment", "AWS_ACCESS_KEY_ID=REDACTED_SECRET"],
+  ])("classifies %s as an API key", (_caseName, text) => {
+    expect(sanitizeMemoryCandidate({ text, type: "behavior" })).toEqual({
+      allowed: false,
+      reason: "api_key",
+    });
+  });
+
   it("preserves an ordinary customer preference", () => {
     const text = "Prefere receber atualizações de entrega por WhatsApp no período da tarde.";
 
