@@ -51,18 +51,19 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 12.3.4
-
       - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
 
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.3.4
+
       - run: pnpm install --frozen-lockfile
 
       - name: Aguardar Redis REST do E2E
+        working-directory: apps/crm
         run: |
           for tentativa in {1..30}; do
             # O SRH aceita comandos pelo corpo HTTP, não por rotas como
@@ -142,6 +143,7 @@ jobs:
       # mesmo — mas o contrato é único, e um workflow que contorna o gate seria
       # o começo de ele não valer para ninguém.
       - name: Gerar o .env.e2e (ambiente da suíte)
+        working-directory: apps/crm
         run: pnpm e2e:env
 
       # E publica o arquivo no ambiente do JOB, para que servidor e testes leiam
@@ -163,6 +165,7 @@ jobs:
       # (32 bytes, geradas pelo script) em vez do rótulo de 21 caracteres que o
       # bloco `env:` fixava e que o app recusa.
       - name: Publicar o .env.e2e no ambiente do job
+        working-directory: apps/crm
         run: grep -vE '^[[:space:]]*(#|$)' .env.e2e >> "$GITHUB_ENV"
 
       # `pnpm e2e:build`, não `pnpm build`: as três `NEXT_PUBLIC_*` são embutidas
@@ -170,11 +173,13 @@ jobs:
       # deixaria a URL errada dentro do JavaScript que roda no browser — servidor
       # falando com um banco e cliente com outro, no mesmo teste.
       - name: Build de produção (com o ambiente do E2E)
+        working-directory: apps/crm
         run: pnpm e2e:build
         env:
           NEXT_TELEMETRY_DISABLED: "1"
 
       - name: Instalar o browser
+        working-directory: apps/crm
         run: pnpm exec playwright install --with-deps chromium
 
       # `.env.local` é CÓPIA do `.env.e2e`, não uma terceira redação dele.
@@ -192,6 +197,7 @@ jobs:
       # secret conhecido no admin — sem ele, todo spec que loga fica de fora, que
       # era a maior parte da suíte.
       - name: Semear credenciais de teste
+        working-directory: apps/crm
         run: |
           cp .env.e2e .env.local
           pnpm exec tsx scripts/seed-e2e-credentials.ts
@@ -219,6 +225,7 @@ jobs:
       # `process.env`; o de escalação parseia o `.env.local` por conta própria.
       # Sem a flag o de capacidades morre na validação Zod das 3 vars do Supabase.
       - name: Semear as fixtures que as specs não semeiam sozinhas
+        working-directory: apps/crm
         run: |
           pnpm exec tsx scripts/seed-e2e-escalacao.ts
           pnpm exec tsx --env-file=.env.local scripts/seed-e2e-capacidades-ausentes.ts
@@ -230,6 +237,7 @@ jobs:
       # pela própria suíte, não a saúde das telas. Isolá-lo aqui preserva os
       # limites de produção e mantém a evidência útil.
       - name: E2E — telas de IA antes da carga acumulada
+        working-directory: apps/crm
         run: pnpm exec playwright test --workers=1 olhar-telas-do-epico.spec.ts
         env:
           AUTH_RATE_LIMIT_LOGIN_IP: "1000"
@@ -266,6 +274,7 @@ jobs:
       # fazem o segundo ser recusado como replay. Foi o que derrubava a
       # `reset-password-mfa` (issue #80): ela passa sozinha e falha em paralelo.
       - name: E2E — parte 1 de 2
+        working-directory: apps/crm
         run: |
           pnpm exec playwright test --workers=1 \
             smoke.spec.ts auth.spec.ts error-pages.spec.ts \
@@ -282,6 +291,7 @@ jobs:
           AUTH_RATE_LIMIT_LOGIN_IP: "1000"
 
       - name: E2E — parte 2 de 2 (processo novo, contador de login zerado)
+        working-directory: apps/crm
         run: |
           pnpm exec playwright test --workers=1 \
             agente-novo-e-uso.spec.ts agente-organiza-operacao.spec.ts \

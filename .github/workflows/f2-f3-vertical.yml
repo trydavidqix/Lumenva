@@ -8,13 +8,13 @@ jobs:
     runs-on: [self-hosted, self-hosted-lumenva-disposable]
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 12.3.4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.3.4
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter lumenva-crm lint
       - run: pnpm --filter lumenva-crm typecheck

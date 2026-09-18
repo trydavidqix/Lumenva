@@ -13,10 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 12.3.4
-
       - uses: actions/setup-node@v7
         with:
           # 22 como o job `ci` e o `.nvmrc`. Buildar numa versão que o
@@ -24,10 +20,14 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.3.4
+
       - run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm build
+        run: pnpm --dir apps/crm build
         env:
           NEXT_TELEMETRY_DISABLED: "1"
           SENTRY_DSN: ""
