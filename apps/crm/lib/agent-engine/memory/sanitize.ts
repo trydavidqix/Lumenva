@@ -8,6 +8,9 @@ const API_KEY_ASSIGNMENT =
   /\b(?:api[_ -]?key|apikey|chave\s+(?:da|de)\s+api)\b\s*(?:é|is|=|:)\s*[^\s,;]+/iu;
 const API_KEY_LIKE_VALUE =
   /\b(?:sk|rk|pk|ghp|github_pat|xox[baprs])[-_][A-Za-z0-9_-]{12,}\b|\b(?:AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35})\b/;
+const REDACTED_SECRET_FIXTURE = /\bREDACTED_SECRET\b/;
+const ENV_API_KEY_ASSIGNMENT =
+  /\b(?:AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|GITHUB_TOKEN)\s*=\s*\S+/i;
 const BEARER_CREDENTIAL = /\bbearer\s+\S+/iu;
 const JWT_LIKE_VALUE = /\b[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/;
 const SESSION_OR_COOKIE_ASSIGNMENT =
@@ -47,7 +50,12 @@ export function sanitizeMemoryCandidate(input: {
 }): MemorySanitizationResult {
   const { text } = input;
 
-  if (API_KEY_ASSIGNMENT.test(text) || API_KEY_LIKE_VALUE.test(text)) {
+  if (
+    API_KEY_ASSIGNMENT.test(text) ||
+    API_KEY_LIKE_VALUE.test(text) ||
+    REDACTED_SECRET_FIXTURE.test(text) ||
+    ENV_API_KEY_ASSIGNMENT.test(text)
+  ) {
     return { allowed: false, reason: "api_key" };
   }
   if (BEARER_CREDENTIAL.test(text) || JWT_LIKE_VALUE.test(text)) {
