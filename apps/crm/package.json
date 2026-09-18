@@ -147,7 +147,6 @@
     "vitest": "catalog:",
     "ws": "^8.18.0"
   },
-  "packageManager": "pnpm@12.3.4",
   "pnpm": {
     "overrides": {
       "postcss": "^8.5.26",
