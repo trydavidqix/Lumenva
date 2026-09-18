@@ -687,3 +687,16 @@
 - Checkpoint G6 emitido (loop/checkpoints/G6-report.md, COMPLETO 7/7), loop
   PARADO aguardando aprovação do dono (G6.approved = GATILHO da FG do Vendaval).
   7 INB abertos no §3. O ÉPICO DE GOVERNANÇA (G1-G6) FECHA na aprovação.
+
+## 2026-09-18 — Operating Core — consolidação inicial
+
+- Fonte de verdade consolidada: `event_log` para fatos/dispatch; `job_queue` para
+  execução durável; `cron_jobs` apenas agenda; `agent-worker/main.ts` compõe runtime.
+- Criada facade canônica `apps/crm/lib/operating-core/index.ts`; worker 24/7 e rota
+  de case reply migrados para essa fronteira. Implementação madura existente foi
+  preservada; protótipo `packages/operating-core` de branches antigas classificado
+  como superseded, sem reintroduzir runtime paralelo.
+- Evidência: teste focado da facade passou (2/2). Typecheck com heap 4 GB isolou
+  8 erros pré-existentes; nenhum erro restante na facade após correção do fixture.
+- Arquitetura registrada em `docs/architecture/OPERATING-CORE.md` e referenciada
+  por `ARCHITECTURE.md`; próximos passos são lint, suíte unitária e banco.

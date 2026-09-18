@@ -81,6 +81,17 @@ request → proxy.ts (X-Request-Id, x-pathname; isPublicPath? → bypass;
 worker → `runAgentTurn` (RAG + tools MCP) → guardrails before-send → adapter WAHA →
 handoff humano se gatilho. Diagrama: [`docs/architecture/agent-turn.html`](docs/architecture/agent-turn.html).
 
+## Operating Core: event log, jobs, and runtime
+
+Canonical map: [`docs/architecture/OPERATING-CORE.md`](docs/architecture/OPERATING-CORE.md).
+
+- `event_log` is the append-only domain-event source and generic consumer ledger.
+- `job_queue` is the single durable execution queue for agent, follow-up, watchdog,
+  flywheel, case-reply, and operator jobs.
+- `cron_jobs` stores schedules only; the scheduler enqueues into `job_queue`.
+- `apps/crm/workers/agent-worker/main.ts` is the runtime composition root.
+- `apps/crm/lib/operating-core/index.ts` is the canonical application import boundary.
+
 ## Event log + workers
 
 Triggers Postgres emitem linhas em `event_log`. Workers (cron / Realtime listener) consomem e disparam side effects. Idempotência via `unique (organization_id, external_id)` + captura `code === '23505'`.
