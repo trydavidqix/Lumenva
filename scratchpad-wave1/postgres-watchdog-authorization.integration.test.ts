@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { Pool } from "pg";
+import { Pool } from "../apps/crm/node_modules/pg";
 import { NoProgressWatchdog } from "../apps/crm/lib/psycheos/no-progress-watchdog";
 import { PostgresWatchdogRequesterRegistry, requestRerouteFromRegistry } from "./postgres-watchdog-authorization";
 

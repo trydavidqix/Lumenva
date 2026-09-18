@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool } from "../apps/crm/node_modules/pg";
 
 type Receipt = { organizationId: string; requestId: string; toolName: string; actorId: string; outcome: "SUCCEEDED" | "FAILED"; result: unknown; evidence: Record<string, unknown> };
 let pool: Pool | undefined;
