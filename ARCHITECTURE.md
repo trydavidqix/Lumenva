@@ -3,6 +3,7 @@
 > Visão de 1 página. Profundidade vive em `docs/specs/` e `docs/stories/epics/MASTER.md`.
 > Mapa de toda a documentação: [`docs/index.md`](docs/index.md).
 > Estado real de implementação (o que está pronto vs. incompleto): [`docs/current-state.md`](docs/current-state.md).
+> Source of truth por domínio: [`docs/architecture/DOMAIN-SOURCES-OF-TRUTH.md`](docs/architecture/DOMAIN-SOURCES-OF-TRUTH.md).
 
 ## Camadas
 

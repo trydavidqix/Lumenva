@@ -727,3 +727,15 @@
   “Graphiti recomendado, Mem0 futuro”; corrigido para refletir o código real e
   eliminar decisão contraditória.
 - Evidência: 13 arquivos de teste de memory/context/workers, 143/143 testes verdes.
+
+## 2026-09-18 — Agents/Content/Integrations/Infrastructure — fechamento de mapa
+
+- Agents: `lib/agent-engine` é runtime canônico; `lib/ai/runtime/agent.ts` permanece
+  somente como compatibilidade deprecated para rota interna/dry-run.
+- Content OS: `lib/content-os` e workers próprios são domínio separado; `creative_jobs`
+  modela lifecycle de provider, não compete com `job_queue` genérica.
+- Integrations/Infrastructure: adapters vivem em `lib/waha`, `lib/nuvemshop`,
+  `lib/channels`, `lib/mcp`, `lib/voice`; Postgres/event log/audit continuam autoridade.
+- Mapa único publicado em `docs/architecture/DOMAIN-SOURCES-OF-TRUTH.md`.
+- Evidência: Agents 82/82, Memory 143/143, Content 11/11; sem duplicata funcional
+  confirmada que justificasse rewrite ou remoção de feature.
