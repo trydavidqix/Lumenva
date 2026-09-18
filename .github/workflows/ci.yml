@@ -8,7 +8,7 @@ on:
 
 jobs:
   verify:
-    runs-on: [self-hosted, self-hosted-lumenva-disposable]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -51,7 +51,7 @@ jobs:
         run: pnpm --filter lumenva-crm test:shell
 
   verify-heavy:
-    runs-on: [self-hosted, self-hosted-lumenva-disposable]
+    runs-on: ubuntu-latest
     timeout-minutes: 50
     env:
       NODE_OPTIONS: --max-old-space-size=6144
@@ -89,7 +89,7 @@ jobs:
   # tests/invariants/** contra ele. Invocar via `pnpm test:db` é o que põe
   # node_modules/.bin no PATH que o script herda para chamar `vitest`.
   invariants:
-    runs-on: [self-hosted, self-hosted-lumenva-disposable]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
