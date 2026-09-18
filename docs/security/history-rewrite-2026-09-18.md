@@ -8,6 +8,8 @@
 - Original mirror backup: `/Users/david/Desktop/Lumenva-secret-remediation-20260918-mirror.git`.
 - Infisical lookup used project ID `cab856e8-5f22-4967-bcb3-ded28628314f`.
 
+The 193 branch refs are clean. A fresh mirror also exposes 80 GitHub-managed `refs/pull/*` refs containing the pre-rewrite findings. GitHub rejected updates to those hidden refs. Public visibility remains blocked until GitHub purges or regenerates those pull-request refs.
+
 ## Local worktree synchronization
 
 History rewrite changed commit identifiers. Executor, Agentic AI Engineer, and every other local worktree must synchronize before new commits or pushes.
@@ -24,4 +26,3 @@ For a dirty worktree, save or commit local work first. Reapply only required cha
 ## Credential rotation owner action
 
 Historical findings had four probable service families: Stripe, AWS, GitHub, and WAHA. No matching active secret names were available from the authorized Infisical project. Owner must rotate/revoke each family manually before enabling dependent integrations.
-
