@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-size:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, self-hosted-lumenva-disposable]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
