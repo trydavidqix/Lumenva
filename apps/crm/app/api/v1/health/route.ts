@@ -22,8 +22,9 @@
  * quem opera o sistema vê para onde ele tentou ir; quem só passa na frente, não.
  */
 import { timingSafeEqual } from "node:crypto";
-import { NextResponse, type NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 
+import { ok } from "@/lib/api/wrappers";
 import { env } from "@/lib/env";
 import { alvoDe, classificarFalhaDeAlcance, type FalhaDeAlcance } from "@/lib/net/alcance";
 
@@ -220,14 +221,12 @@ export async function GET(req: NextRequest) {
 
   const httpStatus = status === "unhealthy" ? 503 : 200;
 
-  return NextResponse.json(
+  return ok(
     {
-      data: {
-        status,
-        version: process.env.npm_package_version ?? "0.1.0",
-        timestamp: new Date().toISOString(),
-        checks,
-      },
+      status,
+      version: process.env.npm_package_version ?? "0.1.0",
+      timestamp: new Date().toISOString(),
+      checks,
     },
     { status: httpStatus },
   );

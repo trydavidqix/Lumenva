@@ -54,7 +54,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   const secret = auth.startsWith("Bearer ") ? auth.slice(7).trim() : req.headers.get("x-cron-secret")?.trim() ?? "";
   if (!cronSecretMatches(secret)) return fail("forbidden", "Cron secret missing or invalid.", 403, { requestId });
   try { return ok(await runMetricsTick(), { requestId }); }
-  catch (error) { return fail("provider_unavailable", error instanceof Error ? error.message : "Metrics worker unavailable.", 503, { requestId }); }
+  catch (error) { console.error("[content-metrics.cron] failed", { requestId, error }); return fail("provider_unavailable", "Metrics worker unavailable.", 503, { requestId }); }
 }
 
 export async function POST(req: NextRequest): Promise<Response> { return GET(req); }

@@ -5,6 +5,7 @@
  * MCP usa: listLeadsHandler, getLeadHandler além dos acima (S-13.04).
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 import { ApiError } from "@/lib/api/types";
 import type { Actor, HandlerCtx } from "@/lib/api/handlers/types";
@@ -116,12 +117,26 @@ interface LeadCursor {
   created_at: string;
   id: string;
 }
-function encLeadCursor(p: LeadCursor): string {
-  return Buffer.from(JSON.stringify(p), "utf8").toString("base64url");
+function leadCursorKey(): string {
+  const key = process.env.CURSOR_HMAC_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) throw new Error("CURSOR_HMAC_SECRET is required for lead pagination");
+  return key;
 }
-function decLeadCursor(raw: string): LeadCursor | null {
+
+export function encodeLeadCursor(p: LeadCursor): string {
+  const payload = Buffer.from(JSON.stringify(p), "utf8").toString("base64url");
+  const signature = createHmac("sha256", leadCursorKey()).update(payload).digest("base64url");
+  return `${payload}.${signature}`;
+}
+
+export function decodeLeadCursor(raw: string): LeadCursor | null {
   try {
-    const p = JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as LeadCursor;
+    const [payload, signature] = raw.split(".");
+    if (!payload || !signature) return null;
+    const expected = createHmac("sha256", leadCursorKey()).update(payload).digest();
+    const supplied = Buffer.from(signature, "base64url");
+    if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) return null;
+    const p = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as LeadCursor;
     if (typeof p.id !== "string" || typeof p.created_at !== "string") return null;
     return p;
   } catch {
@@ -149,7 +164,7 @@ export async function listLeadsHandler(
   if (q.owner_user_id) query = query.eq("owner_user_id", q.owner_user_id);
 
   if (q.cursor) {
-    const c = decLeadCursor(q.cursor);
+    const c = decodeLeadCursor(q.cursor);
     if (!c) {
       throw new ApiError(400, "invalid_cursor", undefined, ctx.requestId, "Cursor inválido.");
     }
@@ -168,7 +183,7 @@ export async function listLeadsHandler(
   const last = page[page.length - 1];
   const cursor =
     hasMore && last
-      ? encLeadCursor({ created_at: String(last.created_at), id: String(last.id) })
+      ? encodeLeadCursor({ created_at: String(last.created_at), id: String(last.id) })
       : null;
   return { leads: page, cursor, has_more: hasMore };
 }

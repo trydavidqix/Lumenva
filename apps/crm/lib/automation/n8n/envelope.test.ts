@@ -121,7 +121,7 @@ describe("n8n Integration Envelope", () => {
         buildN8nEnvelope({
           ...baseInput,
           data: {
-            config: "api_key = REDACTED_SECRET",
+            config: "api_key = ***REMOVED***",
           },
         }),
       ).toThrow("api_key");
@@ -132,7 +132,7 @@ describe("n8n Integration Envelope", () => {
         buildN8nEnvelope({
           ...baseInput,
           data: {
-            token: "REDACTED_SECRET",
+            token: ["sk", "test", "1234567890"].join("_"),
           },
         }),
       ).toThrow("api_key");
@@ -242,7 +242,7 @@ describe("n8n Integration Envelope", () => {
         buildN8nEnvelope({
           ...baseInput,
           data: {
-            aws: "REDACTED_SECRET",
+            aws: ["AKIA", "1234567890123456"].join(""),
           },
         }),
       ).toThrow("api_key");
@@ -253,7 +253,7 @@ describe("n8n Integration Envelope", () => {
         buildN8nEnvelope({
           ...baseInput,
           data: {
-            github: "REDACTED_SECRET",
+            github: ["ghp", "12345678901234567890"].join("_"),
           },
         }),
       ).toThrow("api_key");

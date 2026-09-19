@@ -60,7 +60,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
   if (!cronSecretMatches(secretFrom(req))) return fail("forbidden", "Cron secret missing or invalid.", 403, { requestId });
   try { return ok(await runPublicationTick(), { requestId }); }
-  catch (error) { return fail("provider_unavailable", error instanceof Error ? error.message : "Publication worker unavailable.", 503, { requestId }); }
+  catch (error) { console.error("[content-publication.cron] failed", { requestId, error }); return fail("provider_unavailable", "Publication worker unavailable.", 503, { requestId }); }
 }
 
 export async function POST(req: NextRequest): Promise<Response> { return GET(req); }

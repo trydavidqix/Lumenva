@@ -6966,18 +6966,6 @@ create table if not exists org_memory_entries (
 create index if not exists idx_org_memory_entries_org_status
   on org_memory_entries (organization_id, status, created_at);
 
--- Agent OS Phase 6 — Learning Flywheel proposal types. Idempotent forward-fix
--- preserving the legacy distiller/org-memory values while allowing the closed
--- Phase 6 proposal vocabulary in fresh installs and clone updates.
-alter table flywheel_distiller_proposals
-  drop constraint if exists flywheel_distiller_proposals_type_check;
-alter table flywheel_distiller_proposals
-  add constraint flywheel_distiller_proposals_type_check
-  check (type in (
-    'playbook_bullet', 'golden_case', 'reentry_trigger', 'org_memory_entry',
-    'skill_change', 'routing_change', 'eval_case', 'operational_threshold'
-  ));
-
 -- RLS (mesmo shape do loop tenant_isolation_* do baseline).
 do $$
 declare t text;
@@ -10768,3 +10756,23 @@ create policy browsermesh_event_idempotency_tenant_all on public.browsermesh_eve
   with check (organization_id in (select public.fn_user_org_ids()::text));
 grant select, insert on public.browsermesh_event_idempotency to authenticated;
 grant all on public.browsermesh_event_idempotency to service_role;
+
+-- ---- Wave 8 Asset Intelligence: persistent license/provenance registry ----
+create table if not exists public.asset_license_records (
+  organization_id text not null,
+  license_ref text not null,
+  source_id text not null,
+  owner_id text not null,
+  status text not null check (status in ('REGISTERED','VERIFIED','SUPERSEDED','REVOKED')),
+  expires_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (organization_id, license_ref)
+);
+alter table public.asset_license_records enable row level security;
+drop policy if exists asset_license_records_tenant_all on public.asset_license_records;
+create policy asset_license_records_tenant_all on public.asset_license_records for all to authenticated
+  using (organization_id in (select public.fn_user_org_ids()::text))
+  with check (organization_id in (select public.fn_user_org_ids()::text));
+grant select on public.asset_license_records to authenticated;
+grant all on public.asset_license_records to service_role;

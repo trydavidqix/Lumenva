@@ -2,9 +2,6 @@ import { defineConfig } from "vitest/config";
 import path from "node:path";
 
 export default defineConfig({
-  // The workspace root contains `lib -> apps/crm/lib`; keeping Vitest rooted
-  // at the app prevents the same suite from being collected twice through the
-  // symlink when the package script runs from the monorepo root.
   root: path.resolve(__dirname),
   // JSX automático já é o default do transform esbuild no Vite 7+ (vitest 4);
   // a opção `esbuild.jsx` saiu do tipo — provado pelos testes de componente.
@@ -44,19 +41,18 @@ export default defineConfig({
       // o vitest acabava coletando specs Playwright de até 10 worktrees, travando a suíte.
       "**/.worktrees/**",
       "**/.claude/worktrees/**",
+      // Scratchpads are historical wave experiments, not part of the CRM unit
+      // gate. Their PostgreSQL integration tests have their own harness and
+      // require external database/container setup.
+      "scratchpad-*/**",
       "apps/site/**",
       "workers/voice-worker/**",
-      "apps/site/**",
-      "workers/voice-worker/**",
-      "apps/site/**",
-      "workers/voice-worker/**",
-      "apps/site/**",
-      "workers/voice-worker/**",
-      "apps/site/**",
-      "workers/voice-worker/**",
-      "apps/site/**",
-      "workers/voice-worker/**",
+      "scripts/*.test.mjs",
       "apps/crm/scripts/*.test.mjs",
+      "**/*.integration.test.ts",
+      "**/*.real.integration.test.ts",
+      "**/*.postgres.integration.test.ts",
+      "**/*.rls.integration.test.ts",
     ],
   },
   resolve: { alias: { "@": path.resolve(__dirname, ".") } },

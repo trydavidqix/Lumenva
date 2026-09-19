@@ -5,6 +5,8 @@ create unique index if not exists hermes_tool_loop_locks_tenant_lock_key on publ
 alter table public.hermes_tool_loop_locks enable row level security;
 drop policy if exists hermes_tool_loop_locks_tenant_all on public.hermes_tool_loop_locks;
 create policy hermes_tool_loop_locks_tenant_all on public.hermes_tool_loop_locks
-  for all using (tenant_id in (select public.fn_user_org_ids()))
-  with check (tenant_id in (select public.fn_user_org_ids()));
+  for all using (tenant_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    and tenant_id::uuid in (select public.fn_user_org_ids()))
+  with check (tenant_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    and tenant_id::uuid in (select public.fn_user_org_ids()));
 grant select, insert, update, delete on public.hermes_tool_loop_locks to authenticated;

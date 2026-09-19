@@ -20,7 +20,7 @@ export function extractSpeakableVoiceText(output: unknown): string | null {
   const record = output as Record<string, unknown>;
   for (const key of ["draft", "draftMessage", "text", "message", "reply"] as const) {
     const candidate = record[key];
-    if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+    if (typeof candidate === "string" && candidate.trim() && candidate.trim().length <= 4000) return candidate.trim();
   }
   return null;
 }

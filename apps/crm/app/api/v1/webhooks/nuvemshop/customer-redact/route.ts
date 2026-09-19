@@ -24,6 +24,7 @@ import { audit } from "@/lib/audit";
 import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createLgpdRequest, findContactByExternalId } from "@/lib/lgpd/repository";
+import { parseNuvemshopWebhookPayload } from "@/lib/schemas/nuvemshop-webhook";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -83,12 +84,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const rawBody = await req.text();
 
   // 2. Parse JSON
-  let body: NuvemshopCustomerRedactPayload;
-  try {
-    body = JSON.parse(rawBody) as NuvemshopCustomerRedactPayload;
-  } catch {
-    return fail("invalid_request", "invalid_json", 400);
-  }
+  const parsed = parseNuvemshopWebhookPayload(rawBody);
+  if (!parsed.success) return fail("invalid_request", parsed.code, 400);
+  const body = parsed.data as NuvemshopCustomerRedactPayload;
 
   const storeId = body.store_id !== undefined ? String(body.store_id) : "";
   if (!storeId) {
