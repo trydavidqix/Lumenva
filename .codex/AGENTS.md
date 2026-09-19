@@ -9,6 +9,7 @@ This file supplements the root [`AGENTS.md`](../AGENTS.md) for Codex-specific be
 - Shared modular rules: `../.claude/rules/`.
 - Doctrine reconciliation matrix: `../docs/harness-doctrine-matrix.md`.
 - Codex repo skill: `../.agents/skills/DeskcommCRM/SKILL.md`.
+- AI platform specialization: `../.agents/skills/LumenvaAIPlatformArchitect/SKILL.md`.
 
 The Codex skill is a **bridge**, not an independent source of conventions. If it disagrees with `CLAUDE.md`, follow `CLAUDE.md`. If historical wording conflicts with current Spec/PRD/business-rule, use the repository precedence and the reconciliation matrix rather than reviving a frozen snapshot.
 
@@ -21,6 +22,7 @@ Keep user credentials, private MCPs and machine-specific settings in `~/.codex/c
 - `explorer` — read-only evidence gathering.
 - `reviewer` — read-only correctness/security/regression review.
 - `docs-researcher` — read-only API/documentation verification.
+- `ai-platform-architect` — writable specialist for AI-first architecture: Agent OS, Model/Resource Router, evals, Outcome OS, protocols, economics, security and implementation. Runs Caveman FULL behavior.
 
 Use these roles for their narrow purpose; do not make them alternate sources of product doctrine.
 
