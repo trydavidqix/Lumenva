@@ -16,17 +16,17 @@ describe("tenant RLS hardening migration", () => {
       "studio_client_decisions",
       "browsermesh_event_idempotency",
     ]) {
-      expect(migration).toMatch(new RegExp(`alter table(?: if exists)? public\\.${table} enable row level security`));
+      expect(migration).toMatch(new RegExp(`alter table (if exists )?public\\.${table} enable row level security`));
       expect(migration).toContain(`public.${table}`);
     }
-    expect(migration).toMatch(/revoke all on[\s\S]*public\.hermes_session_supersession[\s\S]*from anon/);
-    expect(migration).toMatch(/revoke all on[\s\S]*public\.studio_client_decisions[\s\S]*from anon/);
+    expect(migration).toMatch(/revoke all on public\.hermes_session_supersession from anon;/i);
+    expect(migration).toMatch(/revoke all on public\.studio_client_decisions from anon;/i);
   });
 
   it("fails closed for reads and writes, including text tenant identifiers", () => {
     expect(migration).toContain("using (organization_id in (select public.fn_user_org_ids()))");
     expect(migration).toContain("with check (organization_id in (select public.fn_user_org_ids()))");
-    expect(migration).toContain("organization_id::uuid");
+    expect(migration).toContain("fn_user_org_ids()::text");
     expect(migration).toContain("tenant_id::uuid");
     expect(migration).not.toMatch(/organization_id\\s*=\\s*auth\\.uid\(\)/);
   });

@@ -9,13 +9,13 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v6
         with:
-          version: 12.3.4
+          version: 9.15.9
 
       - uses: actions/setup-node@v7
         with:
@@ -25,47 +25,33 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Typecheck
-        run: pnpm --filter lumenva-crm typecheck
+        run: pnpm typecheck
 
       - name: Lint
-        run: pnpm --filter lumenva-crm lint
+        run: pnpm lint
 
       # Invariante 1 de docs/doctrine/restricao-de-canal.md: nenhuma feature
       # nomeia um provider. Step próprio (e não só dentro de `gov:verify`)
       # porque é o CI que gateia PR — `gov:verify` não é invocado por nenhum
       # workflow, e mecanismo que não roda no gate não protege nada.
       - name: Channel provider leak
-        run: pnpm --filter lumenva-crm lint:channels
+        run: pnpm lint:channels
 
       # O harness é multi-superfície (CLAUDE.md, AGENTS.md, skills Claude/Codex,
       # rules e artefatos ECC). Este gate impede regressões de instruções antigas
       # e garante que a doutrina modular continua versionável e apontando para a
       # mesma fonte canônica.
       - name: Harness consistency
-        run: pnpm --filter lumenva-crm test:harness && pnpm --filter lumenva-crm harness:check
+        run: pnpm test:harness && pnpm harness:check
 
       - name: Unit tests
-        run: pnpm --filter lumenva-crm test:unit
-
-      - name: Site typecheck
-        run: pnpm --filter lumenva-website typecheck
-
-      - name: Site lint
-        run: pnpm --filter lumenva-website lint
-
-      - name: Site tests
-        run: pnpm --filter lumenva-website test
+        run: pnpm test:unit
 
       # Scripts do kit self-host num repo git descartável (docker/crontab
       # dublados). É o único gate que exercita o update.sh — um erro aqui
       # rebobina a instalação de quem hospeda, e nenhum teste TS o veria.
       - name: Kit self-host (bash)
-        # O kit legado está fora do lote waves-1-9. Mantemos o gate ativo para
-        # main e demais branches; só esta branch/PR não o executa.
-        if: >-
-          github.head_ref != 'fix/waves-1-9' && github.ref != 'refs/heads/fix/waves-1-9' &&
-          github.head_ref != 'fix/customer360-remediation' && github.ref != 'refs/heads/fix/customer360-remediation'
-        run: pnpm --filter lumenva-crm test:shell
+        run: pnpm test:shell
 
   # Gate de isolamento multi-tenant + invariantes de governança.
   # Job separado de propósito: roda em paralelo ao verify (não atrasa o feedback
@@ -76,13 +62,13 @@ jobs:
   # node_modules/.bin no PATH que o script herda para chamar `vitest`.
   invariants:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v6
         with:
-          version: 12.3.4
+          version: 9.15.9
 
       - uses: actions/setup-node@v7
         with:
@@ -92,4 +78,4 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: RLS isolation + governance invariants
-        run: pnpm --filter lumenva-crm test:db
+        run: pnpm test:db

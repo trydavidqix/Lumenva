@@ -22,20 +22,20 @@ create policy entitlement_events_tenant_all on public.entitlement_events
 drop policy if exists hermes_session_supersession_tenant_all on public.hermes_session_supersession;
 create policy hermes_session_supersession_tenant_all on public.hermes_session_supersession
   for all to authenticated
-  using (organization_id::uuid in (select public.fn_user_org_ids()))
-  with check (organization_id::uuid in (select public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()::text))
+  with check (organization_id in (select public.fn_user_org_ids()::text));
 
 drop policy if exists studio_client_decisions_tenant_all on public.studio_client_decisions;
 create policy studio_client_decisions_tenant_all on public.studio_client_decisions
   for all to authenticated
-  using (organization_id::uuid in (select public.fn_user_org_ids()))
-  with check (organization_id::uuid in (select public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()::text))
+  with check (organization_id in (select public.fn_user_org_ids()::text));
 
 drop policy if exists browsermesh_event_idempotency_tenant_all on public.browsermesh_event_idempotency;
 create policy browsermesh_event_idempotency_tenant_all on public.browsermesh_event_idempotency
   for all to authenticated
-  using (organization_id::uuid in (select public.fn_user_org_ids()))
-  with check (organization_id::uuid in (select public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()::text))
+  with check (organization_id in (select public.fn_user_org_ids()::text));
 
 -- The Hermes lock table predates tenant hardening and stores tenant_id as text.
 -- UUID-backed production tenants are compared explicitly; non-UUID legacy rows

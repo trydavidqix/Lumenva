@@ -133,6 +133,85 @@ No ambiente Codex Cloud, por worktree/branch: pnpm install --frozen-lockfile; pn
 
 Até a execução desses comandos, nenhuma linha M/P é considerada tratada ou consolidada.
 
+## Ledger de remediação — Wave 10–15
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| wave10/mobile-delivery-2026-09-13 | Wave 10 Delivery | remediation/waves-10-15-2026-09-15 | aplicado, teste real pendente | commit 4d19b14d; delivery gate persistido e testes adicionados |
+| wave11/consent-registry-2026-09-12 | Wave 11 Consent | remediation/waves-10-15-2026-09-15 | já coberto pelo baseline | cherry-pick vazio após comparação |
+| wave12/marketing-content-2026-09-13 | Wave 12 Content | remediation/waves-10-15-2026-09-15 | aplicado, teste real pendente | commit c5ba644c; TOCTOU consent integration test adicionado |
+| wave13/source-registry-rls-proof-2026-09-13 | Wave 13 Source Registry | remediation/waves-10-15-2026-09-15 | aplicado, teste real pendente | commit 8a365c90; RLS integration test adicionado |
+| wave15/resource-router-2026-09-13 | Wave 15 Resource Router | remediation/waves-10-15-2026-09-15 | aplicado, teste real pendente | commit 48b56ddf; router e teste de input malformado adicionados |
+
+O subgrupo permanece aberto até Vitest/typecheck no Codex Cloud. Validações locais: package_json=valid, conflict_markers=none e git diff --check=pass.
+
+## Ledger de remediação — Business OS / Operating Core
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| business-os/wave-1-agent-contracts-2026-09-11 | Operating Core contracts | remediation/business-os-operating-core-2026-09-15 | aplicado, teste real pendente | commit eb4bce20; contratos e testes adicionados |
+| business-os/wave-1-job-engine-events-2026-09-11 | Operating Core events | remediation/business-os-operating-core-2026-09-15 | aplicado, teste real pendente | commit d98c3b59; reconciliação manual preservou claim persistido e validação tenant |
+| business-os/wave-1-operating-core-evidence-2026-09-11 | Evidence policy | remediation/business-os-operating-core-2026-09-15 | aplicado, teste real pendente | commit 7ed0ed20; evidence policy/approval foundations adicionados |
+
+O subgrupo permanece aberto até os testes reais no Codex Cloud. Validações locais: package_json=valid, conflict_markers=none e git diff --check=pass.
+
+## Ledger de remediação — Business OS audit/Stripe
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| business-os/phase-0-audit | Phase 0 audit | remediation/business-os-audit-stripe-2026-09-15 | aplicado, revisão/teste real pendente | commits b1f7ca9e, b2d2891f e de847d3c; nove mapas de arquitetura restaurados |
+| business-os/phase-0-audit-docs-2026-09-11 | Phase 0 docs | remediation/business-os-audit-stripe-2026-09-15 | aplicado, revisão/teste real pendente | conteúdo documental incorporado em de847d3c |
+| business-os/phase-3-contract-security-2026-09-12 | Stripe contract | remediation/business-os-audit-stripe-2026-09-15 | aplicado, teste real pendente | commit bc72da78; contratos e testes provider-free |
+| business-os/phase-3-stripe-security-2026-09-12 | Stripe security | remediation/business-os-audit-stripe-2026-09-15 | aplicado, teste real pendente | commit bb3fc0fc; route/browser contracts e audit doc |
+
+O grupo permanece aberto até typecheck/lint/testes no Codex Cloud. Conflitos foram comparados: o conflito Stripe era apenas formatação/comentário; os documentos ausentes foram recuperados por conteúdo do merge tree, sem descarte lógico.
+
+## Ledger de remediação — Business OS CLI/Entitlements
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| business-os/phase-1-cli-2026-09-11 | CLI/Entitlements | remediation/business-os-cli-entitlements-2026-09-15 | aplicado, teste real pendente | commit 1f331dac; route, adapter, MCP entitlements, CLI e testes |
+| business-os/phase-1-cli-esm-2026-09-11 | CLI ESM | remediation/business-os-cli-entitlements-2026-09-15 | aplicado, teste real pendente | commit 182620f7; script cli:lumenva com tsx/esm |
+| business-os/phase-1-entitlements | Entitlements catalog | remediation/business-os-cli-entitlements-2026-09-15 | aplicado, teste real pendente | merge c155 recuperado via -m2 e arquivos de migration-policy adicionados |
+
+O subgrupo permanece aberto até typecheck/lint/testes no Codex Cloud. Validações locais: package_json=valid, migration_policy_syntax=pass, conflict_markers=none e git diff --check=pass.
+
+| wave10/mobile-compliance-guardian-2026-09-13 | Wave 10 Mobile Compliance | remediation/waves-10-15-2026-09-15 | aplicado, teste real pendente | commit 4d34220c; Mobile Releases registrado na navegação |
+| wave14-15/evals-autonomy-2026-09-12 | Wave 14–15 Evals | remediation/waves-10-15-2026-09-15 | já coberto pelo baseline | cherry-pick vazio após comparação; não houve alteração descartada |
+
+## Ledger de remediação — Wave 6–9
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| wave6/studio-comercial-2026-09-12 | Wave 6 Studio | remediation/waves-6-9-2026-09-15 | já coberto pelo baseline | cherry-pick vazio após reconciliação |
+| wave7-8/studio-editor-2026-09-12 | Wave 7–8 Studio Editor | remediation/waves-6-9-2026-09-15 | aplicado, teste real pendente | commit 986a6230; testes de concorrência estabilizados |
+| wave8/asset-intelligence-2026-09-13 | Wave 8 Asset Intelligence | remediation/waves-6-9-2026-09-15 | aplicado, teste real pendente | commit a1db6ba0; registry, migration, baseline, RLS e integration test |
+| wave9/product-factory-2026-09-12 | Wave 9 Product Factory | remediation/waves-6-9-2026-09-15 | aplicado, teste real pendente | commit 4a817bbe; teste de concorrência do estado durável |
+
+O grupo permanece aberto até os testes reais no Codex Cloud. Validações locais: package_json=valid, conflict_markers=none, registry SQL presente com estados quotados e git diff --check=pass.
+
+## Ledger de remediação — Wave 1–5
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| wave1/job-engine-persistence-2026-09-13 | Wave 1 Job Engine | remediation/waves-1-9-2026-09-15 | aplicado, teste real pendente | commit ad2dc7df; job-engine.ts/test.ts adicionados |
+| wave2/agent-birth-2026-09-12 | Wave 2 Agent Birth | remediation/waves-1-9-2026-09-15 | aplicado, teste real pendente | commit 1260125e; teste Postgres descartável adicionado |
+| wave3/session-runtime-skeleton-2026-09-12 | Wave 3 Session Runtime | remediation/waves-1-9-2026-09-15 | já coberto pelo baseline | cherry-pick vazio após reconciliação |
+| wave4/browsermesh-wake-2026-09-12 | Wave 4 BrowserMesh | remediation/waves-1-9-2026-09-15 | já coberto pelo baseline | cherry-pick vazio após reconciliação |
+| wave5/command-center-2026-09-12 | Wave 5 Command Center | remediation/waves-1-9-2026-09-15 | aplicado, teste real pendente | commit 6f645e29; RLS integration test preservado |
+
+O grupo permanece aberto até Vitest/Postgres/typecheck no Codex Cloud; validações locais package_json=valid, conflict_markers=none e git diff --check=pass.
+
+## Ledger de remediação — LGPD/PAdES
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| f6-lgpd-export-2026-09-10 | LGPD export | remediation/lgpd-pades-2026-09-15 | já coberto pelo baseline, teste real pendente | cherry-pick e770c2e1 redundante; endpoint ZIP/JSON atual preservado |
+| f6/lgpd-zip-manifest-2026-09-10 | LGPD manifest | remediation/lgpd-pades-2026-09-15 | já coberto pelo baseline, teste real pendente | cherry-pick 706caf3e redundante; export-package atual inclui verificação |
+| f6/pades-scaffold-2026-09-10 | PAdES | remediation/lgpd-pades-2026-09-15 | já coberto pelo baseline, teste real pendente | cherry-pick ed4a5252 redundante; signer fail-closed e fixture já presentes |
+
+O grupo não é fechado sem executar test:pades/typecheck no Codex Cloud. Validações locais package_json=valid, conflict_markers=none e git diff --check=pass.
+
 ## Ledger de remediação — Customer 360
 
 | Branch original | Grupo | Branch isolada | Estado | Evidência |
