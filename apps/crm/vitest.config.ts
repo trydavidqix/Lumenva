@@ -2,6 +2,10 @@ import { defineConfig } from "vitest/config";
 import path from "node:path";
 
 export default defineConfig({
+  // The workspace root contains `lib -> apps/crm/lib`; keeping Vitest rooted
+  // at the app prevents the same suite from being collected twice through the
+  // symlink when the package script runs from the monorepo root.
+  root: path.resolve(__dirname),
   // JSX automático já é o default do transform esbuild no Vite 7+ (vitest 4);
   // a opção `esbuild.jsx` saiu do tipo — provado pelos testes de componente.
   test: {
@@ -17,7 +21,7 @@ export default defineConfig({
     // depois); só para de cronometrar a lentidão da máquina como se fosse
     // asserção. Caso que precisa de mais (abrir processo filho) declara o seu.
     testTimeout: 15_000,
-    setupFiles: ["./apps/crm/tests/setup/vitest.setup.ts"],
+    setupFiles: ["./tests/setup/vitest.setup.ts"],
     globals: true,
     coverage: { provider: "v8", reporter: ["text", "html"] },
     // tests/journeys/** roda no Playwright (jornada de baseline dos canais), igual
