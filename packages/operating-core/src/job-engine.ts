@@ -1,5 +1,5 @@
 import { JOB_EVENT_TYPES, type Evidence, type Job, type JobEvent, type JobEventType, type JobEvidence } from "./contracts.js";
-import type { PostgresJobClaimStore } from "./job-claim-store.js";
+
 const transitions: Record<Job["status"], readonly Job["status"][]> = { queued: ["claimed"], claimed: ["running", "queued"], running: ["completed", "queued"], completed: ["evidence"], evidence: [] };
 export class JobEngineError extends Error { constructor(readonly code: "not_found" | "invalid_transition" | "tenant_mismatch" | "ownership_mismatch" | "claim_conflict", message: string) { super(message); this.name = "JobEngineError"; } }
 export interface JobEngineOptions { now?: () => string; id?: () => string; }
@@ -8,7 +8,7 @@ export class InMemoryJobEngine {
   constructor(options: JobEngineOptions = {}) { this.now = options.now ?? (() => new Date().toISOString()); this.id = options.id ?? (() => crypto.randomUUID()); }
   enqueue<T>(input: { id?: string; organizationId: string; kind: string; payload: T }): Job<T> { if (!input.organizationId.trim() || !input.kind.trim()) throw new JobEngineError("tenant_mismatch", "job_input_invalid"); const timestamp = this.now(); const job: Job<T> = { id: input.id ?? this.id(), organizationId: input.organizationId, kind: input.kind, payload: input.payload, status: "queued", claimedBy: null, attempts: 0, evidence: [], createdAt: timestamp, updatedAt: timestamp }; this.jobs.set(job.id, job); this.emit(job, "job.queued", { kind: job.kind }); return job; }
   claim(id: string, workerId: string, organizationId: string): Job { const job = this.get(id, organizationId); this.transition(job, "claimed"); job.claimedBy = workerId; job.attempts += 1; this.touch(job); this.emit(job, "job.claimed", { workerId }); return job; }
-  async claimPersisted(id: string, workerId: string, organizationId: string, claimStore: Pick<PostgresJobClaimStore, "claim" | "release">): Promise<Job> {
+  async claimPersisted(id: string, workerId: string, organizationId: string, claimStore: { claim: (org: string, job: string, worker: string) => Promise<boolean>, release: (org: string, job: string, worker: string) => Promise<boolean | void> }): Promise<Job> {
     const claim = await claimStore.claim(organizationId, id, workerId);
     if (!claim) throw new JobEngineError("claim_conflict", "job_already_claimed");
     try {
