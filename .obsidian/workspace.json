@@ -1,0 +1,211 @@
+{
+  "main": {
+    "id": "98b9b90b04fddd33",
+    "type": "split",
+    "children": [
+      {
+        "id": "ff39cacc4d349e3b",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "4848b0dd3dd0cc6d",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Visualização em gráfico"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "8d99354e190fe0c1",
+    "type": "split",
+    "children": [
+      {
+        "id": "4b4a3e6c47348c7b",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "07adf26478e632dc",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Explorador de arquivos"
+            }
+          },
+          {
+            "id": "7d6b27f1619d64df",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Procurar"
+            }
+          },
+          {
+            "id": "01f81af1a2753a85",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-bookmark",
+              "title": "Marcadores"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "ef6bbf791cdba9a3",
+    "type": "split",
+    "children": [
+      {
+        "id": "8c1858caeaa0bd0d",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "214c668990ab2515",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Links inversos"
+            }
+          },
+          {
+            "id": "1f6d26271922376d",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Links de saída"
+            }
+          },
+          {
+            "id": "9cb32de5f092c253",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Etiquetas"
+            }
+          },
+          {
+            "id": "3839fbbe2ac54aa3",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "Todas as propriedades"
+            }
+          },
+          {
+            "id": "e1b921a8e8ac4d71",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Sumário"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Abrir a troca rápida": false,
+      "graph:Abrir visualização em gráfico": false,
+      "canvas:Criar novo canvas": false,
+      "daily-notes:Abrir a nota de hoje": false,
+      "templates:Inserir modelo": false,
+      "command-palette:Abrir paleta de comandos": false,
+      "bases:Criar nova base": false
+    }
+  },
+  "active": "4848b0dd3dd0cc6d",
+  "lastOpenFiles": [
+    "Lumenva-Knowledge/05-Juridico-Compliance/termos-de-uso.md",
+    "Lumenva-Knowledge/05-Juridico-Compliance/stripe-tax-requisitos.md",
+    "Lumenva-Knowledge/05-Juridico-Compliance/politica-privacidade.md",
+    "Lumenva-Knowledge/05-Juridico-Compliance/gap-futuro-paises.md",
+    "Lumenva-Knowledge/05-Juridico-Compliance",
+    "Lumenva-Knowledge/04-Pesquisa-Bruta/produto-estudio.md",
+    "Lumenva-Knowledge/04-Pesquisa-Bruta/operacoes.md",
+    "Lumenva-Knowledge/04-Pesquisa-Bruta/memoria-meta.md",
+    "Lumenva-Knowledge/04-Pesquisa-Bruta/marketing.md",
+    "Lumenva-Knowledge/04-Pesquisa-Bruta/atendimento.md",
+    "Lumenva-Knowledge/00-Sistema/03-Obsidian-Capacidade-Global.md",
+    "Lumenva-Knowledge/04-Pesquisa-Bruta/00-Fontes-e-estado-da-pesquisa.md",
+    "Lumenva-Knowledge/04-Pesquisa-Bruta",
+    "Lumenva-Knowledge/03-Por-Agente/sales-agent.md",
+    "Lumenva-Knowledge/03-Por-Agente/00-Contrato-de-Nascimento-Psyche.md",
+    "Lumenva-Knowledge/03-Por-Agente",
+    "Lumenva-Knowledge/02-Emocao-Sintetica/02-Decay-e-Context-Composer.md",
+    "Lumenva-Knowledge/02-Emocao-Sintetica/01-PAD-Plutchik-OCC.md",
+    "Lumenva-Knowledge/02-Emocao-Sintetica",
+    "Lumenva-Knowledge/01-Tracos-de-Personalidade/01-Big-Five-e-Behavior-Contract.md",
+    "Lumenva-Knowledge/01-Tracos-de-Personalidade",
+    "Lumenva-Knowledge/00-Sistema/01-Agent-Birth-Pipeline-com-Psyche.md",
+    "Lumenva-Knowledge/00-Sistema/00-Índice PsycheOS.md",
+    "Lumenva-Knowledge/00-Sistema"
+  ]
+}

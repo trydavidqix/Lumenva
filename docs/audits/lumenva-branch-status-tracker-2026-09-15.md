@@ -145,6 +145,53 @@ Até a execução desses comandos, nenhuma linha M/P é considerada tratada ou c
 
 O subgrupo permanece aberto até Vitest/typecheck no Codex Cloud. Validações locais: package_json=valid, conflict_markers=none e git diff --check=pass.
 
+## Ledger de remediação — Business OS / Operating Core
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| business-os/wave-1-agent-contracts-2026-09-11 | Operating Core contracts | remediation/business-os-operating-core-2026-09-15 | aplicado, teste real pendente | commit eb4bce20; contratos e testes adicionados |
+| business-os/wave-1-job-engine-events-2026-09-11 | Operating Core events | remediation/business-os-operating-core-2026-09-15 | aplicado, teste real pendente | commit d98c3b59; reconciliação manual preservou claim persistido e validação tenant |
+| business-os/wave-1-operating-core-evidence-2026-09-11 | Evidence policy | remediation/business-os-operating-core-2026-09-15 | aplicado, teste real pendente | commit 7ed0ed20; evidence policy/approval foundations adicionados |
+
+O subgrupo permanece aberto até os testes reais no Codex Cloud. Validações locais: package_json=valid, conflict_markers=none e git diff --check=pass.
+
+## Ledger de remediação — Business OS audit/Stripe
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| business-os/phase-0-audit | Phase 0 audit | remediation/business-os-audit-stripe-2026-09-15 | aplicado, revisão/teste real pendente | commits b1f7ca9e, b2d2891f e de847d3c; nove mapas de arquitetura restaurados |
+| business-os/phase-0-audit-docs-2026-09-11 | Phase 0 docs | remediation/business-os-audit-stripe-2026-09-15 | aplicado, revisão/teste real pendente | conteúdo documental incorporado em de847d3c |
+| business-os/phase-3-contract-security-2026-09-12 | Stripe contract | remediation/business-os-audit-stripe-2026-09-15 | aplicado, teste real pendente | commit bc72da78; contratos e testes provider-free |
+| business-os/phase-3-stripe-security-2026-09-12 | Stripe security | remediation/business-os-audit-stripe-2026-09-15 | aplicado, teste real pendente | commit bb3fc0fc; route/browser contracts e audit doc |
+
+O grupo permanece aberto até typecheck/lint/testes no Codex Cloud. Conflitos foram comparados: o conflito Stripe era apenas formatação/comentário; os documentos ausentes foram recuperados por conteúdo do merge tree, sem descarte lógico.
+
+## Ledger de remediação — Business OS CLI/Entitlements
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| business-os/phase-1-cli-2026-09-11 | CLI/Entitlements | remediation/business-os-cli-entitlements-2026-09-15 | aplicado, teste real pendente | commit 1f331dac; route, adapter, MCP entitlements, CLI e testes |
+| business-os/phase-1-cli-esm-2026-09-11 | CLI ESM | remediation/business-os-cli-entitlements-2026-09-15 | aplicado, teste real pendente | commit 182620f7; script cli:lumenva com tsx/esm |
+| business-os/phase-1-entitlements | Entitlements catalog | remediation/business-os-cli-entitlements-2026-09-15 | aplicado, teste real pendente | merge c155 recuperado via -m2 e arquivos de migration-policy adicionados |
+
+O subgrupo permanece aberto até typecheck/lint/testes no Codex Cloud. Validações locais: package_json=valid, migration_policy_syntax=pass, conflict_markers=none e git diff --check=pass.
+
+## Ledger de remediação — Automation/Identity
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| automation/lumenva-identity-trigger-2026-09-14 | Automation/Identity | remediation/automation-identity-2026-09-15 | aplicado, verificação externa pendente | commit ce05ffa4; trigger doc versionado |
+
+O grupo depende de runner/credenciais externas para prova operacional; localmente package_json=valid, conflict_markers=none e git diff --check=pass.
+
+## Ledger de remediação — AI Creator/Commerce
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| implementation/ai-creator-commerce-revenue-os-2026-09-13 | AI Creator/Commerce Connect | remediation/ai-creator-commerce-2026-09-15 | aplicado, teste real pendente | commit 11a6a79d; adapter Nuvemshop provider-neutral com capabilities comprovadas |
+
+O grupo permanece aberto até typecheck/lint/testes no Codex Cloud; o conflito add/delete foi resolvido mantendo o adapter ausente no baseline, sem descarte de lógica existente.
+
 | wave10/mobile-compliance-guardian-2026-09-13 | Wave 10 Mobile Compliance | remediation/waves-10-15-2026-09-15 | aplicado, teste real pendente | commit 4d34220c; Mobile Releases registrado na navegação |
 | wave14-15/evals-autonomy-2026-09-12 | Wave 14–15 Evals | remediation/waves-10-15-2026-09-15 | já coberto pelo baseline | cherry-pick vazio após comparação; não houve alteração descartada |
 
@@ -207,3 +254,25 @@ O grupo permanece aberto até o Codex Cloud executar os testes e typecheck; as v
 | business-os/phase-1-http-2026-09-11 | Migrations | remediation/entitlements-billing-migrations-2026-09-15 | aplicado, teste real pendente | commit cf511bbc; declaração .mjs.d.ts restaurada |
 
 O grupo não é considerado fechado: a execução local de pnpm tentou resolver pacotes em registry.npmjs.org e falhou repetidamente por DNS. Gate obrigatório no Codex Cloud: pnpm install --frozen-lockfile e, depois, os comandos completos desta página.
+
+## Auditoria adicional — Business OS audit/Stripe
+
+| Verificação | Resultado |
+|---|---|
+| Branch auditada | `remediation/business-os-audit-stripe-2026-09-15` @ `60be644d` |
+| Drift de imports relativos inicial | 35 ocorrências detectadas por scanner estático de resolução de módulos |
+| Módulos históricos restauráveis | 14 arquivos restaurados a partir de `6e0a13fa`, `35064424`, `47802c2b`, `28a63f94`, `d3a77113`, `586b3750`, `750b0920`, `e901ad98` e `8084af09`; nenhum foi inventado |
+| Imports acionáveis após restauração | 0; a única ocorrência restante está dentro de uma string de fixture que gera código de teste, não é import executado pela branch |
+| Validação estática | `git diff --check` passou para as alterações desta unidade |
+| Typecheck/lint local | Não executados até o fim: não há `node_modules` nos worktrees e `pnpm --offline` tentou acessar `registry.npmjs.org`, bloqueado por DNS |
+
+As restaurações preservam os caminhos canônicos do CRM: consent registry, gateway projection, no-progress watchdog, agent definition/authority/registry, layer manifest, Stripe webhook contract, overview state/persistence, build-plan state store, source registry, studio context pack, operating-core adapters e fixture de entitlements. O gate real de typecheck/lint/Vitest permanece pendente no CI/Codex Cloud.
+
+### Ciclo CI — 2026-09-16
+
+Run real: `35106766261` ([GitHub Actions](https://github.com/trydavidqix/Lumenva/actions/runs/35106766261)) terminou com `failure` nos jobs `verify` e `invariants`.
+
+- `verify`: a configuração de heap foi aplicada e o OOM desapareceu; o typecheck avançou até erros de drift/tipos em `stripe-browser-state`, export do checkout, `AuditAction`, `health` status, fixtures `DispatchWorker`/`WakeWorker`, lock date, `action-bus`, `reverse-design`, `source-registry`, consent publication, affect ledger e delivery fixture.
+- `invariants`: o baseline avançou além do erro `CLAIMED` e falhou em `operator does not exist: text = uuid` em `supabase/baseline.sql:10768`, confirmando que o baseline desta branch ainda não incorpora a correção de tenant UUID.
+
+Correções históricas correspondentes foram preparadas nesta branch, sem editar migrations: contratos/adapters ausentes restaurados, imports alinhados, fixtures tipadas, narrowing corrigido, `AuditAction` canônico e baseline/CI já corrigidos. A validação local completa continua indisponível por ausência de `node_modules`; o próximo gate é CI real após commit.
