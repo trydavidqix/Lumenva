@@ -11,5 +11,8 @@
     "test:unit": "pnpm -r --if-present test:unit",
     "test:shell": "pnpm -r --if-present test:shell",
     "test:db": "pnpm -r --if-present test:db"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
   }
 }

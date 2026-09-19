@@ -166,6 +166,32 @@ O subgrupo permanece aberto até os testes reais no Codex Cloud. Validações lo
 
 O grupo permanece aberto até typecheck/lint/testes no Codex Cloud. Conflitos foram comparados: o conflito Stripe era apenas formatação/comentário; os documentos ausentes foram recuperados por conteúdo do merge tree, sem descarte lógico.
 
+## Ledger de remediação — Business OS CLI/Entitlements
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| business-os/phase-1-cli-2026-09-11 | CLI/Entitlements | remediation/business-os-cli-entitlements-2026-09-15 | aplicado, teste real pendente | commit 1f331dac; route, adapter, MCP entitlements, CLI e testes |
+| business-os/phase-1-cli-esm-2026-09-11 | CLI ESM | remediation/business-os-cli-entitlements-2026-09-15 | aplicado, teste real pendente | commit 182620f7; script cli:lumenva com tsx/esm |
+| business-os/phase-1-entitlements | Entitlements catalog | remediation/business-os-cli-entitlements-2026-09-15 | aplicado, teste real pendente | merge c155 recuperado via -m2 e arquivos de migration-policy adicionados |
+
+O subgrupo permanece aberto até typecheck/lint/testes no Codex Cloud. Validações locais: package_json=valid, migration_policy_syntax=pass, conflict_markers=none e git diff --check=pass.
+
+## Ledger de remediação — Automation/Identity
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| automation/lumenva-identity-trigger-2026-09-14 | Automation/Identity | remediation/automation-identity-2026-09-15 | aplicado, verificação externa pendente | commit ce05ffa4; trigger doc versionado |
+
+O grupo depende de runner/credenciais externas para prova operacional; localmente package_json=valid, conflict_markers=none e git diff --check=pass.
+
+## Ledger de remediação — AI Creator/Commerce
+
+| Branch original | Grupo | Branch isolada | Estado | Evidência |
+|---|---|---|---|---|
+| implementation/ai-creator-commerce-revenue-os-2026-09-13 | AI Creator/Commerce Connect | remediation/ai-creator-commerce-2026-09-15 | aplicado, teste real pendente | commit 11a6a79d; adapter Nuvemshop provider-neutral com capabilities comprovadas |
+
+O grupo permanece aberto até typecheck/lint/testes no Codex Cloud; o conflito add/delete foi resolvido mantendo o adapter ausente no baseline, sem descarte de lógica existente.
+
 | wave10/mobile-compliance-guardian-2026-09-13 | Wave 10 Mobile Compliance | remediation/waves-10-15-2026-09-15 | aplicado, teste real pendente | commit 4d34220c; Mobile Releases registrado na navegação |
 | wave14-15/evals-autonomy-2026-09-12 | Wave 14–15 Evals | remediation/waves-10-15-2026-09-15 | já coberto pelo baseline | cherry-pick vazio após comparação; não houve alteração descartada |
 

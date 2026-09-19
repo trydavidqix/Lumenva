@@ -61,7 +61,7 @@ export function createPostgresSourceRegistry(db: Queryable, table = "hermes_sour
         RETURNING organization_id, source_id, uri, title, owner, license, version, source_type, scope, retrieved_at, last_verified_at, content_hash, state, created_at`,
         [source.organizationId, sourceId, source.uri, source.title, source.owner, source.license, source.version, source.sourceType, source.scope ?? null, source.retrievedAt ?? null, source.lastVerifiedAt ?? null, source.contentHash ?? null, source.state ?? "active", createdAt]);
       const row = result.rows[0];
-      if (!row) throw new Error("source_registry_insert_failed");
+      if (!row) throw new Error("source_registry_insert_missing");
       const record = fromRow(row);
       return { created: row.created_at === createdAt || new Date(row.created_at).toISOString() === new Date(createdAt).toISOString(), record };
     },

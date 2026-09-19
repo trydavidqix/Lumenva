@@ -1,10 +1,8 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 
-const dockerAvailable = spawnSync("docker", ["version"], { stdio: "ignore" }).status === 0;
-
-describe.skipIf(!dockerAvailable)("Hermes Source Registry RLS (real PostgreSQL)", () => {
+describe("Hermes Source Registry RLS (real PostgreSQL)", () => {
   it("persiste via migration e isola tenants com role sem BYPASSRLS", async () => {
     const container = execFileSync("docker", ["run", "--rm", "-d", "-e", "POSTGRES_PASSWORD=postgres", "-p", "0:5432", "postgres:16"], { encoding: "utf8" }).trim();
     try {
@@ -21,8 +19,8 @@ describe.skipIf(!dockerAvailable)("Hermes Source Registry RLS (real PostgreSQL)"
         await admin.query(`CREATE ROLE ${role} LOGIN PASSWORD 'test-role' NOSUPERUSER NOBYPASSRLS`);
         await admin.query("CREATE OR REPLACE FUNCTION public.fn_user_org_ids() RETURNS SETOF text LANGUAGE sql STABLE AS $$ SELECT unnest(string_to_array(current_setting('app.org_ids', true), ',')) $$");
         const root = `${process.cwd()}/supabase/migrations`;
-        await admin.query(await readFile(`${root}/20260917100000_0174_hermes_source_registry.sql`, "utf8"));
-        await admin.query(await readFile(`${root}/20260917100100_0175_hermes_source_registry_rls.sql`, "utf8"));
+        await admin.query(await readFile(`${root}/20260917100000_0185_hermes_source_registry.sql`, "utf8"));
+        await admin.query(await readFile(`${root}/20260917100100_0186_hermes_source_registry_rls.sql`, "utf8"));
         await admin.query(`GRANT USAGE ON SCHEMA public TO ${role}`);
         await admin.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON public.hermes_source_registry TO ${role}`);
         const tenant = new Pool({ connectionString: url.replace("postgres:postgres@", `${role}:test-role@`) });
@@ -36,5 +34,5 @@ describe.skipIf(!dockerAvailable)("Hermes Source Registry RLS (real PostgreSQL)"
         } finally { client.release(); await tenant.end(); }
       } finally { await admin.query(`DROP ROLE IF EXISTS ${role}`).catch(() => undefined); await admin.end(); }
     } finally { execFileSync("docker", ["rm", "-f", container], { stdio: "ignore" }); }
-   }, 40_000);
+  }, 40_000);
 });

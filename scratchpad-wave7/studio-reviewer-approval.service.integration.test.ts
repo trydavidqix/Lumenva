@@ -24,12 +24,12 @@ describe("Studio approval service authority", () => {
     await admin.query("CREATE ROLE service_role NOLOGIN");
     await admin.query("GRANT USAGE ON SCHEMA public TO authenticated, service_role");
     await admin.query("GRANT EXECUTE ON FUNCTION public.fn_user_org_ids() TO authenticated");
-    await admin.query(readFileSync("supabase/migrations/20260917101000_0184_studio_reviewer_authorizations.sql", "utf8"));
+    await admin.query(readFileSync("supabase/migrations/20260917101000_0195_studio_reviewer_authorizations.sql", "utf8"));
     await registerReviewer(admin, { organizationId: org, reviewerId: "reviewer-a", role: "owner" });
     await registerReviewer(admin, { organizationId: otherOrg, reviewerId: "reviewer-b", role: "owner" });
     tenant = new Pool({ connectionString: url.replace("postgres:test", "authenticated:authenticated") });
     await tenant.query(`SET app.org_ids = '${org}'`);
-  }, 30_000);
+  });
   afterAll(async () => { await tenant?.end(); if (admin) { await admin.query("DROP OWNED BY authenticated"); await admin.query("DROP OWNED BY service_role"); await admin.query("DROP ROLE IF EXISTS authenticated"); await admin.query("DROP ROLE IF EXISTS service_role"); await admin.end(); } if (container) { const { execFileSync } = await import("node:child_process"); execFileSync("docker", ["rm", "-f", container]); } });
 
   it("approveEdit consults persistent authority and rejects unknown reviewer", async () => {
@@ -43,5 +43,5 @@ describe("Studio approval service authority", () => {
     await expect(store.approveEdit({ editId: "edit", reviewerId: "unknown" })).rejects.toThrow("reviewer_not_authorized");
     await expect(store.approveEdit({ editId: "edit", reviewerId: "reviewer-b" })).rejects.toThrow("reviewer_not_authorized");
     await expect(store.approveEdit({ editId: "edit", reviewerId: "reviewer-a" })).resolves.toMatchObject({ version: 2, created_by: "reviewer-a" });
-  }, 30_000);
+  });
 });

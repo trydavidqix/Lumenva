@@ -64,3 +64,4 @@ export class PostgresAgentDefinitionRegistry {
     return { id: row.definition_id, version: row.definition_version, identity: row.identity, mission: row.mission, boundaries: boundariesFromRow(row.boundaries), authority: row.authority, escalation: row.escalation, status: row.status };
   }
 }
+

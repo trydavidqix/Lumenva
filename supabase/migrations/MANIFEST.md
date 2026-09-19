@@ -214,11 +214,28 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 - **Integrations**: tenant_integrations, orders, nuvemshop_products
 - **Compliance**: lgpd_requests
 - **Ops**: incidents
+| `20260911100000` | `0161_entitlements_catalog` | Entitlements catalog definition. |
 | `20260912120000` | `0162_stripe_entitlement_boundary` | Stripe entitlement boundary and tenant-safe billing state. |
-| `20260913010000` | `0164_hermes_tool_loop_locks` | Hermes tool-loop lock state with tenant isolation. |
+| `20260913010100` | `0167_hermes_tool_loop_locks` | Hermes tool-loop lock state with tenant isolation. |
 | `20260913020000` | `0165_hermes_session_supersession` | Hermes session supersession state. |
 | `20260913050000` | `0168_client_portal_decisions` | Client portal decision records. |
 | `20260913100000` | `browsermesh_event_idempotency` | BrowserMesh replay claims table. |
 | `20260913120000` | `0169_hermes_tool_loop_locks_tenant_rls` | Hermes tool-loop lock tenant RLS hardening. |
 | `20260913150000` | `0166_studio_client_portal_tokens` | Studio client portal token storage. |
-| `20260913160000` | `0163_browsermesh_event_idempotency_rls` | BrowserMesh replay claims tenant RLS and grants. |
+| `20260913150002` | `command_center_overview_rls` | Command center overview RLS policy. |
+| `20260913160000` | `0172_browsermesh_event_idempotency_rls` | BrowserMesh replay claims tenant RLS and grants. |
+| `20260913170000` | `0173_asset_license_records` | Asset license records. |
+| `20260915090000` | `0170_tenant_rls_hardening` | Tenant RLS hardening. |
+| `20260915100000` | `0171_content_asset_provenance` | Content asset provenance. |
+| `20260917100000` | `0185_hermes_source_registry` | Hermes source registry. |
+| `20260917100100` | `0186_hermes_source_registry_rls` | Hermes source registry RLS. |
+| `20260917100200` | `0187_hermes_memory_gateway` | Hermes memory gateway. |
+| `20260917100300` | `0188_psyche_watchdog_observations` | Psyche watchdog observations. |
+| `20260917100400` | `0189_psyche_watchdog_requesters` | Psyche watchdog requesters. |
+| `20260917100500` | `0190_operating_core_job_receipts_rls` | Operating core job receipts RLS. |
+| `20260917100600` | `0191_contact_consents` | Contact consents. |
+| `20260917100700` | `0192_studio_editor` | Studio editor tables. |
+| `20260917100800` | `0193_operating_core_receipts` | Operating core receipts. |
+| `20260917101000` | `0195_studio_reviewer_authorizations` | Studio reviewer authorizations. |
+| `20260918150000` | `0196_customer360_pii` | Customer 360 PII isolation and compliance. |
+| `20260918160000` | `0197_customer360_merge` | Customer 360 merge queue and idempotency. |

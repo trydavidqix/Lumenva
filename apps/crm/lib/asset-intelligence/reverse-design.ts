@@ -41,6 +41,11 @@ export function suggestLayerReuse(
     }));
 }
 
+/**
+ * Downstream authorization boundary. Suggestions never authorize reuse by
+ * themselves; this function requires a tenant-matched, unexpired approval and
+ * revalidates every layer's external license before returning executable use.
+ */
 export async function approveLayerReuse(
   manifest: LayerManifest,
   request: { organizationId: string; targetSemanticTags: readonly string[] },
@@ -48,7 +53,9 @@ export async function approveLayerReuse(
   findLicense: (licenseRef: string) => Promise<LayerLicenseRecord | null>,
   now = new Date(),
 ): Promise<readonly LayerReuseSuggestion[]> {
-  if (manifest.organization_id !== request.organizationId) throw new LayerReuseAuthorizationError("Layer reuse tenant mismatch.");
+  if (manifest.organization_id !== request.organizationId) {
+    throw new LayerReuseAuthorizationError("Layer reuse tenant mismatch.");
+  }
   if (!approval || !approval.approval_id.trim() || approval.organizationId !== request.organizationId || approval.status !== "APPROVED" || Date.parse(approval.expires_at) <= now.getTime()) {
     throw new LayerReuseAuthorizationError("Explicit layer reuse approval is required.");
   }
@@ -56,6 +63,7 @@ export async function approveLayerReuse(
   return suggestLayerReuse(manifest, request.targetSemanticTags).map((suggestion) => ({ ...suggestion, authorization: "APPROVED_FOR_REUSE" as const }));
 }
 
+/** Loads approval from the durable tenant-scoped registry before authorizing. */
 export async function approveLayerReuseFromStore(
   manifest: LayerManifest,
   request: { organizationId: string; targetSemanticTags: readonly string[]; approvalId: string },

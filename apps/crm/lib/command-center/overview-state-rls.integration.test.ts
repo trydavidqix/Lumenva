@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Pool } from "pg";
@@ -23,9 +23,7 @@ async function waitForPostgres(connectionString: string): Promise<void> {
   throw new Error("postgres_query_not_ready");
 }
 
-const dockerAvailable = spawnSync("docker", ["version"], { stdio: "ignore" }).status === 0;
-
-describe.skipIf(!dockerAvailable)("Command Center overview RLS (real PostgreSQL)", () => {
+describe("Command Center overview RLS (real PostgreSQL)", () => {
   beforeAll(async () => {
     container = execFileSync("docker", ["run", "--rm", "-d", "-e", "POSTGRES_PASSWORD=test", "-p", "127.0.0.1::5432", "postgres:16"], { encoding: "utf8" }).trim();
     const port = execFileSync("docker", ["port", container, "5432/tcp"], { encoding: "utf8" }).trim().match(/:(\d+)$/)?.[1];
@@ -36,7 +34,7 @@ describe.skipIf(!dockerAvailable)("Command Center overview RLS (real PostgreSQL)
     await admin.query("CREATE ROLE authenticated NOLOGIN");
     await admin.query("CREATE ROLE command_center_rls_test LOGIN PASSWORD 'test-role' NOSUPERUSER NOBYPASSRLS IN ROLE authenticated");
     await admin.query("CREATE OR REPLACE FUNCTION public.fn_user_org_ids() RETURNS SETOF text LANGUAGE sql STABLE AS $$ SELECT unnest(string_to_array(current_setting('app.org_ids', true), ',')) $$");
-    await admin.query(await readFile(join(process.cwd(), "supabase/migrations/20260917100900_0183_command_center_overview_rls.sql"), "utf8"));
+    await admin.query(await readFile(join(process.cwd(), "supabase/migrations/20260913150002_command_center_overview_rls.sql"), "utf8"));
   }, 30_000);
 
   afterAll(async () => {

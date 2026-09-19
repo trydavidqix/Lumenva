@@ -13,6 +13,13 @@ describe("Customer 360 PII security contract", () => {
     expect(tool).toMatch(/CPF nunca retornado em plaintext/);
     expect(tool).not.toMatch(/cpf_decrypted|cpf_encrypted/);
   });
+  it("does not expose the reversible-by-dictionary CPF hash through REST", () => {
+    const handler = read("apps/crm/app/api/v1/contacts/_handler.ts");
+    const publicSelect = handler.match(/const SELECT_COLS =([\s\S]*?);/i)?.[1] ?? "";
+    expect(publicSelect).not.toContain("cpf_hash");
+    expect(handler).toContain("const SELECT_INTERNAL_COLS = `${SELECT_COLS}, cpf_hash`");
+    expect(handler).toContain("const { cpf_hash: _cpfHash");
+  });
   it("keeps merge UI read-only until manager endpoint exists", () => {
     const dialog = read("apps/crm/components/contacts/MergeDialog.tsx");
     expect(dialog).toMatch(/read-only scaffolding/);
