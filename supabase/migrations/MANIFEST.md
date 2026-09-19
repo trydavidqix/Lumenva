@@ -237,3 +237,5 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 | `20260917100700` | `0192_studio_editor` | Studio editor tables. |
 | `20260917100800` | `0193_operating_core_receipts` | Operating core receipts. |
 | `20260917101000` | `0195_studio_reviewer_authorizations` | Studio reviewer authorizations. |
+| `20260918150000` | `0196_customer360_pii` | Customer 360 PII isolation and compliance. |
+| `20260918160000` | `0197_customer360_merge` | Customer 360 merge queue and idempotency. |

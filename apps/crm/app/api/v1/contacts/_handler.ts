@@ -13,6 +13,7 @@ import { ApiError } from "@/lib/api/types";
 import type { Actor, HandlerCtx } from "@/lib/api/handlers/types";
 import { audit } from "@/lib/audit";
 import { hashCpf, encryptCpfSql } from "@/lib/contacts/cpf";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Contact } from "@/lib/types/contacts";
 import type {
   ContactCreate,
@@ -23,7 +24,8 @@ import type {
 type SB = SupabaseClient;
 
 const SELECT_COLS =
-  "id, organization_id, name, display_name, email, email_normalized, phone_number, cpf_hash, birthdate, is_blocked, blocked_reason, is_anonymized, anonymized_at, is_merged_into, merged_at, consent, tags, source, source_metadata, created_at, updated_at, last_activity_at";
+  "id, organization_id, name, display_name, email, email_normalized, phone_number, birthdate, is_blocked, blocked_reason, is_anonymized, anonymized_at, is_merged_into, merged_at, consent, tags, source, source_metadata, created_at, updated_at, last_activity_at";
+const SELECT_INTERNAL_COLS = `${SELECT_COLS}, cpf_hash`;
 
 const ROLE_RANK: Record<string, number> = {
   viewer: 1,
@@ -36,6 +38,18 @@ interface CursorPayload {
   last_activity_at: string | null;
   created_at: string;
   id: string;
+}
+
+export function contactsAfterCursor(c: CursorPayload): string {
+  if (c.last_activity_at === null) {
+    return `created_at.lt.${c.created_at},and(created_at.eq.${c.created_at},id.lt.${c.id})`;
+  }
+  return [
+    `last_activity_at.lt.${c.last_activity_at}`,
+    `and(last_activity_at.eq.${c.last_activity_at},created_at.lt.${c.created_at})`,
+    `and(last_activity_at.eq.${c.last_activity_at},created_at.eq.${c.created_at},id.lt.${c.id})`,
+    "last_activity_at.is.null",
+  ].join(",");
 }
 
 function cursorKey(): string {
@@ -56,7 +70,11 @@ export function decodeContactsCursor(raw: string): CursorPayload | null {
     if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) return null;
     const json = Buffer.from(payload, "base64url").toString("utf8");
     const parsed = JSON.parse(json) as CursorPayload;
-    if (typeof parsed.id !== "string" || typeof parsed.created_at !== "string") return null;
+    if (
+      typeof parsed.id !== "string" ||
+      typeof parsed.created_at !== "string" ||
+      (parsed.last_activity_at !== null && typeof parsed.last_activity_at !== "string")
+    ) return null;
     return parsed;
   } catch {
     return null;
@@ -143,9 +161,7 @@ export async function listContactsHandler(
     if (!c) {
       throw new ApiError(400, "invalid_cursor", undefined, ctx.requestId, "Cursor inválido.");
     }
-    query = query.or(
-      `created_at.lt.${c.created_at},and(created_at.eq.${c.created_at},id.lt.${c.id})`,
-    );
+    query = query.or(contactsAfterCursor(c));
   }
 
   const { data, error } = await query;
@@ -178,7 +194,7 @@ export interface GetContactInput {
   decryptPurpose?: string | null;
 }
 
-export interface GetContactResult extends Contact {
+export interface GetContactResult extends Omit<Contact, "cpf_hash"> {
   cpf_available: boolean;
   cpf_decrypted: string | null;
   cpf_decrypt_denied?: boolean;
@@ -191,7 +207,7 @@ export async function getContactHandler(
 ): Promise<GetContactResult> {
   const { data, error } = await supabase
     .from("contacts")
-    .select(SELECT_COLS)
+    .select(SELECT_INTERNAL_COLS)
     .eq("id", input.contactId)
     .eq("organization_id", ctx.organization_id)
     .maybeSingle();
@@ -203,11 +219,12 @@ export async function getContactHandler(
     throw new ApiError(404, "not_found", undefined, ctx.requestId, "Contato não encontrado.");
   }
   const contact = data as Contact;
+  const { cpf_hash: _cpfHash, ...publicContact } = contact;
 
   let cpfDecrypted: string | null = null;
   let cpfDecryptDenied = false;
 
-  if (input.decryptPurpose && contact.cpf_hash && ctx.actor.type === "user") {
+  if (input.decryptPurpose && _cpfHash && ctx.actor.type === "user") {
     const { data: membership } = await supabase
       .from("user_organizations")
       .select("role")
@@ -221,8 +238,9 @@ export async function getContactHandler(
     if (rank < ROLE_RANK.manager!) {
       cpfDecryptDenied = true;
     } else {
-      const { data: dec, error: decErr } = await supabase.rpc("decrypt_cpf", {
+      const { data: dec, error: decErr } = await createAdminClient().rpc("decrypt_cpf", {
         p_contact_id: input.contactId,
+        p_purpose: input.decryptPurpose,
       });
       if (decErr) {
         console.warn("[contacts.get] decrypt_cpf RPC unavailable", decErr.message);
@@ -247,8 +265,8 @@ export async function getContactHandler(
   }
 
   return {
-    ...contact,
-    cpf_available: !!contact.cpf_hash,
+    ...publicContact,
+    cpf_available: !!_cpfHash,
     cpf_decrypted: cpfDecrypted,
     cpf_decrypt_denied: cpfDecryptDenied || undefined,
   };
@@ -259,7 +277,7 @@ export async function getContactHandler(
 // ---------------------------------------------------------------------------
 
 export interface CreateContactResult {
-  contact: Contact;
+  contact: Omit<Contact, "cpf_hash">;
   action: "created" | "matched";
 }
 
@@ -285,7 +303,7 @@ export async function createContactHandler(
 
   if (input.cpf) {
     insertRow.cpf_hash = hashCpf(input.cpf);
-    const enc = await encryptCpfSql(supabase, input.cpf);
+    const enc = await encryptCpfSql(createAdminClient(), input.cpf);
     if (enc) insertRow.cpf_encrypted = enc;
   }
 
@@ -331,7 +349,7 @@ export async function createContactHandler(
         source: contact.source,
         has_email: !!contact.email,
         has_phone: !!contact.phone_number,
-        has_cpf: !!contact.cpf_hash,
+        has_cpf: !!input.cpf,
       },
       p_metadata: { request_id: ctx.requestId, ...a.metadataActor },
       p_organization_id: contact.organization_id,
@@ -401,7 +419,7 @@ export async function patchContactHandler(
   if (input.consent !== undefined) patch.consent = input.consent;
   if (input.cpf !== undefined) {
     patch.cpf_hash = hashCpf(input.cpf);
-    const enc = await encryptCpfSql(supabase, input.cpf);
+    const enc = await encryptCpfSql(createAdminClient(), input.cpf);
     if (enc) patch.cpf_encrypted = enc;
   }
 

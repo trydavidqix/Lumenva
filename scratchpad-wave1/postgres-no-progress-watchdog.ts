@@ -1,5 +1,5 @@
-import type { Queryable } from "../agent-engine/queue/queue";
-import type { WatchdogSignal, WatchdogObservation } from "./no-progress-watchdog";
+import type { Queryable } from "../apps/crm/lib/agent-engine/queue/queue";
+import type { WatchdogSignal, WatchdogObservation } from "../apps/crm/lib/psycheos/no-progress-watchdog";
 
 type Row = { cycle: number; progressed: boolean; no_progress_cycles: number; status: "ON_TRACK" | "AT_RISK" };
 

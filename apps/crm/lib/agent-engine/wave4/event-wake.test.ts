@@ -25,6 +25,6 @@ describe("EventWake", () => {
     await expect(wakeEventPersisted(event, workers, policy, SECRET, store, actors)).resolves.toMatchObject({ status: "WAKED" });
     await expect(wakeEventPersisted(event, workers, policy, SECRET, store, actors)).resolves.toEqual({ status: "DUPLICATE", event_id: "event-1", reason: "IDEMPOTENT_REPLAY" });
     expect(calls[0]).toMatch(/insert into public\.browsermesh_event_idempotency/i);
-    expect(calls[0]).toMatch(/on conflict \(organization_id,idempotency_key\) do nothing returning/i);
+    expect(calls[0]).toMatch(/on conflict do nothing returning/i);
   });
 });

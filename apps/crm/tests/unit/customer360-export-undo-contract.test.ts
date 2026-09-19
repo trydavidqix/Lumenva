@@ -16,7 +16,8 @@ describe("Customer 360 export and merge loser contract", () => {
   });
   it("keeps merge resolution provider-free and delegated to the transactional RPC", () => {
     const source = read("apps/crm/app/api/v1/merge_queue/[id]/resolve/route.ts");
-    expect(source).toMatch(/supabase\.rpc\("merge_contacts"/);
+    expect(source).toMatch(/createAdminClient\(\)\.rpc\("merge_contacts"/);
+    expect(source).not.toMatch(/supabase\.rpc\("merge_contacts"/);
     expect(source).toMatch(/p_queue_id/);
   });
 });

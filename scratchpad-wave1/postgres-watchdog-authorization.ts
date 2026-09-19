@@ -1,5 +1,5 @@
-import type { Queryable } from "../agent-engine/queue/queue";
-import type { RerouteRequest, RerouteResult, WatchdogObservation } from "./no-progress-watchdog";
+import type { Queryable } from "../apps/crm/lib/agent-engine/queue/queue";
+import type { RerouteRequest, RerouteResult, WatchdogObservation } from "../apps/crm/lib/psycheos/no-progress-watchdog";
 
 type Permission = RerouteRequest["permissionLevel"];
 type Row = { requester_id: string; permission_level: Permission; capabilities: unknown; enabled: boolean };

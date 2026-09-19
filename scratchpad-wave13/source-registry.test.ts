@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { registerSource, createPostgresSourceRegistry, type SourceRecord } from "./source-registry";
+import { registerSource, createPostgresSourceRegistry, type SourceRecord } from "../apps/crm/lib/memory/source-registry";
 
 const source: Omit<SourceRecord, "sourceId" | "createdAt"> = {
   organizationId: "org-a",

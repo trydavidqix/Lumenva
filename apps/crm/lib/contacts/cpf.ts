@@ -23,22 +23,19 @@ export function hashCpf(raw: string): string {
 /**
  * At-rest CPF encryption via pgcrypto-backed `encrypt_cpf` RPC.
  *
- * Returns null when the RPC is not yet provisioned in the database — caller
- * should still persist `cpf_hash` and emit a single console.warn (we tolerate
- * the gap until the migration lands).
+ * CPF persistence is fail-closed: a hash without its ciphertext violates the
+ * at-rest PII contract and must never be accepted by a caller.
  */
 export async function encryptCpfSql(
   supabase: SupabaseClient,
   plaintext: string,
-): Promise<Uint8Array | null> {
+): Promise<Uint8Array> {
   const { data, error } = await supabase.rpc("encrypt_cpf", { p_plaintext: plaintext });
   if (error) {
-    console.warn(
-      "[contacts.cpf] encrypt_cpf RPC unavailable — storing cpf_hash only.",
-      error.message,
-    );
-    return null;
+    throw new Error("CPF encryption unavailable", { cause: error });
   }
-  if (!data) return null;
+  if (!data || (typeof data === "string" ? data.length === 0 : data.byteLength === 0)) {
+    throw new Error("CPF encryption unavailable");
+  }
   return data as Uint8Array;
 }
