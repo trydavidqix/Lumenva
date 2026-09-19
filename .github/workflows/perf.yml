@@ -2,9 +2,7 @@ name: perf
 
 on:
   pull_request:
-    branches: [main]
   push:
-    branches: [main]
 
 jobs:
   build-and-size:

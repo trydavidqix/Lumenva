@@ -18,9 +18,7 @@ name: e2e
 # Quando N execuções seguidas passarem limpas, adicionar `e2e` aos obrigatórios.
 on:
   pull_request:
-    branches: [main]
   push:
-    branches: [main]
 
 jobs:
   e2e:
