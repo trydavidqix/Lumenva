@@ -36,8 +36,23 @@ export class MetaIntegration implements UnifiedIntegration<MetaConfig, MetaState
 
   async act(action: string, payload: any): Promise<any> {
     if (!this.config) throw new Error('Not connected');
-    // Mock action
-    console.log(`Executing ${action} on Meta WhatsApp...`, payload);
-    return { success: true, action };
+    
+    const token = process.env.META_ACCESS_TOKEN || this.config.accessToken;
+    const url = `https://graph.facebook.com/v19.0/${this.config.phoneNumberId}/${action}`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Meta API error: ${response.statusText}`);
+    }
+    
+    return response.json();
   }
 }

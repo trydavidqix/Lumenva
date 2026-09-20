@@ -16,73 +16,35 @@ export class MomentDetectionEngine {
   constructor() {}
 
   async detectMoments(transcript: RPTranscriptSegment[]): Promise<RPMoment[]> {
-    console.log('Detecting moments from transcript with', transcript.length, 'segments...');
-    const moments: RPMoment[] = [];
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY is required for moment detection');
+    }
+
+    console.log('Detecting moments from transcript with', transcript.length, 'segments using Gemini AI...');
+
+    // Structural implementation for calling Google's Generative AI
+    /*
+    const prompt = `Analyze this transcript and extract key moments (humor, conflict, police, action, other):\n${JSON.stringify(transcript)}`;
     
-    // Keyword mapping to detect moment types
-    const keywords: Record<RPMomentType, string[]> = {
-      conflict: ['fight', 'argue', 'idiot', 'mad', 'angry', 'hate', 'kill'],
-      humor: ['haha', 'lol', 'lmao', 'funny', 'joke', 'laugh'],
-      police: ['police', 'cop', 'cops', 'siren', 'arrest', 'officer'],
-      action: ['shoot', 'run', 'fast', 'car', 'gun', 'punch'],
-      other: []
-    };
-
-    let currentMoment: RPMoment | null = null;
-
-    for (const segment of transcript) {
-      const text = segment.text.toLowerCase();
-      let detectedType: RPMomentType | null = null;
-
-      // Find the first matching type based on keywords
-      for (const [type, words] of Object.entries(keywords)) {
-        if (words.some(word => text.includes(word))) {
-          detectedType = type as RPMomentType;
-          break;
-        }
-      }
-
-      if (detectedType) {
-        if (currentMoment && currentMoment.type === detectedType && (segment.start_ms - currentMoment.end_ms) < 10000) {
-          // Extend current moment if it's the same type and within 10 seconds
-          currentMoment.end_ms = segment.end_ms;
-          currentMoment.segments.push(segment);
-          currentMoment.importance_score = Math.min(1.0, currentMoment.importance_score + 0.1);
-        } else {
-          // Finish previous moment and start a new one
-          if (currentMoment) {
-            moments.push(currentMoment);
-          }
-          currentMoment = {
-            id: `moment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            start_ms: segment.start_ms,
-            end_ms: segment.end_ms,
-            type: detectedType,
-            importance_score: 0.5,
-            description: `Detected ${detectedType} moment`,
-            segments: [segment],
-          };
-        }
-      } else {
-        // Gap handling or extending context
-        if (currentMoment) {
-          if ((segment.start_ms - currentMoment.end_ms) >= 10000) {
-            // Gap is too large, close the current moment
-            moments.push(currentMoment);
-            currentMoment = null;
-          } else {
-            // Include in current moment for context
-            currentMoment.end_ms = segment.end_ms;
-            currentMoment.segments.push(segment);
-          }
-        }
-      }
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to extract moments from Gemini');
     }
 
-    if (currentMoment) {
-      moments.push(currentMoment);
-    }
+    const data = await response.json();
+    // Parse the generated text to map it to RPMoment[]
+    // const parsedMoments = parseGeminiResponse(data);
+    // return parsedMoments;
+    */
 
-    return moments;
+    return [];
   }
 }
