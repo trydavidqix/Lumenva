@@ -5,7 +5,7 @@ import { z } from "zod";
 import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
-import { ContentOsNotFoundError, ContentOsValidationError, ContentSourceService } from "@/lib/content-os/intelligence/source-service";
+import { ContentOsNotFoundError, ContentOsValidationError, setSourceStatus, requestSourceCollection } from "@/lib/content-os/intelligence/source-service";
 import { SupabaseIntelligenceRepository } from "@/lib/content-os/intelligence/supabase-repository";
 import { createClient } from "@/lib/supabase/server";
 
@@ -40,7 +40,7 @@ export async function PATCH(request: NextRequest, context: Params): Promise<Resp
   const parsed = patchSchema.safeParse(raw);
   if (!parsed.success) return fail("invalid_request", "Dados inválidos.", 400, { requestId, details: parsed.error.flatten() });
   try {
-    const source = await new ContentSourceService(new SupabaseIntelligenceRepository(await createClient())).setStatus({ organizationId: authz.org.orgId, sourceId: id, status: parsed.data.status });
+    const source = await setSourceStatus(new SupabaseIntelligenceRepository(await createClient()), { organizationId: authz.org.orgId, sourceId: id, status: parsed.data.status });
     void audit({ action: "content_os.source_status_changed", actorUserId: authz.user.id, organizationId: authz.org.orgId, resourceType: "content_source", resourceId: id, requestId, metadata: { status: parsed.data.status } });
     return ok(source, { requestId });
   } catch (error) {
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest, context: Params): Promise<Respo
     const source = await repository.findSource(authz.org.orgId, id);
     if (!source) return fail("not_found", "Fonte não encontrada.", 404, { requestId });
     if (source.status !== "active") return fail("invalid_request", "Somente fontes ativas podem ser coletadas.", 422, { requestId });
-    await new ContentSourceService(repository).requestCollection({ organizationId: authz.org.orgId, sourceId: id });
+    await requestSourceCollection(repository, { organizationId: authz.org.orgId, sourceId: id });
     void audit({ action: "content_os.source_collection_requested", actorUserId: authz.user.id, organizationId: authz.org.orgId, resourceType: "content_source", resourceId: id, requestId, metadata: {} });
     return ok({ requested: true, source_id: id }, { requestId });
   } catch (error) {

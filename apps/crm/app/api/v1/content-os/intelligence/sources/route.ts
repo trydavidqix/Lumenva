@@ -5,7 +5,7 @@ import { z } from "zod";
 import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
-import { ContentOsValidationError, ContentSourceService } from "@/lib/content-os/intelligence/source-service";
+import { ContentOsValidationError, createSourceFromCatalog } from "@/lib/content-os/intelligence/source-service";
 import { SupabaseIntelligenceRepository } from "@/lib/content-os/intelligence/supabase-repository";
 import { createClient } from "@/lib/supabase/server";
 
@@ -48,8 +48,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   try {
     const db = await createClient();
-    const service = new ContentSourceService(new SupabaseIntelligenceRepository(db));
-    const source = await service.createFromCatalog({ organizationId: authz.org.orgId, catalogKey: parsed.data.catalog_key });
+    const source = await createSourceFromCatalog(new SupabaseIntelligenceRepository(db), { organizationId: authz.org.orgId, catalogKey: parsed.data.catalog_key });
     void audit({
       action: "content_os.source_created",
       actorUserId: authz.user.id,

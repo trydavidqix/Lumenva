@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  ContentSourceService,
+  createSourceFromCatalog,
+  setSourceStatus,
+  requestSourceCollection,
   ContentOsNotFoundError,
   ContentOsValidationError,
   type IntelligenceRepository,
@@ -125,13 +127,12 @@ describe("Content OS intelligence services", () => {
 
   it("does not let organization A disable or collect a source owned by B", async () => {
     const repository = repositoryFixture();
-    const service = new ContentSourceService(repository);
 
     await expect(
-      service.setStatus({ organizationId: "org-a", sourceId: "source-b", status: "disabled" }),
+      setSourceStatus(repository, { organizationId: "org-a", sourceId: "source-b", status: "disabled" }),
     ).rejects.toBeInstanceOf(ContentOsNotFoundError);
     await expect(
-      service.requestCollection({ organizationId: "org-a", sourceId: "source-b" }),
+      requestSourceCollection(repository, { organizationId: "org-a", sourceId: "source-b" }),
     ).rejects.toBeInstanceOf(ContentOsNotFoundError);
 
     expect(repository.sources[0]?.status).toBe("active");
@@ -159,8 +160,7 @@ describe("Content OS intelligence services", () => {
 
   it("creates an approved GitHub release source from the curated catalog", async () => {
     const repository = repositoryFixture();
-    const service = new ContentSourceService(repository);
-    const source = await service.createFromCatalog({
+    const source = await createSourceFromCatalog(repository, {
       organizationId: "org-a",
       catalogKey: "github-openai-agents-python-releases",
     });
@@ -179,10 +179,9 @@ describe("Content OS intelligence services", () => {
 
   it("rejects catalog keys outside the approved source list", async () => {
     const repository = repositoryFixture();
-    const service = new ContentSourceService(repository);
 
     await expect(
-      service.createFromCatalog({ organizationId: "org-a", catalogKey: "https://attacker.example/feed" }),
+      createSourceFromCatalog(repository, { organizationId: "org-a", catalogKey: "https://attacker.example/feed" }),
     ).rejects.toBeInstanceOf(ContentOsValidationError);
     expect(listSourceCatalog().every((source) => source.configuration.route.startsWith("/github/"))).toBe(true);
   });

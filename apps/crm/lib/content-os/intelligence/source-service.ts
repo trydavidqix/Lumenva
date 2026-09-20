@@ -78,62 +78,71 @@ function containsCredential(value: unknown): boolean {
  * Domain service. Its organizationId parameter must only originate in trusted
  * server authentication or worker context, never from a browser DTO.
  */
-export class ContentSourceService {
-  constructor(private readonly repository: IntelligenceRepository) {}
 
-  async create(input: Omit<ContentSourceRecord, "id" | "status" | "externalRef">): Promise<ContentSourceRecord> {
-    if (containsCredential(input.configuration)) {
-      throw new ContentOsValidationError("Provider credentials cannot be stored in a content source");
-    }
-
-    return this.repository.createSource(input);
+export async function createSource(
+  repository: IntelligenceRepository,
+  input: Omit<ContentSourceRecord, "id" | "status" | "externalRef">,
+): Promise<ContentSourceRecord> {
+  if (containsCredential(input.configuration)) {
+    throw new ContentOsValidationError("Provider credentials cannot be stored in a content source");
   }
 
-  async createFromCatalog(input: {
+  return repository.createSource(input);
+}
+
+export async function createSourceFromCatalog(
+  repository: IntelligenceRepository,
+  input: {
     organizationId: string;
     catalogKey: string;
-  }): Promise<ContentSourceRecord> {
-    const source = getSourceCatalogEntry(input.catalogKey);
-    if (!source) {
-      throw new ContentOsValidationError("Content source catalog key is not approved");
-    }
-
-    return this.create({
-      organizationId: input.organizationId,
-      name: source.name,
-      provider: source.provider,
-      sourceType: source.sourceType,
-      configuration: source.configuration,
-    });
+  },
+): Promise<ContentSourceRecord> {
+  const source = getSourceCatalogEntry(input.catalogKey);
+  if (!source) {
+    throw new ContentOsValidationError("Content source catalog key is not approved");
   }
 
-  async setStatus(input: {
+  return createSource(repository, {
+    organizationId: input.organizationId,
+    name: source.name,
+    provider: source.provider,
+    sourceType: source.sourceType,
+    configuration: source.configuration,
+  });
+}
+
+export async function setSourceStatus(
+  repository: IntelligenceRepository,
+  input: {
     organizationId: string;
     sourceId: string;
     status: "active" | "disabled";
-  }): Promise<ContentSourceRecord> {
-    const source = await this.repository.updateSource(input.organizationId, input.sourceId, {
-      status: input.status,
-    });
-    if (!source) throw new ContentOsNotFoundError("Content source");
-    return source;
-  }
+  },
+): Promise<ContentSourceRecord> {
+  const source = await repository.updateSource(input.organizationId, input.sourceId, {
+    status: input.status,
+  });
+  if (!source) throw new ContentOsNotFoundError("Content source");
+  return source;
+}
 
-  async requestCollection(input: {
+export async function requestSourceCollection(
+  repository: IntelligenceRepository,
+  input: {
     organizationId: string;
     sourceId: string;
-  }): Promise<void> {
-    const source = await this.repository.findSource(input.organizationId, input.sourceId);
-    if (!source) throw new ContentOsNotFoundError("Content source");
-    if (source.status !== "active") {
-      throw new ContentOsValidationError("Only active sources can be collected");
-    }
-
-    await this.repository.emit({
-      type: "content.source_collection_requested",
-      organizationId: input.organizationId,
-      entityId: source.id,
-      metadata: { provider: source.provider },
-    });
+  },
+): Promise<void> {
+  const source = await repository.findSource(input.organizationId, input.sourceId);
+  if (!source) throw new ContentOsNotFoundError("Content source");
+  if (source.status !== "active") {
+    throw new ContentOsValidationError("Only active sources can be collected");
   }
+
+  await repository.emit({
+    type: "content.source_collection_requested",
+    organizationId: input.organizationId,
+    entityId: source.id,
+    metadata: { provider: source.provider },
+  });
 }

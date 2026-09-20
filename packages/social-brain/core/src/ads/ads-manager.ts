@@ -28,41 +28,40 @@ export type AdsPolicy = {
   autoApprovalEnabled: boolean;
 };
 
-export class AdsManager {
-  constructor(private policy: AdsPolicy) {}
+export function proposeCampaign(
+  draft: AdsDraft,
+  budget: BudgetProposal,
+  targeting: TargetingProposal
+): AdCampaignProposal {
+  return {
+    id: `proposal_${Date.now()}`,
+    draft,
+    budget,
+    targeting,
+    status: 'pending_approval',
+  };
+}
 
-  public proposeCampaign(
-    draft: AdsDraft,
-    budget: BudgetProposal,
-    targeting: TargetingProposal
-  ): AdCampaignProposal {
-    return {
-      id: `proposal_${Date.now()}`,
-      draft,
-      budget,
-      targeting,
-      status: 'pending_approval',
-    };
+export function evaluateProposal(
+  policy: AdsPolicy,
+  proposal: AdCampaignProposal
+): AdCampaignProposal {
+  // Explicitly block budget usage automatically unless policy is explicitly set for auto-approval
+  // and the budget is within the allowed limit.
+  if (
+    policy.autoApprovalEnabled &&
+    proposal.budget.amount <= policy.autoApproveBudgetLimit
+  ) {
+    return { ...proposal, status: 'approved' };
   }
 
-  public evaluateProposal(proposal: AdCampaignProposal): AdCampaignProposal {
-    // Explicitly block budget usage automatically unless policy is explicitly set for auto-approval
-    // and the budget is within the allowed limit.
-    if (
-      this.policy.autoApprovalEnabled &&
-      proposal.budget.amount <= this.policy.autoApproveBudgetLimit
-    ) {
-      return { ...proposal, status: 'approved' };
-    }
+  return { ...proposal, status: 'pending_approval' };
+}
 
-    return { ...proposal, status: 'pending_approval' };
+export function activateCampaign(proposal: AdCampaignProposal): AdCampaignProposal {
+  if (proposal.status !== 'approved') {
+    throw new Error('Cannot activate campaign: approval is required before budget usage.');
   }
 
-  public activateCampaign(proposal: AdCampaignProposal): AdCampaignProposal {
-    if (proposal.status !== 'approved') {
-      throw new Error('Cannot activate campaign: approval is required before budget usage.');
-    }
-
-    return { ...proposal, status: 'active' };
-  }
+  return { ...proposal, status: 'active' };
 }
