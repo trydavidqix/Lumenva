@@ -212,7 +212,7 @@ organization_id — tenant canónico; RLS em toda fronteira tenant-aware
 - O **Postgres é a fonte única da verdade** para o estado persistente. Contexto de frontend, browser, CLI ou modelo não é autoridade.
 - `organization_id` é o tenant canónico. Toda API, MCP, CLI, worker, agente e browser boundary tenant-aware aplica RLS e nunca confia no `organization_id` vindo do body como autoridade.
 - Todo agente nasce pelo mesmo **Agent Birth Pipeline**, com definição, contratos, políticas, ferramentas, skills, memória, verificação, guardrails, evals e versão publicada.
-- **Claude é o único orquestrador de agentes Codex**. O CRM decide e regista; BrowserMesh executa; os agentes não se auto-orquestram fora das políticas.
+- **Claude é o único orquestrador.** Codex e Gemini atuam como executores delimitados por task; o CRM decide e regista, BrowserMesh executa, e nenhum executor cria uma hierarquia paralela ou se auto-orquestra fora das políticas.
 
 ### Camada comercial: planos e entitlements
 
