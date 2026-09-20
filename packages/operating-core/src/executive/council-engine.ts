@@ -19,22 +19,27 @@ export class ExecutiveCouncil {
     problem: string,
     risk: RiskLevel
   ): Promise<ExecutiveDecision> {
-    // Stub function simulating orchestrating these multiple roles
-    const proposals = ['Proposal A: Scale horizontally', 'Proposal B: Optimize queries'];
-    const disagreements = ['Challenger disagrees with Proposal A cost'];
+    // Simulate async processing
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    const architectProposal = `Architect Proposal: To solve "${problem}", we should adopt an event-driven architecture.`;
+    const builderDetails = `Builder Implementation Details: We can use Kafka for the event bus and containerize the services.`;
+    const challengerCritique = `Challenger Critique: The event-driven approach introduces unnecessary complexity and latency given the risk level (${risk}).`;
     
+    const synthesizerCall = `Proceed with a simplified message queue instead of full Kafka to balance architectural purity and operational simplicity.`;
+
     return {
       id: `DEC-${Date.now()}`,
       executive: 'Main Synthesizer',
       problem,
       risk,
       models_used: ['GPT-4', 'Claude 3.5 Sonnet'],
-      proposals,
-      disagreements,
-      decision: 'Proceed with Proposal B and minor scaling',
-      reasoning_summary: 'Optimization provides better ROI than immediate horizontal scaling based on Architect and Challenger inputs.',
-      evidence: ['Load test results', 'Cost analysis'],
-      cost: 0.15,
+      proposals: [architectProposal, builderDetails],
+      disagreements: [challengerCritique],
+      decision: synthesizerCall,
+      reasoning_summary: 'Synthesizer evaluated Architect and Builder inputs against Challenger critiques, favoring a balanced approach.',
+      evidence: ['Simulated architectural review', 'Risk assessment guidelines'],
+      cost: 0.25,
     };
   }
 }
