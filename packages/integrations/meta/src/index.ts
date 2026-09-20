@@ -10,3 +10,5 @@ export * as igInbox from './inbox';
 export * as igRead from './read';
 
 export * from './client';
+export * from './types';
+export * from './verify';
