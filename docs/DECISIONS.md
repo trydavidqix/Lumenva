@@ -2,11 +2,11 @@
 
 Status: definitivo; decisões aprovadas/consensuadas em 2026-09-16.
 
-## D-001 — Três papéis LLM, não uma frota
+## D-001 — Conselho pequeno e limitado, não uma frota
 
-**Decisão:** um Claude Maestro permanente, um Codex Builder sob demanda e um Reviewer temporário em sessão limpa.
+**Decisão:** um Claude Maestro permanente; por task, um executor principal sob demanda escolhido entre Codex e Gemini; e um Reviewer temporário em sessão limpa. Codex é o default para implementação geral. Gemini é preferido quando a task é materialmente Google/Firebase/GCP. Quando possível, Reviewer usa modelo diferente do executor.
 
-**Motivo:** clareza, menor custo/contexto e separação maker ≠ checker. Verifier, Context Engine, Loop Controller, Policy e Observability são componentes do harness.
+**Motivo:** mantém clareza, baixo custo/contexto e separação maker ≠ checker, sem desperdiçar a especialização Google. Verifier, Context Engine, Loop Controller, Policy e Observability continuam componentes do harness, não novos papéis LLM.
 
 ## D-002 — Agentic OS ainda não iniciado
 
@@ -49,3 +49,9 @@ Status: definitivo; decisões aprovadas/consensuadas em 2026-09-16.
 **Decisão:** após V0 aprovado, V1 será state/event kernel com decisões atômicas, idempotência e session runtime.
 
 **Motivo:** é a fundação para retries, checkpoints, observabilidade e recovery sem depender de conversa ou terminal.
+
+## D-009 — Claude é o único orquestrador; Codex e Gemini são executores
+
+**Decisão:** somente Claude Code com Maestro Mode pode decompor a intenção do Dono, recrutar agentes, escolher o executor, conectar contexto e decidir retry/escalation. Codex e Gemini executam tarefas delimitadas e devolvem evidence; não criam uma hierarquia paralela, não ampliam o próprio escopo e não concedem privilégios.
+
+**Motivo:** preserva uma cadeia única de autoridade e permite usar modelos diferentes sem criar dois control planes. Maestri coordena o canvas; o Permission/Approval Engine continua sendo a autoridade para capabilities, produção e ações críticas.
