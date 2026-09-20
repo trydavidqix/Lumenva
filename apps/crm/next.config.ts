@@ -8,9 +8,8 @@ import type { NextConfig } from "next";
  *  - Initial bundle /app/inbox < 250KB gzipped
  */
 const nextConfig: NextConfig = {
-  // Self-host (HostGator): gera .next/standalone pro container Docker (node server.js).
-  // A Vercel usa o output padrão do Next.js para empacotar as funções.
-  output: process.env.VERCEL ? undefined : "standalone",
+  // Self-host: gera .next/standalone pro container Docker (node server.js).
+  output: "standalone",
   reactStrictMode: true,
   poweredByHeader: false,
   // typedRoutes moved out of experimental in Next 15.5+

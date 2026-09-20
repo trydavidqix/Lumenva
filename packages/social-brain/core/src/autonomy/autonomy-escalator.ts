@@ -1,10 +1,10 @@
 import { z } from 'zod';
 
-export const autonomyStateSchema = z.enum(['draft', 'schedule', 'auto-publish']);
+export const autonomyStateSchema = z.enum(['shadow', 'assisted', 'auto']);
 export type AutonomyState = z.infer<typeof autonomyStateSchema>;
 
 export const autonomyEvidenceSchema = z.object({
-  evalScore: z.number().min(0).max(100),
+  evalScore: z.number().min(0).max(1),
   confidence: z.number().min(0).max(1),
 });
 export type AutonomyEvidence = z.infer<typeof autonomyEvidenceSchema>;
@@ -15,12 +15,12 @@ export interface AutonomyPolicy {
 }
 
 export class AutonomyEscalator {
-  private static readonly stateOrder: AutonomyState[] = ['draft', 'schedule', 'auto-publish'];
+  private static readonly stateOrder: AutonomyState[] = ['shadow', 'assisted', 'auto'];
 
   private static readonly policies: Record<AutonomyState, AutonomyPolicy> = {
-    'draft': { minEvalScore: 0, minConfidence: 0 },
-    'schedule': { minEvalScore: 70, minConfidence: 0.7 },
-    'auto-publish': { minEvalScore: 90, minConfidence: 0.9 },
+    'shadow': { minEvalScore: 0, minConfidence: 0 },
+    'assisted': { minEvalScore: 0.70, minConfidence: 0.7 },
+    'auto': { minEvalScore: 0.95, minConfidence: 0.9 },
   };
 
   /**
@@ -46,7 +46,7 @@ export class AutonomyEscalator {
       return;
     }
 
-    // Ensure no states are skipped (e.g., draft -> auto-publish directly is not allowed)
+    // Ensure no states are skipped (e.g., shadow -> auto directly is not allowed)
     if (targetIndex > currentIndex + 1) {
       throw new Error(`Escalation failed: Cannot bypass sequential state transitions. Must transition to '${this.stateOrder[currentIndex + 1]}' first.`);
     }
