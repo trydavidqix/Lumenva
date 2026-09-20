@@ -8,7 +8,8 @@ Um sistema de engenharia confiável para transformar intenção do Dono em mudan
 
 ```text
 Dono → Maestri → Claude Maestro → task pequena → Floor isolado
-     → Codex Builder → verifier determinístico → Reviewer independente
+     → Executor principal escolhido por tarefa (Codex ou Gemini)
+     → verifier determinístico → Reviewer independente em modelo diferente quando possível
      → retry bounded ou bloqueio → Human Gate → merge/deploy autorizado
 ```
 
@@ -29,7 +30,7 @@ O Lumenva possui múltiplas branches/worktrees de remediation e partes de runtim
 ## Princípios
 
 - Audit first; reuse before create.
-- Exatamente um Maestro permanente, um Builder Codex sob demanda e um Reviewer temporário.
+- Exatamente um Maestro permanente. Por tarefa, recrutar um executor principal sob demanda: Codex para implementação geral e Gemini para trabalho Google/Firebase/GCP quando houver vantagem concreta. Reviewer é temporário e independente; quando possível usa modelo diferente do executor.
 - Verifier é processo determinístico, não agente LLM adicional.
 - Task pequena, escopo congelado, acceptance testável e limite máximo de 3 attempts.
 - Sem arquitetura paralela sem justificativa e aprovação.
