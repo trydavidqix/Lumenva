@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@lumenva/core": "workspace:*",
+    "@lumenva/operating-core": "workspace:*",
     "@lumenva/db": "workspace:*",
     "@modelcontextprotocol/server": "2.0.0",
     "@supabase/supabase-js": "2.111.0",

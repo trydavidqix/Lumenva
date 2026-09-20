@@ -4,7 +4,7 @@ export * from './event-log-adapter';
 export * from './job-claim-store';
 export * from './job-engine';
 export * from './receipt-store';
-export * from './cloud-fabric/index.js';
+export { ResourceRouter, CloudProvider } from './cloud-fabric/index.js';
 export * from './knowledge/index.js';
 export * from './memory/index.js';
 export * from './context/context-engine.js';

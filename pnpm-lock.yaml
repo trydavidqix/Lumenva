@@ -448,6 +448,9 @@ importers:
       '@lumenva/db':
         specifier: workspace:*
         version: link:../../packages/social-brain/db
+      '@lumenva/operating-core':
+        specifier: workspace:*
+        version: link:../../packages/operating-core
       '@modelcontextprotocol/server':
         specifier: 2.0.0
         version: 2.0.0
