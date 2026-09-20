@@ -22,24 +22,26 @@ MISSION → BLUEPRINT → ARCHITECTURE → ROADMAP → TASKS → RUNLOG
         ↓
 Maestri Floor / git worktree isolado por task
         ↓
-Codex — BUILDER sob demanda
+Executor principal sob demanda
+   ├── Codex — implementação geral/refactor/testes
+   └── Gemini — Google/Firebase/GCP e implementação Google-native
         ↓
 scripts/verify.sh / Verification Engine determinístico
         ↓
-Claude ou Codex — REVIEWER temporário, sessão limpa
+Reviewer temporário, sessão limpa, preferencialmente em modelo diferente do executor
         ↓
 Human Gate → merge/deploy autorizado
 ```
 
-Não recrutar outros agentes por padrão. Context Engine, Loop Controller, Policy Engine, Evidence Store e Observability são componentes do harness, não papéis LLM adicionais.
+Não recrutar uma frota por padrão. Claude continua sendo o único Maestro. Codex e Gemini são executores limitados ao escopo da task; apenas um deles é executor principal por task salvo justificativa explícita. Context Engine, Loop Controller, Policy Engine, Evidence Store e Observability são componentes do harness, não papéis LLM adicionais.
 
 ## Camadas
 
 - **Control plane:** Maestri Canvas, Roles, Connections, Floors e partitura `Lumenva Engineering Loop`.
 - **Orchestrator:** Claude Maestro; audita, planeja, delega, interpreta falhas e escala.
-- **Execution:** Codex Builder em Floor/worktree; sandbox/container apenas quando o risco justificar.
+- **Execution:** Codex ou Gemini em Floor/worktree conforme a natureza da task; sandbox/container apenas quando o risco justificar.
 - **Verification:** shell/scripts/testes reais; exit code e evidence decidem.
-- **Review:** sessão independente, read-only, PASS/FAIL com evidence.
+- **Review:** sessão independente, read-only, idealmente em modelo diferente do executor; PASS/FAIL com evidence.
 - **State:** Postgres transacional + event log append-only; Markdown como projeções humanas.
 - **Product runtime:** reutilizar o runtime Agent Engine existente depois da auditoria V0.
 - **Human governance:** approval persistido, com escopo e expiração, antes de efeitos críticos.
