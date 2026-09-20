@@ -1,0 +1,36 @@
+{
+  "name": "@lumenva/web",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:foundation": "pnpm --dir ../.. --filter @lumenva/core test && pnpm --dir ../.. --filter @lumenva/core typecheck && pnpm --dir ../.. --filter @lumenva/db test && pnpm --dir ../.. --filter @lumenva/db typecheck && pnpm --dir ../.. --filter @lumenva/worker test && pnpm --dir ../.. --filter @lumenva/worker typecheck && pnpm --dir ../.. --filter @lumenva/provider-brightbean test && pnpm --dir ../.. --filter @lumenva/provider-brightbean typecheck && pnpm --dir ../.. --filter @lumenva/provider-moneyprinter test && pnpm --dir ../.. --filter @lumenva/provider-moneyprinter typecheck && vitest run",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@supabase/ssr": "0.12.4",
+    "@supabase/supabase-js": "2.111.0",
+    "next": "16.3.2",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@lumenva/core": "workspace:*",
+    "@lumenva/db": "workspace:*",
+    "@lumenva/provider-brightbean": "workspace:*",
+    "@lumenva/provider-moneyprinter": "workspace:*",
+    "@lumenva/worker": "workspace:*",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "4.1.10"
+  }
+}

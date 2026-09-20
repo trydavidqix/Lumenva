@@ -1,0 +1,3 @@
+export interface TaskStartArgs { id: string; name: string; gates: string[] }
+function requiredValue(args: readonly string[], flag: string): string { const index = args.indexOf(flag); const value = index >= 0 ? args[index + 1] : undefined; if (!value || value.startsWith('--')) throw new Error(`${flag} is required`); return value }
+export function parseTaskStartArgs(args: readonly string[]): TaskStartArgs { const id = requiredValue(args, '--id'); const name = requiredValue(args, '--name'); const gates = requiredValue(args, '--gates').split(',').map(gate => gate.trim()).filter(Boolean); if (gates.length === 0) throw new Error('--gates must contain at least one gate'); return { id, name, gates } }

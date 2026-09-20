@@ -1,0 +1,43 @@
+{
+  "name": "@lumenva/db",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./types": "./src/types.ts",
+    "./client/browser": "./src/client/browser.ts",
+    "./client/server": "./src/client/server.ts",
+    "./jobs": "./src/jobs/repository.ts",
+    "./social": "./src/social/account-repository.ts",
+    "./content": "./src/content/repository.ts",
+    "./content/variants": "./src/content/variant-repository.ts",
+    "./content/video-workflow": "./src/content/video-workflow-repository.ts",
+    "./scheduling": "./src/scheduling/repository.ts",
+    "./approval": "./src/approval/repository.ts",
+    "./publishing": "./src/publishing/repository.ts",
+    "./publishing/worker": "./src/publishing/worker-repository.ts",
+    "./media": "./src/media/repository.ts",
+    "./storage/media": "./src/storage/media-storage.ts",
+    "./storage/object-store": "./src/storage/object-store.ts",
+    "./storage/r2": "./src/storage/r2/r2.ts",
+    "./neon": "./src/neon/index.ts",
+    "./analytics": "./src/analytics/repository.ts",
+    "./analytics/queries": "./src/analytics/queries.ts",
+    "./audit": "./src/audit/repository.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@lumenva/core": "workspace:*",
+    "@supabase/ssr": "0.12.4",
+    "@supabase/supabase-js": "2.111.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "4.1.10"
+  }
+}

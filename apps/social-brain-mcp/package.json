@@ -1,0 +1,30 @@
+{
+  "name": "@lumenva/mcp",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "22.x" },
+  "scripts": {
+    "dev": "next dev",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "next build"
+  },
+  "dependencies": {
+    "@lumenva/core": "workspace:*",
+    "@lumenva/db": "workspace:*",
+    "@modelcontextprotocol/server": "2.0.0",
+    "@supabase/supabase-js": "2.111.0",
+    "next": "16.3.2",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "4.1.10"
+  }
+}

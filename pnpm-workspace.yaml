@@ -1,6 +1,9 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+  - 'packages/social-brain/*'
+  - 'packages/social-brain/providers/*'
+  - 'packages/integrations/*'
 
 catalogMode: manual
 catalog:

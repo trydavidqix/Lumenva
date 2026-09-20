@@ -1,0 +1,12 @@
+{
+  "status": 200,
+  "message": "success",
+  "data": {
+    "task_id": "mp-task-123",
+    "state": 1,
+    "progress": 100,
+    "videos": [
+      "https://moneyprinter.test/tasks/mp-task-123/final-1.mp4"
+    ]
+  }
+}

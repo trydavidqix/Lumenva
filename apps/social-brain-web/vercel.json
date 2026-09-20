@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "installCommand": "corepack pnpm install",
+  "buildCommand": "corepack pnpm run test:foundation && corepack pnpm run build",
+  "ignoreCommand": "exit 1",
+  "outputDirectory": ".next",
+  "git": {
+    "deploymentEnabled": false
+  }
+}
