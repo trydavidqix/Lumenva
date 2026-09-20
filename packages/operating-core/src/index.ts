@@ -14,3 +14,6 @@ export * from './session/session-engine.js';
 export * from './evals/eval-os.js';
 export * from './learning/learning-os.js';
 export * from './backup/dr-engine.js';
+export * from './autonomy/index.js';
+export * from './executive/index.js';
+export * from './outcome-os/index.js';
