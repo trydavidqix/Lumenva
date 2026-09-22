@@ -6,8 +6,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
 import { tenantSchema, type TenantInput } from "@/lib/schemas/settings";
-import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
-import { ROLE_RANK } from "@/lib/auth/types";
+import { requireRole } from "@/lib/auth/require-role";
 
 export type UpdateTenantResult =
   | { ok: true }
@@ -19,13 +18,20 @@ export async function updateTenant(input: TenantInput): Promise<UpdateTenantResu
     return { ok: false, error: "validation_failed", details: parsed.error.flatten() };
   }
 
-  const authUser = await loadAuthUser();
-  if (!authUser) return { ok: false, error: "unauthenticated" };
-  const activeOrg = await resolveActiveOrg(authUser);
-  if (!activeOrg) return { ok: false, error: "forbidden_tenant" };
-  if (!authUser.is_platform_admin && ROLE_RANK[activeOrg.role] < ROLE_RANK.admin) {
+  const hdrs = await headers();
+  const requestId = hdrs.get("x-request-id") ?? undefined;
+
+  const authz = await requireRole("admin", { requestId, resource: "organization", allowPlatformAdmin: true });
+  if (!authz.ok) {
+    if (authz.response.status === 401) return { ok: false, error: "unauthenticated" };
+    if (authz.response.status === 403 && (await authz.response.json()).error?.code === "forbidden_tenant") {
+      return { ok: false, error: "forbidden_tenant" };
+    }
     return { ok: false, error: "forbidden_role" };
   }
+
+  const authUser = authz.user;
+  const activeOrg = authz.org;
 
 /**
  * A ESCRITA EM `organizations` VAI PELO ADMIN CLIENT — e não é preguiça.
@@ -47,8 +53,6 @@ export async function updateTenant(input: TenantInput): Promise<UpdateTenantResu
  * handler que usa service role.
  */
   const supabase = createAdminClient();
-  const hdrs = await headers();
-  const requestId = hdrs.get("x-request-id");
   const ip = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
   const userAgent = hdrs.get("user-agent") ?? null;
 
