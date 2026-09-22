@@ -7,6 +7,7 @@ import { aggregatePairedEvaluations, gradeContextRecall, gradeHallucinations, qu
 const recall = gradeContextRecall('DB_PRIMARY_REGION = us-central1\nDEPLOY_POLICY = no-deploy-without-owner', 'DB_PRIMARY_REGION is us-central1. DEPLOY_POLICY is no-deploy-without-owner.');
 assert.equal(recall.recall, 100);
 assert.equal(recall.measurement_type, 'exact');
+assert.equal(gradeContextRecall('ROUTER_RISK = R0-R4\nWORKTREE_MODE = isolated', 'R0-R4\nisolated').recall, 100);
 assert.equal(gradeHallucinations('What is the CEO birthday?', 'Não há evidência suficiente.').classification, 'MISSING_EVIDENCE');
 assert.equal(gradeHallucinations('What is the CEO birthday?', 'The CEO birthday is January 1.').classification, 'HALLUCINATED');
 const saving = qualityPreservingSavings({ task_success: true, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, total_tokens: 100 }, { task_success: true, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, total_tokens: 70 });
