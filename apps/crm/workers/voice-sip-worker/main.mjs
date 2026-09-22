@@ -379,9 +379,20 @@ export async function createVoiceSipWorker(env = process.env) {
         return sendJson(res, 422, { error: "invalid_e164" });
       }
       if (!firstMessage) return sendJson(res, 422, { error: "first_message_required" });
-      if (pendingOutbound.has(voiceCallId)) return sendJson(res, 409, { error: "outbound_call_already_pending" });
+      const existingPending = pendingOutbound.get(voiceCallId);
+      if (existingPending) {
+        // Idempotent control-plane retry: the voice_call_id is the reservation
+        // key. Never originate a second PSTN call while the first request is
+        // still between ARI originate and StasisStart.
+        return sendJson(res, 202, {
+          accepted: true,
+          duplicate: true,
+          voice_call_id: voiceCallId,
+          provider_call_id: existingPending.providerCallId ?? null,
+        });
+      }
 
-      pendingOutbound.set(voiceCallId, { firstMessage });
+      pendingOutbound.set(voiceCallId, { firstMessage, providerCallId: null });
       try {
         const result = await gateway.initiateOutboundCall({
           voiceCallId,
@@ -393,6 +404,8 @@ export async function createVoiceSipWorker(env = process.env) {
           fromE164,
           toE164,
         });
+        const pending = pendingOutbound.get(voiceCallId);
+        if (pending) pending.providerCallId = result.providerCallId;
         try {
           await brainClient.recordEvent({
             voice_call_id: voiceCallId,
@@ -462,34 +475,49 @@ export async function createVoiceSipWorker(env = process.env) {
       try {
         await forwarder.forward(result);
         processedEvents += 1;
-        if (mediaEnabled && result.status === "normalized") {
+        if (result.status === "normalized") {
           const { event } = result;
           const channelId = event.providerEventId; // asterisk-adapter.ts: providerEventId === channelId
+          const correlatedVoiceCallId =
+            event.direction === "outbound" && event.attributes.voiceCallId
+              ? event.attributes.voiceCallId
+              : null;
+
           if (event.eventType === "StasisStart") {
-            const technicalE164 = event.direction === "inbound" ? event.calledE164 : event.callerE164;
-            const voiceCallId =
-              event.direction === "outbound" && event.attributes.voiceCallId
-                ? event.attributes.voiceCallId
-                : (
-                    await brainClient.resolveContext({
-                      provider_call_id: event.providerEventId,
-                      connection_id: event.connectionId,
-                      caller_e164: event.callerE164,
-                      called_e164: event.calledE164,
-                      direction: event.direction,
-                    })
-                  ).voice_call_id;
-            const outbound = pendingOutbound.get(voiceCallId);
-            await attachMedia(
-              channelId,
-              voiceCallId,
-              technicalE164,
-              outbound?.firstMessage ?? greetingText,
-            ).catch((error) => logError("voice_media_attach_failed", error, { channelId }));
-            if (outbound) pendingOutbound.delete(voiceCallId);
+            let voiceCallId = correlatedVoiceCallId;
+            if (!voiceCallId && mediaEnabled) {
+              voiceCallId = (
+                await brainClient.resolveContext({
+                  provider_call_id: event.providerEventId,
+                  connection_id: event.connectionId,
+                  caller_e164: event.callerE164,
+                  called_e164: event.calledE164,
+                  direction: event.direction,
+                })
+              ).voice_call_id;
+            }
+
+            if (voiceCallId && mediaEnabled) {
+              const technicalE164 = event.direction === "inbound" ? event.calledE164 : event.callerE164;
+              const outbound = pendingOutbound.get(voiceCallId);
+              await attachMedia(
+                channelId,
+                voiceCallId,
+                technicalE164,
+                outbound?.firstMessage ?? greetingText,
+              ).catch((error) => logError("voice_media_attach_failed", error, { channelId }));
+            }
+            if (voiceCallId) pendingOutbound.delete(voiceCallId);
           } else if (event.eventType === "StasisEnd" || event.eventType === "ChannelHangupRequest") {
-            const session = activeMediaSessions.get(channelId);
-            if (session) await session.detach().catch((error) => logError("voice_media_detach_failed", error, { channelId }));
+            if (correlatedVoiceCallId) pendingOutbound.delete(correlatedVoiceCallId);
+            if (mediaEnabled) {
+              const session = activeMediaSessions.get(channelId);
+              if (session) {
+                await session.detach().catch((error) =>
+                  logError("voice_media_detach_failed", error, { channelId }),
+                );
+              }
+            }
           }
         }
       } catch (error) {
