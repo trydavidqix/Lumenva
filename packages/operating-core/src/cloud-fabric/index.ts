@@ -20,3 +20,8 @@ export * from './port-registry';
 export * from './budget-policy';
 export * from './routing-observability';
 export * from './acceptance';
+export * from './durable-stores';
+export * from './benchmark-harness';
+export * from './evidence-gate';
+export * from './provider-health';
+export * from './tool-registry';
