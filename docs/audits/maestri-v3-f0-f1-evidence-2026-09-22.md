@@ -98,6 +98,8 @@ The evaluation contract now reports `context_tokens` separately from `total_toke
 
 F22 increment after the benchmark: Core now removes identical candidate content before progressive L1/L2 expansion, selecting the highest score and using the path as deterministic tie-breaker. Core validation passed with 38/38 tests and TypeScript typecheck. This is a local optimization proof; a new benchmark with unique cases is still required to establish end-to-end savings.
 
+The homogeneous v2 dataset was completed with 30 unique pairs, using offset execution so no earlier case was repeated: baseline `1171978` versus Fabric `842666` total tokens (`28.10%` reduction), and baseline `2128743` versus Fabric `1593713` context tokens (`25.13%` reduction). Quality stayed at 100% for success, recall, and grounding with 0% hallucination. Trust is `VALIDATED` with score `81.28`.
+
 ## Comandos e resultado
 
 ```text

@@ -266,7 +266,7 @@ F25 rollout e limpeza de compatibilidade
 - Task success, context recall, evidence grounding: `100%` in both lanes; hallucination rate: `0%`.
 - Fabric total-token delta: `-5.70%`; context-token delta: `-7.50%` (Fabric used more measured tokens in both views), so quality was preserved but the optimization gate regressed.
 - Trust: `DEGRADED`; `quality_preserving_saving` is not approved.
-- F24 is measured, not passed. F22 automatic context optimization and metric diagnosis are now the blocking implementation gates before another benchmark.
+- F24 histórico permanece `DEGRADED`, mas a suíte homogênea v2 de 30 casos inéditos passou: F22/F24 agora têm evidência ponta a ponta validada nessa versão do dataset.
 
 ### F22 progress update — 2026-09-22
 
@@ -275,6 +275,7 @@ F25 rollout e limpeza de compatibilidade
 - Benchmark accounting now exposes `context_tokens` separately from `total_tokens` and hydrates legacy records from their raw JSONL evidence.
 - Core Context Engine now deduplicates identical candidate content before L1/L2 expansion, keeping the highest-score candidate with deterministic path tie-breaking; Core validation: 38/38 tests and typecheck passed.
 - Existing 30-pair evidence remains `DEGRADED`: deduplication is covered by unit tests, but end-to-end savings are not proven.
+- New homogeneous v2 evidence has 30 unique pairs: baseline `1171978` vs Fabric `842666` total tokens (`28.10%` reduction), context `2128743` vs `1593713` (`25.13%` reduction), with 100% success/recall/grounding and 0% hallucination. Trust: `VALIDATED`, score `81.28`.
 - MCG regression suite: 36/36 passed.
 
 ### Gates adicionais do plano completo
