@@ -5,7 +5,7 @@ import { parseCodexJsonl, parseCodexTools } from './codex-usage.mjs';
 import { aggregatePairedEvaluations, gradeContextRecall, gradeHallucinations, qualityPreservingSavings, saveEvaluation, trustScore } from './evals.mjs';
 import { runProcess } from './executor.mjs';
 
-const DEFAULT_MODEL = 'gpt-5.6';
+const DEFAULT_MODEL = 'gpt-5.5';
 const DEFAULT_EFFORT = 'medium';
 
 async function readJsonl(path) {
@@ -36,6 +36,10 @@ function questionFor(test) {
   return test.question + noEvidence + '\nDo not edit files. Return only the requested answer.';
 }
 
+export function buildCodexArgs({ model = DEFAULT_MODEL, effort = DEFAULT_EFFORT, workspace, prompt } = {}) {
+  return ['exec', '--ignore-user-config', '--ephemeral', '--skip-git-repo-check', '--sandbox', 'read-only', '--model', model, '--config', 'model_reasoning_effort="' + effort + '"', '--json', '-C', workspace, prompt];
+}
+
 export function buildLanePrompt(lane, test) {
   const evidence = String(test.evidence || '');
   const context = lane === 'baseline' ? evidence + '\n' + archiveFor(test) : evidence;
@@ -63,7 +67,7 @@ export async function runPairedCase({ root, binary, workspace = root, test, mode
 
   const runLane = async lane => {
     const prompt = buildLanePrompt(lane, test);
-    const args = ['exec', '--ignore-user-config', '--ephemeral', '--skip-git-repo-check', '--sandbox', 'read-only', '--ask-for-approval', 'never', '--model', model, '--config', 'model_reasoning_effort="' + effort + '"', '--json', '-C', workspace, prompt];
+    const args = buildCodexArgs({ model, effort, workspace, prompt });
     const result = await runProcess({ command: binary, args, cwd: workspace, job_class, timeout_ms, signal });
     const usage = parseCodexJsonl(result.stdout);
     const answer = answerFromJsonl(result.stdout);
