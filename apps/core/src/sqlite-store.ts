@@ -3,7 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 export type CoreTask = {
   id: string;
   type: string;
-  status: "QUEUED";
+  status: "QUEUED" | "RECOVERING" | "COMPLETED" | "FAILED" | "CANCELLED" | "BLOCKED_OWNER";
   idempotencyKey: string;
   traceId: string;
   payload: unknown;
@@ -24,7 +24,7 @@ export type CoreEvent = {
 type TaskRow = {
   id: string;
   type: string;
-  status: "QUEUED";
+  status: CoreTask["status"];
   idempotency_key: string;
   trace_id: string;
   payload_json: string;
@@ -108,6 +108,20 @@ export class SqliteStore {
   getTask(id: string): CoreTask | null {
     const row = this.db().prepare("SELECT * FROM tasks WHERE id = ?").get(id) as TaskRow | undefined;
     return row ? mapTask(row) : null;
+  }
+
+  listNonTerminalTasks(): CoreTask[] {
+    const rows = this.db().prepare(
+      "SELECT * FROM tasks WHERE status NOT IN ('COMPLETED', 'FAILED', 'CANCELLED', 'BLOCKED_OWNER') ORDER BY created_at ASC",
+    ).all() as unknown as TaskRow[];
+    return rows.map(mapTask);
+  }
+
+  updateTaskStatus(id: string, status: CoreTask["status"]): CoreTask {
+    this.db().prepare("UPDATE tasks SET status = ?, updated_at = ? WHERE id = ?").run(status, new Date().toISOString(), id);
+    const task = this.getTask(id);
+    if (!task) throw new Error(`task not found: ${id}`);
+    return task;
   }
 
   appendEvent(input: CoreEvent): CoreEvent {
