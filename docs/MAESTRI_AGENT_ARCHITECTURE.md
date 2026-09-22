@@ -2860,3 +2860,762 @@ The approved visual direction is a dark Lumenva command-room interface with:
 - responsive iPhone companion focused on chat, progress and approvals.
 
 The UI must remain information-dense but operational: every status shown should be backed by real state, never decorative fake progress.
+
+
+# Canonical 14-Task Implementation Program
+
+## Purpose
+
+This section consolidates the fragmented Maestri / Command Center / Local Runtime / Context Gateway / Engineering Council / Frontier Workforce plans into one implementation program with exactly **14 bounded work packages**.
+
+It does not authorize implementation, merge, rebase, production changes, branch deletion or automatic merge to `main`.
+
+Core rule:
+
+> One architecture owner. One technical integration owner. Fourteen bounded builders. One independent integration guardian. Deterministic evidence decides completion.
+
+## Command structure
+
+```text
+OWNER
+  |
+  v
+CLAUDE CEO / PRINCIPAL ARCHITECT / CONTEXT CUSTODIAN
+  |
+  v
+MAESTRI — durable governor, scheduler and source of operational state
+  |
+  +-------------------------------+
+  |                               |
+  v                               v
+CODEX CTO / INTEGRATION LEAD      JULES WORKFORCE
+                                  J01 ... J14
+                                  one Work Package each
+  |                               |
+  +---------------+---------------+
+                  |
+                  v
+        J15 INTEGRATION GUARDIAN
+        fresh context / read-only
+                  |
+                  v
+        DETERMINISTIC VERIFIER
+                  |
+                  v
+        CODEX CTO CROSS-REVIEW
+                  |
+                  v
+        CLAUDE CEO ACCEPTANCE
+                  |
+                  v
+             HUMAN GATE
+```
+
+### Claude CEO
+
+Permanent architecture authority for this program.
+
+Owns:
+- product intent;
+- canonical architecture;
+- Context & Decision Ledger;
+- decomposition into the 14 TaskContracts;
+- cross-task architectural decisions;
+- conflict resolution;
+- acceptance of architectural changes;
+- scope control;
+- final release-readiness recommendation.
+
+Does not become the default implementation worker.
+
+### Maestri
+
+Software governor, not another LLM hierarchy level.
+
+Owns:
+- durable state;
+- TaskContracts;
+- dependencies;
+- conflict graph;
+- scheduler;
+- work-package release;
+- provider/runtime routing;
+- checkpoints;
+- evidence references;
+- approval state;
+- retries and escalation.
+
+### Codex CTO
+
+Permanent technical integration lead.
+
+Owns:
+- deep repository interpretation when a worker is blocked;
+- cross-module technical decisions delegated by Claude CEO;
+- integration review across packages;
+- resolving incompatible implementation proposals;
+- difficult changes that exceed a bounded worker;
+- reviewing J15 findings;
+- preparing the integrated technical state for Claude CEO acceptance.
+
+Codex CTO must not become a second product architect.
+
+### J01-J14
+
+Fourteen bounded implementation workers.
+
+Rules:
+- exactly one canonical Work Package per worker;
+- one isolated branch/worktree/task environment;
+- no architecture expansion;
+- no cross-task ownership;
+- cannot modify another worker's TaskContract;
+- must return ResultDigest + Evidence;
+- if dependency or architecture is missing: BLOCKED, do not invent.
+
+### J15 — Integration Guardian
+
+J15 is **not Security Lead and not another coordinator**.
+
+J15 is the independent integration/coverage guardian because the dominant risk of fourteen parallel work packages is architectural drift, duplication and contract mismatch.
+
+J15:
+- starts from fresh context;
+- is read-only by default;
+- receives the canonical Blueprint, 14 TaskContracts, diffs, ResultDigests, AcceptanceManifests and evidence;
+- checks cross-task contracts, duplicated responsibilities, data ownership, naming, adapter boundaries, dependency violations and missing capabilities;
+- runs the Anti-Loss Gate against the consolidated result;
+- emits PASS / FAIL / BLOCKED plus minimal required corrections;
+- never fixes its own findings.
+
+Security remains a separate specialist gate after integration when the implementation reaches the appropriate phase. Security must not replace the integration guardian.
+
+## Branch contribution ledger
+
+### `vps`
+Canonical future architecture:
+- Maestri V3;
+- Personal AI Engineering OS;
+- context engine;
+- MCP gateway;
+- tool registry;
+- knowledge/graph work;
+- cloud execution gates;
+- provider-oriented architecture.
+
+Primary destination: Tasks 1, 4, 5, 6, 12 and 13.
+
+### `lumenva-command-center`
+Reusable implementation/evidence for:
+- Lumenva Core;
+- terminal runtime concepts;
+- bridge;
+- event bus;
+- storage;
+- telemetry;
+- Maestri Context Gateway;
+- Command Center plan.
+
+Primary destination: Tasks 2, 3, 9, 10 and 13.
+
+### `lumenva-command-center-blueprint-v2`
+Product/UI architecture:
+- deterministic control plane;
+- agent runtime;
+- context;
+- execution;
+- observability;
+- evaluation;
+- desktop;
+- visual office.
+
+Primary destination: Tasks 9, 10 and 11.
+
+### `lumenva-local-runtime`
+Reusable local execution design and implementation:
+- persistent local runtime;
+- command runner boundary;
+- local executor;
+- recovery;
+- runtime contracts.
+
+Primary destination: Task 8.
+
+### `TOKENS`
+Frontier-brain and workforce architecture:
+- Task Graph;
+- tiered routing;
+- Context Gateway / MCG;
+- Resource Router policy;
+- evidence;
+- independent verification;
+- usage/budget concepts.
+
+Primary destination: Tasks 3, 5, 6 and 13.
+
+### `feat/maestri-engineering-council*`
+Role separation:
+- Claude Maestro;
+- Codex Builder;
+- Gemini executor;
+- Independent Reviewer;
+- deterministic verifier.
+
+Absorbed into the canonical command structure and Task 12. It must not create a second orchestration system.
+
+### `feat/f1-identity-mapping` and `feat/f2-tenant-isolation`
+Identity and tenant-boundary evidence.
+
+Preserve as architectural constraints for state, policy and API boundaries. Do not duplicate identity or tenancy in Maestri.
+
+### `security/mcp-auth-rate-limit`
+Security-boundary evidence for remote/MCP surfaces.
+
+Preserve for the later security gate. It is not a separate Maestri auth system.
+
+### `voz`, Meta branches and domain feature branches
+Remain product/domain capabilities and consumers of the platform.
+
+Do not absorb voice, Meta or domain business logic into Maestri Core.
+
+### Backup/chore branches
+Historical evidence only unless a specific contract or doctrine is explicitly promoted by the canonical Blueprint.
+
+## Canonical capability ownership
+
+```text
+Intent / architecture                -> Claude CEO
+Durable orchestration state          -> Maestri Core
+Technical integration                -> Codex CTO
+Task execution                       -> bounded worker
+Agent definition/versioning          -> Agent Factory
+Context selection/recovery           -> Context Engine
+Scheduling/dependencies              -> Task Graph + Scheduler
+Executor/model selection             -> Resource Router
+Cloud execution                      -> Cloud Execution Fabric
+Local execution                      -> Local Runtime
+Code truth                           -> GitHub
+Operational truth                    -> Postgres
+Verification                         -> deterministic Verifier
+Independent integration review       -> J15 Integration Guardian
+Acceptance/evidence                  -> Acceptance + Evidence Engine
+Human authorization                  -> Human Gate
+```
+
+No second scheduler, queue, router, memory authority, approval engine or orchestration hierarchy may be introduced by a work package.
+
+# The 14 canonical Work Packages
+
+## T01 — Canonical Contracts & Repository Architecture
+
+**Worker:** J01 — Contracts Architect
+
+**Origin:** `vps` Maestri V3 + Personal AI Engineering OS + Engineering Council contracts.
+
+**Destination:** one provider-neutral contracts package and one canonical repository map.
+
+**Responsibility:**
+- TaskContract;
+- AcceptanceManifest;
+- ResultDigest;
+- FailureDigest;
+- StateCheckpoint;
+- ProviderRun;
+- AgentDefinition;
+- Evidence reference contracts;
+- version/hash rules;
+- canonical naming glossary.
+
+**Dependencies:** none after Blueprint freeze.
+
+**Must absorb:** overlapping contract definitions in MCG, Command Center plans and provider-specific notes.
+
+**Must not absorb:** provider implementation details.
+
+**Result:** every other work package codes against the same schemas and vocabulary.
+
+**Done when:** schemas are versioned, ownership is unambiguous, duplicate contract names are mapped to one canonical concept.
+
+## T02 — Maestri State/Event/Job Kernel
+
+**Worker:** J02 — Core State Builder
+
+**Origin:** Operating Core concepts, Lumenva Core, current Maestri job/MCP surfaces, V3 State Ledger.
+
+**Destination:** one durable Maestri Core state/event/job kernel.
+
+**Responsibility:**
+- jobs/tasks;
+- attempts;
+- leases/claims;
+- lifecycle transitions;
+- events;
+- checkpoints;
+- idempotency;
+- resume semantics;
+- Postgres operational ownership.
+
+**Dependencies:** T01.
+
+**Must absorb:** competing job/session state concepts.
+
+**Result:** no task state depends on chat, renderer memory or a provider session.
+
+**Done when:** one documented state machine owns task/job transitions and survives process/session replacement.
+
+## T03 — Task Graph, Scheduler & Resource Router
+
+**Worker:** J03 — Scheduling Builder
+
+**Origin:** TOKENS Task Graph, MCG DAG/scheduler, Operating Core ResourceRouter, V3 Conflict Graph.
+
+**Destination:** one dependency/conflict-aware scheduling and routing domain.
+
+**Responsibility:**
+- DAG;
+- dependency unlock;
+- conflict graph;
+- priorities;
+- concurrency;
+- resource class;
+- provider/runtime candidate selection;
+- WAITING states;
+- bounded retry scheduling.
+
+**Dependencies:** T01, T02.
+
+**Must absorb:** duplicate scheduler/router logic.
+
+**Result:** a task has one scheduling path and one routing decision record.
+
+**Done when:** dependencies, conflicts and routing use canonical contracts and cannot create a second queue/router.
+
+## T04 — Engineering OS, Skills & Agent Factory
+
+**Worker:** J04 — Agent Platform Builder
+
+**Origin:** Personal AI Engineering OS + V3 mandatory Agent Factory.
+
+**Destination:** one versioned provider-neutral agent/skill/config system.
+
+**Responsibility:**
+- Constitution;
+- shared Skills;
+- AgentDefinition;
+- Agent Factory;
+- Agent Registry;
+- provider compiler;
+- configuration compiler;
+- capability discovery;
+- version pinning.
+
+**Dependencies:** T01.
+
+**Must absorb:** provider-specific duplicate role definitions where they are logically equivalent.
+
+**Result:** logical agents are defined once and compiled/mapped to native provider capabilities.
+
+**Done when:** no runtime agent can become READY without a validated, versioned definition or explicit native mapping.
+
+## T05 — Context, Memory, Checkpoint & Recovery Engine
+
+**Worker:** J05 — Context Builder
+
+**Origin:** V3 Context Engine, MCG, TOKENS Context Gateway, current context-budget/retriever work.
+
+**Destination:** one context/recovery pipeline.
+
+**Responsibility:**
+- ContextPacket;
+- progressive disclosure;
+- instruction resolver;
+- code/knowledge retrieval;
+- provenance;
+- context budget;
+- State Ledger recovery;
+- checkpoint reconstruction;
+- scoped memory retrieval;
+- compaction recovery.
+
+**Dependencies:** T01, T02, T04.
+
+**Must absorb:** duplicate token/context-saving systems.
+
+**Result:** context is reconstructed from durable sources rather than full session replay.
+
+**Done when:** a fresh provider session can continue a task from contract + checkpoint + evidence + Git state.
+
+## T06 — Cloud Provider Execution Fabric
+
+**Worker:** J06 — Cloud Adapter Builder
+
+**Origin:** V3 cloud architecture, provider plans, manual Jules/Codex workflows, Engineering OS adapters.
+
+**Destination:** one Cloud Execution Fabric.
+
+**Responsibility:**
+- Claude adapter;
+- Codex adapter;
+- Gemini/Jules family adapter;
+- provider health;
+- dispatch;
+- poll/callback;
+- cancellation;
+- result normalization;
+- failure normalization;
+- usage normalization;
+- fallback hooks.
+
+**Dependencies:** T01, T03, T04, T05.
+
+**Must absorb:** fake/simulated provider-success paths.
+
+**Result:** provider differences stay behind one adapter contract.
+
+**Done when:** Maestri can represent a real provider run without provider-specific state leaking into core scheduling contracts.
+
+## T07 — GitHub, Worktrees & Execution Workspace Fabric
+
+**Worker:** J07 — Workspace Builder
+
+**Origin:** Engineering Council Floors, Codex worktree patterns, cloud execution branch/PR flows.
+
+**Destination:** one execution workspace abstraction.
+
+**Responsibility:**
+- repo/ref resolution;
+- isolated worktree/workspace identity;
+- branch ownership;
+- commit/diff references;
+- PR/CI correlation;
+- GitHub event ingress;
+- workspace cleanup lifecycle;
+- conflict metadata.
+
+**Dependencies:** T01, T02, T03, T06.
+
+**Must absorb:** parallel ad-hoc branch/worktree ownership models.
+
+**Result:** every write task has an explicit isolated workspace and Git identity.
+
+**Done when:** two parallel write tasks cannot silently share one mutable workspace.
+
+## T08 — Local Runtime & Host Abstraction
+
+**Worker:** J08 — Local Runtime Builder
+
+**Origin:** `lumenva-local-runtime` + desktop terminal plan.
+
+**Destination:** one persistent Maestri Local Runtime.
+
+**Responsibility:**
+- LocalHost;
+- SSHHost;
+- runtime heartbeat;
+- PTY/process manager boundary;
+- filesystem/git gateway;
+- local agent CLI gateway;
+- reconnect/session discovery;
+- runtime capability reporting.
+
+**Dependencies:** T01, T02, T03, T04.
+
+**Must absorb:** local execution functionality from earlier terminal/runtime experiments without creating another scheduler/job engine.
+
+**Result:** desktop closure does not define Maestri job lifetime.
+
+**Done when:** local execution is a capability provider beneath Maestri, not a second orchestrator.
+
+## T09 — Desktop App & Embedded Terminal Workspace
+
+**Worker:** J09 — Desktop Builder
+
+**Origin:** Command Center V2 + approved desktop mockup + terminal-runtime concepts.
+
+**Destination:** first-party Lumenva Maestri Desktop.
+
+**Responsibility:**
+- Electron shell;
+- React UI;
+- typed preload/IPC;
+- xterm.js terminal panes;
+- node-pty integration through Local Runtime;
+- projects;
+- terminal tabs/splits;
+- files;
+- diff;
+- editor surface;
+- preview surface;
+- CI/evidence pane.
+
+**Dependencies:** T01, T08.
+
+**Must absorb:** duplicate desktop/terminal UI concepts.
+
+**Result:** one desktop workspace for Maestri, Claude/Codex/Gemini terminals and project state.
+
+**Done when:** UI contains no unrestricted process/filesystem authority and all runtime actions use typed capability boundaries.
+
+## T10 — Command Center Chat, Tasks & Agent Office
+
+**Worker:** J10 — Command Center Builder
+
+**Origin:** `lumenva-command-center`, Command Center Blueprint V2, current /command concepts.
+
+**Destination:** one primary Maestri interaction surface.
+
+**Responsibility:**
+- /command/chat;
+- task list;
+- task detail;
+- provider/run status;
+- Agent Office;
+- approvals surface;
+- blockers;
+- evidence links;
+- pause/resume/cancel/retry commands;
+- activity stream.
+
+**Dependencies:** T01, T02, T03, T04, T06.
+
+**Must absorb:** decorative/fake agent state.
+
+**Result:** every visible state is derived from real Maestri state.
+
+**Done when:** the user can operate Maestri without opening a provider-specific app.
+
+## T11 — Web/iPhone Companion & Shared Client Protocol
+
+**Worker:** J11 — Mobile/Web Builder
+
+**Origin:** desktop/mobile product layer and Command Center responsive requirements.
+
+**Destination:** one shared client SDK/protocol with desktop and web/mobile transports.
+
+**Responsibility:**
+- HTTPS/WebSocket client transport;
+- responsive iPhone UI;
+- Chat;
+- Tasks;
+- Agents;
+- Projects;
+- Approvals;
+- actionable notifications;
+- remote status;
+- explicit gated remote terminal attachment later.
+
+**Dependencies:** T02, T09, T10.
+
+**Must absorb:** any proposal for a separate unrelated mobile product.
+
+**Result:** desktop and iPhone read the same Maestri task/evidence truth.
+
+**Done when:** closing the phone/browser does not affect execution and mobile can control approved workflow actions.
+
+## T12 — Evidence, Acceptance, Verification, Review & Approval
+
+**Worker:** J12 — Verification Platform Builder
+
+**Origin:** V3 Evidence Validator, Engineering Council verifier/reviewer, existing approvals/authority work.
+
+**Destination:** one completion and approval pipeline.
+
+**Responsibility:**
+- AcceptanceManifest state;
+- Evidence records;
+- deterministic verifier profiles;
+- fresh-context reviewer contract;
+- approval state;
+- authority envelope integration;
+- PASS/FAIL/BLOCKED semantics;
+- no self-approval.
+
+**Dependencies:** T01, T02, T04.
+
+**Must absorb:** duplicate completion/reviewer concepts.
+
+**Result:** DONE is impossible from model assertion alone.
+
+**Done when:** mandatory acceptance requires evidence + deterministic verification + independent review where policy requires it.
+
+## T13 — Observability, Provider Health, Quota & Usage
+
+**Worker:** J13 — Observability Builder
+
+**Origin:** MCG telemetry/dashboard, TOKENS budgets, V3 telemetry/audit and provider governors.
+
+**Destination:** one observability/usage domain.
+
+**Responsibility:**
+- correlation IDs;
+- provider health;
+- runtime health;
+- exact/estimated/unavailable measurement labels;
+- quota state;
+- usage/cost where available;
+- alerts;
+- retry/loop visibility;
+- trace/evidence references;
+- redaction.
+
+**Dependencies:** T02, T06, T08.
+
+**Must absorb:** duplicate telemetry dashboards and invented metrics.
+
+**Result:** operational decisions use attributable measurements.
+
+**Done when:** UI and router can distinguish exact, estimated and unavailable data without fabricating usage.
+
+## T14 — Consolidation Migration, Legacy Retirement & Release Readiness
+
+**Worker:** J14 — Consolidation Builder
+
+**Origin:** all relevant branches and the Blueprint's Dry Project protocol.
+
+**Destination:** one canonical implementation line.
+
+**Responsibility:**
+- final branch-to-component mapping;
+- migration order;
+- shadow/mirror/assisted/primary rollout;
+- legacy markers;
+- documentation supersession;
+- duplicate module retirement candidates;
+- final repository structure;
+- implementation coverage ledger;
+- release-readiness package.
+
+**Dependencies:** T01-T13.
+
+**Must absorb:** historical plans as evidence, not parallel roadmaps.
+
+**Result:** one capability -> one canonical owner -> one canonical implementation path.
+
+**Done when:** every relevant branch/capability is explicitly preserved, absorbed or marked legacy with rationale and no capability disappears silently.
+
+# Dependency waves
+
+Do not launch all fourteen write tasks simultaneously.
+
+```text
+WAVE 0
+T01
+
+WAVE 1
+T02   T04
+
+WAVE 2
+T03   T05   T08   T12
+
+WAVE 3
+T06   T09   T13
+
+WAVE 4
+T07   T10
+
+WAVE 5
+T11
+
+WAVE 6
+T14
+
+CONTINUOUS
+J15 Integration Guardian reviews every completed wave from fresh context.
+```
+
+Workers can be registered up front, but Maestri releases each TaskContract only after its dependencies are satisfied.
+
+# J15 review contract
+
+Inputs:
+- canonical Blueprint;
+- Context & Decision Ledger;
+- Branch Contribution Ledger;
+- T01-T14 TaskContracts;
+- completed ResultDigests;
+- diffs/artifacts;
+- AcceptanceManifests;
+- evidence;
+- current dependency graph.
+
+Checks:
+1. no duplicate scheduler/queue/router;
+2. no duplicate state authority;
+3. no provider-specific semantics leaked into canonical core;
+4. no second orchestrator;
+5. no task widened its ownership;
+6. no capability disappeared;
+7. naming is canonical;
+8. data/state ownership is unique;
+9. local/cloud boundaries remain explicit;
+10. Desktop/Web clients do not become state authority;
+11. builder did not become verifier;
+12. workspaces remain isolated;
+13. legacy designation has rationale;
+14. all fourteen outputs can compose into one product.
+
+Output:
+```text
+STATUS: PASS | FAIL | BLOCKED
+CROSS_TASK_FINDINGS
+DUPLICATION_FINDINGS
+MISSING_CAPABILITIES
+CONTRACT_VIOLATIONS
+DEPENDENCY_VIOLATIONS
+ANTI_LOSS_RESULT
+REQUIRED_CORRECTIONS
+RESIDUAL_UNCERTAINTY
+```
+
+# Context & Decision Ledger — canonical additions
+
+- The product is one Lumenva Maestri, not three provider-specific systems.
+- Claude CEO is the single architecture/context authority for this program.
+- Codex CTO is the technical integration authority, not a second product architect.
+- Maestri is software governance/state, not another competing LLM manager.
+- J01-J14 are bounded workers, not architectural authorities.
+- J15 is Integration Guardian, not Security Lead and not coordinator.
+- Security review remains a separate later specialist gate.
+- GitHub remains code truth.
+- Postgres remains operational truth.
+- Conversation/provider session state is never durable truth.
+- Local Runtime is execution capability, not another job engine/router.
+- MCG/Context Gateway is absorbed into the one Context Engine, not maintained as a parallel context platform.
+- TOKENS workforce routing is absorbed into the one Resource Router, not maintained as a second workforce scheduler.
+- Engineering Council role separation survives; its orchestration implementation is absorbed into Maestri + canonical roles.
+- Voice, Meta and product-domain capabilities remain outside Maestri Core.
+- No automatic merge to `main`.
+- No plan can mark completion without AcceptanceManifest + Evidence.
+- One responsibility must have one architectural owner.
+
+# Anti-Loss Gate for the 14-task program
+
+Before T14 can report READY:
+
+1. Recompare final architecture against every relevant branch.
+2. Recompare against `docs/MAESTRI_AGENT_ARCHITECTURE.md`, Personal AI Engineering OS, Command Center plans, Local Runtime plans, TOKENS plan and Engineering Council docs.
+3. Confirm every identified capability has exactly one of:
+   - PRESERVED;
+   - ABSORBED;
+   - LEGACY WITH RATIONALE;
+   - OUTSIDE MAESTRI DOMAIN.
+4. Confirm no capability disappeared because of naming differences.
+5. Confirm no duplicate queue/router/context/memory/state/approval system survived.
+6. Confirm the final repository map names the canonical owner of every responsibility.
+7. Confirm the 14 ResultDigests compose without contradictory contracts.
+8. J15 must issue Anti-Loss PASS before Claude CEO performs final architectural acceptance.
+
+# Program Definition of Done
+
+The 14-task program is implementation-ready only when:
+- the canonical Blueprint is the only active architectural roadmap;
+- every TaskContract is bounded and dependency-scoped;
+- Claude CEO, Codex CTO, Maestri and J15 authority boundaries are explicit;
+- all relevant branches are mapped;
+- duplicate concepts have one canonical destination;
+- state/data ownership is unambiguous;
+- the target repository structure is explicit;
+- the rollout order is explicit;
+- each task has measurable acceptance;
+- J15 can review the entire program without builder history;
+- no branch is merged/deleted merely by producing this plan.
