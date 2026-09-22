@@ -105,6 +105,10 @@ export class SqliteStore {
     return this.getTaskByIdempotencyKey(input.idempotencyKey) as CoreTask;
   }
 
+  getTaskByIdempotencyKey(key: string): CoreTask | null {
+    return this.getTaskByIdempotencyKeyInternal(key);
+  }
+
   getTask(id: string): CoreTask | null {
     const row = this.db().prepare("SELECT * FROM tasks WHERE id = ?").get(id) as TaskRow | undefined;
     return row ? mapTask(row) : null;
@@ -139,7 +143,7 @@ export class SqliteStore {
     return rows.map(mapEvent);
   }
 
-  private getTaskByIdempotencyKey(key: string): CoreTask | null {
+  private getTaskByIdempotencyKeyInternal(key: string): CoreTask | null {
     const row = this.db().prepare("SELECT * FROM tasks WHERE idempotency_key = ?").get(key) as TaskRow | undefined;
     return row ? mapTask(row) : null;
   }

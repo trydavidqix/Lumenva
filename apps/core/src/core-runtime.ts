@@ -47,7 +47,33 @@ export class CoreRuntime {
     return this.store.getTask(id);
   }
 
+  async startTask(input: {
+    id: string;
+    type: string;
+    idempotencyKey: string;
+    traceId: string;
+    payload: unknown;
+  }): Promise<{ task: CoreTask; created: boolean }> {
+    if (this.state !== "running") throw new Error("CoreRuntime is not running");
+    const existing = this.store.getTaskByIdempotencyKey(input.idempotencyKey);
+    const task = this.store.createTask(input);
+    if (!existing) {
+      await this.eventBus.publish({
+        id: `task-created:${task.id}`,
+        type: "task.created",
+        taskId: task.id,
+        traceId: task.traceId,
+        payload: { type: task.type, status: task.status },
+      });
+    }
+    return { task, created: existing === null };
+  }
+
   events(): CoreEventBus {
     return this.eventBus;
+  }
+
+  eventsList() {
+    return this.store.replayEvents();
   }
 }
