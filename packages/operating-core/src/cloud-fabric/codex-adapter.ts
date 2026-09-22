@@ -42,7 +42,7 @@ const executionSchema = {
 export function createCodexSdkRunner(): CodexRunner {
   return {
     async health() {
-      const executable = process.platform === 'win32' ? 'codex.cmd' : 'codex';
+      const executable = process.platform === 'win32' ? 'codex.exe' : 'codex';
       const version = spawnSync(executable, ['--version'], { encoding: 'utf8', stdio: 'pipe' });
       const auth = spawnSync(executable, ['login', 'status'], { encoding: 'utf8', stdio: 'pipe' });
       if (version.status === 0 && auth.status === 0) return { ok: true, status: 'healthy' };

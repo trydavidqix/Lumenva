@@ -43,7 +43,7 @@ const executionSchema = {
 } as const;
 
 export function createClaudeCliRunner(): ClaudeRunner {
-  const executable = process.platform === "win32" ? "claude.cmd" : "claude";
+  const executable = process.platform === "win32" ? "claude.exe" : "claude";
   return {
     async health() {
       try {
