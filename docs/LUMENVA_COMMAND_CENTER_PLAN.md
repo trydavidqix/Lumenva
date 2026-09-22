@@ -15,6 +15,9 @@ A meta não é criar apenas uma dashboard ou wrapper de terminal. O produto deve
 - roteamento por capacidade, risco e custo
 - telemetria e traces
 - memória em camadas
+- Memory OS corporativa com memória compartilhada e memórias privadas por agente
+- histórico operacional persistente
+- Live Office / Pixel Floor com agentes que nascem automaticamente
 - evidências e artefatos
 - budgets e alertas
 - validação A/B
@@ -169,6 +172,120 @@ Ao abrir um node:
 - Usage
 - Logs
 
+## Live Office / Pixel Floor
+
+O Command Center terá uma visão opcional de escritório vivo em pixel art.
+
+O Pixel Floor é uma view de observabilidade, não o runtime dos agentes.
+
+Princípios:
+- Canvas 2D leve no MVP.
+- React controla menus, painéis e modais; não controla frame a frame os personagens.
+- Office Engine recebe eventos reais do Core.
+- movimento visual representa estado real sempre que possível.
+- fechar ou ocultar o Pixel Floor nunca interrompe agents.
+
+Entidades:
+- World
+- Room
+- Zone
+- Desk
+- Station
+- Decoration
+- AgentAvatar
+- SpawnPoint
+- Portal
+- InteractionPoint
+
+Estados visuais:
+- IDLE
+- WALKING
+- THINKING
+- READING
+- CODING
+- TOOL_USE
+- REVIEWING
+- WAITING
+- NEEDS_APPROVAL
+- BLOCKED
+- FAILED
+- DONE
+- OFFLINE
+- SYNCING
+- DELEGATING
+
+## Nascimento automático de agents
+
+Ao criar um agent no Agent Registry:
+
+agent.created
+-> Office Engine
+-> Spawn Manager
+-> resolve role/tags
+-> resolve room
+-> resolve desk/station
+-> cria avatar
+-> aparece no escritório
+-> move para seu posto
+
+Prioridade de spawn:
+1. role compatível
+2. tags/capabilities
+3. desk/station disponível
+4. spawn zone padrão
+
+O agent nasce visualmente sem exigir configuração manual adicional.
+
+## Scene / Scenario System
+
+Cenários não ficam hardcoded na UI.
+
+Um cenário define:
+- tamanho do mapa
+- rooms
+- zones
+- walls
+- floors
+- spawn zones
+- desks
+- stations
+- decorations
+- collision map
+- interaction points
+
+Criar Scene Editor visual com:
+- drag and drop
+- adicionar/remover sala
+- adicionar/mover mesa
+- adicionar estação
+- adicionar decoração
+- mudar piso/parede
+- criar zonas
+- salvar
+- duplicar
+- versionar cenário
+
+Assets modulares:
+- characters/
+- furniture/
+- decorations/
+- rooms/
+- effects/
+- themes/
+- scenarios/
+
+Exemplos de estações semânticas:
+- Git Station
+- QA Lab
+- Research Station
+- MCP Hub
+- Memory Vault
+- Context Core
+- Approval Gate
+- Deployment Room
+
+O visual nunca pode inventar atividade. Se não houver telemetria suficiente, mostrar estado genérico/indisponível em vez de fingir comportamento.
+
 ## Terminal real
 
 Fluxo:
@@ -292,6 +409,173 @@ Itens críticos nunca são descartados por simples limite de tamanho.
 - L5 Evidence Archive
 
 Todo item deve manter provenance.
+
+## Memory OS corporativa
+
+A memória não pode ser um único bucket global nem um preload permanente de tudo.
+
+A memória compartilhada da empresa contém apenas verdades comuns e validadas:
+- decisões aprovadas
+- arquitetura aprovada
+- objetivos
+- políticas
+- estado operacional
+- jobs importantes
+- evidências
+- fatos organizacionais canônicos
+
+Memórias operacionais permanecem separadas por domínio/agente.
+
+Namespaces iniciais:
+- company/
+- executive/claude/
+- engineering/codex/
+- intelligence/antigravity/
+- episodic/jobs/
+- projects/
+- customers/ quando houver contexto Customer Ops
+
+Regras:
+- Claude CEO não grava diretamente memória privada do Codex.
+- Codex não grava diretamente memória executiva.
+- Antigravity não promove pesquisa para verdade corporativa sem validação.
+- Memória episódica de job não vira automaticamente memória corporativa.
+- Toda promoção de memória precisa preservar source, provenance, timestamp, confidence derivada de evidência e histórico de supersession.
+
+Pipeline de promoção:
+
+experiência
+-> conhecimento candidato
+-> validação
+-> conhecimento aprovado
+-> memória corporativa
+
+Nenhuma memória candidata pode virar verdade da empresa apenas porque um modelo afirmou algo.
+
+## Ownership e fontes de verdade da memória
+
+Cada classe de informação deve ter owner explícito.
+
+Fonte canônica:
+- Postgres / CRM: fatos operacionais e de negócio.
+- org_memory: conhecimento corporativo aprovado.
+- customer_memory: memória omnichannel de cliente, quando aplicável.
+- agent_memory: memória privada/especializada de cada agente.
+- episodic/jobs: contexto e aprendizado de execuções específicas.
+
+Projeções derivadas:
+- Graphiti: relações e temporalidade derivadas dos fatos canônicos.
+- Mem0: memória semântica opcional e descartável/reconstruível.
+- pgvector / RAG: conhecimento publicado e recuperável.
+- Obsidian ou equivalente: conhecimento humano curado e consultado sob demanda.
+- Skills: procedimentos versionados.
+- Hooks / Policies: comportamento determinístico, nunca memória probabilística.
+
+Graphiti, Mem0 e índices vetoriais não substituem a fonte canônica.
+
+## Retrieval e economia de contexto
+
+O sistema nunca deve pré-carregar todo o vault ou toda a memória de um projeto.
+
+O Context Engine compila contexto sob demanda por job.
+
+Estratégia inicial:
+- janela recente curta
+- resumo da sessão
+- L0/L1 sempre quando relevantes
+- recuperação top-k pequena de memória relevante
+- decisões/constraints/must_keep com prioridade máxima
+- evidência vinculada à task
+- project memory apenas quando necessária
+
+Default inicial de retrieval:
+- 1 a 5 itens realmente relevantes por classe, ajustável pelo Context Compiler.
+
+Cada retrieval registra:
+- memory_id
+- namespace
+- source
+- provenance
+- score/reason
+- timestamp
+- bytes/chars/tokens
+- cache hit/miss
+- task_id
+- trace_id
+
+## Ciclo de vida e higiene da memória
+
+Todo item de memória deve suportar:
+- created_at
+- updated_at
+- last_used_at
+- source
+- provenance
+- owner
+- scope
+- status
+- supersedes
+- superseded_by
+- ttl quando aplicável
+- retention policy
+- sensitivity
+- hash/version
+
+Estados possíveis:
+- CANDIDATE
+- VALIDATED
+- ACTIVE
+- STALE
+- SUPERSEDED
+- REJECTED
+- ARCHIVED
+
+Memórias antigas não devem ser apagadas silenciosamente quando forem evidência histórica; devem poder ser superseded/archived.
+
+## Handoffs e memória de engenharia
+
+Handoffs de Claude/Codex/Antigravity são memória operacional, não verdade corporativa automática.
+
+Um handoff deve registrar:
+- objetivo
+- estado atual
+- arquivos tocados
+- decisões
+- evidências
+- testes
+- blockers
+- próximos passos
+- trace/task IDs
+
+O próximo agente recebe somente o handoff + memória recuperada necessária ao trabalho.
+
+## Histórico operacional separado de Memory OS
+
+Logs, métricas, traces, cache e eventos operacionais não são a mesma coisa que memória semântica.
+
+Criar HistoryStore atrás de uma interface própria para:
+- tasks
+- traces
+- token_usage
+- context_metrics
+- cache_metrics
+- alerts
+- eval_runs
+- replays
+- agent_usage
+- tool_usage
+- plugin_usage
+- mcp_usage
+- runtime health
+
+Política inicial:
+- raw append-only
+- rollups diários
+- queries Today / 7d / 30d / All time
+- retenção configurável
+- export/backup sem colocar secrets no Git
+
+O Git contém código/configuração segura; não é o banco dos logs nem da memória operacional.
 
 ## Context Diff e Cache
 
@@ -772,16 +1056,350 @@ Clientes futuros:
 
 Durante transição, Maestri Wire pode ser bridge temporária.
 
+## M0 — Remediação obrigatória antes do Command Center
+
+Nenhuma feature nova do Command Center deve ser construída antes de fechar M0.
+
+### M0.1 Preservação
+
+Branch de recuperação já criada:
+- backup/lumenva-command-center-pre-cleanup-2026-09-22
+
+Estado antigo protegido:
+- HEAD contaminado conhecido: 34c6b398520f5a46a98edf0e1d74ad500cd104fb
+- commit contaminado: 437a0f532cb392e067f18a8011c58424c6265b6c
+- último commit limpo conhecido do plano: ed148778a4591a8aaf0e1b1efd5c90007f00cfd6
+
+Não apagar a branch de backup até o fechamento completo da remediação.
+
+### M0.2 Reconstrução limpa da branch
+
+Criar branch temporária de repair partindo de ed148778a4591a8aaf0e1b1efd5c90007f00cfd6.
+
+Transportar somente:
+- docs/LUMENVA_COMMAND_CENTER_PLAN.md
+- docs/superpowers/plans/2026-09-22-lumenva-context-gateway.md
+- docs/superpowers/specs/2026-09-22-lumenva-context-gateway-design.md
+- packages/maestri-context-gateway/**
+
+Allowlist inicial da reconstrução:
+- docs/LUMENVA_COMMAND_CENTER_PLAN.md
+- docs/superpowers/**
+- packages/maestri-context-gateway/**
+
+Não trazer como parte da remediação MCG:
+- apps/crm/**
+- apps/social-brain/**
+- packages/social-brain/**
+- packages/integrations/meta/**
+- supabase/**
+- mudanças não relacionadas ao MCG/Command Center
+
+Antes de mover lumenva-command-center para a história limpa:
+- comparar branch repair vs main
+- comparar MCG repair vs backup
+- provar que nenhum arquivo MCG foi perdido
+- provar que nenhuma mudança lateral entrou
+
+A reescrita de lumenva-command-center está autorizada somente depois desses gates.
+A main não deve ser alterada.
+
+### M0.3 Integração correta com monorepo e CI
+
+Corrigir package scripts do MCG para participar dos gates do monorepo.
+
+Adicionar test:unit equivalente ao test atual.
+
+Atualizar pnpm-lock.yaml de forma consistente.
+
+Criar CI específico para MCG em lumenva-command-center e em PRs que toquem:
+- packages/maestri-context-gateway/**
+- docs relevantes do MCG
+
+Gates:
+- install frozen
+- tests MCG
+- import/syntax smoke
+- secret scan
+- path/personal-data scan
+- dashboard smoke
+- contracts smoke
+
+Nenhum commit do MCG pode ser considerado PASS sem testes automáticos.
+
+### M0.4 Correções conhecidas de métricas
+
+Corrigir bug visual de REDUÇÃO %, evitando dupla formatação number -> string -> number.
+
+Corrigir cache accounting:
+- hits são calculados antes de inserir misses
+- tokens_avoided considera somente fragments que já eram hits
+- misses da execução atual não entram como saving
+
+Compression Ratio:
+- usar soma ponderada de original vs delivered
+- não média simples por evento
+
+MCG Coverage:
+- medir por tasks/traces/turns elegíveis
+- não por context.compile events / total telemetry events
+
+Separar:
+- Estimated Context Savings
+- Compression
+- Coverage
+- Real Workflow Token Savings
+
+Nunca apresentar bytes/4 como economia real do workflow.
+
+### M0.5 Trust, Efficiency e Regression
+
+Remover dataset_size hardcoded em 1.
+
+Criar agregador real de paired evals.
+
+Estados mínimos:
+- 0–29 pares válidos: VALIDATING
+- >=30 + quality gates: VALIDATED
+- dados insuficientes: UNVALIDATED
+
+Efficiency não pode virar MEASURED com dataset insuficiente.
+
+Regression Watch:
+- regressão comprovada -> REGRESSION_DETECTED
+- dados suficientes sem regressão -> NO_REGRESSION
+- dados insuficientes -> UNVALIDATED
+
+### M0.6 Executor robusto para Eval e Replay
+
+Criar executor comum com:
+- spawn
+- stdout/stderr
+- heartbeat
+- last_activity_at
+- timeout configurável
+- cancellation
+- graceful kill
+- hard kill
+- exit classification
+
+Remover timeout único rígido de 45s para todos os replays.
+
+Eval Runner não pode esperar indefinidamente.
+
+Classes iniciais:
+- TINY
+- LIGHT
+- NORMAL
+- HEAVY
+
+Timeout e policy devem ser configuráveis.
+
+### M0.7 HistoryStore
+
+O código deve preservar o princípio:
+Git não é o banco de runtime.
+
+Criar HistoryStore com interface própria.
+
+Persistir:
+- telemetry
+- traces
+- evals
+- replay
+- alerts
+- cache metrics
+- usage
+- task history
+
+Suportar:
+- Today
+- 7d
+- 30d
+- All time
+
+Manter provenance e measurement_type.
+
+### M0.8 Contracts e registries
+
+Os JSON Schemas devem ser usados por validação real, não apenas existir como arquivos.
+
+Validar contratos:
+- task
+- event
+- trace
+- telemetry
+- agent
+- runtime
+- tool
+- plugin
+- mcp
+- alert
+- eval
+- artifact
+
+Registries não podem permanecer [] como estado final.
+
+Popular dinamicamente/por descoberta real:
+- agents
+- tools
+- plugins
+- MCPs
+- runtimes
+- models
+
+Cada registro:
+- id/name
+- version
+- capabilities
+- health
+- last_seen
+- success_rate
+- failure_rate
+- latency
+- usage
+- measurement_type
+- source
+
+### M0.9 Scheduler, Router e Reliability
+
+Transformar primitives isoladas em fluxo operacional:
+
+Task
+-> DAG
+-> Ready Queue
+-> Router
+-> Risk
+-> Capability Check
+-> Approval
+-> Executor
+-> Verification
+
+Adicionar:
+- queue
+- leases
+- dependency wakeup
+- concurrency limits
+- resource locking
+- cancellation
+- retry history
+- Dead Letter Queue
+- semantic dedup
+- worktree allocation
+
+Circuit Breaker deve persistir estado entre reinícios.
+
+### M0.10 Evidence, Progress e Confidence
+
+Separar:
+- Progress
+- Evidence Coverage
+- Confidence
+
+Progress = acceptance criteria concluídos.
+
+Evidence Coverage = critérios sustentados por evidência.
+
+Confidence = derivada de tests, typecheck, evidence, verifier e unresolved issues.
+
+Nunca usar Confidence = Progress.
+
+Evidence Graph completo:
+Claim -> Evidence -> Source -> Artifact -> Task -> Trace
+
+### M0.11 Validation Lab completo
+
+Primeiro:
+- deterministic/unit tests
+- 6 paired smoke runs
+
+Depois dos smoke gates:
+- mínimo 30 paired evaluations reais
+
+Distribuição inicial:
+- 5 context recall
+- 5 coding
+- 5 tool-heavy
+- 5 long-context
+- 5 evidence/review
+- 5 mixed workflow
+
+Cada par mantém:
+- mesma task
+- mesmo model
+- mesmo effort
+- mesmo workspace snapshot
+- mesmas tools
+- mesma policy
+
+Somente depois calcular como validated:
+- real workflow savings
+- Trust
+- Efficiency
+- Regression baseline
+
+### M0.12 Dashboard e história
+
+Dashboard deve responder:
+1. O que está acontecendo?
+2. O que está custando?
+3. O MCG está realmente ajudando?
+
+Views mínimas:
+- Overview
+- History
+- Traces
+- Tasks
+- Agents
+- Tools
+- Plugins
+- MCPs
+- Cache
+- Memory
+- Validation
+- Alerts
+
+Nenhuma view final aceita:
+- NaN
+- fake zero
+- unknown inventado
+- []
+- placeholder
+- future/prepared como PASS
+
+### M0.13 Gate de conclusão
+
+M0 fecha somente quando:
+
+- branch hygiene PASS
+- unrelated files 0
+- secrets 0
+- MCG tests PASS
+- MCG CI PASS
+- cache accounting PASS
+- metrics semantics PASS
+- contracts PASS
+- registries reais
+- history persistente
+- scheduler/router/reliability operacionais
+- progress/confidence separados
+- 30 paired evals válidos
+- Trust/Regression com dataset suficiente
+- dashboard sem fake metrics
+- PARTIAL final = 0
+- NOT_STARTED final = 0
+- BLOCKED apenas quando externo, reproduzível e documentado
+
 ## Migração gradual a partir do Maestri
 
-M0: MCG atual estabilizado.
+M0: Remediação, Memory OS e MCG estabilizados.
 M1: Criar Lumenva Core.
 M2: Criar Desktop shell.
 M3: Ler estado existente via bridge.
-M4: Canvas e Agent Nodes próprios.
+M4: Canvas, Agent Nodes e Pixel Floor próprios.
 M5: Terminal próprio xterm.js + node-pty.
 M6: Claude/Codex/Antigravity rodando no Lumenva Runtime.
-M7: Scheduler, DAG e Worktrees próprios.
+M7: Scheduler, DAG, Worktrees e Memory OS integrados ao Core.
 M8: Lumenva Link próprio.
 M9: Maestri deixa de ser dependência.
 
@@ -855,38 +1473,80 @@ Não aceitar como PASS:
 - prepared
 - métrica inventada
 
-## Restrições
+## Restrições e autorização de execução
 
-- Não fazer deploy automático.
-- Não fazer push/merge automático por agentes.
+- Não fazer deploy em produção automaticamente.
+- Não fazer merge em main automaticamente.
+- Push e reescrita controlada de lumenva-command-center estão autorizados para executar este plano, desde que o backup e os gates de comparação estejam comprovados.
+- Não apagar a branch de backup até a conclusão final.
 - Não apagar evidências.
-- Não executar ações destrutivas sem Owner approval.
+- Não executar mutações de produção, delete destrutivo ou manipulação de secrets sem Owner approval explícito.
 - Não expor secrets.
-- Não remover controles de segurança.
+- Não remover controles de segurança do sistema operacional/runtime.
 - Não confundir estimativa com dado exato.
+- Não usar subagents para a implementação deste plano quando a execução tiver sido solicitada inline.
+- Em caso de dúvida técnica, consultar primeiro documentação oficial da tecnologia envolvida e registrar a decisão/evidência.
 
 ## Ordem de implementação
 
-1. Core + contracts + event bus
-2. terminal runtime
-3. agent runtime
-4. MCG/context engine
-5. storage + telemetry + traces
-6. canvas + Agent Nodes
-7. scheduler + DAG + worktrees
-8. router + risk + capabilities
-9. evidence + artifacts + CEO brief
-10. budgets + alerts
-11. Validation Lab + replay
-12. Efficiency/Trust/Regression
-13. Lumenva Link
-14. mobile/remote
-15. refinamento visual
+0. Backup + reconstrução limpa da branch
+1. CI/monorepo + correções conhecidas do MCG
+2. Metrics semantics + cache accounting
+3. Trust/Efficiency/Regression + executor robusto
+4. HistoryStore + Memory OS completa
+5. Contracts + registries
+6. Scheduler + DAG + router + reliability + worktrees
+7. Evidence + artifacts + progress/confidence + CEO brief
+8. Validation Lab: 6 paired smoke
+9. Validation Lab: 30 paired evaluations
+10. Dashboard/History/Trace final do MCG
+11. Core + contracts + event bus
+12. terminal runtime
+13. agent runtime
+14. MCG/context engine nativo
+15. storage + telemetry + traces no Core
+16. Canvas + Agent Nodes + Live Office / Pixel Floor
+17. Scene Editor + auto-spawn de agents
+18. budgets + alerts
+19. Lumenva Link
+20. mobile/remote
+21. refinamento visual e acessibilidade
 
-## Status inicial
+## Regra de execução contínua
 
-PLANNING
+Quando este plano for colocado em execução integral:
+- executar inline, sem subagents;
+- não parar após implementar apenas um subconjunto;
+- auditar antes de modificar;
+- manter checkpoints verificáveis;
+- rodar testes após cada milestone;
+- corrigir regressões antes de avançar;
+- consultar documentação oficial diante de dúvida de API, runtime, Git, Electron, Node, PTY, SQLite, GitHub Actions ou qualquer dependência;
+- continuar automaticamente enquanto houver trabalho executável dentro do escopo e permissões disponíveis;
+- parar somente diante de bloqueio externo real, irreversível ou que exija credencial/Owner action não disponível;
+- quando bloqueado, registrar exatamente: BLOCKER, causa, evidência, impacto e ação mínima do Owner.
 
-Este documento é a fonte de verdade inicial da branch Lumenva Command Center.
+## Definition of Done global
 
-O próximo passo é quebrar o plano em milestones pequenos e verificáveis antes de iniciar implementação ampla.
+O projeto não termina porque código foi escrito.
+
+Só termina quando:
+- cada milestone tem evidência;
+- testes relevantes passam;
+- nenhum PASS depende de mock/placeholder;
+- métricas exibidas possuem provenance;
+- Memory OS respeita ownership e promotion;
+- runtime e UI refletem estado real;
+- branch está limpa;
+- CI está verde;
+- documentação foi atualizada;
+- PARTIAL final = 0;
+- NOT_STARTED final = 0;
+- BLOCKED restante é exclusivamente externo e documentado.
+
+## Status atual
+
+ACTIVE — M0 REMEDIATION / CONSOLIDATION
+
+Este documento é a fonte de verdade única da branch Lumenva Command Center.
+Não criar um segundo plano concorrente para o mesmo escopo; atualizar este arquivo.
