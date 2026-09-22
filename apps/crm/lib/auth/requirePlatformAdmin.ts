@@ -1,24 +1,20 @@
 /**
- * Server guard for /admin/* (Super-Admin Platform sub-product).
+ * Server guards for Super-Admin Platform sub-product (both layout and API).
  *
  * Flow:
  *  1. Validate JWT via getUser() (NEVER getSession on backend per CLAUDE.md).
  *  2. Confirm row in platform_admins (active = no revoked_at).
  *  3. Enforce MFA AAL2 if `mfa_required` (default true for platform admins).
  *
- * Redirects:
+ * Redirects (for layout):
  *  - no user        → /login?next=/admin
  *  - no row         → /admin/forbidden
  *  - aal1 + required → /login/mfa?next=/admin
- *
- * The middleware already does an early `fn_is_platform_admin` RPC check;
- * this helper performs the authoritative server-side validation inside the
- * /admin layout (where redirects are cheap, DB calls are allowed in Node
- * runtime, and we have access to AAL state).
  */
 import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { logger } from "@/lib/logger";
 
 export interface PlatformAdminInfo {
   user_id: string;
@@ -31,41 +27,76 @@ export interface PlatformAdminContext {
   platformAdmin: PlatformAdminInfo;
 }
 
-export async function requirePlatformAdmin(): Promise<PlatformAdminContext> {
+type ResolveResult =
+  | { ok: true; context: PlatformAdminContext }
+  | { ok: false; reason: "unauthenticated" | "forbidden" | "mfa_required" | "internal_error" };
+
+export async function resolvePlatformAdmin(): Promise<ResolveResult> {
   const supabase = await createClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect("/login?next=/admin");
+    return { ok: false, reason: "unauthenticated" };
   }
 
   // platform_admins RLS: only platform admins read; non-admins get null → forbid.
-  const { data: paRow } = await supabase
+  const { data: paRow, error } = await supabase
     .from("platform_admins")
     .select("user_id, scope, mfa_required, revoked_at")
     .eq("user_id", user.id)
     .is("revoked_at", null)
     .maybeSingle();
 
+  if (error) {
+    logger.error("[auth] platform_admins query failed", { error: error.message });
+    return { ok: false, reason: "internal_error" };
+  }
+
   if (!paRow) {
-    redirect("/admin/forbidden");
+    return { ok: false, reason: "forbidden" };
   }
 
   if (paRow.mfa_required) {
-    const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aalError) {
+      logger.error("[auth] mfa aal query failed", { error: aalError.message });
+      return { ok: false, reason: "internal_error" };
+    }
     if (aalData?.currentLevel !== "aal2") {
-      redirect("/login/mfa?next=/admin");
+      return { ok: false, reason: "mfa_required" };
     }
   }
 
   return {
-    user,
-    platformAdmin: {
-      user_id: paRow.user_id,
-      scope: paRow.scope,
-      mfa_required: paRow.mfa_required,
-    },
+    ok: true,
+    context: {
+      user,
+      platformAdmin: {
+        user_id: paRow.user_id,
+        scope: paRow.scope,
+        mfa_required: paRow.mfa_required,
+      },
+    }
   };
+}
+
+export async function requirePlatformAdmin(): Promise<PlatformAdminContext> {
+  const result = await resolvePlatformAdmin();
+
+  if (!result.ok) {
+    switch (result.reason) {
+      case "unauthenticated":
+        redirect("/login?next=/admin");
+      case "forbidden":
+        redirect("/admin/forbidden");
+      case "mfa_required":
+        redirect("/login/mfa?next=/admin");
+      case "internal_error":
+        throw new Error("Erro interno ao validar permissões de administrador.");
+    }
+  }
+
+  return result.context;
 }
