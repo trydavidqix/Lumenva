@@ -54,19 +54,19 @@
 - Consumes: `GRAPHITI_BASE_URL`, `GRAPHITI_API_KEY`, `GRAPHITI_TIMEOUT_MS`, `GRAPHITI_LLM_*`, `GRAPHITI_EMBEDDER_MODEL` from Infisical `prod`.
 - Produces: one canonical configuration table mapping the VPS contract to `createKnowledgeGraphFromEnv()` and a list of fields that must remain runtime-only.
 
-- [ ] **Step 1: Confirm the current checkout and competing work**
+- [x] **Step 1: Confirm the current checkout and competing work**
 
   Run `git status --short --branch`, `git branch --show-current`, and inspect active agents before editing. Expected: clean isolated `vps`; no active agent owns this same worktree.
 
-- [ ] **Step 2: Compare names without reading values**
+- [x] **Step 2: Compare names without reading values**
 
   Compare only secret names from Infisical/GitHub and env names consumed by `runtime.ts`; do not run a command that prints secret values. Expected mapping: `GRAPHITI_BASE_URL` → `http://graphiti:8000` inside the compose network, `GRAPHITI_API_KEY` → adapter header, and the four sidecar provider settings remain sidecar-only.
 
-- [ ] **Step 3: Resolve mode vocabulary explicitly**
+- [x] **Step 3: Resolve mode vocabulary explicitly**
 
   Keep Maestri V3 modes `off`, `shadow`, and `on`. Treat the legacy CRM vocabulary `canary` as an external rollout policy, not as an unreviewed new mode in the V3 runtime. Document that no real tenant flag is changed by this plan.
 
-- [ ] **Step 4: Record the reconciliation**
+- [x] **Step 4: Record the reconciliation**
 
   Add the mapping, current VPS evidence, and unresolved live round-trip gate to the audit and canonical plan. Run `git diff --check` and commit:
 
@@ -74,6 +74,14 @@
   git add docs/audits/maestri-v3-rollout-matrix-2026-09-22.md docs/LUMENVA_COMMAND_CENTER_PLAN.md
   git commit -m "docs(graph): reconcile Maestri with VPS runtime"
   ```
+
+**Task 1 result — 2026-09-22:** `RECONCILED / LIVE ROUND-TRIP PENDING`.
+The local checkout is clean on `vps`; no competing agent owns this worktree;
+the documented Infisical names match the Maestri adapter contract; V3 keeps
+`off|shadow|on`; legacy `canary` remains external policy. The local Infisical
+wrapper produced no usable version/help/session output, so no values were read
+and no CLI was installed. The next gate requires access to the existing VPS
+runtime or an authenticated names-only Infisical query.
 
 ### Task 2: Harden the Maestri Graphiti adapter for the existing service
 

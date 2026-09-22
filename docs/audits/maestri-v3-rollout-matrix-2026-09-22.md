@@ -32,6 +32,34 @@ This gate is for the isolated `vps` branch only. It is read-only with respect to
 | Claude Railway MCP | Configured but unauthenticated | `Needs authentication` |
 | Gemini MCP / gh-aw MCP | Gemini configured but disabled by host trust; gh-aw has no MCP | Project settings use official GitHub MCP read-only/lockdown; `gh aw mcp list` found no workflow MCP. Gemini exposes explicit `--skip-trust` for a session; it was not used automatically |
 
+## Graphiti VPS contract reconciliation — Task 1
+
+Auditoria realizada na branch isolada `vps`, sem alterar `main`, produção, flags ou
+valores de secrets.
+
+| Contract area | Maestri V3 | VPS/documented runtime | Result |
+|---|---|---|---|
+| Mode | `off \| shadow \| on` | Runbook describes legacy CRM `canary` as rollout vocabulary | Reconciled: V3 keeps the three modes; `canary` stays an external legacy policy |
+| Endpoint | `GRAPHITI_BASE_URL` | `http://graphiti:8000` on private `ai-graph-internal` network | Name and topology match; no public URL added |
+| App secret | `GRAPHITI_API_KEY` | Shared app/sidecar secret; adapter sends `X-Api-Key` | Name matches; value remains runtime-only |
+| Timeout | `GRAPHITI_TIMEOUT_MS` | Maestri default `2000` ms | Compatible; no secret involved |
+| Sidecar secrets | `GRAPHITI_NEO4J_PASSWORD`, `GRAPHITI_LLM_API_KEY`, `GRAPHITI_LLM_BASE_URL`, `GRAPHITI_LLM_MODEL`, `GRAPHITI_EMBEDDER_MODEL` | Documented in Infisical project `DeskcommCRM - Lumenva`, environment `prod` | Sidecar-only; never copied into Maestri prompts, Git, or Windows env |
+| Provider/backend | Graphiti HTTP adapter | `zepai/graphiti:0.22.0` + Neo4j Community | Existing free backend is Neo4j, not FalkorDB; no duplicate installation |
+
+Evidence boundary:
+
+- Direct local evidence confirms the checked-out adapter consumes `GRAPHITI_MODE`,
+  `GRAPHITI_BASE_URL`, `GRAPHITI_API_KEY` and `GRAPHITI_TIMEOUT_MS`, and fails closed
+  to `NullKnowledgeGraph` when mode/configuration is invalid.
+- VPS runbooks document the existing sidecar, private network, Infisical names and
+  `prod` environment. They do not prove a current live Maestri round-trip.
+- The local Infisical wrapper is present but returned no version/help/session output;
+  no secret value was read or printed. A live names-only query therefore remains
+  pending VPS/Infisical access, not a reason to install another CLI.
+
+Task 1 decision: **RECONCILED / LIVE ROUND-TRIP PENDING**. Graphiti remains `OFF`
+by default and no real tenant flag is changed.
+
 ## Guard
 
 The package exposes:
