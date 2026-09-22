@@ -841,3 +841,16 @@ Still not legitimately claimable as complete without external evidence:
 - production rollout, which remains outside this branch's authorization
 
 The Definition of Done therefore remains OPEN. No mock, placeholder, or unexecuted integration is marked PASS.
+
+
+### Integration pass after plan revalidation
+
+Implemented further repository-only gaps:
+- LearningResourceRouter injects measured historical success into routing
+- ContextResolver composes validated memory and lazy tools under separate budgets
+- QuotaBroker unifies subscription/runtime quota snapshots
+- deterministic 30-case benchmark corpus generator across six representative categories
+- WorkforceOrchestrator now resolves memory/tools into ContextPackets and records post-review LearningRouter observations
+- tests cover 30-case corpus construction and bounded context resolution
+
+External execution remains required to turn these prepared integrations into measured PASS evidence.
