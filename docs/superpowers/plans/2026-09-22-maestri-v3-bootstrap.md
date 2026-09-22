@@ -81,6 +81,6 @@
 
 **Files:** auditoria, plano, relatórios de validação
 
-- [ ] Rodar smoke tests dos SDKs, CLIs e adapters.
-- [ ] Rodar gates de docs, lockfile, secret scan e `git diff --check`.
+- [x] Rodar smoke tests dos SDKs, CLIs e adapters.
+- [x] Rodar gates de docs, lockfile, secret scan e `git diff --check`.
 - [ ] Registrar branch, commits, evidências e pendências; não fazer merge em `main`.

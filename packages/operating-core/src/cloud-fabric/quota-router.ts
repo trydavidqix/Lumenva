@@ -1,9 +1,9 @@
-import { ExecutionPort } from './execution-port';
+import { ExecutionPort } from './execution-port.js';
 
 export class QuotaRouter {
   async selectProviderBasedOnQuota(providers: ExecutionPort[]): Promise<ExecutionPort> {
     for (const provider of providers) {
-      const quota = await provider.checkQuota();
+      const quota = await provider.quota();
       if (quota.remaining_budget === undefined || quota.remaining_budget > 0) {
         return provider;
       }

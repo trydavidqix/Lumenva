@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Pool } from "../../../apps/crm/node_modules/pg";
@@ -9,6 +9,7 @@ import type { ReceiptInput } from "./receipt-store.js";
 let container = "";
 let admin: Pool;
 let adminUrl = "";
+const hasDockerDaemon = spawnSync("docker", ["version"], { stdio: "ignore" }).status === 0;
 
 async function waitForPostgres(connectionString: string): Promise<void> {
   for (let attempt = 0; attempt < 40; attempt += 1) {
@@ -40,7 +41,7 @@ const base: ReceiptInput = {
   createdAt: "2026-09-13T00:00:00.000Z",
 };
 
-describe("Wave 1 receipt Postgres integration", () => {
+describe.skipIf(!hasDockerDaemon)("Wave 1 receipt Postgres integration", () => {
   beforeAll(async () => {
     container = execFileSync("docker", ["run", "--rm", "-d", "-e", "POSTGRES_PASSWORD=test", "-p", "127.0.0.1::5432", "postgres:16"], { encoding: "utf8" }).trim();
     const port = execFileSync("docker", ["port", container, "5432/tcp"], { encoding: "utf8" }).trim().match(/:(\d+)$/)?.[1];

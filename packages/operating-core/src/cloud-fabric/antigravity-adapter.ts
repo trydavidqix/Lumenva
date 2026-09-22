@@ -1,25 +1,37 @@
-import { ExecutionPort, TaskContract, ExecutionResult, QuotaSnapshot } from './execution-port';
+import { cancelledResult, ExecutionPort, HealthSnapshot, TaskContract, ExecutionResult, QuotaSnapshot, unavailableQuota, unavailableResult, UsageSnapshot } from './execution-port.js';
 
 export class AntigravityAdapter implements ExecutionPort {
   public name = 'antigravity';
 
   async execute(contract: TaskContract): Promise<ExecutionResult> {
-    // Stub implementation
-    return {
-      task_id: contract.task_id,
-      status: 'success',
-      files_changed: [],
-      tests: [],
-      evidence: 'Antigravity completed the task.',
-    };
+    return unavailableResult(contract.task_id, this.name, 'Antigravity execution adapter is not configured for this runtime');
+  }
+
+  async resume(taskId: string): Promise<ExecutionResult> {
+    return unavailableResult(taskId, this.name, 'Antigravity resume is unavailable because no execution handle is configured');
+  }
+
+  async cancel(taskId: string): Promise<ExecutionResult> {
+    return cancelledResult(taskId, this.name);
+  }
+
+  async health(): Promise<HealthSnapshot> {
+    return { ok: false, status: 'unavailable', message: 'Antigravity execution adapter is not configured' };
+  }
+
+  async capabilities(): Promise<string[]> {
+    return [];
+  }
+
+  async usage(): Promise<UsageSnapshot> {
+    return { input_tokens: 0, cached_tokens: 0, output_tokens: 0, duration_ms: 0, cost_usd: 0 };
+  }
+
+  async quota(): Promise<QuotaSnapshot> {
+    return unavailableQuota(this.name);
   }
 
   async checkQuota(): Promise<QuotaSnapshot> {
-    // Stub implementation
-    return {
-      provider: 'antigravity',
-      tokens_used: 0,
-      cost_usd: 0,
-    };
+    return this.quota();
   }
 }

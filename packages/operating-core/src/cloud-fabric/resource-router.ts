@@ -1,8 +1,8 @@
-import { CloudProvider } from './cloud-job';
-import { ExecutionPort } from './execution-port';
-import { CodexAdapter } from './codex-adapter';
-import { AntigravityAdapter } from './antigravity-adapter';
-import { QuotaRouter } from './quota-router';
+import { CloudProvider } from './cloud-job.js';
+import { ExecutionPort } from './execution-port.js';
+import { CodexAdapter } from './codex-adapter.js';
+import { AntigravityAdapter } from './antigravity-adapter.js';
+import { QuotaRouter } from './quota-router.js';
 
 export interface ExecutionTarget {
   provider: CloudProvider | string;
