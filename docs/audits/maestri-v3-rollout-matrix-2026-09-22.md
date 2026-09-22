@@ -22,7 +22,7 @@ This gate is for the isolated `vps` branch only. It is read-only with respect to
 | Jules SDK / Agentic Workflows | Installed and doctor-validated | SDK smoke passed; `gh-aw v0.88.8`, doctor PASS |
 | Codex Action | Prepared, not executed | Manual `vps`-only workflow; `OPENAI_API_KEY` remains external |
 | Jules Action | Prepared, not executed | Manual `vps`-only workflow; `JULES_API_KEY` remains external |
-| GitHub Actions secrets | Not configured | Remote `gh secret list` returned no repository secrets |
+| GitHub Actions secrets | Jules configured | `JULES_API_KEY` was copied from Google Secret Manager project `lumenva`; value was never printed |
 | Remote `vps` branch | Behind local worktree | New commits/workflows remain local; no push performed |
 | Workflow syntax | Validated | Official `actionlint v1.7.12` passed both manual workflows |
 | Codex GitHub MCP | Configured with official native binary | Worktree `.codex/config.toml` uses read-only + lockdown; Codex host auth probe remains `Unsupported` |
@@ -52,4 +52,4 @@ The local rollout safety gate is implemented. F25 remains open for external conf
 - The official GitHub MCP Server supports a native stdio binary or PAT/OAuth; the Docker path is explicitly excluded here because Docker is not installed.
 - Codex Action requires a provider API secret in GitHub Actions; Jules Action requires `JULES_API_KEY`. No secrets are created automatically, so those workflows remain unconfigured until the owner supplies names, scope, and environment.
 - The two workflow files are intentionally manual and `vps`-guarded. Official `actionlint v1.7.12` and static safety checks passed; `gh aw validate` is not applicable because these are standard YAML workflows and the repository has no Agentic Workflow Markdown source files. No workflow was dispatched.
-- Remote metadata was read-only: repository `trydavidqix/Lumenva` has default branch `main`, no repository Actions secrets were listed, and the local `vps` changes were not pushed.
+- Remote metadata was read-only except for the explicitly authorized `JULES_API_KEY` secret write: repository `trydavidqix/Lumenva` has default branch `main`; the value was copied from Google Secret Manager without being printed; local `vps` changes were not pushed.

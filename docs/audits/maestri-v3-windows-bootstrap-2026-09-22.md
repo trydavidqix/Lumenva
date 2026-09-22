@@ -64,3 +64,5 @@ Foram adicionados `.github/workflows/maestri-v3-codex-manual.yml` e `.github/wor
 O `actionlint v1.7.12` oficial foi instalado após confirmar ausência. A primeira validação encontrou um input incompatível no Codex Action; foi corrigido para `safety-strategy: read-only`, e a validação final dos dois YAMLs passou.
 
 Consulta read-only ao repositório remoto `trydavidqix/Lumenva` não encontrou secrets de Actions. Os workflows novos e os commits da preparação permanecem apenas no worktree local; nenhum push ou merge foi executado.
+
+Após autorização explícita, `JULES_API_KEY` foi copiada do Google Secret Manager (`project=lumenva`, versão `latest`) para o secret de Actions homônimo. O valor não foi exibido, salvo ou versionado. O workflow Jules continua manual e não foi executado.
