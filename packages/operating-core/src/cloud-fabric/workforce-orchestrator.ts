@@ -18,6 +18,8 @@ import type { LearningRouter } from './learning-router';
 import type { ReviewResult } from './independent-review';
 import { executeIndependentReview } from './reviewer-executor';
 import { createRoutingTrace } from './trace-factory';
+import { executeWithRetry } from './execution-loop';
+import { nextEscalation, type EscalationState } from './escalation-engine';
 import { readyTasks } from './master-plan';
 
 export interface PortResolver {
@@ -117,7 +119,8 @@ export class WorkforceOrchestrator {
 
         const executionKey = executionIdempotencyKey(plan.plan_id, task.task_id, baseSha, 1);
         await this.persistence?.saveRoutingTrace(createRoutingTrace({ task_id: task.task_id, phase: 'execute', decision: routed, context_packet_id: packet.context_packet_id }));
-        const execution = await this.idempotency.once(executionKey, () => port.execute(contract));
+        const loop = await this.idempotency.once(executionKey, () => executeWithRetry(port, contract));
+        const execution = loop.result;
         this.costLedger.record(execution);
         await this.persistence?.saveExecution(execution);
         const gate = evidenceGate(execution, task.risk);
@@ -161,7 +164,7 @@ export class WorkforceOrchestrator {
           success: execution.status === 'success',
           reviewer_accepted: review.accepted,
           deterministic_passed: execution.tests.length > 0 && execution.tests.every((test) => test.passed),
-          retries: 0,
+          retries: Math.max(0, loop.attempts.length - 1),
           latency_ms: execution.usage?.duration_ms,
           cost_usd: execution.usage?.cost_usd,
         };
