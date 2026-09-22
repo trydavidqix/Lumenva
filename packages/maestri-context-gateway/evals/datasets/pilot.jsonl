@@ -1,0 +1,1 @@
+{"id":"pilot-constraint","evidence":"DEPLOY_POLICY = no-deploy-without-owner\nLEGACY_DELETE_ALLOWED = false","question":"Can deployment proceed without owner approval?"}

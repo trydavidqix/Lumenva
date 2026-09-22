@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"event.v1","type":"object","required":["timestamp","source"],"properties":{"timestamp":{"type":"string"},"source":{"type":"string"},"trace_id":{"type":"string"},"task_id":{"type":"string"}}}

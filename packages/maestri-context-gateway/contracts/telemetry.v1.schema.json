@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"telemetry.v1","type":"object","required":["timestamp","source","measurement_type"],"properties":{"timestamp":{"type":"string"},"source":{"type":"string"},"measurement_type":{"enum":["exact","estimated","unavailable"]},"total_tokens":{"type":["number","null"]}}}

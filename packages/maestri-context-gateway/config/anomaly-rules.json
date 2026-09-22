@@ -1,0 +1,7 @@
+{
+  "token_spike": { "enabled": true, "multiplier": 2.0, "minimum_events": 3 },
+  "retry_storm": { "enabled": true, "calls": 3 },
+  "tool_loop": { "enabled": true, "calls": 4 },
+  "context_churn": { "enabled": true, "calls": 5 },
+  "agent_stuck": { "enabled": true, "age_minutes": 30 }
+}

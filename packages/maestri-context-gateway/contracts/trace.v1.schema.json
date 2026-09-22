@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"trace.v1","type":"object","required":["trace_id","timestamp","source"],"properties":{"trace_id":{"type":"string"},"session_id":{"type":"string"},"task_id":{"type":"string"},"timestamp":{"type":"string"},"source":{"type":"string"}}}
