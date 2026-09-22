@@ -3,6 +3,10 @@ import { join } from 'node:path';
 
 const now = () => new Date().toISOString();
 const facts = text => String(text || '').split(/\r?\n/).map(line => line.trim()).filter(line => line.includes('=')).map(line => line.split('=').map(value => value.trim()));
+const average = values => {
+  const numeric = values.filter(Number.isFinite);
+  return numeric.length ? Number((numeric.reduce((sum, value) => sum + value, 0) / numeric.length).toFixed(2)) : null;
+};
 
 export function gradeContextRecall(evidence, answer) {
   const expected = facts(evidence); const lower = String(answer || '').toLowerCase();
@@ -20,17 +24,18 @@ export function qualityPreservingSavings(baseline, mcg) {
   const total = Number.isFinite(baseline?.total_tokens) && Number.isFinite(mcg?.total_tokens) && baseline.total_tokens > 0 ? Number(((baseline.total_tokens - mcg.total_tokens) / baseline.total_tokens * 100).toFixed(2)) : null;
   const success = mcg.task_success === true || (Number.isFinite(mcg.task_success) && mcg.task_success >= 98);
   const qualified = total != null && total >= 20 && success && mcg.context_recall >= 97 && mcg.evidence_grounding >= 98 && mcg.hallucination_rate <= baseline.hallucination_rate && mcg.total_tokens < baseline.total_tokens;
-  return { percent: total, qualified, source: 'baseline and MCG run records', measurement_type: baseline?.measurement_type === 'exact' && mcg?.measurement_type === 'exact' ? 'exact' : 'estimated', timestamp: now() };
+  return { percent: total, qualified, source: 'baseline and MCG paired run records', measurement_type: baseline?.measurement_type === 'exact' && mcg?.measurement_type === 'exact' ? 'exact' : 'estimated', timestamp: now() };
 }
 
 export function trustScore({ baseline, mcg, context_recall, evidence_grounding, hallucination_rate, dataset_size = 0, last_validation = null }) {
   const savings = qualityPreservingSavings({ ...baseline, hallucination_rate: baseline?.hallucination_rate ?? hallucination_rate }, { ...mcg, context_recall, evidence_grounding, hallucination_rate });
   const minimum_dataset = 30;
   const real = baseline?.real_executor === true && mcg?.real_executor === true;
-  const validated = real && dataset_size >= minimum_dataset && savings.qualified;
-  const status = validated ? 'VALIDATED' : real && dataset_size < minimum_dataset ? 'VALIDATING' : real ? 'DEGRADED' : 'UNVALIDATED';
-  const score = validated ? Number(((Math.min(100, context_recall) + Math.min(100, evidence_grounding) + Math.max(0, 100 - hallucination_rate) + Math.min(100, savings.percent)) / 4).toFixed(2)) : null;
-  return { status, score, dataset_size, minimum_dataset, task_success_baseline: baseline?.task_success ?? null, task_success_mcg: mcg?.task_success ?? null, context_recall, evidence_grounding, hallucination_rate, real_token_saving: savings.percent, quality_preserving_saving: savings.qualified ? savings.percent : null, last_validation, source: 'state/evals/runs', measurement_type: savings.measurement_type, timestamp: now() };
+  let status = 'UNVALIDATED';
+  if (real && dataset_size > 0 && dataset_size < minimum_dataset) status = 'VALIDATING';
+  else if (real && dataset_size >= minimum_dataset) status = savings.qualified ? 'VALIDATED' : 'DEGRADED';
+  const score = status === 'VALIDATED' ? Number(((Math.min(100, context_recall) + Math.min(100, evidence_grounding) + Math.max(0, 100 - hallucination_rate) + Math.min(100, savings.percent)) / 4).toFixed(2)) : null;
+  return { status, score, dataset_size, minimum_dataset, task_success_baseline: baseline?.task_success ?? null, task_success_mcg: mcg?.task_success ?? null, context_recall, evidence_grounding, hallucination_rate, real_token_saving: savings.percent, quality_preserving_saving: savings.qualified ? savings.percent : null, last_validation, source: 'state/evals/runs aggregate', measurement_type: savings.measurement_type, timestamp: now() };
 }
 
 export async function saveEvaluation(root, run) {
@@ -38,12 +43,58 @@ export async function saveEvaluation(root, run) {
   await writeFile(join(dir, `${id}.json`), `${JSON.stringify(record, null, 2)}\n`, { mode: 0o600 }); return record;
 }
 
-export async function latestEvaluation(root) {
+export async function evaluationRuns(root) {
   const dir = join(root, 'state', 'evals', 'runs');
   try {
     const files = (await readdir(dir)).filter(name => name.endsWith('.json'));
-    if (!files.length) return null;
     const records = await Promise.all(files.map(async name => { try { return JSON.parse(await readFile(join(dir, name), 'utf8')); } catch { return null; } }));
-    return records.filter(Boolean).sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')))[0] || null;
-  } catch { return null; }
+    return records.filter(Boolean).sort((a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')));
+  } catch { return []; }
+}
+
+function comparablePair(run) {
+  if (run?.kind !== 'A/B' || !run.baseline || !run.mcg) return false;
+  if (run.baseline.real_executor !== true || run.mcg.real_executor !== true) return false;
+  if (run.baseline.measurement_type === 'unavailable' || run.mcg.measurement_type === 'unavailable') return false;
+  if (run.baseline.model !== run.mcg.model) return false;
+  if (run.baseline.effort !== run.mcg.effort) return false;
+  if (run.baseline.workspace !== run.mcg.workspace) return false;
+  return true;
+}
+
+export async function aggregatePairedEvaluations(root) {
+  const runs = (await evaluationRuns(root)).filter(comparablePair);
+  const lane = name => {
+    const items = runs.map(run => run[name]);
+    const tokenValues = items.map(item => item.total_tokens);
+    const allTokens = tokenValues.length > 0 && tokenValues.every(Number.isFinite);
+    return {
+      task_success: items.length ? Number((items.filter(item => item.task_success === true).length / items.length * 100).toFixed(2)) : null,
+      context_recall: average(items.map(item => item.context_recall)),
+      evidence_grounding: average(items.map(item => item.evidence_grounding)),
+      hallucination_rate: average(items.map(item => item.hallucination_rate)),
+      total_tokens: allTokens ? tokenValues.reduce((sum, value) => sum + value, 0) : null,
+      real_executor: items.length > 0,
+      measurement_type: items.length && items.every(item => item.measurement_type === 'exact') ? 'exact' : items.length ? 'estimated' : 'unavailable'
+    };
+  };
+  const baseline = lane('baseline');
+  const mcg = lane('mcg');
+  return {
+    dataset_size: runs.length,
+    baseline,
+    mcg,
+    context_recall: mcg.context_recall,
+    evidence_grounding: mcg.evidence_grounding,
+    hallucination_rate: mcg.hallucination_rate,
+    valid_run_ids: runs.map(run => run.run_id),
+    source: 'state/evals/runs/*.json',
+    measurement_type: baseline.measurement_type === 'exact' && mcg.measurement_type === 'exact' ? 'exact' : runs.length ? 'estimated' : 'unavailable',
+    timestamp: now()
+  };
+}
+
+export async function latestEvaluation(root) {
+  const records = await evaluationRuns(root);
+  return records.at(-1) || null;
 }
