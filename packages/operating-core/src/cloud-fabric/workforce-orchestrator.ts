@@ -8,6 +8,8 @@ import type {
 import { ResourceRouter } from './resource-router';
 import { ContextEngine, type ContextBuildInput } from '../context/context-engine';
 import { toResultDigest } from './result-digest';
+import { evidenceGate } from './evidence-gate';
+import type { WorkforcePersistence } from './durable-stores';
 import { evaluateIndependentReview, type ReviewResult } from './independent-review';
 import { readyTasks } from './master-plan';
 
@@ -37,9 +39,11 @@ export class WorkforceOrchestrator {
     private readonly router: ResourceRouter,
     private readonly ports: PortResolver,
     private readonly context: ContextEngine = new ContextEngine(),
+    private readonly persistence?: WorkforcePersistence,
   ) {}
 
   async runPlan(plan: MasterPlan, baseSha: string): Promise<OrchestrationRun> {
+    await this.persistence?.savePlan(plan);
     const completed = new Set<string>();
     const blocked = new Set<string>();
     const failed = new Set<string>();
@@ -93,12 +97,14 @@ export class WorkforceOrchestrator {
         contract.context_packet_id = packet.context_packet_id;
 
         const execution = await port.execute(contract);
-        if (execution.status !== 'success') {
+        await this.persistence?.saveExecution(execution);
+        const gate = evidenceGate(execution, task.risk);
+        if (execution.status !== 'success' || !gate.passed) {
           const target = execution.status === 'blocked' || execution.status === 'waiting_for_approval'
             ? blocked
             : failed;
           target.add(task.task_id);
-          results.push({ task, contract, execution, status: target === blocked ? 'blocked' : 'failed' });
+          results.push({ task, contract, execution, status: target === blocked ? 'blocked' : 'failed', reason: gate.reasons.join(',') });
           continue;
         }
 
@@ -129,7 +135,8 @@ export class WorkforceOrchestrator {
         }
 
         completed.add(task.task_id);
-        void toResultDigest(execution);
+        const digest = toResultDigest(execution);
+        await this.persistence?.saveDigest(digest);
         results.push({ task, contract, execution, review, status: 'completed' });
       }
     }
