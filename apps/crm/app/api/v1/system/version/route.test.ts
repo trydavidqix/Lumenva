@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 import { loadAuthUser } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
-import { resolvePlatformAdmin, type PlatformAdminContext } from "@/lib/auth/requirePlatformAdmin";
+import { resolvePlatformAdmin } from "@/lib/auth/requirePlatformAdmin";
 import { requirePlatformAdminApi } from "@/lib/auth/require-platform-admin-api";
 import { fail } from "@/lib/api/wrappers";
 
@@ -16,16 +16,6 @@ vi.mock("@/lib/auth/require-platform-admin-api", () => ({ requirePlatformAdminAp
 
 const OWNER = { id: "11111111-1111-4111-8111-111111111111", email: "dono@x.com", is_platform_admin: true };
 const MEMBRO = { ...OWNER, id: "22222222-2222-4222-8222-222222222222", is_platform_admin: false };
-const OWNER_CONTEXT: PlatformAdminContext = {
-  user: {
-    id: OWNER.id,
-    app_metadata: {},
-    user_metadata: {},
-    aud: "authenticated",
-    created_at: "2026-09-22T00:00:00.000Z",
-  },
-  platformAdmin: { user_id: OWNER.id, scope: "*", mfa_required: true },
-};
 
 let versionRow: Record<string, unknown>;
 let runRow: Record<string, unknown> | null;
@@ -56,8 +46,8 @@ beforeEach(() => {
     update_requested_at: null,
   };
 
-  vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: true, context: OWNER_CONTEXT });
-  vi.mocked(requirePlatformAdminApi).mockResolvedValue({ ok: true, context: OWNER_CONTEXT });
+  vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: true, context: { user: OWNER as never, platformAdmin: { user_id: OWNER.id, scope: "*", mfa_required: true } } });
+  vi.mocked(requirePlatformAdminApi).mockResolvedValue({ ok: true, context: { user: OWNER as never, platformAdmin: { user_id: OWNER.id, scope: "*", mfa_required: true } } });
 
   vi.mocked(createAdminClient).mockReturnValue({
     from: (table: string) => {
@@ -240,7 +230,7 @@ describe("GET /api/v1/system/version", () => {
 
 describe("POST /api/v1/system/update", () => {
   it("exige sessão", async () => {
-    vi.mocked(requirePlatformAdminApi).mockResolvedValue({ ok: false, response: fail("unauthenticated", "Faça login", 401) });
+    vi.mocked(requirePlatformAdminApi).mockResolvedValue({ ok: false, response: fail("unauthenticated", "Faça login", 401) as never });
     const { POST } = await import("../update/route");
     const res = await POST(post());
     expect(res.status).toBe(401);
@@ -249,7 +239,7 @@ describe("POST /api/v1/system/update", () => {
   });
 
   it("nega para quem não é dono do servidor", async () => {
-    vi.mocked(requirePlatformAdminApi).mockResolvedValue({ ok: false, response: fail("forbidden", "Proibido", 403) });
+    vi.mocked(requirePlatformAdminApi).mockResolvedValue({ ok: false, response: fail("forbidden", "Proibido", 403) as never });
     const { POST } = await import("../update/route");
     expect((await POST(post())).status).toBe(403);
     expect(inserted).toBeNull();
