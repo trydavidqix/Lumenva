@@ -26,7 +26,7 @@ export interface SipOutboundRequest {
   contactId: string;
   agentId: string;
   goal: string;
-  /** The customer's own number — used as Caller ID, never a platform-purchased number. */
+  /** Verified technical caller identity bound to this tenant's SIP route. */
   fromE164: string;
   toE164: string;
 }
