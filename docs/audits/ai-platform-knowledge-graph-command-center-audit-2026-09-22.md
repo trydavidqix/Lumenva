@@ -50,6 +50,14 @@ As duas fases têm gate `GO` no AI Platform. Isso prova a implementação no sta
 4. `Context Engine` — retrieval progressivo de Obsidian + Graphiti + arquivos do projeto.
 5. `Graph View` — visualização read-only com drill-down até source/SHA.
 
+## Progresso standalone — 2026-09-22
+
+- `packages/knowledge`: publicado local, scanner e provenance implementados; 5/5 testes.
+- `packages/knowledge-graph`: namespace, `NullKnowledgeGraph`, projection worker e adapter HTTP Graphiti; 4/4 testes.
+- Typecheck dos dois pacotes: PASS.
+- Commits: `3c951634`, `124c8448`, `ccb4d3dd`, `91523605`.
+- Ainda não existe Core/event bus nem Graph View conectado; não declarar integração completa.
+
 ## Gates antes de ativar
 
 - Graphiti começa `OFF`.
