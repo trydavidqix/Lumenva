@@ -21,7 +21,12 @@ export interface AriOriginateResult {
 
 /** Seam around the Asterisk ARI HTTP client. Nothing outside this file talks ARI wire format. */
 export interface AriClient {
-  originate(input: { endpoint: string; callerId: string; context: string }): Promise<AriOriginateResult>;
+  originate(input: {
+    endpoint: string;
+    callerId: string;
+    context: string;
+    variables?: Record<string, string>;
+  }): Promise<AriOriginateResult>;
 }
 
 interface AriChannelCallerOrConnected {
@@ -110,8 +115,17 @@ export function createAsteriskSipGateway(deps: {
       const connectionId = requireConnectionId(channel);
       const callerE164 = normalizeE164(channel?.caller?.number, "caller number");
       const calledE164 = normalizeE164(channel?.connected?.number, "called number");
+      const rawDirection = channel?.channelvars?.["VOICE_DIRECTION"];
+      const direction = rawDirection === "outbound" ? "outbound" : "inbound";
+      const rawVoiceCallId = channel?.channelvars?.["VOICE_CALL_ID"];
+      const voiceCallId =
+        typeof rawVoiceCallId === "string" && rawVoiceCallId.trim() ? rawVoiceCallId.trim() : null;
 
-      const organizationId = await deps.directory.resolveOrganizationByConnection(connectionId, calledE164);
+      // Inbound resolves by the DID that was called; outbound resolves by
+      // the tenant-owned Caller ID. A customer destination must never be
+      // used as tenant authority.
+      const technicalE164 = direction === "outbound" ? callerE164 : calledE164;
+      const organizationId = await deps.directory.resolveOrganizationByConnection(connectionId, technicalE164);
       if (!organizationId) throw new Error("[voice] organization not found for Asterisk SIP connection");
 
       return {
@@ -125,14 +139,19 @@ export function createAsteriskSipGateway(deps: {
         // the boundary so every consumer gets the repo's canonical ISO-8601
         // UTC contract, not Asterisk's raw offset format.
         occurredAt: new Date(event.timestamp).toISOString(),
-        direction: "inbound",
+        direction,
         callerE164,
         calledE164,
-        attributes: { callControlId: channelId, callSessionId: null },
+        attributes: {
+          callControlId: channelId,
+          callSessionId: null,
+          ...(voiceCallId ? { voiceCallId } : {}),
+        },
       };
     },
 
     async initiateOutboundCall(request: SipOutboundRequest): Promise<SipOutboundResult> {
+      if (!request.voiceCallId.trim()) throw new Error("[voice] outbound call requires a voice call id");
       if (!request.organizationId.trim()) throw new Error("[voice] outbound call requires an organization");
       if (!request.contactId.trim()) throw new Error("[voice] outbound call requires a contact");
       if (!request.agentId.trim()) throw new Error("[voice] outbound call requires an agent");
@@ -157,6 +176,11 @@ export function createAsteriskSipGateway(deps: {
         endpoint: `PJSIP/${request.toE164}@${request.connectionId}`,
         callerId: request.fromE164,
         context: deps.outboundContext,
+        variables: {
+          SIP_CONNECTION_ID: request.connectionId,
+          VOICE_DIRECTION: "outbound",
+          VOICE_CALL_ID: request.voiceCallId,
+        },
       });
       return { providerCallId: result.channelId };
     },
