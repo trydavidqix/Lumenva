@@ -854,3 +854,15 @@ Implemented further repository-only gaps:
 - tests cover 30-case corpus construction and bounded context resolution
 
 External execution remains required to turn these prepared integrations into measured PASS evidence.
+
+### Independent-review integration pass
+
+Further repository work completed:
+- independent verification now executes through a distinct ExecutionPort instead of only evaluating reviewer metadata
+- same-provider reviewer is rejected before review execution
+- execute and verify routing decisions are persisted as routing traces when persistence is configured
+- LearningRouter observations are now also persisted through WorkforcePersistence
+- canonical contract version helper added
+- deterministic test added for distinct reviewer execution
+
+This closes an important structural gap found during revalidation. It still does not claim real provider review PASS until authenticated provider-backed executions are run.
