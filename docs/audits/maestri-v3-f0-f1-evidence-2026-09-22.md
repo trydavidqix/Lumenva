@@ -96,7 +96,9 @@ F22 first optimization increment: the MCG compiler deduplicates identical fragme
 
 The evaluation contract now reports `context_tokens` separately from `total_tokens`. Legacy paired records are hydrated from their already-persisted raw Codex JSONL evidence; no benchmark task was rerun. The measured result remains negative in both views, so this change improves attribution but does not pass F22/F24.
 
-F22 increment after the benchmark: Core now removes identical candidate content before progressive L1/L2 expansion, selecting the highest score and using the path as deterministic tie-breaker. Core validation passed with 38/38 tests and TypeScript typecheck. This is a local optimization proof; a new benchmark with unique cases is still required to establish end-to-end savings.
+F22 increment after the benchmark: Core now removes identical candidate content before progressive L1/L2 expansion, selecting the highest score and using the path as deterministic tie-breaker. Core validation passed with 38/38 tests and TypeScript typecheck. The homogeneous v2 benchmark below supplies the end-to-end savings evidence.
+
+F17/F18 bridge increment: `packages/operating-core` now defines the canonical snake_case `ContextPacket`; `apps/core` maps its progressive packet through deterministic `toDelegationContext`, and `MaestriDelegator` accepts the typed packet. Core context tests passed 8/8, delegator tests 2/2, and Core typecheck passed. The final provider execution wiring is still pending.
 
 The homogeneous v2 dataset was completed with 30 unique pairs, using offset execution so no earlier case was repeated: baseline `1171978` versus Fabric `842666` total tokens (`28.10%` reduction), and baseline `2128743` versus Fabric `1593713` context tokens (`25.13%` reduction). Quality stayed at 100% for success, recall, and grounding with 0% hallucination. Trust is `VALIDATED` with score `81.28`.
 

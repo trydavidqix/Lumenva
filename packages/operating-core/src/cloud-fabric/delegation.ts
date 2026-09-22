@@ -3,11 +3,9 @@ import { unavailableResult } from "./execution-port.js";
 import type { ExecutionTarget, ResourceRouter, TaskRequirements } from "./resource-router.js";
 import type { HandoffRequest } from "./handoff.js";
 import { createResultDigest, type ResultDigest } from "./result-digest.js";
+import type { ContextPacket } from "./context-packet.js";
 
-export interface DelegationContext {
-  packet_id: string;
-  [key: string]: unknown;
-}
+export interface DelegationContext extends ContextPacket {}
 
 export interface DelegationExecutorInput {
   target: ExecutionTarget & { adapter: ExecutionPort };

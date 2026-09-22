@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveContext, resolveProgressiveContext, type ContextCandidate, type TaskContract } from "./context-engine.js";
+import { resolveContext, resolveProgressiveContext, toDelegationContext, type ContextCandidate, type TaskContract } from "./context-engine.js";
 import { ToolRegistry } from "./tool-registry.js";
 
 const task: TaskContract = {
@@ -76,6 +76,18 @@ describe("progressive Context Engine", () => {
     const packet = resolveContext({ task: { ...task, contextBudget: 200 }, candidates: duplicateCandidates, level: 2 });
 
     expect(packet.relevantFiles.map((file) => file.path)).toEqual(["apps/core/src/high.ts"]);
+  });
+
+  it("bridges the Core packet into the canonical Maestri delegation context", () => {
+    const packet = resolveContext({ task, candidates, level: 2 });
+    const context = toDelegationContext(packet);
+
+    expect(context.packet_id).toBe(`packet:${packet.contextVersion}`);
+    expect(context.task_id).toBe(task.taskId);
+    expect(context.context_version).toBe(packet.contextVersion);
+    expect(context.relevant_files[0]?.path).toBe(packet.relevantFiles[0]?.path);
+    expect(context.token_budget).toBe(task.contextBudget);
+    expect("relevantFiles" in context).toBe(false);
   });
 
   it("requests only the next context level when the execution gate needs it", async () => {

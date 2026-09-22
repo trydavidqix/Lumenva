@@ -274,6 +274,7 @@ F25 rollout e limpeza de compatibilidade
 - The highest-priority fragment is retained deterministically; ties use stable ID ordering.
 - Benchmark accounting now exposes `context_tokens` separately from `total_tokens` and hydrates legacy records from their raw JSONL evidence.
 - Core Context Engine now deduplicates identical candidate content before L1/L2 expansion, keeping the highest-score candidate with deterministic path tie-breaking; Core validation: 38/38 tests and typecheck passed.
+- F17/F18 bridge increment: `operating-core` now owns the canonical snake_case `ContextPacket`; Core exports a deterministic `toDelegationContext` adapter for Obsidian/Graphiti-derived packets, and `MaestriDelegator` accepts that typed packet. Core context test: 8/8; delegator test: 2/2; typecheck passed. Provider execution wiring still remains.
 - Existing 30-pair evidence remains `DEGRADED`: deduplication is covered by unit tests, but end-to-end savings are not proven.
 - New homogeneous v2 evidence has 30 unique pairs: baseline `1171978` vs Fabric `842666` total tokens (`28.10%` reduction), context `2128743` vs `1593713` (`25.13%` reduction), with 100% success/recall/grounding and 0% hallucination. Trust: `VALIDATED`, score `81.28`.
 - MCG regression suite: 36/36 passed.

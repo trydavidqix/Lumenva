@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { DelegationContext } from "@lumenva/operating-core";
 import type { ToolCatalog } from "./tool-registry.js";
 
 export type TaskContract = {
@@ -49,6 +50,31 @@ export type ContextPacket = {
   tokenBudget: number;
   characterCount: number;
 };
+
+export function toDelegationContext(packet: ContextPacket): DelegationContext {
+  return {
+    packet_id: `packet:${packet.contextVersion}`,
+    task_id: packet.taskId,
+    context_version: packet.contextVersion,
+    level: packet.level,
+    objective: packet.objective,
+    relevant_instructions: [...packet.relevantInstructions],
+    relevant_files: packet.relevantFiles.map((file) => ({
+      path: file.path,
+      symbols: [...file.symbols],
+      score: file.score,
+      ...(file.excerpt !== undefined ? { excerpt: file.excerpt } : {}),
+    })),
+    relevant_symbols: [...packet.relevantSymbols],
+    prior_decisions: [...packet.priorDecisions],
+    constraints: [...packet.constraints],
+    available_tools: [...packet.availableTools],
+    ...(packet.mcpCatalogVersion ? { mcp_catalog_version: packet.mcpCatalogVersion } : {}),
+    evidence: [...packet.evidence],
+    token_budget: packet.tokenBudget,
+    character_count: packet.characterCount,
+  };
+}
 
 export type ProgressiveContextRetriever = {
   symbols(task: TaskContract): Promise<ContextCandidate[]>;

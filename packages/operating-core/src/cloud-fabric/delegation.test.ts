@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ExecutionPort, TaskContract } from "./execution-port.js";
 import { createHandoffRequest } from "./handoff.js";
 import { MaestriDelegator } from "./delegation.js";
+import type { ContextPacket } from "./context-packet.js";
 
 const contract: TaskContract = {
   task_id: "task-delegate",
@@ -33,12 +34,31 @@ function provider(): ExecutionPort {
   };
 }
 
+function contextPacket(): ContextPacket {
+  return {
+    packet_id: "packet-1",
+    task_id: "task-delegate",
+    context_version: "v1",
+    level: 0,
+    objective: "inspect auth",
+    relevant_instructions: [],
+    relevant_files: [],
+    relevant_symbols: [],
+    prior_decisions: [],
+    constraints: [],
+    available_tools: ["read_only"],
+    evidence: [],
+    token_budget: 1000,
+    character_count: 12,
+  };
+}
+
 describe("MaestriDelegator", () => {
   it("resolves context before execution and returns only a digest downstream", async () => {
     const order: string[] = [];
     const delegator = new MaestriDelegator({
       route: async () => ({ provider: "codex", adapter: provider() }),
-      resolveContext: async () => { order.push("context"); return { packet_id: "packet-1", objective: "inspect auth" }; },
+      resolveContext: async () => { order.push("context"); return contextPacket(); },
       execute: async ({ target, contract: taskContract, context }) => {
         order.push(`execute:${target.provider}:${context.packet_id}:${taskContract.task_id}`);
         return target.adapter!.execute(taskContract);
@@ -58,7 +78,7 @@ describe("MaestriDelegator", () => {
   it("rejects direct agent-to-agent requests", async () => {
     const delegator = new MaestriDelegator({
       route: async () => ({ provider: "codex", adapter: provider() }),
-      resolveContext: async () => ({ packet_id: "packet-1" }),
+      resolveContext: async () => contextPacket(),
       execute: async ({ target, contract: taskContract }) => target.adapter!.execute(taskContract),
     });
     const request = createHandoffRequest({ task_id: "task-delegate", from_agent: "claude", to_agent: "codex", goal: "inspect auth" });
