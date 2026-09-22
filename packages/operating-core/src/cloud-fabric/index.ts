@@ -48,3 +48,8 @@ export * from './validation-corpus';
 export * from './reviewer-executor';
 export * from './trace-factory';
 export * from './contract-version';
+export * from './execution-loop';
+export * from './resume-controller';
+export * from './redaction';
+export * from './history-query';
+export * from './provider-selection';
