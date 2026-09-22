@@ -262,16 +262,18 @@ F25 rollout e limpeza de compatibilidade
 
 - 30 paired cases / 60 real Codex CLI read-only executions are now persisted without duplicating the first 20 cases.
 - Baseline: `916321` exact tokens; Fabric: `968573` exact tokens.
+- Context accounting is now explicit: baseline `1662140` and Fabric `1786750` context tokens, reconstructed from the existing raw JSONL evidence without rerunning cases.
 - Task success, context recall, evidence grounding: `100%` in both lanes; hallucination rate: `0%`.
-- Fabric token delta: `-5.70%` (Fabric used more tokens), so quality was preserved but token efficiency regressed.
+- Fabric total-token delta: `-5.70%`; context-token delta: `-7.50%` (Fabric used more measured tokens in both views), so quality was preserved but the optimization gate regressed.
 - Trust: `DEGRADED`; `quality_preserving_saving` is not approved.
-- F24 is measured, not passed. F22 automatic context optimization is now the blocking implementation gate before another benchmark.
+- F24 is measured, not passed. F22 automatic context optimization and metric diagnosis are now the blocking implementation gates before another benchmark.
 
 ### F22 progress update — 2026-09-22
 
 - MCG compiler now deduplicates fragments with identical content before priority ordering and hard-cap selection.
 - The highest-priority fragment is retained deterministically; ties use stable ID ordering.
-- This is an optimization primitive, not yet proof of end-to-end savings.
+- Benchmark accounting now exposes `context_tokens` separately from `total_tokens` and hydrates legacy records from their raw JSONL evidence.
+- Existing 30-pair evidence remains `DEGRADED`: deduplication is covered by unit tests, but end-to-end savings are not proven.
 - MCG regression suite: 36/36 passed.
 
 ### Gates adicionais do plano completo

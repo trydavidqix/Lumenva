@@ -74,7 +74,7 @@ export async function runPairedCase({ root, binary, workspace = root, test, mode
     const grade = gradeCase(test, answer);
     const record = {
       lane, run_id, case_id: test.id, category: test.category, prompt_chars: prompt.length, ...grade,
-      total_tokens: usage?.total_tokens ?? null, input_tokens: usage?.input_tokens ?? null, cached_input_tokens: usage?.cached_input_tokens ?? null,
+      total_tokens: usage?.total_tokens ?? null, context_tokens: usage?.context_tokens ?? null, input_tokens: usage?.input_tokens ?? null, cached_input_tokens: usage?.cached_input_tokens ?? null,
       output_tokens: usage?.output_tokens ?? null, reasoning_tokens: usage?.reasoning_tokens ?? null,
       measurement_type: usage?.measurement_type || 'unavailable', source: usage?.source || 'codex.exec.jsonl',
       real_executor: result.classification === 'SUCCESS', executor: 'codex', runtime: 'Codex CLI',

@@ -86,12 +86,15 @@ Final aggregate after 30 paired cases:
 - Baseline: `916321` exact tokens.
 - Fabric: `968573` exact tokens.
 - Token delta: `-5.70%` (regression; Fabric used more tokens).
+- Context tokens reconstructed from existing raw JSONL: baseline `1662140`, Fabric `1786750`; delta `-7.50%`.
 - Task success/recall/grounding: `100%`; hallucination: `0%`.
 - Trust: `DEGRADED`; quality-preserving savings not approved.
 
 This evidence advances the plan but does not pass F24. F22 must reduce redundant context without reducing quality before re-running the benchmark.
 
 F22 first optimization increment: the MCG compiler deduplicates identical fragments before budget selection, retaining the highest-priority item deterministically. MCG regression suite remained 36/36 green. End-to-end benchmark impact is not yet claimed.
+
+The evaluation contract now reports `context_tokens` separately from `total_tokens`. Legacy paired records are hydrated from their already-persisted raw Codex JSONL evidence; no benchmark task was rerun. The measured result remains negative in both views, so this change improves attribution but does not pass F22/F24.
 
 ## Comandos e resultado
 

@@ -13,6 +13,9 @@ assert.equal(gradeHallucinations('What is the CEO birthday?', 'The CEO birthday 
 const saving = qualityPreservingSavings({ task_success: true, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, total_tokens: 100 }, { task_success: true, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, total_tokens: 70 });
 assert.equal(saving.qualified, true);
 assert.equal(saving.percent, 30);
+const contextSaving = qualityPreservingSavings({ task_success: true, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, total_tokens: 120, context_tokens: 100 }, { task_success: true, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, total_tokens: 140, context_tokens: 70 });
+assert.equal(contextSaving.context_percent, 30);
+assert.equal(contextSaving.qualified, true);
 assert.equal(qualityPreservingSavings({ task_success: 100, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, total_tokens: 100 }, { task_success: 100, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, total_tokens: 95 }).qualified, true);
 assert.equal(trustScore({ baseline: { task_success: 100, total_tokens: 100, real_executor: true }, mcg: { task_success: 100, total_tokens: 70, real_executor: true }, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, dataset_size: 30 }).status, 'VALIDATED');
 assert.equal(trustScore({ baseline: { task_success: 100, total_tokens: 100, real_executor: true }, mcg: { task_success: 100, total_tokens: 70, real_executor: true }, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, dataset_size: 1 }).status, 'VALIDATING');
@@ -23,8 +26,8 @@ try {
     await saveEvaluation(root, {
       run_id: `pair-${i}`,
       kind: 'A/B',
-      baseline: { task_success: true, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, total_tokens: 100, real_executor: true, measurement_type: 'exact', model: null, effort: 'same', workspace: root },
-      mcg: { task_success: true, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, total_tokens: 70, real_executor: true, measurement_type: 'exact', model: null, effort: 'same', workspace: root }
+      baseline: { task_success: true, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, total_tokens: 100, context_tokens: 80, real_executor: true, measurement_type: 'exact', model: null, effort: 'same', workspace: root },
+      mcg: { task_success: true, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, total_tokens: 70, context_tokens: 60, real_executor: true, measurement_type: 'exact', model: null, effort: 'same', workspace: root }
     });
   }
   const aggregate = await aggregatePairedEvaluations(root);

@@ -10,9 +10,10 @@ export function parseCodexJsonl(text) {
   if (!usage) return null;
   const input_tokens = usage.input_tokens;
   const cached_input_tokens = Number.isFinite(usage.cached_input_tokens) ? usage.cached_input_tokens : 0;
+  const context_tokens = input_tokens + cached_input_tokens;
   const output_tokens = Number.isFinite(usage.output_tokens) ? usage.output_tokens : 0;
   const reasoning_tokens = Number.isFinite(usage.reasoning_output_tokens) ? usage.reasoning_output_tokens : (Number.isFinite(usage.reasoning_tokens) ? usage.reasoning_tokens : 0);
-  return { input_tokens, cached_input_tokens, output_tokens, reasoning_tokens, total_tokens: input_tokens + output_tokens + reasoning_tokens, measurement_type: 'exact', source: 'codex.exec.jsonl' };
+  return { input_tokens, cached_input_tokens, context_tokens, output_tokens, reasoning_tokens, total_tokens: input_tokens + output_tokens + reasoning_tokens, measurement_type: 'exact', source: 'codex.exec.jsonl' };
 }
 
 export function parseCodexTools(text) {
