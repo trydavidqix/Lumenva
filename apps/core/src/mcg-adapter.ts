@@ -1,4 +1,5 @@
 import type { ContextPacket } from "./context-engine.js";
+import type { BudgetLimits } from "./context-budget.js";
 
 export type ContextRequest = {
   taskId: string;
@@ -6,6 +7,7 @@ export type ContextRequest = {
   objective: string;
   budgetChars: number;
   packet?: ContextPacket;
+  budgetLimits?: BudgetLimits;
 };
 
 export type ContextResult = {

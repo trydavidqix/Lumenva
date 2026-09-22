@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CoreRuntime } from "./core-runtime.js";
+import type { BudgetLimits } from "./context-budget.js";
 import { resolveContext, type ContextPacket, type TaskContract } from "./context-engine.js";
 import { createLocalMgcAdapter, type MgcAdapter } from "./mcg-adapter.js";
 import { SqliteStore } from "./sqlite-store.js";
@@ -95,6 +96,36 @@ describe("CoreRuntime MCG boundary", () => {
       .rejects.toMatchObject({ code: "MCG_UNAVAILABLE" });
     expect(core.eventsList().map((event) => event.type)).toEqual(["task.created", "context.requested", "context.failed"]);
     expect(core.eventsList()[2]?.payload).toEqual({ code: "MCG_UNAVAILABLE", measurementType: "unavailable" });
+    await core.stop();
+  });
+
+  it("fails closed before the adapter when the context budget is exceeded", async () => {
+    const core = runtime();
+    await core.start();
+    const task = await core.startTask({ id: "task-1", type: "task.start", idempotencyKey: "start-1", traceId: "trace-1", payload: {} });
+    let called = false;
+    const adapter: MgcAdapter = {
+      compile: async () => {
+        called = true;
+        return { contextVersion: "v-context-1", fragments: [], measurementType: "estimated", source: "context.compiler" };
+      },
+    };
+    const limits: BudgetLimits = {
+      inputTokens: 1,
+      outputTokens: 500,
+      cachedTokens: 500,
+      contextPercent: 100,
+      toolDefinitions: 10,
+      toolCalls: 10,
+      executionMs: 60_000,
+      monetaryCost: 1,
+      providerQuota: 10_000,
+    };
+
+    await expect(core.requestContext(task.task.id, adapter, { objective: "This does not fit", budgetChars: 500, budgetLimits: limits }))
+      .rejects.toMatchObject({ code: "BUDGET_EXCEEDED" });
+    expect(called).toBe(false);
+    expect(core.eventsList().at(-1)?.payload).toEqual(expect.objectContaining({ code: "BUDGET_EXCEEDED", measurementType: "unavailable" }));
     await core.stop();
   });
 });

@@ -65,6 +65,7 @@ As duas fases têm gate `GO` no AI Platform. Isso prova a implementação no sta
 - `apps/core`: `ContextPacket` progressivo implementado em L0/L1/L2, com hard cap, ordenação determinística e hash de versão reproduzível; 12/12 testes do pacote e typecheck PASS.
 - `apps/core`: Budget Engine multidimensional implementado para tokens, contexto, tools, tempo, custo e quota, com falha fechada e violações determinísticas; 14/14 testes do pacote e typecheck PASS.
 - `apps/core`: `ContextPacket` opcional atravessa `CoreRuntime.requestContext` e o adapter local converte excerpts em fragments MCG; chamadas legadas sem packet continuam compatíveis; 15/15 testes do pacote e typecheck PASS.
+- `apps/core`: preflight de budget bloqueia requests excedentes antes do adapter, persiste `context.failed` com `BUDGET_EXCEEDED` e mantém o adapter sem chamada; 16/16 testes do pacote e typecheck PASS.
 - Commits: `3c951634`, `124c8448`, `ccb4d3dd`, `91523605`.
 - Graph View conectado e Context Engine progressivo continuam pendentes.
 

@@ -1,9 +1,18 @@
 import { CoreEventBus } from "./event-bus.js";
+import { evaluateBudget } from "./context-budget.js";
 import { parsePublishedMarkdown, scanKnowledgeBody } from "@lumenva/knowledge";
 import { projectPublishedNote, type KnowledgeGraph } from "@lumenva/knowledge-graph";
 import { MgcUnavailableError, type ContextRequest, type ContextResult, type MgcAdapter } from "./mcg-adapter.js";
 import type { CoreTask } from "./sqlite-store.js";
 import { SqliteStore } from "./sqlite-store.js";
+
+export class ContextBudgetExceededError extends Error {
+  readonly code = "BUDGET_EXCEEDED" as const;
+  constructor(readonly violations: Array<{ dimension: string; overBy: number }>) {
+    super("Context budget exceeded");
+    this.name = "ContextBudgetExceededError";
+  }
+}
 
 type RuntimeState = "stopped" | "running";
 
@@ -91,6 +100,31 @@ export class CoreRuntime {
       traceId: task.traceId,
       payload: { objective: input.objective, budgetChars: input.budgetChars, measurementType: "unavailable" },
     });
+    if (input.budgetLimits) {
+      const inputChars = input.packet?.characterCount ?? input.objective.length;
+      const budget = evaluateBudget({
+        inputTokens: Math.ceil(inputChars / 4),
+        outputTokens: 0,
+        cachedTokens: 0,
+        contextPercent: inputChars / Math.max(1, input.budgetChars) * 100,
+        toolDefinitions: input.packet?.availableTools.length ?? 0,
+        toolCalls: 0,
+        executionMs: 0,
+        monetaryCost: 0,
+        providerQuota: 0,
+      }, input.budgetLimits);
+      if (budget.status === "exceeded") {
+        const exceeded = new ContextBudgetExceededError(budget.violations);
+        await this.eventBus.publish({
+          id: `context-budget-failed:${taskId}`,
+          type: "context.failed",
+          taskId,
+          traceId: task.traceId,
+          payload: { code: exceeded.code, measurementType: "unavailable", violations: exceeded.violations },
+        });
+        throw exceeded;
+      }
+    }
     try {
       const result = await adapter.compile({ ...input, taskId, traceId: task.traceId });
       await this.eventBus.publish({
