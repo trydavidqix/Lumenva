@@ -13,10 +13,14 @@ export interface NormalizedSipCallEvent {
   attributes: {
     callControlId: string | null;
     callSessionId: string | null;
+    /** Existing Lumenva call row for governed outbound calls. */
+    voiceCallId?: string | null;
   };
 }
 
 export interface SipOutboundRequest {
+  /** Existing governed voice_calls.id allocated by the CRM before dialing. */
+  voiceCallId: string;
   organizationId: string;
   connectionId: string;
   contactId: string;
