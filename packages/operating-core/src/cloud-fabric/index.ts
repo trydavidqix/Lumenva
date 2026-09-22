@@ -53,3 +53,6 @@ export * from './resume-controller';
 export * from './redaction';
 export * from './history-query';
 export * from './provider-selection';
+export * from './history-persistence';
+export * from './dashboard-service';
+export * from './plan-status';
