@@ -779,3 +779,20 @@ Still requires real external runtime integration/evidence before PASS:
 - real browser/E2E verification
 - benchmark suite with real providers and >=30 validated observations where required
 - production/deployment integration (not authorized in this branch)
+
+
+### Continued implementation pass
+
+Additional implementation completed:
+- removed false-success Codex and Antigravity stubs; unconfigured runtimes now return BLOCKED instead of fabricated success
+- expanded package typecheck scope to the full operating-core source tree
+- exported the complete workforce fabric through the operating-core public API
+- added WorkforcePersistence contract plus in-memory reference store for plans, executions, digests, traces, and routing observations
+- added benchmark harness for paired executor evaluation
+- added strict Evidence Gate
+- added provider health probes
+- added token-budgeted Lazy Tool Registry
+- wired plan/execution/digest persistence and evidence gating into WorkforceOrchestrator
+- expanded tests for evidence, PAYG budget states, and lazy tool loading
+
+Current hard external gates remain authenticated provider runtimes, real quota telemetry, real gateway credentials, durable database adapter selection/migration, and execution of provider-backed benchmark/E2E suites. These gates must not be represented as PASS until real evidence exists.
