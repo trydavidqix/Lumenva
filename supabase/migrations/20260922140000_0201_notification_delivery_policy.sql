@@ -46,22 +46,46 @@ drop policy if exists notification_delivery_policies_insert_org
 create policy notification_delivery_policies_insert_org
   on public.notification_delivery_policies
   for insert to authenticated
-  with check (organization_id in (select public.fn_user_org_ids()));
+  with check (
+    public.fn_is_platform_admin()
+    or (
+      organization_id in (select public.fn_user_org_ids())
+      and public.fn_role_at_least(organization_id, 'manager')
+    )
+  );
 
 drop policy if exists notification_delivery_policies_update_org
   on public.notification_delivery_policies;
 create policy notification_delivery_policies_update_org
   on public.notification_delivery_policies
   for update to authenticated
-  using (organization_id in (select public.fn_user_org_ids()))
-  with check (organization_id in (select public.fn_user_org_ids()));
+  using (
+    public.fn_is_platform_admin()
+    or (
+      organization_id in (select public.fn_user_org_ids())
+      and public.fn_role_at_least(organization_id, 'manager')
+    )
+  )
+  with check (
+    public.fn_is_platform_admin()
+    or (
+      organization_id in (select public.fn_user_org_ids())
+      and public.fn_role_at_least(organization_id, 'manager')
+    )
+  );
 
 drop policy if exists notification_delivery_policies_delete_org
   on public.notification_delivery_policies;
 create policy notification_delivery_policies_delete_org
   on public.notification_delivery_policies
   for delete to authenticated
-  using (organization_id in (select public.fn_user_org_ids()));
+  using (
+    public.fn_is_platform_admin()
+    or (
+      organization_id in (select public.fn_user_org_ids())
+      and public.fn_role_at_least(organization_id, 'manager')
+    )
+  );
 
 comment on table public.notification_delivery_policies is
   'Per-tenant fail-closed Notification Router policy: exact destination allowlist, retry ceilings, quiet hours, cooldown and voice call rate limits. No provider credentials.';
