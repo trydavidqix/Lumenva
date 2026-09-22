@@ -148,8 +148,15 @@ async function recordAttempt(
   const attempt = Math.min(rows[0]?.next_attempt ?? 1, 10);
   await db.query(
     `insert into notification_delivery_attempts
-       (organization_id, notification_id, channel, attempt, status, external_id, error_code)
-     values ($1,$2,$3,$4,$5,$6,$7)
+       (organization_id, notification_id, channel, attempt, status, external_id, error_code,
+        queued_at, sent_at, failed_at, occurred_at)
+     values (
+       $1,$2,$3,$4,$5,$6,$7,
+       case when $5 = 'queued' then now() else null end,
+       case when $5 = 'sent' then now() else null end,
+       case when $5 = 'failed' then now() else null end,
+       now()
+     )
      on conflict (notification_id, channel, attempt) do nothing`,
     [row.organization_id, row.id, channel, attempt, status, externalId, errorCode],
   );
