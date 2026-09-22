@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { CoreEvent, CoreEventType, Unsubscribe } from './contracts.js';
+import type { CoreEvent, CoreEventType, Unsubscribe } from './contracts.ts';
 type Handler = (event: CoreEvent) => void | Promise<void>;
 export class EventBus {
   #handlers = new Map<CoreEventType|'*', Set<Handler>>(); #sequence = 0;

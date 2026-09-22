@@ -1,4 +1,4 @@
-import type { EventBus } from './event-bus.js';
+import type { EventBus } from './event-bus.ts';
 
 export interface TelemetryObservation { name:string; value:number; unit?:string; source:string; traceId?:string; occurredAt:string; provenance:'runtime'|'derived'; }
 export class TelemetryStore {

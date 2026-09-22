@@ -1,4 +1,4 @@
-import { EventBus } from './event-bus.js'; import type { CoreHealth } from './contracts.js';
+import { EventBus } from './event-bus.ts'; import type { CoreHealth } from './contracts.ts';
 export class LumenvaCore {
   readonly events = new EventBus(); #status: CoreHealth['status']='STOPPED'; #startedAt: string|null=null;
   health(): CoreHealth { return {status:this.#status,startedAt:this.#startedAt,eventSequence:this.events.sequence,subscribers:this.events.subscriberCount}; }

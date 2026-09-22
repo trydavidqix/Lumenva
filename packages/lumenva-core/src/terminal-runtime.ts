@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { EventBus } from './event-bus.js';
+import type { EventBus } from './event-bus.ts';
 
 export interface PtyProcess {
   pid: number;

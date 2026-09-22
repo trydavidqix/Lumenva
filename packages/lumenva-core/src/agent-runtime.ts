@@ -1,7 +1,7 @@
-import type { EventBus } from './event-bus.js';
-import type { TerminalRuntime, TerminalSnapshot } from './terminal-runtime.js';
-import type { StateStorage } from './storage.js';
-import type { TelemetryStore } from './telemetry.js';
+import type { EventBus } from './event-bus.ts';
+import type { TerminalRuntime, TerminalSnapshot } from './terminal-runtime.ts';
+import type { StateStorage } from './storage.ts';
+import type { TelemetryStore } from './telemetry.ts';
 
 export type AgentRisk = 'R0' | 'R1' | 'R2' | 'R3' | 'R4';
 export type AgentStatus = 'IDLE' | 'STARTING' | 'RUNNING' | 'WAITING' | 'BLOCKED' | 'STOPPED' | 'ERROR';

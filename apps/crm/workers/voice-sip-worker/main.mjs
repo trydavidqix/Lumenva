@@ -77,6 +77,29 @@ function required(env, name) {
   return value.trim();
 }
 
+function safeEqual(a, b) {
+  if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+async function readJson(req) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > 32_768) throw new Error("body_too_large");
+    chunks.push(chunk);
+  }
+  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+}
+
+function sendJson(res, status, body) {
+  res.writeHead(status, { "content-type": "application/json" });
+  res.end(JSON.stringify(body));
+}
+
 export async function createVoiceSipWorker(env = process.env) {
   const ariBaseUrl = required(env, "ARI_BASE_URL");
   const ariUsername = required(env, "ARI_USERNAME");
@@ -121,7 +144,7 @@ export async function createVoiceSipWorker(env = process.env) {
   const activeMediaSessions = new Map(); // channelId -> { rtpSession, sender, detach() }
 
   /** Attends one call: capture -> STT -> Agent OS turn -> TTS -> speak, looping until detached. */
-  async function attachMedia(channelId, voiceCallId, technicalPhoneE164) {
+  async function attachMedia(channelId, voiceCallId, technicalPhoneE164, openingText = greetingText) {
     if (!mediaEnabled || activeMediaSessions.has(channelId)) return;
     const rtpSession = await rtpBridge.start({ callChannelId: channelId });
     const sender = createContinuousSender({
@@ -146,13 +169,13 @@ export async function createVoiceSipWorker(env = process.env) {
     // escuta + turno completo (que sozinho já passa de 5-8s pelos logs reais
     // do primeiro turno). Roda em paralelo ao capture loop abaixo — não
     // bloqueia nem consome do inboundBuffer, só usa o mesmo `sender`.
-    if (greetingText.trim()) {
+    if (openingText.trim()) {
       (async () => {
         try {
           const startedAt = Date.now();
-          log("voice_media_greeting_started", { channelId, voiceCallId, textChars: greetingText.length });
+          log("voice_media_greeting_started", { channelId, voiceCallId, textChars: openingText.length });
           const greetingController = new AbortController();
-          const playback = await speech.tts.synthesize(greetingText, { locale: "pt-PT", signal: greetingController.signal });
+          const playback = await speech.tts.synthesize(openingText, { locale: "pt-PT", signal: greetingController.signal });
           let firstFrame = true;
           for await (const frame of playback.audio) {
             if (stopped) break;
@@ -309,15 +332,108 @@ export async function createVoiceSipWorker(env = process.env) {
   let processedEvents = 0;
   let rejectedEvents = 0;
   let forwardFailures = 0;
+  const pendingOutbound = new Map();
 
-  const healthServer = http.createServer((req, res) => {
-    if (req.url === "/healthz") {
-      res.writeHead(ready ? 200 : 503, { "content-type": "application/json" });
-      res.end(JSON.stringify({ status: ready ? "ok" : "starting", processedEvents, rejectedEvents, forwardFailures }));
-      return;
+  const healthServer = http.createServer(async (req, res) => {
+    const path = (req.url ?? "").split("?", 1)[0];
+    if (req.method === "GET" && path === "/healthz") {
+      return sendJson(res, ready ? 200 : 503, {
+        status: ready ? "ok" : "starting",
+        processedEvents,
+        rejectedEvents,
+        forwardFailures,
+        pendingOutbound: pendingOutbound.size,
+      });
     }
-    res.writeHead(404, { "content-type": "application/json" });
-    res.end(JSON.stringify({ error: "not_found" }));
+
+    if (req.method === "POST" && path === "/v1/calls") {
+      if (!safeEqual(req.headers["x-internal-secret"] ?? "", internalSecret)) {
+        return sendJson(res, 401, { error: "unauthenticated" });
+      }
+      if (!ready) return sendJson(res, 503, { error: "voice_worker_not_ready" });
+
+      let body;
+      try {
+        body = await readJson(req);
+      } catch (error) {
+        return sendJson(res, 400, { error: error instanceof Error ? error.message : "invalid_json" });
+      }
+
+      const voiceCallId = typeof body?.voice_call_id === "string" ? body.voice_call_id.trim() : "";
+      const organizationId = typeof body?.organization_id === "string" ? body.organization_id.trim() : "";
+      const contactId = typeof body?.contact_id === "string" ? body.contact_id.trim() : "";
+      const agentId = typeof body?.agent_id === "string" ? body.agent_id.trim() : "";
+      const goal = typeof body?.goal === "string" ? body.goal.trim() : "";
+      const provider = typeof body?.provider === "string" ? body.provider.trim() : "";
+      const connectionId = typeof body?.connection_id === "string" ? body.connection_id.trim() : "";
+      const fromE164 = typeof body?.from_e164 === "string" ? body.from_e164.trim() : "";
+      const toE164 = typeof body?.to_e164 === "string" ? body.to_e164.trim() : "";
+      const firstMessage = typeof body?.first_message === "string" ? body.first_message.trim().slice(0, 500) : "";
+      const e164 = /^\\+[1-9]\\d{6,14}$/;
+
+      if (provider !== "asterisk") return sendJson(res, 422, { error: "unsupported_provider" });
+      if (!voiceCallId || !organizationId || !contactId || !agentId || !goal || !connectionId) {
+        return sendJson(res, 422, { error: "missing_required_context" });
+      }
+      if (!e164.test(fromE164) || !e164.test(toE164)) {
+        return sendJson(res, 422, { error: "invalid_e164" });
+      }
+      if (!firstMessage) return sendJson(res, 422, { error: "first_message_required" });
+      const existingPending = pendingOutbound.get(voiceCallId);
+      if (existingPending) {
+        // Idempotent control-plane retry: the voice_call_id is the reservation
+        // key. Never originate a second PSTN call while the first request is
+        // still between ARI originate and StasisStart.
+        return sendJson(res, 202, {
+          accepted: true,
+          duplicate: true,
+          voice_call_id: voiceCallId,
+          provider_call_id: existingPending.providerCallId ?? null,
+        });
+      }
+
+      pendingOutbound.set(voiceCallId, { firstMessage, providerCallId: null });
+      try {
+        const result = await gateway.initiateOutboundCall({
+          voiceCallId,
+          organizationId,
+          connectionId,
+          contactId,
+          agentId,
+          goal,
+          fromE164,
+          toE164,
+        });
+        const pending = pendingOutbound.get(voiceCallId);
+        if (pending) pending.providerCallId = result.providerCallId;
+        try {
+          await brainClient.recordEvent({
+            voice_call_id: voiceCallId,
+            connection_id: connectionId,
+            phone_e164: fromE164,
+            state: "connecting",
+            provider_event_id: `${result.providerCallId}:originated`,
+            provider_call_id: result.providerCallId,
+            occurred_at: new Date().toISOString(),
+          });
+        } catch (error) {
+          pendingOutbound.delete(voiceCallId);
+          await connection.hangup(result.providerCallId).catch(() => undefined);
+          throw error;
+        }
+        return sendJson(res, 202, {
+          accepted: true,
+          voice_call_id: voiceCallId,
+          provider_call_id: result.providerCallId,
+        });
+      } catch (error) {
+        pendingOutbound.delete(voiceCallId);
+        logError("voice_sip_outbound_failed", error, { voiceCallId });
+        return sendJson(res, 502, { error: "outbound_failed" });
+      }
+    }
+
+    return sendJson(res, 404, { error: "not_found" });
   });
 
   let listener = null;
@@ -359,24 +475,49 @@ export async function createVoiceSipWorker(env = process.env) {
       try {
         await forwarder.forward(result);
         processedEvents += 1;
-        if (mediaEnabled && result.status === "normalized") {
+        if (result.status === "normalized") {
           const { event } = result;
           const channelId = event.providerEventId; // asterisk-adapter.ts: providerEventId === channelId
+          const correlatedVoiceCallId =
+            event.direction === "outbound" && event.attributes.voiceCallId
+              ? event.attributes.voiceCallId
+              : null;
+
           if (event.eventType === "StasisStart") {
-            const technicalE164 = event.direction === "inbound" ? event.calledE164 : event.callerE164;
-            const context = await brainClient.resolveContext({
-              provider_call_id: event.providerEventId,
-              connection_id: event.connectionId,
-              caller_e164: event.callerE164,
-              called_e164: event.calledE164,
-              direction: event.direction,
-            });
-            await attachMedia(channelId, context.voice_call_id, technicalE164).catch((error) =>
-              logError("voice_media_attach_failed", error, { channelId }),
-            );
+            let voiceCallId = correlatedVoiceCallId;
+            if (!voiceCallId && mediaEnabled) {
+              voiceCallId = (
+                await brainClient.resolveContext({
+                  provider_call_id: event.providerEventId,
+                  connection_id: event.connectionId,
+                  caller_e164: event.callerE164,
+                  called_e164: event.calledE164,
+                  direction: event.direction,
+                })
+              ).voice_call_id;
+            }
+
+            if (voiceCallId && mediaEnabled) {
+              const technicalE164 = event.direction === "inbound" ? event.calledE164 : event.callerE164;
+              const outbound = pendingOutbound.get(voiceCallId);
+              await attachMedia(
+                channelId,
+                voiceCallId,
+                technicalE164,
+                outbound?.firstMessage ?? greetingText,
+              ).catch((error) => logError("voice_media_attach_failed", error, { channelId }));
+            }
+            if (voiceCallId) pendingOutbound.delete(voiceCallId);
           } else if (event.eventType === "StasisEnd" || event.eventType === "ChannelHangupRequest") {
-            const session = activeMediaSessions.get(channelId);
-            if (session) await session.detach().catch((error) => logError("voice_media_detach_failed", error, { channelId }));
+            if (correlatedVoiceCallId) pendingOutbound.delete(correlatedVoiceCallId);
+            if (mediaEnabled) {
+              const session = activeMediaSessions.get(channelId);
+              if (session) {
+                await session.detach().catch((error) =>
+                  logError("voice_media_detach_failed", error, { channelId }),
+                );
+              }
+            }
           }
         }
       } catch (error) {

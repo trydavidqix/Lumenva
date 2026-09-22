@@ -70,8 +70,14 @@ export function startFakeAriServer(options?: { username?: string; password?: str
       }
 
       if (req.method === "GET" && /^\/ari\/channels\/[^/]+\/variable$/.test(url.pathname)) {
-        res.writeHead(200, { "content-type": "application/json" });
-        res.end(JSON.stringify({ value: "sip-conn-abc" }));
+        const variable = url.searchParams.get("variable");
+        if (variable === "SIP_CONNECTION_ID") {
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify({ value: "sip-conn-abc" }));
+          return;
+        }
+        res.writeHead(404, { "content-type": "application/json" });
+        res.end(JSON.stringify({ message: "Variable not found" }));
         return;
       }
 

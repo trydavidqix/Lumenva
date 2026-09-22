@@ -240,3 +240,7 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 | `20260918150000` | `0196_customer360_pii` | Customer 360 PII isolation and compliance. |
 | `20260918160000` | `0197_customer360_merge` | Customer 360 merge queue and idempotency. |
 - 0194_command_center_overview_rls
+
+| `20260922133000` | `0200_voice_notification_router` | Durable Notification Router state/attempt ledger plus `notification_delivery` cron+queue kind for WAHA → voice escalation. |
+
+| `20260922140000` | `0201_notification_delivery_policy` | Per-tenant exact voice destination allowlist, quiet hours, cooldown, retry ceilings and hourly/daily anti-fraud call limits. |

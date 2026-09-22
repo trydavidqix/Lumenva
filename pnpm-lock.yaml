@@ -75,6 +75,15 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  packages/lumenva-core:
+    devDependencies:
+      '@types/node':
+        specifier: ^26.2.0
+        version: 26.6.2
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
   apps/crm:
     dependencies:
       '@ai-sdk/anthropic':
@@ -488,6 +497,9 @@ importers:
 
   apps/social-brain-web:
     dependencies:
+      '@lumenva/integration-meta':
+        specifier: workspace:*
+        version: link:../../packages/integrations/meta
       '@supabase/ssr':
         specifier: 0.12.4
         version: 0.12.4(@supabase/supabase-js@2.111.0)

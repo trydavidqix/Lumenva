@@ -1,6 +1,12 @@
 ; TEMPLATE ONLY — NOT ACTIVE. Do not copy to /etc/asterisk until the owner supplies
 ; the real Twilio trunk parameters and explicitly authorizes the change.
 ; Keep endpoint 1000 and transport-udp unchanged.
+;
+; The logical Voice Core connection for this trunk is "twilio-outbound" by
+; convention in this branch. It is intentionally the same value used as
+; voice_sip_connections.external_connection_id and the PJSIP endpoint targeted
+; by governed ARI outbound calls. The inbound PJSIP endpoint may keep the
+; separate name twilio-inbound because IP identify is directional plumbing.
 
 ; Use the existing production transport only if the contracted trunk is UDP.
 ; For Twilio Secure Trunking, create a separate TLS transport after confirming
