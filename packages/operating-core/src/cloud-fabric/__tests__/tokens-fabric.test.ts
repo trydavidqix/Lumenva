@@ -13,6 +13,9 @@ import { IdempotencyStore } from '../idempotency';
 import { requiresOwnerApproval } from '../approval-gate';
 import { WorktreePolicy } from '../worktree-policy';
 import { runtimePolicy } from '../runtime-policy';
+import { validateMasterPlan, validateTaskContract } from '../contract-validation';
+import { MemoryRetriever } from '../memory-retriever';
+import { autonomousDecision } from '../autonomous-policy';
 
 describe('TOKENS workforce fabric', () => {
   it('prefers frontier models for planning', () => {
@@ -142,5 +145,24 @@ describe('TOKENS workforce fabric', () => {
     expect(runtimePolicy({ risk: 'R1' }).allowed).toBe(true);
     expect(runtimePolicy({ risk: 'R1', touches_secrets: true }).requires_approval).toBe(true);
     expect(runtimePolicy({ risk: 'R4' }).requires_approval).toBe(true);
+  });
+
+  it('validates canonical contracts', () => {
+    expect(validateTaskContract({ task_id: 't', goal: 'g', scope: 's', allowed_paths: [], constraints: [], base_sha: 'sha' }).valid).toBe(true);
+    const plan = createMasterPlan({ objective: 'x', tasks: [{ task_id: 'a', objective: 'a', acceptance_criteria: [] }] });
+    expect(validateMasterPlan(plan).valid).toBe(true);
+  });
+
+  it('retrieves only relevant validated memory inside budget', () => {
+    const retriever = new MemoryRetriever([
+      { id: '1', text: 'a', provenance: 'test', validated: true, tags: ['coding'], token_estimate: 10, updated_at: '2026-01-01T00:00:00Z' },
+      { id: '2', text: 'b', provenance: 'test', validated: false, tags: ['coding'], token_estimate: 10, updated_at: '2026-01-02T00:00:00Z' },
+    ]);
+    expect(retriever.retrieve({ tags: ['coding'], token_budget: 20, require_validated: true }).map(x => x.id)).toEqual(['1']);
+  });
+
+  it('keeps R2 autonomous but independently reviewed', () => {
+    expect(autonomousDecision('R2')).toEqual({ automatic: true, requires_review: true, requires_owner: false });
+    expect(autonomousDecision('R4').requires_owner).toBe(true);
   });
 });
