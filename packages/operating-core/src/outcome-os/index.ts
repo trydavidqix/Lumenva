@@ -1,3 +1,3 @@
-export * from './result-contracts';
-export * from './verifier';
-export * from './economics-ledger';
+export * from './result-contracts.js';
+export * from './verifier.js';
+export * from './economics-ledger.js';

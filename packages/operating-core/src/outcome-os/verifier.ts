@@ -1,4 +1,4 @@
-import { ResultContract } from './result-contracts';
+import { ResultContract } from './result-contracts.js';
 
 export interface OutcomeEvidence {
   source_ref: string;

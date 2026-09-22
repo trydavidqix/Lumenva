@@ -1,10 +1,11 @@
-export * from './router';
-export * from './contracts';
-export * from './event-log-adapter';
-export * from './job-claim-store';
-export * from './job-engine';
-export * from './receipt-store';
-export { ResourceRouter, CloudProvider } from './cloud-fabric/index.js';
+export * from './router/index.js';
+export * from './contracts.js';
+export * from './event-log-adapter.js';
+export * from './job-claim-store.js';
+export * from './job-engine.js';
+export * from './receipt-store.js';
+export { ResourceRouter, CloudProvider, CodexAdapter, AntigravityAdapter, createCodexSdkRunner } from './cloud-fabric/index.js';
+export type { ExecutionPort, TaskContract, ExecutionResult, ExecutionStatus, QuotaSnapshot, UsageSnapshot, HealthSnapshot } from './cloud-fabric/execution-port.js';
 export * from './knowledge/index.js';
 export * from './memory/index.js';
 export * from './context/context-engine.js';

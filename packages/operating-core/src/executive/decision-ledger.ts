@@ -1,4 +1,4 @@
-import { RiskLevel } from '../autonomy/risk-level';
+import { RiskLevel } from '../autonomy/risk-level.js';
 
 export interface ExecutiveDecision {
   id: string;

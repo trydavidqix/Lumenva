@@ -89,6 +89,9 @@ importers:
       '@lumenva/knowledge-graph':
         specifier: workspace:*
         version: link:../../packages/knowledge-graph
+      '@lumenva/operating-core':
+        specifier: workspace:*
+        version: link:../../packages/operating-core
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

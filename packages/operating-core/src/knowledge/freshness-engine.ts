@@ -1,5 +1,5 @@
-import { SourceRegistry, SourceStatus } from './source-registry';
-import { KnowledgeCard } from './knowledge-cards';
+import { SourceRegistry, SourceStatus } from './source-registry.js';
+import { KnowledgeCard } from './knowledge-cards.js';
 
 export interface FreshnessConfig {
   checkIntervalHours: number;

@@ -1,5 +1,5 @@
-import { ExecutiveDecision } from './decision-ledger';
-import { RiskLevel } from '../autonomy/risk-level';
+import { ExecutiveDecision } from './decision-ledger.js';
+import { RiskLevel } from '../autonomy/risk-level.js';
 
 export type CouncilRole = 'Architect' | 'Builder' | 'Challenger' | 'Synthesizer';
 

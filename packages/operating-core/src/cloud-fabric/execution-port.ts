@@ -1,4 +1,4 @@
-export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
+export type ExecutionRiskLevel = 'low' | 'medium' | 'high' | 'critical';
 
 export interface BudgetLimits {
   input_tokens?: number;
@@ -17,7 +17,7 @@ export interface TaskContract {
   allowed_paths: string[];
   constraints: string[];
   capabilities: string[];
-  risk: RiskLevel;
+  risk: ExecutionRiskLevel;
   base_sha: string;
   context_budget: BudgetLimits;
   tool_budget: BudgetLimits;

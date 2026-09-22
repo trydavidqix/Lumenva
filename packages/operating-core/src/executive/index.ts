@@ -1,2 +1,2 @@
-export * from './decision-ledger';
-export * from './council-engine';
+export * from './decision-ledger.js';
+export * from './council-engine.js';
