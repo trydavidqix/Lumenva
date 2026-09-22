@@ -1550,3 +1550,53 @@ ACTIVE — M0 REMEDIATION / CONSOLIDATION
 
 Este documento é a fonte de verdade única da branch Lumenva Command Center.
 Não criar um segundo plano concorrente para o mesmo escopo; atualizar este arquivo.
+
+
+## Execution Handoff — implementação integral
+
+Este arquivo é a única fonte de verdade para a execução do Lumenva Command Center nesta branch.
+
+Ao iniciar uma nova sessão de implementação:
+
+- ler este documento inteiro antes de modificar código;
+- executar o plano na ordem definida, começando pelo primeiro gate incompleto;
+- trabalhar inline na sessão principal, sem subagents;
+- usar autonomia máxima dentro do workspace/branch e das permissões já concedidas;
+- não pedir confirmação para operações normais e reversíveis necessárias ao plano;
+- preservar o backup `backup/lumenva-command-center-pre-cleanup-2026-09-22`;
+- nunca alterar `main` como parte desta execução;
+- manter a Memory OS, memória L0–L5, namespaces, provenance, promotion pipeline, retrieval sob demanda, handoffs e HistoryStore como partes obrigatórias do produto;
+- não confundir Memory OS com logs, telemetry, cache ou histórico operacional;
+- consultar documentação oficial quando houver dúvida de comportamento/API antes de improvisar uma solução;
+- testar cada milestone e corrigir regressões antes de avançar;
+- registrar evidência verificável para cada PASS;
+- não encerrar por limite artificial de milestone: continuar para o próximo item executável;
+- somente interromper por bloqueio externo real, credencial/Owner action necessária, conflito irreversível, indisponibilidade externa que impeça avanço ou risco fora das autorizações deste documento;
+- em bloqueio, emitir `BLOCKED_OWNER` ou `BLOCKED_EXTERNAL` com causa, evidência, impacto e ação mínima necessária;
+- não desabilitar controles de segurança do sistema operacional/runtime, não expor secrets e não executar mutações destrutivas/produção sem a aprovação exigida neste plano.
+
+O fechamento integral exige:
+
+```text
+M0 remediation complete
++
+Memory OS complete
++
+MCG V4 complete
++
+Core/Runtime complete
++
+Desktop/Canvas/Pixel Floor complete
++
+Validation complete
++
+CI green
++
+PARTIAL = 0
++
+NOT_STARTED = 0
++
+remaining BLOCKED only if externally proven
+```
+
+Se uma implementação anterior já existir, auditar e reutilizar o que estiver correto. Não recomeçar do zero sem necessidade e não marcar como PASS apenas porque há arquivos, endpoints, mocks ou testes isolados.
