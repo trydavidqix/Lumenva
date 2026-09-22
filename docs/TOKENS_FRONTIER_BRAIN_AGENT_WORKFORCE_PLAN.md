@@ -866,3 +866,29 @@ Further repository work completed:
 - deterministic test added for distinct reviewer execution
 
 This closes an important structural gap found during revalidation. It still does not claim real provider review PASS until authenticated provider-backed executions are run.
+
+### Definitive repository-limit validation
+
+The plan was re-read end-to-end and compared against the current TOKENS implementation. This pass separates structural implementation from externally measured completion.
+
+Additional repository-only work completed:
+- bounded retry execution is now invoked by WorkforceOrchestrator, with retry counts feeding LearningRouter
+- resume controller for runtimes exposing ExecutionPort.resume
+- secret-redaction utility for trace/evidence persistence boundaries
+- history query windows TODAY / 7D / 30D / ALL
+- Postgres history reader for executions and routing traces
+- provider selection helper for healthy independent ports
+- live dashboard aggregation service over quota snapshots, LearningRouter statistics, cost ledger and run counters
+- explicit phase-status contract distinguishing IMPLEMENTED_STRUCTURAL from BLOCKED_EXTERNAL
+- tests for bounded retry, redaction and history windows
+
+Definitive repository boundary:
+- F1-F6: structural implementation present
+- F7-F9: adapter/broker structure present; real authenticated clients and quota telemetry remain external
+- F10-F18: structural implementation present, including executed independent reviewer boundary
+- F19-F20: data/service layer present; final live Command Center UI wiring remains integration work in the Command Center surface
+- F21: harness and deterministic 30-case corpus present; real provider-backed benchmark execution remains external
+- F22-F23: structural implementation present
+- F24: rollout remains external and is not authorized here
+
+No provider-backed, production, migration, browser-E2E, or benchmark PASS is claimed without execution evidence. main remains outside this branch's mutation scope.
