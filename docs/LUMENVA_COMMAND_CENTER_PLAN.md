@@ -63,6 +63,142 @@ OWNER
         -> Validation Lab
         -> Trust / Efficiency
 
+## Consolidação validada — Maestri Context & Agent Fabric
+
+Data da validação: 2026-09-22.
+
+Esta seção consolida `implementacao-tokens`, Command Center, Multi-Cloud Agent Fabric e MCP Bus em uma única arquitetura. Ela entra aqui, imediatamente depois da arquitetura alvo, e passa a ser a regra de decomposição dos milestones M1–M9. Não criar uma segunda arquitetura paralela.
+
+### Decisões validadas
+
+1. **Maestri controla o contexto.** Codex, Claude e Gemini recebem `ContextPacket` resolvido pelo Lumenva; não dependemos da semântica de subagents de nenhum provider.
+2. **Contexto progressivo.** A sequência padrão é `TaskContract → paths/símbolos → trechos → arquivos adicionais → expansão excepcional`. Nunca fazer dump do repositório ou da sessão inteira por padrão.
+3. **Ferramentas lazy.** O agente recebe somente o catálogo filtrado por capability, risco, policy e task; schema detalhado entra sob demanda.
+4. **Providers atrás de `ExecutionPort`.** Claude, Codex e Gemini/Antigravity implementam o mesmo contrato e não conhecem a lógica interna do Maestri.
+5. **Handoffs passam pelo Maestri.** O fluxo é `HandoffRequest → Context Engine → ContextPacket → executor`; nunca Claude → Codex com sessão integral.
+6. **MCP moderno com compatibilidade.** O alvo é MCP `2026-07-28`, usando stateless/sessionless quando cliente e servidor negociarem essa era, cache hints/ordenação determinística em listas, handles explícitos de estado e propagação W3C/OTel. Manter fallback para `2025-11-25` durante a migração; não assumir que todo servidor suporta a era moderna.
+7. **Observabilidade uniforme.** Toda execução correlaciona `trace_id`, `job_id`, `task_id`, `agent_id`, `execution_id` e `context_packet_id`.
+8. **Qualidade antes de economia.** Benchmarks com baseline medem tokens, cached tokens, tempo, tools expostas, arquivos lidos, custo, sucesso, retries e overflow. Não existe meta arbitrária de redução que possa mascarar regressão.
+
+### Fontes normativas consultadas
+
+- Codex: [Model guidance — AGENTS.md discovery and hierarchical injection](https://developers.openai.com/api/docs/guides/latest-model).
+- Claude Code: [CLI reference — MCP configuration, allowed tools and permission modes](https://docs.anthropic.com/en/docs/claude-code/cli-usage).
+- Gemini CLI: [CLI commands and hierarchical `GEMINI.md` memory](https://github.com/google-gemini/gemini-cli/blob/main/docs/reference/commands.md).
+- MCP: [2026-07-28 specification](https://github.com/modelcontextprotocol/modelcontextprotocol/tree/main/docs/specification/2026-07-28), [TypeScript SDK migration](https://github.com/modelcontextprotocol/typescript-sdk/blob/main/docs/migration/support-2026-07-28) e [OpenTelemetry trace context](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/docs/specification/2026-07-28/basic/index.mdx).
+
+Relatos de comunidade entram como sinais de risco e casos de benchmark, nunca como autoridade normativa nem como prova de comportamento de um provider.
+
+### Contratos canônicos
+
+`TaskContract` é o único contrato de entrada:
+
+```text
+task_id, goal, scope, allowed_paths, constraints, capabilities,
+risk, base_sha, context_budget, tool_budget, execution_budget,
+preferred_provider, evidence_required
+```
+
+`ContextPacket` é a única unidade de contexto entregue ao executor:
+
+```text
+objective, relevant_instructions, relevant_files, relevant_symbols,
+prior_decisions, constraints, available_tools, evidence, token_budget
+```
+
+`ExecutionPort` expõe `execute`, `resume`, `cancel`, `health`, `capabilities`, `usage` e `quota`.
+
+`ExecutionResult` retorna `task_id`, `status`, `summary`, `files_changed`, `commands`, `tests`, `evidence`, `usage`, `context_used` e `error`.
+
+`ResultDigest` é a saída entre agentes. Logs completos permanecem em Evidence/Trace e não entram automaticamente no próximo prompt.
+
+### Fabric consolidado
+
+```text
+TaskContract
+    ↓
+Context Resolver → Instruction Resolver → Code/Memory Retriever
+    ↓
+Tool Registry lazy → Token/Tool/Execution Budgeter
+    ↓
+ContextPacket
+    ↓
+Resource Router → Policy/Risk/Quota/Latency/Cost
+    ↓
+ExecutionPort → Claude | Codex | Gemini/Antigravity
+    ↓
+ExecutionResult → ResultDigest → Maestri
+    ↓
+Evidence + Telemetry + OTel Trace → Command Center
+```
+
+O `MCP Gateway` não será um daemon proprietário com sessões longas. Ele será uma camada de capability registry, policy, cache de catálogos, compatibilidade de versões, handles explícitos, health/capability probing e tracing entre `ExecutionPort` e servidores MCP.
+
+### Capability e disponibilidade real
+
+Inventário verificado no worktree/host:
+
+| Capability | Estado | Evidência / decisão |
+|---|---|---|
+| Codex CLI | DISPONÍVEL | `codex-cli 0.155.1` |
+| Claude Code | DISPONÍVEL | `2.1.278` |
+| Gemini CLI | DISPONÍVEL | instalado nesta execução, `0.60.0` |
+| MCP TypeScript SDK moderno | DISPONÍVEL | `apps/social-brain-mcp`, `@modelcontextprotocol/server 2.0.0` |
+| MCP SDK legado | EXISTENTE | CRM usa `@modelcontextprotocol/sdk 1.30.0`; migrar por adapter, não apagar agora |
+| MCG | DISPONÍVEL | `packages/maestri-context-gateway` com registry, router, history, telemetry e validation |
+| Electron | AUSENTE | adicionar como dependência do M2 |
+| xterm.js/node-pty | AUSENTE | adicionar como dependência do M5 |
+| Core/ExecutionPort canônico | AUSENTE | primeiro código novo do M1 |
+
+Ausência de provider, MCP ou capability deve produzir `UNAVAILABLE`/`CAPABILITY_UNAVAILABLE`, nunca stub tratado como sucesso. O router deve provar `health()` e capabilities antes de escolher uma rota.
+
+### Fases do Agent Fabric
+
+Estas fases refinam a ordem de implementação existente:
+
+```text
+F0  audit implementation-tokens + fabric atual
+F1  TaskContract canônico
+F2  ExecutionResult canônico
+F3  ContextPacket
+F4  Context Budget Engine
+F5  Instruction Resolver universal
+F6  Progressive Context Retrieval
+F7  Tool Registry lazy/on-demand
+F8  MCP Gateway 2026 + fallback 2025
+F9  ExecutionPort Codex real
+F10 ExecutionPort Claude real
+F11 ExecutionPort Gemini/Antigravity real
+F12 collectors de usage/quota
+F13 Resource Router V2
+F14 HandoffRequest
+F15 ResultDigest
+F16 delegação cross-agent via Maestri
+F17 integração Memory Retriever
+F18 retrieval de conhecimento/código
+F19 OpenTelemetry e traces MCP
+F20 visualização no Command Center
+F21 dashboard de token/context
+F22 otimização automática de contexto
+F23 testes de integração
+F24 benchmarks baseline vs Fabric
+F25 rollout e limpeza de compatibilidade
+```
+
+### Gates adicionais do plano completo
+
+O fechamento do Fabric exige evidência para:
+
+- nenhum catálogo/tool global desnecessário e nenhum contexto sem hard cap;
+- `ContextPacket` reproduzível e expansão sob demanda;
+- catálogo MCP cacheado com ordem determinística e probing de capability;
+- provider intercambiável sem alterar `TaskContract`;
+- Claude → Codex e Codex → Claude somente via Handoff/ResultDigest;
+- fallback, quota e usage reais;
+- traces atravessando MCP, execução retomável e evidência persistida;
+- zero dependência dos stubs antigos;
+- benchmark de pelo menos 20 tasks comparando baseline e Fabric sem regressão de qualidade.
+
 ## Stack inicial
 
 Desktop:
@@ -1497,20 +1633,22 @@ Não aceitar como PASS:
 5. Contracts + registries
 6. Scheduler + DAG + router + reliability + worktrees
 7. Evidence + artifacts + progress/confidence + CEO brief
-8. Validation Lab: 6 paired smoke
-9. Validation Lab: 30 paired evaluations
-10. Dashboard/History/Trace final do MCG
-11. Core + contracts + event bus
-12. terminal runtime
-13. agent runtime
-14. MCG/context engine nativo
-15. storage + telemetry + traces no Core
-16. Canvas + Agent Nodes + Live Office / Pixel Floor
-17. Scene Editor + auto-spawn de agents
-18. budgets + alerts
-19. Lumenva Link
-20. mobile/remote
-21. refinamento visual e acessibilidade
+  8. Validation Lab: 6 paired smoke
+  9. Validation Lab: 30 paired evaluations
+  10. Dashboard/History/Trace final do MCG
+  11. Fabric F0–F4: audit, TaskContract, ExecutionResult, ContextPacket e budgets
+  12. Fabric F5–F8: Instruction Resolver, progressive retrieval, Tool Registry lazy e MCP Gateway moderno com fallback
+  13. M1 Core + contracts + event bus + storage persistente
+  14. Fabric F9–F13: ExecutionPorts, usage/quota e Resource Router V2
+  15. Fabric F14–F18: handoffs, ResultDigest, delegation e retrieval de Memory/code
+  16. Fabric F19–F21: OTel/MCP traces e dashboards de contexto/token
+  17. terminal runtime + Electron Desktop shell
+  18. Canvas + Agent Nodes + Live Office / Pixel Floor
+  19. Scene Editor + auto-spawn de agents
+  20. budgets + alerts + Lumenva Link
+  21. Fabric F22–F25: otimização, integração, benchmark e cleanup de compatibilidade
+  22. mobile/remote
+  23. refinamento visual e acessibilidade
 
 ## Regra de execução contínua
 
@@ -1546,7 +1684,9 @@ Só termina quando:
 
 ## Status atual
 
-ACTIVE — M0 REMEDIATION / CONSOLIDATION
+ACTIVE — M0 VALIDATED / AGENT FABRIC CONSOLIDATION / M1 NEXT
+
+M0 e a dashboard foram validados no worktree isolado. O próximo gate é F0/F1 + M1 Core, agora sob os contratos canônicos `TaskContract`, `ContextPacket`, `ExecutionPort`, `ExecutionResult` e `ResultDigest`. A pesquisa de providers e MCP foi incorporada nesta fonte de verdade em 2026-09-22.
 
 Este documento é a fonte de verdade única da branch Lumenva Command Center.
 Não criar um segundo plano concorrente para o mesmo escopo; atualizar este arquivo.
