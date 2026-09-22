@@ -32,7 +32,7 @@ describe("CoreRuntime MCG boundary", () => {
 
     expect(result).toEqual({ contextVersion: "v-context-1", fragments: [{ id: "objective", content: "Index knowledge" }], measurementType: "estimated", source: "context.compiler" });
     expect(core.eventsList().map((event) => event.type)).toEqual(["task.created", "context.requested", "context.completed"]);
-    expect(core.eventsList()[2]?.payload).toEqual({ contextVersion: "v-context-1", measurementType: "estimated", source: "context.compiler" });
+    expect(core.eventsList()[2]?.payload).toEqual(expect.objectContaining({ contextVersion: "v-context-1", measurementType: "estimated", source: "context.compiler", inputChars: 15, outputChars: 15 }));
     await core.stop();
   });
 

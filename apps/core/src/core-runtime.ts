@@ -98,7 +98,14 @@ export class CoreRuntime {
         type: "context.completed",
         taskId,
         traceId: task.traceId,
-        payload: { contextVersion: result.contextVersion, measurementType: result.measurementType, source: result.source },
+        payload: {
+          contextVersion: result.contextVersion,
+          measurementType: result.measurementType,
+          source: result.source,
+          inputChars: input.objective.length,
+          outputChars: result.fragments.reduce((total, fragment) => total + fragment.content.length, 0),
+          estimatedTokens: Math.ceil(result.fragments.reduce((total, fragment) => total + fragment.content.length, 0) / 4),
+        },
       });
       return result;
     } catch (error) {
