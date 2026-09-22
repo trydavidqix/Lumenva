@@ -24,7 +24,7 @@ test('dashboard serves read-only local endpoints', async t => {
   const tasks = await get(port, '/api/tasks');
   const health = await get(port, '/api/health');
   assert.equal(home.status, 200);
-  assert.match(home.body, /TOKENS ECONOMIZADOS/);
+  assert.match(home.body, /TOKENS CONTEXTO EVITADOS/);
   assert.equal(stats.status, 200);
   assert.equal(tasks.status, 200);
   assert.equal(health.status, 200);

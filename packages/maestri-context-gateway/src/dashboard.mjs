@@ -36,17 +36,92 @@ export async function taskStats(root = ROOT) {
   return rows.sort((left, right) => String(right.created_at || '').localeCompare(String(left.created_at || '')));
 }
 
-function taskTokenSummary(tasks) {
-  const completed = tasks.filter(task => task.status === 'DONE' && task.measurable); const active = tasks.filter(task => task.active);
-  const original = completed.reduce((sum, task) => sum + task.original_chars, 0); const delivered = completed.reduce((sum, task) => sum + task.delivered_chars, 0); const saved = Math.max(0, original - delivered);
-  const total = { executor: 'total', tasks_processed: completed.length, tasks_active: active.length, original_chars: original, delivered_chars: delivered, saved_chars: saved, reduction_percent: original > 0 ? Number((saved / original * 100).toFixed(2)) : 0, estimated_tokens_original: Math.ceil(original / 4), estimated_tokens_delivered: Math.ceil(delivered / 4), estimated_tokens_saved: Math.ceil(saved / 4), measurement_type: completed.length ? 'estimated' : 'unavailable', source: 'task evidence bytes / 4', timestamp: new Date().toISOString() };
+export function contextMetricsFromEvents(events = []) {
+  const compiles = events.filter(event => event.operation === 'context.compile' && Number.isFinite(event.input_chars) && Number.isFinite(event.output_chars));
+  const original_chars = compiles.reduce((sum, event) => sum + event.input_chars, 0);
+  const delivered_chars = compiles.reduce((sum, event) => sum + event.output_chars, 0);
+  const saved_chars = Math.max(0, original_chars - delivered_chars);
+  const compression_ratio = original_chars > 0 ? Number((saved_chars / original_chars * 100).toFixed(2)) : null;
+
+  const eligibleTaskIds = new Set(events.filter(event => event.task_id).map(event => event.task_id));
+  const coveredTaskIds = new Set(compiles.filter(event => event.task_id).map(event => event.task_id));
+  const mcg_coverage = eligibleTaskIds.size ? Number((coveredTaskIds.size / eligibleTaskIds.size * 100).toFixed(2)) : null;
+
+  return {
+    compiles,
+    compression_ratio,
+    mcg_coverage,
+    eligible_tasks: eligibleTaskIds.size,
+    covered_tasks: coveredTaskIds.size,
+    estimated_context_savings: {
+      original_chars,
+      delivered_chars,
+      saved_chars,
+      estimated_tokens_original: original_chars ? Math.ceil(original_chars / 4) : null,
+      estimated_tokens_delivered: original_chars ? Math.ceil(delivered_chars / 4) : null,
+      estimated_tokens_avoided: original_chars ? Math.ceil(saved_chars / 4) : null,
+      measurement_type: compiles.length ? 'estimated' : 'unavailable',
+      source: 'context.compile observed chars; token estimate chars/4',
+      timestamp: new Date().toISOString()
+    }
+  };
+}
+
+function taskTokenSummary(tasks, compiles) {
+  const completed = tasks.filter(task => task.status === 'DONE');
+  const active = tasks.filter(task => task.active);
+  const original = compiles.reduce((sum, event) => sum + (Number.isFinite(event.input_chars) ? event.input_chars : 0), 0);
+  const delivered = compiles.reduce((sum, event) => sum + (Number.isFinite(event.output_chars) ? event.output_chars : 0), 0);
+  const saved = Math.max(0, original - delivered);
+  const total = {
+    executor: 'total',
+    tasks_processed: completed.length,
+    tasks_active: active.length,
+    original_chars: original || null,
+    delivered_chars: compiles.length ? delivered : null,
+    saved_chars: compiles.length ? saved : null,
+    reduction_percent: original > 0 ? Number((saved / original * 100).toFixed(2)) : null,
+    estimated_tokens_original: original ? Math.ceil(original / 4) : null,
+    estimated_tokens_delivered: compiles.length ? Math.ceil(delivered / 4) : null,
+    estimated_tokens_saved: compiles.length ? Math.ceil(saved / 4) : null,
+    measurement_type: compiles.length ? 'estimated' : 'unavailable',
+    source: 'context.compile observed chars; token estimate chars/4',
+    timestamp: new Date().toISOString()
+  };
+
   const by_executor = {};
-  for (const task of [...completed, ...active]) {
-    const key = task.executor || 'Não identificado'; by_executor[key] ||= { executor: key, tasks_processed: 0, tasks_active: 0, original_chars: 0, delivered_chars: 0, saved_chars: 0, estimated_tokens_original: 0, estimated_tokens_delivered: 0, estimated_tokens_saved: 0, reduction_percent: 0, measurement_type: 'estimated', source: 'task evidence bytes / 4', timestamp: total.timestamp };
-    const item = by_executor[key]; if (task.active) item.tasks_active += 1; if (!task.measurable || task.status !== 'DONE') continue;
-    item.tasks_processed += 1; item.original_chars += task.original_chars; item.delivered_chars += task.delivered_chars; item.saved_chars += Math.max(0, task.original_chars - task.delivered_chars);
+  for (const event of compiles) {
+    const key = event.executor || 'Não identificado';
+    by_executor[key] ||= {
+      executor: key,
+      tasks_processed: 0,
+      tasks_active: tasks.filter(task => task.executor === key && task.active).length,
+      original_chars: 0,
+      delivered_chars: 0,
+      saved_chars: 0,
+      estimated_tokens_original: 0,
+      estimated_tokens_delivered: 0,
+      estimated_tokens_saved: 0,
+      reduction_percent: null,
+      measurement_type: 'estimated',
+      source: 'context.compile observed chars; token estimate chars/4',
+      timestamp: total.timestamp,
+      task_ids: new Set()
+    };
+    const item = by_executor[key];
+    item.original_chars += event.input_chars;
+    item.delivered_chars += event.output_chars;
+    item.task_ids.add(event.task_id || `compile-${item.task_ids.size}`);
   }
-  for (const item of Object.values(by_executor)) { item.estimated_tokens_original = Math.ceil(item.original_chars / 4); item.estimated_tokens_delivered = Math.ceil(item.delivered_chars / 4); item.estimated_tokens_saved = Math.ceil(item.saved_chars / 4); item.reduction_percent = item.original_chars ? Number((item.saved_chars / item.original_chars * 100).toFixed(2)) : 0; }
+  for (const item of Object.values(by_executor)) {
+    item.tasks_processed = item.task_ids.size;
+    item.saved_chars = Math.max(0, item.original_chars - item.delivered_chars);
+    item.estimated_tokens_original = Math.ceil(item.original_chars / 4);
+    item.estimated_tokens_delivered = Math.ceil(item.delivered_chars / 4);
+    item.estimated_tokens_saved = Math.ceil(item.saved_chars / 4);
+    item.reduction_percent = item.original_chars ? Number((item.saved_chars / item.original_chars * 100).toFixed(2)) : null;
+    delete item.task_ids;
+  }
   return { ...total, by_executor };
 }
 
@@ -64,30 +139,136 @@ export async function health(root = ROOT, wireProbe) {
 }
 
 export async function dashboardStats(root = ROOT) {
-  const [tasks, events, resources, evaluation] = await Promise.all([taskStats(root), telemetryEvents(root), discoverResources(root), latestEvaluation(root)]); const summary = taskTokenSummary(tasks); const groups = aggregateTelemetry(events);
+  const [tasks, events, resources, evaluation] = await Promise.all([
+    taskStats(root),
+    telemetryEvents(root),
+    discoverResources(root),
+    latestEvaluation(root)
+  ]);
+  const contextMetrics = contextMetricsFromEvents(events);
+  const summary = taskTokenSummary(tasks, contextMetrics.compiles);
+  const groups = aggregateTelemetry(events);
   const tokenUsage = events.reduce((sum, event) => sum + (event.total_tokens || event.estimated_tokens || 0), 0);
   const providerEvents = events.filter(event => event.measurement_type === 'exact' && Number.isFinite(event.total_tokens));
-  const observed_tokens = { input_tokens: providerEvents.length ? providerEvents.reduce((sum, event) => sum + (event.input_tokens || 0), 0) : null, output_tokens: providerEvents.length ? providerEvents.reduce((sum, event) => sum + (event.output_tokens || 0), 0) : null, reasoning_tokens: providerEvents.length ? providerEvents.reduce((sum, event) => sum + (event.reasoning_tokens || 0), 0) : null, total_tokens: providerEvents.length ? providerEvents.reduce((sum, event) => sum + event.total_tokens, 0) : null, measurement_type: providerEvents.length ? 'exact' : 'unavailable', source: providerEvents.length ? [...new Set(providerEvents.map(event => event.source))].join(', ') : 'provider usage absent', timestamp: new Date().toISOString() };
-  await evaluateAlerts(root, { tokens: tokenUsage, executors: Object.fromEntries(groups.agents.map(item => [item.agent, { tokens: item.tokens || 0 }])), agents: Object.fromEntries(groups.agents.map(item => [item.agent, { tokens: item.tokens || 0 }])), plugins: Object.fromEntries(groups.plugins.map(item => [item.plugin, { tokens: item.tokens || 0 }])), mcps: Object.fromEntries(groups.mcps.map(item => [item.mcp, { tokens: item.tokens || 0 }])), ides: Object.fromEntries(groups.ides.map(item => [item.ide, { tokens: item.tokens || 0 }])), runtimes: Object.fromEntries(groups.runtimes.map(item => [item.runtime, { tokens: item.tokens || 0 }])), tools: Object.fromEntries(groups.tools.map(item => [item.tool, { tokens: item.tokens || 0 }])) });
+  const observed_tokens = {
+    input_tokens: providerEvents.length ? providerEvents.reduce((sum, event) => sum + (event.input_tokens || 0), 0) : null,
+    output_tokens: providerEvents.length ? providerEvents.reduce((sum, event) => sum + (event.output_tokens || 0), 0) : null,
+    reasoning_tokens: providerEvents.length ? providerEvents.reduce((sum, event) => sum + (event.reasoning_tokens || 0), 0) : null,
+    total_tokens: providerEvents.length ? providerEvents.reduce((sum, event) => sum + event.total_tokens, 0) : null,
+    measurement_type: providerEvents.length ? 'exact' : 'unavailable',
+    source: providerEvents.length ? [...new Set(providerEvents.map(event => event.source))].join(', ') : 'provider usage absent',
+    timestamp: new Date().toISOString()
+  };
+
+  await evaluateAlerts(root, {
+    tokens: tokenUsage,
+    executors: Object.fromEntries(groups.agents.map(item => [item.agent, { tokens: item.tokens || 0 }])),
+    agents: Object.fromEntries(groups.agents.map(item => [item.agent, { tokens: item.tokens || 0 }])),
+    plugins: Object.fromEntries(groups.plugins.map(item => [item.plugin, { tokens: item.tokens || 0 }])),
+    mcps: Object.fromEntries(groups.mcps.map(item => [item.mcp, { tokens: item.tokens || 0 }])),
+    ides: Object.fromEntries(groups.ides.map(item => [item.ide, { tokens: item.tokens || 0 }])),
+    runtimes: Object.fromEntries(groups.runtimes.map(item => [item.runtime, { tokens: item.tokens || 0 }])),
+    tools: Object.fromEntries(groups.tools.map(item => [item.tool, { tokens: item.tokens || 0 }]))
+  });
   await evaluateAnomalies(root, events, tasks);
-  const now = Date.now(); const completed = tasks.filter(task => task.status === 'DONE' && task.measurable); const savedWithin = days => completed.filter(task => task.completed_at && now - Date.parse(task.completed_at) <= days * 86_400_000).reduce((sum, task) => sum + task.tokens_saved, 0);
-  const trust = evaluation?.trust || trustScore({ baseline: {}, mcg: {}, context_recall: null, evidence_grounding: null, hallucination_rate: null });
-  const compiles = events.filter(event => event.operation === 'context.compile' && Number.isFinite(event.input_chars)); const compression_ratio = compiles.length ? Number((compiles.reduce((sum, event) => sum + (event.input_chars > 0 ? Math.max(0, 1 - (event.output_chars || 0) / event.input_chars) : 0), 0) / compiles.length * 100).toFixed(2)) : null;
-  const mcg_coverage = events.length ? Number((compiles.length / events.length * 100).toFixed(2)) : null;
-  const workflow_token_savings = evaluation?.baseline?.total_tokens != null && evaluation?.mcg?.total_tokens != null && evaluation.baseline.total_tokens > 0 ? Number(((evaluation.baseline.total_tokens - evaluation.mcg.total_tokens) / evaluation.baseline.total_tokens * 100).toFixed(2)) : null;
-  const efficiency = evaluation?.baseline && evaluation?.mcg ? efficiencyScore({ real_token_saving: workflow_token_savings, task_success: evaluation.mcg.task_success ? 100 : 0, context_retention: evaluation.mcg.context_recall, evidence_grounding: evaluation.mcg.evidence_grounding, hallucination_rate: evaluation.mcg.hallucination_rate }) : efficiencyScore({});
-  const regression = evaluation?.baseline && evaluation?.mcg ? regressionWatch(evaluation.baseline, evaluation.mcg) : { status: 'UNVALIDATED', regressions: [], source: 'baseline vs MCG', measurement_type: 'unavailable', timestamp: new Date().toISOString() };
-  const result = { ...summary, observed_tokens, tasks, periods: { today: savedWithin(1), seven_days: savedWithin(7), all_time: completed.reduce((sum, task) => sum + task.tokens_saved, 0) }, by_tool: resources.tools, by_plugin: resources.plugins, by_mcp: resources.mcps, by_ide: resources.ides, agents: resources.agents, runtimes: resources.runtimes, metrics: { compression_ratio, mcg_coverage, workflow_token_savings, workflow_token_savings_percent: workflow_token_savings, source: 'context.compile + paired evaluation', measurement_type: workflow_token_savings != null ? 'exact' : compiles.length ? 'estimated' : 'unavailable', timestamp: new Date().toISOString() }, efficiency, regression, coverage: coverage(events, resources), trust, telemetry: { event_count: events.length, source: 'state/telemetry/events.jsonl', measurement_type: events.length ? events.reduce((best, event) => event.measurement_type === 'exact' ? 'exact' : best, 'estimated') : 'unavailable', timestamp: new Date().toISOString() }, alerts: await alertHistory(root), ceo_inbox: await ceoInbox(root), warnings: tasks.filter(task => !task.measurable && task.active).map(task => `${task.task_id}: resultado final ausente`) };
-  await mkdir(join(root, 'state', 'dashboard'), { recursive: true, mode: 0o700 }); await writeFile(join(root, 'state', 'dashboard', 'snapshot.json'), `${JSON.stringify(result, null, 2)}\n`, { mode: 0o600 }); return result;
+
+  const now = Date.now();
+  const contextTokensWithin = days => contextMetrics.compiles
+    .filter(event => event.timestamp && now - Date.parse(event.timestamp) <= days * 86_400_000)
+    .reduce((sum, event) => sum + Math.ceil(Math.max(0, event.input_chars - event.output_chars) / 4), 0);
+
+  const trust = evaluation?.trust || trustScore({
+    baseline: {},
+    mcg: {},
+    context_recall: null,
+    evidence_grounding: null,
+    hallucination_rate: null
+  });
+
+  const workflow_token_savings = evaluation?.baseline?.total_tokens != null
+    && evaluation?.mcg?.total_tokens != null
+    && evaluation.baseline.total_tokens > 0
+    ? Number(((evaluation.baseline.total_tokens - evaluation.mcg.total_tokens) / evaluation.baseline.total_tokens * 100).toFixed(2))
+    : null;
+
+  const workflowMeasurement = workflow_token_savings == null
+    ? 'unavailable'
+    : evaluation?.baseline?.measurement_type === 'exact' && evaluation?.mcg?.measurement_type === 'exact'
+      ? 'exact'
+      : 'estimated';
+
+  const efficiency = evaluation?.baseline && evaluation?.mcg
+    ? efficiencyScore({
+        real_token_saving: workflow_token_savings,
+        task_success: evaluation.mcg.task_success ? 100 : 0,
+        context_retention: evaluation.mcg.context_recall,
+        evidence_grounding: evaluation.mcg.evidence_grounding,
+        hallucination_rate: evaluation.mcg.hallucination_rate,
+        dataset_size: evaluation.trust?.dataset_size ?? 0
+      })
+    : efficiencyScore({});
+
+  const regression = evaluation?.baseline && evaluation?.mcg
+    ? regressionWatch(evaluation.baseline, evaluation.mcg, { dataset_size: evaluation.trust?.dataset_size ?? 0 })
+    : { status: 'UNVALIDATED', regressions: [], source: 'baseline vs MCG', measurement_type: 'unavailable', timestamp: new Date().toISOString() };
+
+  const result = {
+    ...summary,
+    observed_tokens,
+    tasks,
+    periods: {
+      today: contextTokensWithin(1),
+      seven_days: contextTokensWithin(7),
+      all_time: contextMetrics.estimated_context_savings.estimated_tokens_avoided ?? 0
+    },
+    by_tool: resources.tools,
+    by_plugin: resources.plugins,
+    by_mcp: resources.mcps,
+    by_ide: resources.ides,
+    agents: resources.agents,
+    runtimes: resources.runtimes,
+    metrics: {
+      compression_ratio: contextMetrics.compression_ratio,
+      mcg_coverage: contextMetrics.mcg_coverage,
+      coverage_basis: {
+        eligible_tasks: contextMetrics.eligible_tasks,
+        covered_tasks: contextMetrics.covered_tasks
+      },
+      estimated_context_savings: contextMetrics.estimated_context_savings,
+      real_workflow_token_savings: workflow_token_savings,
+      workflow_token_savings,
+      workflow_token_savings_percent: workflow_token_savings,
+      source: 'context.compile task coverage + paired evaluation',
+      measurement_type: workflowMeasurement,
+      timestamp: new Date().toISOString()
+    },
+    efficiency,
+    regression,
+    coverage: coverage(events, resources),
+    trust,
+    telemetry: {
+      event_count: events.length,
+      source: 'state/telemetry/events.jsonl',
+      measurement_type: events.length ? events.reduce((best, event) => event.measurement_type === 'exact' ? 'exact' : best, 'estimated') : 'unavailable',
+      timestamp: new Date().toISOString()
+    },
+    alerts: await alertHistory(root),
+    ceo_inbox: await ceoInbox(root),
+    warnings: tasks.filter(task => !task.measurable && task.active).map(task => `${task.task_id}: resultado final ausente`)
+  };
+
+  await mkdir(join(root, 'state', 'dashboard'), { recursive: true, mode: 0o700 });
+  await writeFile(join(root, 'state', 'dashboard', 'snapshot.json'), `${JSON.stringify(result, null, 2)}\n`, { mode: 0o600 });
+  return result;
 }
 
 const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lumenva Context Gateway</title><style>
 :root{color-scheme:dark;--bg:#09090B;--head:#0D0D0F;--section:#111113;--card:#161619;--inner:#1C1C20;--hover:#232328;--line:#2B2B31;--strong:#3A3A42;--muted:#787880;--sub:#A1A1AA;--text:#E4E4E7;--white:#FAFAFA;--green:#5EEAD4;--orange:#FBBF24;--red:#FB7185;--blue:#60A5FA}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top right,#18181B 0%,#09090B 42%);color:var(--text);font:14px/1.45 ui-sans-serif,system-ui,sans-serif}main{max-width:1500px;margin:auto;padding:24px}header{display:flex;justify-content:space-between;align-items:end;padding:0 0 22px;border-bottom:1px solid var(--line)}h1,h2,h3,p{margin:0}h1{font-size:24px;letter-spacing:.08em;color:var(--white)}h2{font-size:12px;letter-spacing:.12em;color:var(--sub);text-transform:uppercase;margin-bottom:12px}.sub{margin-top:5px;color:var(--sub)}.live{font-size:12px;color:var(--green)}.grid{display:grid;gap:12px;margin-top:18px}.kpis{grid-template-columns:repeat(6,minmax(120px,1fr))}.trio{grid-template-columns:repeat(3,1fr)}.two{grid-template-columns:repeat(2,minmax(0,1fr))}.card,.panel{border:1px solid var(--line);border-radius:10px;background:linear-gradient(145deg,#1C1C20 0%,#111113 100%)}.card{padding:15px}.panel{padding:18px}.label{color:var(--muted);font-size:11px;letter-spacing:.08em}.value{font-size:25px;font-weight:750;margin-top:5px}.good{color:var(--green)}.important{color:var(--orange)}.muted{color:var(--muted)}.health{display:flex;gap:16px;flex-wrap:wrap;color:var(--sub)}.health b{color:var(--text)}.dot{color:var(--green)}table{width:100%;border-collapse:collapse;font-size:12px;min-width:1060px}th,td{text-align:left;padding:9px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:500}.scroll{overflow:auto}.badge{font-size:10px;border:1px solid currentColor;border-radius:999px;padding:2px 6px;white-space:nowrap}.exact{color:var(--green)}.estimated{color:var(--orange)}.unavailable{color:var(--muted)}.resource{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:9px}.resource .card{background:var(--inner)}.empty{color:var(--muted);padding:4px 0}.bar{height:8px;border-radius:8px;background:var(--line);overflow:hidden;margin-top:8px}.bar i{display:block;height:100%;background:var(--green)}@media(max-width:1000px){main{padding:16px}.kpis,.trio,.two{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:600px){.kpis,.trio,.two{grid-template-columns:1fr}header{align-items:start;gap:10px;flex-direction:column}}
-</style></head><body><main><header><div><h1>LUMENVA CONTEXT GATEWAY</h1><p class="sub">Workspace: <b>Lumenva</b></p></div><div class="live" id="live">● CONECTANDO</div></header><section class="grid kpis" id="kpis"></section><section class="grid"><div class="panel"><div class="health" id="health"></div></div></section><section class="grid trio" id="periods"></section><section class="grid two"><div class="panel"><h2>Volume de contexto</h2><div id="volume"></div></div><div class="panel"><h2>Economia por executor</h2><div id="executors"></div></div></section><section class="grid two"><div class="panel"><h2>Maiores consumidores</h2><div id="tools"></div></div><div class="panel"><h2>Agentes ativos</h2><div id="agents"></div></div></section><section class="grid"><div class="panel"><h2>Tasks recentes</h2><div class="scroll" id="tasks"></div></div></section><section class="grid"><div class="panel"><h2>Cobertura de telemetria</h2><div class="resource" id="coverage"></div></div></section><section class="grid"><div class="panel"><h2>MCG TRUST SCORE</h2><div id="trust"></div></div></section><section class="grid"><div class="panel"><h2>Alertas globais e CEO</h2><div id="alerts"></div></div></section></main><script>
+</style></head><body><main><header><div><h1>LUMENVA CONTEXT GATEWAY</h1><p class="sub">Workspace: <b>Lumenva</b></p></div><div class="live" id="live">● CONECTANDO</div></header><section class="grid kpis" id="kpis"></section><section class="grid"><div class="panel"><div class="health" id="health"></div></div></section><section class="grid trio" id="periods"></section><section class="grid two"><div class="panel"><h2>Volume de contexto</h2><div id="volume"></div></div><div class="panel"><h2>Contexto evitado por executor (estimado)</h2><div id="executors"></div></div></section><section class="grid two"><div class="panel"><h2>Maiores consumidores</h2><div id="tools"></div></div><div class="panel"><h2>Agentes ativos</h2><div id="agents"></div></div></section><section class="grid"><div class="panel"><h2>Tasks recentes</h2><div class="scroll" id="tasks"></div></div></section><section class="grid"><div class="panel"><h2>Cobertura de telemetria</h2><div class="resource" id="coverage"></div></div></section><section class="grid"><div class="panel"><h2>MCG TRUST SCORE</h2><div id="trust"></div></div></section><section class="grid"><div class="panel"><h2>Alertas globais e CEO</h2><div id="alerts"></div></div></section></main><script>
 const $=id=>document.getElementById(id),n=value=>Number.isFinite(value)?value.toLocaleString('pt-BR'):'—',p=value=>Number.isFinite(value)?value.toFixed(2)+'%':'—',e=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])),tag=type=>'<span class="badge '+type+'">'+({exact:'EXATO',estimated:'ESTIMADO',unavailable:'INDISPONÍVEL'}[type]||'INDISPONÍVEL')+'</span>',state={DONE:'CONCLUÍDA',RUNNING:'EM EXECUÇÃO',DISPATCHED:'ENVIADA',BLOCKED:'BLOQUEADA',FAILED:'FALHOU',CANCELLED:'CANCELADA',INCOMPLETE:'INCOMPLETA'};
-function cards(target,items){$(target).innerHTML=items.map(item=>'<div class="card"><div class="label">'+item[0]+'</div><div class="value '+(item[2]||'')+'">'+n(item[1])+'</div></div>').join('')}
+function cards(target,items){$(target).innerHTML=items.map(item=>'<div class="card"><div class="label">'+item[0]+'</div><div class="value '+(item[2]||'')+'">'+(item[3]==='percent'?p(item[1]):n(item[1]))+'</div></div>').join('')}
 function resource(items,key){return items.length?'<div class="resource">'+items.map(item=>'<div class="card"><b>'+e(item[key])+'</b><br><span class="muted">'+n(item.tokens)+' tokens · '+n(item.calls)+' calls</span><br>'+tag(item.measurement_type)+'</div>').join('')+'</div>':'<p class="empty">Sem observação atribuída.</p>'}
-function render(data){cards('kpis',[['TAREFAS CONCLUÍDAS',data.tasks_processed],['TAREFAS ATIVAS',data.tasks_active],['TOKENS RECEBIDOS',data.estimated_tokens_original],['TOKENS ENTREGUES',data.estimated_tokens_delivered],['TOKENS ECONOMIZADOS',data.estimated_tokens_saved,'good'],['REDUÇÃO %',p(data.reduction_percent),'important']]);$('health').innerHTML=[['MCG DAEMON',data.health.daemon],['WIRE',data.health.wire],['WORKSPACE',data.health.workspace],['SSE / AO VIVO',$('live').textContent.includes('AO VIVO')?'ONLINE':'POLLING']].map(item=>'<span><i class="dot">●</i> '+item[0]+': <b>'+e(item[1])+'</b></span>').join('');cards('periods',[['ECONOMIZADO HOJE',data.periods.today,'good'],['ECONOMIZADO 7 DIAS',data.periods.seven_days,'good'],['ECONOMIZADO ALL TIME',data.periods.all_time,'good']]);$('volume').innerHTML=[['Original',data.original_chars,'var(--blue)'],['Entregue',data.delivered_chars,'var(--orange)'],['Economizado',data.saved_chars,'var(--green)']].map(item=>'<p>'+item[0]+' <b>'+n(item[1])+'</b><span class="bar"><i style="width:'+Math.min(100,data.original_chars?item[1]/data.original_chars*100:0)+'%;background:'+item[2]+'"></i></span></p>').join('');$('executors').innerHTML=Object.values(data.by_executor).filter(item=>item.tasks_processed||item.tasks_active).map(item=>'<div class="card"><b>'+e(item.executor)+'</b><br>'+n(item.estimated_tokens_saved)+' economizados · '+p(item.reduction_percent)+'<br>'+tag(item.measurement_type)+'</div>').join('')||'<p class="empty">Sem executor concluído.</p>';$('tools').innerHTML=resource(data.by_tool,'tool');$('agents').innerHTML=data.agents.length?'<div class="resource">'+data.agents.map(agent=>'<div class="card"><b>'+e(agent.name)+'</b><br>'+e(agent.status)+' · '+e(agent.runtime||'runtime não identificado')+'<br>'+tag(agent.measurement_type)+'</div>').join('')+'</div>':'<p class="empty">Sem agente ativo observado.</p>';$('tasks').innerHTML=data.tasks.length?'<table><thead><tr><th>TASK</th><th>EXECUTOR</th><th>AGENT</th><th>RUNTIME</th><th>PLUGIN</th><th>STATUS</th><th>ORIGINAL</th><th>ENTREGUE</th><th>ECONOMIZADOS</th><th>REDUÇÃO</th><th>MEDIÇÃO</th></tr></thead><tbody>'+data.tasks.map(task=>'<tr><td>'+e(task.task_id)+'</td><td>'+e(task.executor)+'</td><td>'+e(task.agent)+'</td><td>'+e(task.runtime)+'</td><td>'+e(task.plugin)+'</td><td>'+e(state[task.status]||task.status)+'</td><td>'+n(task.original_chars)+'</td><td>'+n(task.delivered_chars)+'</td><td>'+n(task.tokens_saved)+'</td><td>'+p(task.reduction_percent)+'</td><td>'+tag(task.measurement_type)+'</td></tr>').join('')+'</tbody></table>':'<p class="empty">Sem tasks.</p>';$('coverage').innerHTML=data.coverage.map(item=>'<div class="card"><b>'+e(item.name)+'</b><br>'+tag(item.measurement_type)+'<br><span class="muted">'+e(item.source)+'</span></div>').join('');$('trust').innerHTML='<div class="resource"><div class="card"><b>'+e(data.trust.status)+'</b><br>Score: '+n(data.trust.score)+'<br>Recall: '+n(data.trust.context_recall)+' · Grounding: '+n(data.trust.evidence_grounding)+'<br>Economia qualificada: '+p(data.trust.quality_preserving_saving)+'</div></div>';const all=[...data.alerts,...data.ceo_inbox];$('alerts').innerHTML=all.length?all.map(alert=>'<p class="card">'+e(alert.severity||alert.level)+' · '+e(alert.message)+' · '+e(alert.delivery_status||'dashboard')+'</p>').join(''):'<p class="empty">Sem alertas ativos.</p>'}
+function render(data){cards('kpis',[['TAREFAS CONCLUÍDAS',data.tasks_processed],['TAREFAS ATIVAS',data.tasks_active],['TOKENS CONTEXTO ORIGINAL (EST.)',data.estimated_tokens_original],['TOKENS CONTEXTO ENTREGUE (EST.)',data.estimated_tokens_delivered],['TOKENS CONTEXTO EVITADOS (EST.)',data.estimated_tokens_saved,'good'],['COMPRESSÃO %',data.metrics.compression_ratio,'important','percent']]);$('health').innerHTML=[['MCG DAEMON',data.health.daemon],['WIRE',data.health.wire],['WORKSPACE',data.health.workspace],['SSE / AO VIVO',$('live').textContent.includes('AO VIVO')?'ONLINE':'POLLING']].map(item=>'<span><i class="dot">●</i> '+item[0]+': <b>'+e(item[1])+'</b></span>').join('');cards('periods',[['CONTEXTO EVITADO HOJE (EST.)',data.periods.today,'good'],['CONTEXTO EVITADO 7 DIAS (EST.)',data.periods.seven_days,'good'],['CONTEXTO EVITADO ALL TIME (EST.)',data.periods.all_time,'good']]);$('volume').innerHTML=[['Original',data.original_chars,'var(--blue)'],['Entregue',data.delivered_chars,'var(--orange)'],['Economizado',data.saved_chars,'var(--green)']].map(item=>'<p>'+item[0]+' <b>'+n(item[1])+'</b><span class="bar"><i style="width:'+Math.min(100,data.original_chars?item[1]/data.original_chars*100:0)+'%;background:'+item[2]+'"></i></span></p>').join('');$('executors').innerHTML=Object.values(data.by_executor).filter(item=>item.tasks_processed||item.tasks_active).map(item=>'<div class="card"><b>'+e(item.executor)+'</b><br>'+n(item.estimated_tokens_saved)+' economizados · '+p(item.reduction_percent)+'<br>'+tag(item.measurement_type)+'</div>').join('')||'<p class="empty">Sem executor concluído.</p>';$('tools').innerHTML=resource(data.by_tool,'tool');$('agents').innerHTML=data.agents.length?'<div class="resource">'+data.agents.map(agent=>'<div class="card"><b>'+e(agent.name)+'</b><br>'+e(agent.status)+' · '+e(agent.runtime||'runtime não identificado')+'<br>'+tag(agent.measurement_type)+'</div>').join('')+'</div>':'<p class="empty">Sem agente ativo observado.</p>';$('tasks').innerHTML=data.tasks.length?'<table><thead><tr><th>TASK</th><th>EXECUTOR</th><th>AGENT</th><th>RUNTIME</th><th>PLUGIN</th><th>STATUS</th><th>ORIGINAL</th><th>ENTREGUE</th><th>ECONOMIZADOS</th><th>REDUÇÃO</th><th>MEDIÇÃO</th></tr></thead><tbody>'+data.tasks.map(task=>'<tr><td>'+e(task.task_id)+'</td><td>'+e(task.executor)+'</td><td>'+e(task.agent)+'</td><td>'+e(task.runtime)+'</td><td>'+e(task.plugin)+'</td><td>'+e(state[task.status]||task.status)+'</td><td>'+n(task.original_chars)+'</td><td>'+n(task.delivered_chars)+'</td><td>'+n(task.tokens_saved)+'</td><td>'+p(task.reduction_percent)+'</td><td>'+tag(task.measurement_type)+'</td></tr>').join('')+'</tbody></table>':'<p class="empty">Sem tasks.</p>';$('coverage').innerHTML=data.coverage.map(item=>'<div class="card"><b>'+e(item.name)+'</b><br>'+tag(item.measurement_type)+'<br><span class="muted">'+e(item.source)+'</span></div>').join('');$('trust').innerHTML='<div class="resource"><div class="card"><b>'+e(data.trust.status)+'</b><br>Score: '+n(data.trust.score)+'<br>Recall: '+n(data.trust.context_recall)+' · Grounding: '+n(data.trust.evidence_grounding)+'<br>Economia qualificada: '+p(data.trust.quality_preserving_saving)+'</div></div>';const all=[...data.alerts,...data.ceo_inbox];$('alerts').innerHTML=all.length?all.map(alert=>'<p class="card">'+e(alert.severity||alert.level)+' · '+e(alert.message)+' · '+e(alert.delivery_status||'dashboard')+'</p>').join(''):'<p class="empty">Sem alertas ativos.</p>'}
 async function load(){const [stats,tasks,health]=await Promise.all(['/api/stats','/api/tasks','/api/health'].map(path=>fetch(path).then(response=>response.json())));render({...stats,tasks:tasks.tasks,health})}let poll;function fallback(){if(poll)return;$('live').textContent='● POLLING · 2s';poll=setInterval(()=>load().catch(()=>{$('live').textContent='● DESCONECTADO'}),2000)}const stream=new EventSource('/api/events');stream.onopen=()=>{$('live').textContent='● AO VIVO';if(poll){clearInterval(poll);poll=null}};stream.addEventListener('update',()=>load().catch(fallback));stream.onerror=()=>{stream.close();fallback()};load().catch(fallback);
 </script></body></html>`;
 
