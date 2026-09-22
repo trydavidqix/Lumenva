@@ -2400,3 +2400,463 @@ The new Maestri is considered operational only when:
 18. Recovery from terminated session/provider is proven.
 19. GitHub remains code source of truth.
 20. `main` is never changed or merged automatically.
+
+
+# Desktop & Mobile Product Layer — Lumenva Maestri App
+
+## Product decision
+
+Maestri is not only a web Command Center. Build a first-party **Lumenva Maestri Desktop** application plus a mobile/web companion, while keeping **Maestri Core** server-side and independent from the desktop process.
+
+The desktop app is a powerful client. Closing it must not stop cloud tasks.
+
+```text
+                    LUMENVA MAESTRI
+                           |
+        +------------------+------------------+
+        |                                     |
+ Maestri Desktop                         Web / iPhone
+ Electron + React                        same product UI
+        |                                     |
+        +--------------- Protocol ------------+
+                           |
+                      Maestri Core
+                           |
+            +--------------+--------------+
+            |              |              |
+         State          Scheduler       Policy
+            |              |              |
+            +--------------+--------------+
+                           |
+                    Provider Router
+                  /        |         \
+             Claude      Codex      Gemini/Jules
+               Cloud      Cloud        Cloud
+```
+
+## Desktop stack
+
+Initial target:
+- Electron;
+- React + TypeScript;
+- xterm.js for terminal rendering;
+- node-pty for real local PTYs;
+- typed preload/contextBridge IPC;
+- Zod validation at every IPC boundary;
+- local runtime as a process separate from renderer;
+- existing Lumenva design system where practical.
+
+Do not place PTY/process/filesystem privileges in the renderer.
+
+## Local Runtime
+
+Add a dedicated **Maestri Local Runtime**.
+
+Responsibilities:
+- PTY Manager;
+- Process Manager;
+- Agent CLI Gateway;
+- File Gateway;
+- Git Gateway;
+- SSH Host;
+- local health/heartbeat;
+- session discovery;
+- session persistence/reattach;
+- secure bridge to Maestri Core.
+
+Supported initial terminal targets:
+- PowerShell/pwsh;
+- bash/zsh where available;
+- Claude CLI;
+- Codex CLI;
+- Gemini CLI;
+- SSH sessions.
+
+Local Runtime state is operational execution state, not project truth.
+
+## Host abstraction
+
+Every local/remote interactive execution must target a Host abstraction.
+
+```text
+Host
+├── LocalHost
+├── SSHHost
+└── CloudHost
+```
+
+Contract should cover, where applicable:
+- exec;
+- spawn;
+- PTY open/write/resize/close;
+- filesystem capability;
+- git capability;
+- health;
+- environment metadata;
+- reconnect semantics.
+
+This keeps the UI independent from whether execution happens on Windows, macOS, Linux/VPS or provider cloud.
+
+## Terminal architecture
+
+```text
+React TerminalPane
+      |
+   xterm.js
+      |
+Typed Terminal Protocol
+      |
+Local Runtime / PTY Server
+      |
+   node-pty
+      |
+PowerShell / bash / claude / codex / gemini / ssh
+```
+
+Required terminal features:
+- multiple tabs;
+- split panes;
+- resize;
+- search;
+- copy/paste;
+- reconnect;
+- scrollback;
+- exit state;
+- per-session cwd;
+- environment label;
+- host label;
+- agent/task association;
+- safe session logging with secret redaction.
+
+Never expose an unauthenticated PTY over a network interface.
+
+## Desktop security boundary
+
+Renderer:
+- no direct Node integration;
+- no arbitrary process spawn;
+- no unrestricted filesystem access;
+- no secret store access.
+
+Preload:
+- narrow typed API only.
+
+Main/local runtime:
+- capability-scoped process and filesystem access;
+- allowlisted executable profiles for agent-managed launches;
+- explicit user terminal may use normal user shell privileges;
+- no privilege escalation;
+- random per-launch local bridge credential;
+- loopback-only local control endpoint by default.
+
+Remote access:
+- authenticated;
+- encrypted;
+- capability-scoped;
+- auditable;
+- no raw PTY exposure directly to the public internet.
+
+## Persistent sessions
+
+Desktop window lifecycle must be separated from agent/process lifecycle.
+
+```text
+Desktop UI closes
+      |
+Local Runtime remains (policy permitting)
+      |
+PTY / agent session continues
+      |
+Desktop reopens
+      |
+discover -> authenticate -> reattach
+```
+
+Cloud sessions are always independent from desktop lifecycle.
+
+Local persistence implementation must be abstracted so platform-specific mechanisms can differ without changing UI contracts.
+
+## Agent workspace UI
+
+Each agent/task workspace exposes:
+
+```text
+[ Chat ] [ Terminal ] [ Files ] [ Diff ] [ Editor ] [ Preview ] [ CI ] [ Evidence ]
+```
+
+Initial provider tabs:
+- Claude;
+- Codex;
+- Gemini;
+- PowerShell;
+- VPS (SSH);
+- + new terminal.
+
+Agent card state comes from real Agent Registry / ProviderRun / LocalRuntime state.
+
+## Desktop information architecture
+
+Primary sidebar:
+- Projects;
+- Dashboard;
+- Agents;
+- Tasks;
+- Approvals;
+- Terminal;
+- Files;
+- Git;
+- CI / Deploy;
+- Evidence;
+- Memory;
+- Settings.
+
+Project column:
+- project status;
+- active branch/worktree;
+- running tasks;
+- local/cloud availability.
+
+Main workspace:
+- chat/activity;
+- terminal;
+- files/editor;
+- diff;
+- preview;
+- CI/evidence.
+
+Right task panel:
+- active tasks;
+- progress;
+- provider;
+- state;
+- blocker;
+- acceptance status.
+
+Top status:
+- Cloud Online/Offline;
+- Local Connected/Disconnected;
+- provider health;
+- current project.
+
+## Mobile / iPhone companion
+
+Mobile is not a compressed desktop IDE. Prioritize control.
+
+Primary mobile tabs:
+- Chat;
+- Tasks;
+- Agents;
+- Projects.
+
+Bottom quick actions:
+- Projects;
+- Terminal;
+- Files;
+- Approvals.
+
+Mobile capabilities:
+- send Maestri messages;
+- inspect task progress;
+- approve/reject gated actions;
+- pause/resume/cancel;
+- inspect evidence/blockers;
+- switch project;
+- provider status;
+- receive actionable notifications;
+- optional terminal access with explicit connection and security gate.
+
+Do not require mobile to keep a session alive.
+
+## One UI, multiple transports
+
+Avoid building unrelated desktop and web products.
+
+Define a shared Maestri client protocol:
+
+```text
+Shared React UI / shared domain components
+            |
+       Maestri Client SDK
+       /               \
+Desktop Transport     Web Transport
+IPC/local bridge      HTTPS/WebSocket
+       \               /
+             Maestri Core
+```
+
+Desktop-only capabilities are advertised dynamically through Capability Registry.
+
+## Local + Cloud execution routing
+
+Execution Router adds locality as a first-class dimension.
+
+Inputs:
+- capability;
+- data locality;
+- host availability;
+- provider availability;
+- risk;
+- quota;
+- cost;
+- latency;
+- required interactive PTY;
+- network policy;
+- user preference.
+
+Possible routes:
+- LOCAL_CLI;
+- SSH_HOST;
+- CLAUDE_CLOUD;
+- CODEX_CLOUD;
+- GEMINI_CLOUD;
+- JULES_CLOUD;
+- GITHUB_RUNNER.
+
+Cloud remains preferred for autonomous long-running work when no local-only capability is required.
+
+## Worktree integration
+
+Every parallel write task gets isolated workspace identity.
+
+```text
+repo
+└── .worktrees/
+    ├── WP-101/
+    ├── WP-102/
+    └── WP-103/
+```
+
+UI must display:
+- task;
+- worktree;
+- branch;
+- provider/agent;
+- dirty state;
+- commit;
+- CI;
+- conflict status.
+
+No two write agents share the same worktree by default.
+
+## Command palette
+
+Add global command palette (Ctrl/Cmd+K):
+- open project;
+- open agent;
+- new terminal;
+- new task;
+- pause/resume;
+- switch host;
+- show approvals;
+- show blockers;
+- open evidence;
+- reconnect runtime;
+- search commands.
+
+Natural-language commands still go through /command/chat.
+
+## Desktop implementation phases
+
+### Phase D0 — Existing UI/runtime audit
+Inventory current Command Center components, terminal-related code, desktop experiments, local runtime code and branch variants. Mark REUSE / ADAPT / REPLACE / DROP.
+
+### Phase D1 — Desktop workspace skeleton
+Create Electron application package without duplicating business logic. Establish main/preload/renderer boundaries and shared client SDK.
+
+### Phase D2 — Typed IPC
+Define versioned Zod schemas for window, host, PTY, filesystem, git, runtime and notification messages. Add contract tests.
+
+### Phase D3 — Local Runtime
+Implement standalone local runtime lifecycle, authentication, health and capability discovery.
+
+### Phase D4 — Real terminal MVP
+Connect xterm.js -> typed bridge -> node-pty. Prove PowerShell on Windows and shell on supported Unix platform. Add resize/close/reconnect tests.
+
+### Phase D5 — Multi-terminal manager
+Tabs, splits, terminal metadata, session association, search and persistence.
+
+### Phase D6 — Agent CLI profiles
+Detect installed Claude/Codex/Gemini CLIs and expose provider launch profiles without copying credentials into Maestri storage.
+
+### Phase D7 — Host abstraction
+Implement LocalHost and SSHHost. CloudHost maps to Cloud Execution Fabric rather than pretending provider APIs are PTYs.
+
+### Phase D8 — Session persistence
+Separate desktop UI lifecycle from local runtime. Reopen and reattach to surviving sessions.
+
+### Phase D9 — Project/worktree workspace
+Bind project, task, branch, worktree, terminals, files, diff and evidence.
+
+### Phase D10 — Files + Diff
+Read scoped workspace files, Git status/diff and change navigation through typed gateways.
+
+### Phase D11 — Editor
+Embed a code editor only after filesystem/write policy is proven. Writes remain scoped to selected workspace.
+
+### Phase D12 — Preview
+Add dev-server/browser preview with explicit port/session ownership.
+
+### Phase D13 — CI/Evidence pane
+Show real checks, commits, evidence and AcceptanceManifest state.
+
+### Phase D14 — Agent Office desktop
+Bind real agent/provider/local-runtime states to cards and activity.
+
+### Phase D15 — Command Center chat
+Make Maestri chat the default top-level interaction surface, not a Claude-specific chat.
+
+### Phase D16 — Cloud/local Execution Router
+Allow task routing between local CLI, SSH and cloud providers based on capability and policy.
+
+### Phase D17 — Web transport
+Expose shared Maestri client protocol over authenticated HTTPS/WebSocket. No direct raw PTY port exposure.
+
+### Phase D18 — iPhone responsive companion
+Implement mobile control layout for chat/tasks/agents/projects/approvals and notifications.
+
+### Phase D19 — Remote terminal gate
+Only after security review, add mobile/web terminal attachment through authenticated, scoped Maestri transport.
+
+### Phase D20 — Packaging
+Produce Windows installer first, then macOS package; Linux package follows runtime validation. Add signed-update architecture without auto-enabling production updates.
+
+### Phase D21 — Recovery/chaos
+Test desktop crash, renderer crash, local runtime restart, network loss, SSH loss, Maestri Core restart and provider outage.
+
+### Phase D22 — Security review
+Threat-model PTY exposure, IPC abuse, filesystem traversal, malicious repo content, prompt injection, secret leakage, forged reconnect and remote terminal takeover.
+
+### Phase D23 — Product acceptance
+Desktop and iPhone flows must satisfy the acceptance gates below.
+
+## Desktop/mobile acceptance gates
+
+1. Desktop opens without starting any provider automatically.
+2. Local Runtime reports capabilities and health.
+3. Real PowerShell terminal works on Windows.
+4. Claude/Codex/Gemini installed CLIs can be launched in isolated terminal sessions.
+5. Closing/reopening UI can reattach to allowed surviving local sessions.
+6. Cloud tasks continue with desktop closed.
+7. Worktree identity is visible and enforced for parallel writers.
+8. Renderer cannot directly spawn arbitrary OS processes through an unrestricted API.
+9. Filesystem access is workspace/capability scoped.
+10. Remote terminal is not publicly exposed.
+11. iPhone can chat, inspect progress, approve and pause/resume.
+12. Same task state is visible on desktop and mobile.
+13. Evidence and acceptance state are identical across clients.
+14. Local/cloud routing is explicit and auditable.
+15. Provider credentials are not copied into project files or Maestri logs.
+16. Desktop app is optional for cloud execution.
+17. Existing Maestri desktop dependency can be removed without losing orchestration capability.
+
+## Product UX target
+
+The approved visual direction is a dark Lumenva command-room interface with:
+- projects and agents on the left;
+- Maestri chat/activity in the center;
+- live task progress on the right;
+- terminal + explorer in the lower workspace;
+- clear Cloud/Local connectivity state;
+- responsive iPhone companion focused on chat, progress and approvals.
+
+The UI must remain information-dense but operational: every status shown should be backed by real state, never decorative fake progress.
