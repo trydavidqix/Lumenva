@@ -22,6 +22,8 @@ This gate is for the isolated `vps` branch only. It is read-only with respect to
 | Jules SDK / Agentic Workflows | Installed and doctor-validated | SDK smoke passed; `gh-aw v0.88.8`, doctor PASS |
 | Codex Action | Prepared, not executed | Manual `vps`-only workflow; `OPENAI_API_KEY` remains external |
 | Jules Action | Prepared, not executed | Manual `vps`-only workflow; `JULES_API_KEY` remains external |
+| GitHub Actions secrets | Not configured | Remote `gh secret list` returned no repository secrets |
+| Remote `vps` branch | Behind local worktree | New commits/workflows remain local; no push performed |
 | Codex GitHub MCP | Configured with official native binary | Worktree `.codex/config.toml` uses read-only + lockdown; Codex host auth probe remains `Unsupported` |
 | Claude GitHub MCP | Configured but unhealthy | OAuth dynamic registration is unsupported by the configured endpoint |
 | Claude Docs MCP | Healthy | `Connected` |
@@ -49,3 +51,4 @@ The local rollout safety gate is implemented. F25 remains open for external conf
 - The official GitHub MCP Server supports a native stdio binary or PAT/OAuth; the Docker path is explicitly excluded here because Docker is not installed.
 - Codex Action requires a provider API secret in GitHub Actions; Jules Action requires `JULES_API_KEY`. No secrets are created automatically, so those workflows remain unconfigured until the owner supplies names, scope, and environment.
 - The two workflow files are intentionally manual and `vps`-guarded. Static safety checks passed; `gh aw validate` is not applicable because these are standard YAML workflows and the repository has no Agentic Workflow Markdown source files. No workflow was dispatched.
+- Remote metadata was read-only: repository `trydavidqix/Lumenva` has default branch `main`, no repository Actions secrets were listed, and the local `vps` changes were not pushed.

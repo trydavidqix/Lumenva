@@ -60,3 +60,5 @@ SDKs locais e `gh-aw` foram instalados e validados: smoke ESM dos SDKs sem chama
 O GitHub MCP oficial oferece caminho nativo stdio/OAuth e caminho PAT; o caminho Docker não entra nesta preparação. A documentação oficial do Codex Action exige secret do provider e a do Jules Action exige `JULES_API_KEY`; esses valores não existem no ambiente auditado e não foram inventados.
 
 Foram adicionados `.github/workflows/maestri-v3-codex-manual.yml` e `.github/workflows/maestri-v3-jules-manual.yml`: ambos são `workflow_dispatch`, aceitam somente a branch `vps` e têm `contents: read`. A validação estática passou; não foram disparados por falta dos secrets externos.
+
+Consulta read-only ao repositório remoto `trydavidqix/Lumenva` não encontrou secrets de Actions. Os workflows novos e os commits da preparação permanecem apenas no worktree local; nenhum push ou merge foi executado.
