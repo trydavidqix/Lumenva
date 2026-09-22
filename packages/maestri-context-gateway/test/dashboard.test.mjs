@@ -138,3 +138,41 @@ test('dashboard exposes resource groups, CEO alerts and persisted summary', asyn
   assert.ok(Array.isArray(stats.agents));
   assert.equal(await fs.access(path.join(root, 'state', 'dashboard', 'snapshot.json')).then(() => true), true);
 });
+
+
+test('dashboard exposes every M0.12 view without fake zero observations', async t => {
+  const fs = await import('node:fs/promises');
+  const path = await import('node:path');
+  const os = await import('node:os');
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'mcg-dashboard-views-'));
+  const server = await createDashboardServer({ root, port: 0, wireProbe: async () => ({ online: false, workspace: 'Lumenva' }) });
+  t.after(async () => { await new Promise(resolve => server.close(resolve)); await fs.rm(root, { recursive: true, force: true }); });
+  const response = await get(server.address().port, '/api/views');
+  assert.equal(response.status, 200);
+  const views = JSON.parse(response.body).views;
+  assert.deepEqual(Object.keys(views), ['Overview','History','Traces','Tasks','Agents','Tools','Plugins','MCPs','Cache','Memory','Validation','Alerts']);
+  assert.equal(views.Cache.status, 'UNAVAILABLE');
+  assert.equal(views.Cache.samples, null);
+  assert.equal(views.Memory.records, null);
+  assert.equal(views.Validation.paired_runs, null);
+  assert.equal(views.Validation.status, 'UNVALIDATED');
+  assert.equal(response.body.includes('NaN'), false);
+  for (const endpoint of ['/api/history','/api/cache','/api/memory','/api/validation']) {
+    const item = await get(server.address().port, endpoint);
+    assert.equal(item.status, 200);
+    assert.equal(item.body.includes('NaN'), false);
+  }
+});
+
+test('dashboard periods stay unavailable when no context compile was observed', async t => {
+  const fs = await import('node:fs/promises');
+  const path = await import('node:path');
+  const os = await import('node:os');
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'mcg-dashboard-periods-'));
+  const server = await createDashboardServer({ root, port: 0, wireProbe: async () => ({ online: false, workspace: 'Lumenva' }) });
+  t.after(async () => { await new Promise(resolve => server.close(resolve)); await fs.rm(root, { recursive: true, force: true }); });
+  const stats = JSON.parse((await get(server.address().port, '/api/stats')).body);
+  assert.equal(stats.periods.today, null);
+  assert.equal(stats.periods.seven_days, null);
+  assert.equal(stats.periods.all_time, null);
+});

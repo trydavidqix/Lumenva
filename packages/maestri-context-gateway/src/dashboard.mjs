@@ -5,10 +5,12 @@ import { join } from 'node:path';
 import { ROOT } from './core.mjs';
 import { loadWireConfig, wireRequest } from './wire.mjs';
 import { aggregateTelemetry, alertHistory, ceoInbox, coverage, discoverResources, evaluateAlerts, evaluateAnomalies, telemetryEvents } from './telemetry.mjs';
-import { latestEvaluation, trustScore } from './evals.mjs';
+import { aggregatePairedEvaluations, evaluationRuns, latestEvaluation, trustScore } from './evals.mjs';
 import { listTraces, loadTrace } from './traces.mjs';
 import { getEventBus } from './events/bus.mjs';
 import { efficiencyScore, regressionWatch } from './scores.mjs';
+import { getHistoryStore, HISTORY_TYPES } from './history/store.mjs';
+import { MEMORY_LAYERS, MEMORY_NAMESPACES, memoryEvents, retrievalHistory } from './context/memory.mjs';
 
 const HOST = '127.0.0.1';
 const PORT = 7435;
@@ -217,9 +219,9 @@ export async function dashboardStats(root = ROOT) {
     observed_tokens,
     tasks,
     periods: {
-      today: contextTokensWithin(1),
-      seven_days: contextTokensWithin(7),
-      all_time: contextMetrics.estimated_context_savings.estimated_tokens_avoided ?? 0
+      today: contextMetrics.compiles.length ? contextTokensWithin(1) : null,
+      seven_days: contextMetrics.compiles.length ? contextTokensWithin(7) : null,
+      all_time: contextMetrics.estimated_context_savings.estimated_tokens_avoided
     },
     by_tool: resources.tools,
     by_plugin: resources.plugins,
@@ -262,6 +264,99 @@ export async function dashboardStats(root = ROOT) {
   return result;
 }
 
+
+async function cacheView(root) {
+  const rows = await getHistoryStore(root).query('cache_metrics', { period: 'ALL_TIME', limit: 5000 });
+  const latest = rows.at(-1)?.data || null;
+  const observed = rows.length > 0;
+  return {
+    status: observed ? 'OBSERVED' : 'UNAVAILABLE',
+    samples: observed ? rows.length : null,
+    latest: latest ? {
+      cache_hits: Number.isFinite(latest.cache_hits) ? latest.cache_hits : null,
+      cache_misses: Number.isFinite(latest.cache_misses) ? latest.cache_misses : null,
+      cache_hit_rate: Number.isFinite(latest.cache_hit_rate) ? latest.cache_hit_rate : null,
+      tokens_avoided_estimated: Number.isFinite(latest.tokens_avoided_estimated) ? latest.tokens_avoided_estimated : null,
+      context_reused: typeof latest.context_reused === 'boolean' ? latest.context_reused : null
+    } : null,
+    measurement_type: latest?.measurement_type || 'unavailable',
+    source: 'HistoryStore cache_metrics',
+    timestamp: new Date().toISOString()
+  };
+}
+
+async function historyView(root) {
+  const store = getHistoryStore(root);
+  const available = new Set(await store.listAvailableTypes());
+  const types = {};
+  for (const type of HISTORY_TYPES) {
+    if (!available.has(type)) {
+      types[type] = { status: 'UNAVAILABLE', records: null, measurement_type: 'unavailable', source: `state/history/raw/${type}.jsonl` };
+      continue;
+    }
+    const rows = await store.query(type, { period: 'ALL_TIME', limit: 5000 });
+    types[type] = { status: 'OBSERVED', records: rows.length, measurement_type: rows.every(row => row.measurement_type === 'exact') ? 'exact' : 'estimated', source: `state/history/raw/${type}.jsonl` };
+  }
+  return { types, source: 'HistoryStore', measurement_type: available.size ? 'exact' : 'unavailable', timestamp: new Date().toISOString() };
+}
+
+async function memoryView(root) {
+  const [events, retrievals] = await Promise.all([memoryEvents(root), retrievalHistory(root)]);
+  const latest = new Map();
+  for (const event of events) if (event.memory?.id) latest.set(event.memory.id, event.memory);
+  const records = [...latest.values()];
+  const count = filter => records.filter(filter).length;
+  return {
+    status: events.length ? 'OBSERVED' : 'UNAVAILABLE',
+    records: events.length ? records.length : null,
+    event_count: events.length || null,
+    retrieval_count: retrievals.length || null,
+    layers: Object.fromEntries(MEMORY_LAYERS.map(layer => [layer, events.length ? count(item => item.layer === layer) : null])),
+    namespaces: Object.fromEntries(MEMORY_NAMESPACES.map(namespace => [namespace, events.length ? count(item => item.namespace?.startsWith(namespace)) : null])),
+    statuses: events.length ? Object.fromEntries([...new Set(records.map(item => item.status))].map(status => [status, count(item => item.status === status)])) : null,
+    source: 'state/memory/events.jsonl + retrieval.jsonl',
+    measurement_type: events.length ? 'exact' : 'unavailable',
+    timestamp: new Date().toISOString()
+  };
+}
+
+async function validationView(root) {
+  const [runs, aggregate] = await Promise.all([evaluationRuns(root), aggregatePairedEvaluations(root)]);
+  const trust = trustScore({ ...aggregate, dataset_size: aggregate.dataset_size, last_validation: runs.at(-1)?.timestamp || null });
+  return {
+    status: trust.status,
+    paired_runs: aggregate.dataset_size || null,
+    minimum_dataset: trust.minimum_dataset,
+    categories: Object.keys(aggregate.categories).length ? aggregate.categories : null,
+    trust,
+    latest_run_id: runs.at(-1)?.run_id || null,
+    source: aggregate.source,
+    measurement_type: aggregate.measurement_type,
+    timestamp: new Date().toISOString()
+  };
+}
+
+export async function dashboardViews(root = ROOT) {
+  const [stats, history, traces, cache, memory, validation] = await Promise.all([
+    dashboardStats(root), historyView(root), listTraces(root), cacheView(root), memoryView(root), validationView(root)
+  ]);
+  const unavailable = (source) => ({ status: 'UNAVAILABLE', observations: null, measurement_type: 'unavailable', source, timestamp: new Date().toISOString() });
+  return {
+    Overview: { status: 'OBSERVED', tasks_processed: stats.tasks_processed, tasks_active: stats.tasks_active, metrics: stats.metrics, measurement_type: stats.telemetry.measurement_type, source: stats.telemetry.source, timestamp: new Date().toISOString() },
+    History: history,
+    Traces: traces.length ? { status: 'OBSERVED', count: traces.length, traces, measurement_type: 'exact', source: 'state/telemetry/traces/*.jsonl', timestamp: new Date().toISOString() } : unavailable('state/telemetry/traces/*.jsonl'),
+    Tasks: { status: stats.tasks.length ? 'OBSERVED' : 'UNAVAILABLE', count: stats.tasks.length || null, tasks: stats.tasks.length ? stats.tasks : null, measurement_type: stats.tasks.length ? 'estimated' : 'unavailable', source: 'tasks/*/state.json + evidence', timestamp: new Date().toISOString() },
+    Agents: { status: stats.agents.length ? 'OBSERVED' : 'UNAVAILABLE', count: stats.agents.length || null, items: stats.agents.length ? stats.agents : null, measurement_type: stats.agents[0]?.measurement_type || 'unavailable', source: 'local-process + telemetry', timestamp: new Date().toISOString() },
+    Tools: { status: stats.by_tool.length ? 'OBSERVED' : 'UNAVAILABLE', count: stats.by_tool.length || null, items: stats.by_tool.length ? stats.by_tool : null, measurement_type: stats.by_tool[0]?.measurement_type || 'unavailable', source: 'state/telemetry/events.jsonl', timestamp: new Date().toISOString() },
+    Plugins: { status: stats.by_plugin.length ? 'OBSERVED' : 'UNAVAILABLE', count: stats.by_plugin.length || null, items: stats.by_plugin.length ? stats.by_plugin : null, measurement_type: stats.by_plugin[0]?.measurement_type || 'unavailable', source: 'explicit task metadata + telemetry', timestamp: new Date().toISOString() },
+    MCPs: { status: stats.by_mcp.length ? 'OBSERVED' : 'UNAVAILABLE', count: stats.by_mcp.length || null, items: stats.by_mcp.length ? stats.by_mcp : null, measurement_type: stats.by_mcp[0]?.measurement_type || 'unavailable', source: 'state/telemetry/events.jsonl', timestamp: new Date().toISOString() },
+    Cache: cache,
+    Memory: memory,
+    Validation: validation,
+    Alerts: { status: stats.alerts.length || stats.ceo_inbox.length ? 'OBSERVED' : 'UNAVAILABLE', count: stats.alerts.length + stats.ceo_inbox.length || null, items: stats.alerts.length || stats.ceo_inbox.length ? [...stats.alerts, ...stats.ceo_inbox] : null, measurement_type: stats.alerts.length || stats.ceo_inbox.length ? 'estimated' : 'unavailable', source: 'state/alerts/*.jsonl', timestamp: new Date().toISOString() }
+  };
+}
+
 const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lumenva Context Gateway</title><style>
 :root{color-scheme:dark;--bg:#09090B;--head:#0D0D0F;--section:#111113;--card:#161619;--inner:#1C1C20;--hover:#232328;--line:#2B2B31;--strong:#3A3A42;--muted:#787880;--sub:#A1A1AA;--text:#E4E4E7;--white:#FAFAFA;--green:#5EEAD4;--orange:#FBBF24;--red:#FB7185;--blue:#60A5FA}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top right,#18181B 0%,#09090B 42%);color:var(--text);font:14px/1.45 ui-sans-serif,system-ui,sans-serif}main{max-width:1500px;margin:auto;padding:24px}header{display:flex;justify-content:space-between;align-items:end;padding:0 0 22px;border-bottom:1px solid var(--line)}h1,h2,h3,p{margin:0}h1{font-size:24px;letter-spacing:.08em;color:var(--white)}h2{font-size:12px;letter-spacing:.12em;color:var(--sub);text-transform:uppercase;margin-bottom:12px}.sub{margin-top:5px;color:var(--sub)}.live{font-size:12px;color:var(--green)}.grid{display:grid;gap:12px;margin-top:18px}.kpis{grid-template-columns:repeat(6,minmax(120px,1fr))}.trio{grid-template-columns:repeat(3,1fr)}.two{grid-template-columns:repeat(2,minmax(0,1fr))}.card,.panel{border:1px solid var(--line);border-radius:10px;background:linear-gradient(145deg,#1C1C20 0%,#111113 100%)}.card{padding:15px}.panel{padding:18px}.label{color:var(--muted);font-size:11px;letter-spacing:.08em}.value{font-size:25px;font-weight:750;margin-top:5px}.good{color:var(--green)}.important{color:var(--orange)}.muted{color:var(--muted)}.health{display:flex;gap:16px;flex-wrap:wrap;color:var(--sub)}.health b{color:var(--text)}.dot{color:var(--green)}table{width:100%;border-collapse:collapse;font-size:12px;min-width:1060px}th,td{text-align:left;padding:9px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:500}.scroll{overflow:auto}.badge{font-size:10px;border:1px solid currentColor;border-radius:999px;padding:2px 6px;white-space:nowrap}.exact{color:var(--green)}.estimated{color:var(--orange)}.unavailable{color:var(--muted)}.resource{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:9px}.resource .card{background:var(--inner)}.empty{color:var(--muted);padding:4px 0}.bar{height:8px;border-radius:8px;background:var(--line);overflow:hidden;margin-top:8px}.bar i{display:block;height:100%;background:var(--green)}@media(max-width:1000px){main{padding:16px}.kpis,.trio,.two{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:600px){.kpis,.trio,.two{grid-template-columns:1fr}header{align-items:start;gap:10px;flex-direction:column}}
 </style></head><body><main><header><div><h1>LUMENVA CONTEXT GATEWAY</h1><p class="sub">Workspace: <b>Lumenva</b></p></div><div class="live" id="live">● CONECTANDO</div></header><section class="grid kpis" id="kpis"></section><section class="grid"><div class="panel"><div class="health" id="health"></div></div></section><section class="grid trio" id="periods"></section><section class="grid two"><div class="panel"><h2>Volume de contexto</h2><div id="volume"></div></div><div class="panel"><h2>Contexto evitado por executor (estimado)</h2><div id="executors"></div></div></section><section class="grid two"><div class="panel"><h2>Maiores consumidores</h2><div id="tools"></div></div><div class="panel"><h2>Agentes ativos</h2><div id="agents"></div></div></section><section class="grid"><div class="panel"><h2>Tasks recentes</h2><div class="scroll" id="tasks"></div></div></section><section class="grid"><div class="panel"><h2>Cobertura de telemetria</h2><div class="resource" id="coverage"></div></div></section><section class="grid"><div class="panel"><h2>MCG TRUST SCORE</h2><div id="trust"></div></div></section><section class="grid"><div class="panel"><h2>Alertas globais e CEO</h2><div id="alerts"></div></div></section></main><script>
@@ -287,6 +382,11 @@ export function createDashboardServer({ root = ROOT, port = PORT, wireProbe } = 
       if (req.url === '/') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); return res.end(html); }
       if (req.url === '/api/events') { res.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', Connection: 'keep-alive', 'Cache-Control': 'no-cache' }); clients.add(res); await publish(); req.on('close', () => clients.delete(res)); return; }
       if (req.url === '/api/stats') return sendJson(res, await dashboardStats(root));
+      if (req.url === '/api/views') return sendJson(res, { views: await dashboardViews(root), source: 'dashboard view registry', measurement_type: 'exact', timestamp: new Date().toISOString() });
+      if (req.url === '/api/history') return sendJson(res, await historyView(root));
+      if (req.url === '/api/cache') return sendJson(res, await cacheView(root));
+      if (req.url === '/api/memory') return sendJson(res, await memoryView(root));
+      if (req.url === '/api/validation') return sendJson(res, await validationView(root));
       if (req.url === '/api/tasks') return sendJson(res, { tasks: await taskStats(root), source: 'tasks/*/state.json + evidence', measurement_type: 'estimated', timestamp: new Date().toISOString() });
       if (req.url === '/api/health') return sendJson(res, await health(root, wireProbe));
       if (req.url === '/api/trust') return sendJson(res, (await dashboardStats(root)).trust);
