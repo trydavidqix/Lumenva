@@ -4,3 +4,8 @@ export * from './execution-port';
 export * from './codex-adapter';
 export * from './antigravity-adapter';
 export * from './quota-router';
+export * from './model-registry';
+export * from './routing-policy';
+export * from './escalation-engine';
+export * from './result-digest';
+export * from './handoff-guard';
