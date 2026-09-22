@@ -40,6 +40,13 @@ Auditoria concluída antes de instalar. Não foi instalado Docker, não foram re
 - Jules CLI: não instalar; fonte oficial auditada oferece SDK/API/Action, não CLI local.
 - Secrets: não criar enquanto nomes, escopo, owner e ambiente não forem definidos.
 
+## Validação posterior à instalação
+
+- `pnpm run maestri:v3:sdk-smoke`: PASS; imports ESM de Codex/Jules, sem chamada externa.
+- `gh aw doctor`: PASS; autenticação GitHub CLI verificada.
+- `gh aw version`: `v0.88.8`.
+- `docker`, `kubectl`, `supabase` e `jules`: ausentes; mantidos fora do escopo conforme decisão do Owner.
+
 ## Próximo gate
 
 SDKs locais e `gh-aw` foram instalados e validados: smoke ESM dos SDKs sem chamada externa; `gh aw doctor` PASS; versão `gh-aw v0.88.8`. O próximo gate é configurar MCP/Actions por capability e autenticação, sem criar secrets automaticamente.
