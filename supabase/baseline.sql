@@ -10836,7 +10836,7 @@ begin
   return v_audit_id;
 end
 $$;
-revoke execute on function public.record_platform_admin_tenant_access(uuid, text) from public, anon;
+revoke execute on function public.record_platform_admin_tenant_access(uuid, text) from public, anon, authenticated;
 grant execute on function public.record_platform_admin_tenant_access(uuid, text) to platform_admin_runtime;
 
 do $$
