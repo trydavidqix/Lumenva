@@ -35,7 +35,7 @@ export async function tryAcknowledgeNotification(
     .eq("organization_id", input.organizationId)
     .eq("contact_id", input.contactId)
     .eq("ack_token", token)
-    .in("status", ["scheduled", "whatsapp_pending", "whatsapp_sent", "voice_pending", "voice_queued"])
+    .in("status", ["scheduled", "whatsapp_pending", "whatsapp_sent", "voice_pending", "voice_queued", "failed"])
     .maybeSingle();
 
   if (findError) throw new Error(`notification_ack_lookup_failed:${findError.message}`);
@@ -58,6 +58,22 @@ export async function tryAcknowledgeNotification(
     .maybeSingle();
 
   if (updateError) throw new Error(`notification_ack_update_failed:${updateError.message}`);
+
+  if (updated) {
+    // Best-effort physical cancellation of future delivery timers. The state
+    // transition above is already the authority (workers re-check TERMINAL), so
+    // a cron cancellation failure cannot undo a valid acknowledgement.
+    await admin
+      .from("cron_jobs")
+      .update({ enabled: false, updated_at: now })
+      .eq("organization_id", input.organizationId)
+      .eq("contact_id", input.contactId)
+      .eq("job_kind", "notification_delivery")
+      .eq("enabled", true)
+      .contains("payload", { notification_id: found.id })
+      .then(() => undefined);
+  }
+
   return {
     acknowledged: updated !== null,
     notificationId: updated?.id ?? found.id,
