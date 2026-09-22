@@ -15,6 +15,12 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 
 import { createMcpServer } from "@/lib/mcp/server";
 import { McpAuthError, validateBearerToken } from "@/lib/mcp/auth";
+import {
+  MCP_RATE_LIMIT,
+  MCP_RATE_WINDOW_SEC,
+  mcpAuthAttemptAllowed,
+  recordMcpAuthFailure,
+} from "@/lib/mcp/auth-rate-limit";
 import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -28,10 +34,23 @@ export const maxDuration = 300;
  * (2/s) é generoso pro uso legítimo de agente automatizado; um flood
  * malicioso ainda esbarra nele.
  */
-const MCP_RATE_LIMIT = 120;
-const MCP_RATE_WINDOW_SEC = 60;
+function rateLimitHeaders(
+  result: { count: number; limit: number; window_sec: number },
+  retryAfter: boolean,
+) {
+  return {
+    "X-RateLimit-Limit": String(result.limit),
+    "X-RateLimit-Remaining": String(Math.max(0, result.limit - result.count)),
+    ...(retryAfter ? { "Retry-After": String(result.window_sec) } : {}),
+  };
+}
 
-function jsonRpcError(code: number, message: string, status: number): Response {
+function jsonRpcError(
+  code: number,
+  message: string,
+  status: number,
+  extraHeaders: Record<string, string> = {},
+): Response {
   return new Response(
     JSON.stringify({
       jsonrpc: "2.0",
@@ -40,18 +59,36 @@ function jsonRpcError(code: number, message: string, status: number): Response {
     }),
     {
       status,
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...extraHeaders },
     },
   );
 }
 
 async function handle(req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
+
+  const authRate = await mcpAuthAttemptAllowed(req);
+  if (!authRate.allowed) {
+    return jsonRpcError(-32000, "rate_limited", 429, rateLimitHeaders(authRate, true));
+  }
+
   let auth;
   try {
     auth = await validateBearerToken(req.headers.get("authorization"));
   } catch (err) {
     if (err instanceof McpAuthError) {
+      if (err.httpStatus === 401) {
+        const failedAuthRate = await recordMcpAuthFailure(req);
+        if (!failedAuthRate.allowed) {
+          return jsonRpcError(-32000, "rate_limited", 429, rateLimitHeaders(failedAuthRate, true));
+        }
+        return jsonRpcError(
+          err.mcpCode,
+          err.message,
+          err.httpStatus,
+          rateLimitHeaders(failedAuthRate, false),
+        );
+      }
       return jsonRpcError(err.mcpCode, err.message, err.httpStatus);
     }
     const msg = err instanceof Error ? err.message : "auth_failed";
@@ -64,7 +101,7 @@ async function handle(req: NextRequest): Promise<Response> {
     MCP_RATE_WINDOW_SEC,
   );
   if (!rl.allowed) {
-    return jsonRpcError(-32000, "rate_limited", 429);
+    return jsonRpcError(-32000, "rate_limited", 429, rateLimitHeaders(rl, true));
   }
 
   const transport = new WebStandardStreamableHTTPServerTransport({});
