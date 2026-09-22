@@ -22,6 +22,10 @@ import { executeIndependentReview } from '../reviewer-executor';
 import { executeWithRetry } from '../execution-loop';
 import { redactSecrets } from '../redaction';
 import { filterHistory } from '../history-query';
+import { executeWithEscalation } from '../escalating-executor';
+import { ApprovalStore } from '../approval-store';
+import { createApprovalRequest } from '../approval-gate';
+import { telemetryEvent } from '../telemetry-event';
 
 describe('TOKENS workforce fabric', () => {
   it('prefers frontier models for planning', () => {
@@ -220,5 +224,24 @@ describe('TOKENS workforce fabric', () => {
     const rows = [{created_at:'2026-09-22T10:00:00Z',id:1},{created_at:'2026-08-01T00:00:00Z',id:2}];
     expect(filterHistory(rows,'TODAY',now).map(x=>x.id)).toEqual([1]);
     expect(filterHistory(rows,'ALL',now)).toHaveLength(2);
+  });
+
+  it('escalates from worker to professional with a hard ceiling', async () => {
+    const worker={name:'worker',async execute(c:any){return{task_id:c.task_id,provider:'worker',status:'failure' as const,files_changed:[],tests:[],evidence:'failed'}},async checkQuota(){return{provider:'worker',tokens_used:0,cost_usd:0}}};
+    const professional={name:'pro',async execute(c:any){return{task_id:c.task_id,provider:'pro',status:'success' as const,files_changed:[],tests:[],evidence:'passed'}},async checkQuota(){return{provider:'pro',tokens_used:0,cost_usd:0}}};
+    const result=await executeWithEscalation({task_id:'t',goal:'g',scope:'s',allowed_paths:[],constraints:[],base_sha:'sha'},{worker,professional});
+    expect(result.result.provider).toBe('pro');
+    expect(result.history).toContain('use-professional');
+  });
+
+  it('stores and resolves owner approvals', () => {
+    const store=new ApprovalStore();
+    const request=store.create(createApprovalRequest({task_id:'t',goal:'g',scope:'s',allowed_paths:[],constraints:[],risk:'R3',base_sha:'sha'}));
+    expect(store.resolve(request.approval_id,true,'owner').status).toBe('APPROVED');
+  });
+
+  it('redacts telemetry payloads before emission', () => {
+    const event=telemetryEvent({event_type:'test',payload:{value:'api_key=super-secret-value'}});
+    expect(JSON.stringify(event)).not.toContain('super-secret-value');
   });
 });
