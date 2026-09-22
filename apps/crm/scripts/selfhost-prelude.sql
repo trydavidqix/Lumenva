@@ -26,6 +26,12 @@ begin
 end
 $$;
 
+-- Keep the self-host prelude aligned with the test-db harness: Supabase grants
+-- these privileges by default to tables created in public.
+alter default privileges for role postgres in schema public grant all on tables to anon;
+alter default privileges for role postgres in schema public grant all on tables to authenticated;
+alter default privileges for role postgres in schema public grant all on tables to service_role;
+
 create schema if not exists auth;
 create schema if not exists extensions;
 

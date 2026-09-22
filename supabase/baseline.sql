@@ -2310,7 +2310,7 @@ CREATE INDEX "ai_agent_runs_agent_idx" ON "public"."ai_agent_runs" USING "btree"
 
 
 
-CREATE UNIQUE INDEX "ai_agent_runs_one_running_per_conv" ON "public"."ai_agent_runs" USING "btree" ("conversation_id") WHERE (("status" = 'running'::"text") AND ("is_dry_run" = false));
+CREATE UNIQUE INDEX IF NOT EXISTS "ai_agent_runs_one_running_per_conv" ON "public"."ai_agent_runs" USING "btree" ("conversation_id") WHERE (("status" = 'running'::"text") AND ("is_dry_run" = false));
 
 
 
@@ -2326,7 +2326,7 @@ CREATE INDEX "ai_agent_versions_agent_idx" ON "public"."ai_agent_versions" USING
 
 
 
-CREATE UNIQUE INDEX "ai_agents_one_default_per_org" ON "public"."ai_agents" USING "btree" ("organization_id") WHERE "is_default";
+CREATE UNIQUE INDEX IF NOT EXISTS "ai_agents_one_default_per_org" ON "public"."ai_agents" USING "btree" ("organization_id") WHERE "is_default";
 
 
 
@@ -2374,7 +2374,7 @@ CREATE INDEX "ai_invocations_org_created_idx" ON "public"."ai_invocations" USING
 
 
 
-CREATE UNIQUE INDEX "ai_kbv_one_active_per_agent" ON "public"."ai_knowledge_versions" USING "btree" ("agent_id") WHERE "is_active";
+CREATE UNIQUE INDEX IF NOT EXISTS "ai_kbv_one_active_per_agent" ON "public"."ai_knowledge_versions" USING "btree" ("agent_id") WHERE "is_active";
 
 
 
@@ -2382,11 +2382,11 @@ CREATE INDEX "ai_knowledge_sources_agent_idx" ON "public"."ai_knowledge_sources"
 
 
 
-CREATE UNIQUE INDEX "ai_knowledge_sources_unique_per_agent" ON "public"."ai_knowledge_sources" USING "btree" ("agent_id", "source_type") WHERE "is_active";
+CREATE UNIQUE INDEX IF NOT EXISTS "ai_knowledge_sources_unique_per_agent" ON "public"."ai_knowledge_sources" USING "btree" ("agent_id", "source_type") WHERE "is_active";
 
 
 
-CREATE UNIQUE INDEX "ai_models_one_default_per_provider" ON "public"."ai_models" USING "btree" ("provider") WHERE "is_default_for_provider";
+CREATE UNIQUE INDEX IF NOT EXISTS "ai_models_one_default_per_provider" ON "public"."ai_models" USING "btree" ("provider") WHERE "is_default_for_provider";
 
 
 
@@ -2590,7 +2590,7 @@ CREATE INDEX "idx_orgs_status" ON "public"."organizations" USING "btree" ("statu
 
 
 
-CREATE UNIQUE INDEX "idx_recovery_unique" ON "public"."user_recovery_codes" USING "btree" ("user_id", "code_hash");
+CREATE UNIQUE INDEX IF NOT EXISTS "idx_recovery_unique" ON "public"."user_recovery_codes" USING "btree" ("user_id", "code_hash");
 
 
 
@@ -2698,7 +2698,7 @@ CREATE INDEX "tenant_integrations_org_idx" ON "public"."tenant_integrations" USI
 
 
 
-CREATE UNIQUE INDEX "tenant_integrations_path_token_idx" ON "public"."tenant_integrations" USING "btree" ("webhook_path_token");
+CREATE UNIQUE INDEX IF NOT EXISTS "tenant_integrations_path_token_idx" ON "public"."tenant_integrations" USING "btree" ("webhook_path_token");
 
 
 
@@ -2706,43 +2706,43 @@ CREATE INDEX "tenant_integrations_status_idx" ON "public"."tenant_integrations" 
 
 
 
-CREATE UNIQUE INDEX "uniq_contacts_org_cpf" ON "public"."contacts" USING "btree" ("organization_id", "cpf_hash") WHERE (("cpf_hash" IS NOT NULL) AND ("is_merged_into" IS NULL));
+CREATE UNIQUE INDEX IF NOT EXISTS "uniq_contacts_org_cpf" ON "public"."contacts" USING "btree" ("organization_id", "cpf_hash") WHERE (("cpf_hash" IS NOT NULL) AND ("is_merged_into" IS NULL));
 
 
 
-CREATE UNIQUE INDEX "uniq_contacts_org_email" ON "public"."contacts" USING "btree" ("organization_id", "email_normalized") WHERE (("email_normalized" IS NOT NULL) AND ("is_merged_into" IS NULL));
+CREATE UNIQUE INDEX IF NOT EXISTS "uniq_contacts_org_email" ON "public"."contacts" USING "btree" ("organization_id", "email_normalized") WHERE (("email_normalized" IS NOT NULL) AND ("is_merged_into" IS NULL));
 
 
 
-CREATE UNIQUE INDEX "uniq_contacts_org_phone" ON "public"."contacts" USING "btree" ("organization_id", "phone_number") WHERE (("phone_number" IS NOT NULL) AND ("is_merged_into" IS NULL));
+CREATE UNIQUE INDEX IF NOT EXISTS "uniq_contacts_org_phone" ON "public"."contacts" USING "btree" ("organization_id", "phone_number") WHERE (("phone_number" IS NOT NULL) AND ("is_merged_into" IS NULL));
 
 
 
-CREATE UNIQUE INDEX "uniq_crm_lead_links_lead_target_link" ON "public"."crm_lead_links" USING "btree" ("lead_id", "target_kind", "target_id", "link_kind");
+CREATE UNIQUE INDEX IF NOT EXISTS "uniq_crm_lead_links_lead_target_link" ON "public"."crm_lead_links" USING "btree" ("lead_id", "target_kind", "target_id", "link_kind");
 
 
 
-CREATE UNIQUE INDEX "uniq_crm_leads_org_source_external" ON "public"."crm_leads" USING "btree" ("organization_id", "source", "external_id") WHERE ("external_id" IS NOT NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS "uniq_crm_leads_org_source_external" ON "public"."crm_leads" USING "btree" ("organization_id", "source", "external_id") WHERE ("external_id" IS NOT NULL);
 
 
 
-CREATE UNIQUE INDEX "uniq_crm_pipelines_org_default" ON "public"."crm_pipelines" USING "btree" ("organization_id") WHERE ("is_default" = true);
+CREATE UNIQUE INDEX IF NOT EXISTS "uniq_crm_pipelines_org_default" ON "public"."crm_pipelines" USING "btree" ("organization_id") WHERE ("is_default" = true);
 
 
 
-CREATE UNIQUE INDEX "uniq_crm_pipelines_org_slug" ON "public"."crm_pipelines" USING "btree" ("organization_id", "slug");
+CREATE UNIQUE INDEX IF NOT EXISTS "uniq_crm_pipelines_org_slug" ON "public"."crm_pipelines" USING "btree" ("organization_id", "slug");
 
 
 
-CREATE UNIQUE INDEX "uniq_crm_stages_pipeline_lost" ON "public"."crm_stages" USING "btree" ("pipeline_id") WHERE (("is_lost" = true) AND ("is_archived" = false));
+CREATE UNIQUE INDEX IF NOT EXISTS "uniq_crm_stages_pipeline_lost" ON "public"."crm_stages" USING "btree" ("pipeline_id") WHERE (("is_lost" = true) AND ("is_archived" = false));
 
 
 
-CREATE UNIQUE INDEX "uniq_crm_stages_pipeline_slug" ON "public"."crm_stages" USING "btree" ("pipeline_id", "slug");
+CREATE UNIQUE INDEX IF NOT EXISTS "uniq_crm_stages_pipeline_slug" ON "public"."crm_stages" USING "btree" ("pipeline_id", "slug");
 
 
 
-CREATE UNIQUE INDEX "uniq_crm_stages_pipeline_won" ON "public"."crm_stages" USING "btree" ("pipeline_id") WHERE (("is_won" = true) AND ("is_archived" = false));
+CREATE UNIQUE INDEX IF NOT EXISTS "uniq_crm_stages_pipeline_won" ON "public"."crm_stages" USING "btree" ("pipeline_id") WHERE (("is_won" = true) AND ("is_archived" = false));
 
 
 
