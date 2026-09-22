@@ -56,11 +56,13 @@ function contextPacket(): ContextPacket {
 describe("MaestriDelegator", () => {
   it("resolves context before execution and returns only a digest downstream", async () => {
     const order: string[] = [];
+    let receivedPacket: ContextPacket | undefined;
     const delegator = new MaestriDelegator({
       route: async () => ({ provider: "codex", adapter: provider() }),
       resolveContext: async () => { order.push("context"); return contextPacket(); },
       execute: async ({ target, contract: taskContract, context }) => {
         order.push(`execute:${target.provider}:${context.packet_id}:${taskContract.task_id}`);
+        receivedPacket = taskContract.context_packet;
         return target.adapter!.execute(taskContract);
       },
     });
@@ -73,6 +75,7 @@ describe("MaestriDelegator", () => {
     expect(order).toEqual(["context", "execute:codex:packet-1:task-delegate"]);
     expect(result.digest.task_id).toBe("task-delegate");
     expect(result.digest.evidence).toEqual(["evidence:1"]);
+    expect(receivedPacket).toEqual(contextPacket());
   });
 
   it("rejects direct agent-to-agent requests", async () => {

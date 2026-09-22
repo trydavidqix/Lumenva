@@ -44,7 +44,8 @@ export class MaestriDelegator {
     }
 
     const context = await this.options.resolveContext(input.request, input.contract);
-    const result = await this.options.execute({ target: target as ExecutionTarget & { adapter: ExecutionPort }, contract: input.contract, context });
+    const contract = { ...input.contract, context_packet: context };
+    const result = await this.options.execute({ target: target as ExecutionTarget & { adapter: ExecutionPort }, contract, context });
     return { target, context, result, digest: createResultDigest(result) };
   }
 }

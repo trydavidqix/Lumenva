@@ -19,6 +19,25 @@ const contract: TaskContract = {
 };
 
 describe("Claude execution adapter", () => {
+  it("passes the canonical context packet through the provider contract", async () => {
+    let received: TaskContract | undefined;
+    const context_packet = {
+      packet_id: "packet-1", task_id: "task-claude", context_version: "v1", level: 0 as const,
+      objective: "inspect a bounded task", relevant_instructions: [], relevant_files: [], relevant_symbols: [],
+      prior_decisions: [], constraints: ["no writes"], available_tools: ["read_file"], evidence: [], token_budget: 1000, character_count: 20,
+    };
+    const adapter = new ClaudeAdapter({
+      run: async (contractInput) => {
+        received = contractInput;
+        return { output: JSON.stringify({ status: "success", summary: "context received", files_changed: [], commands: [], tests: [], evidence: [] }) };
+      },
+    });
+
+    await adapter.execute({ ...contract, context_packet });
+
+    expect(received?.context_packet).toEqual(context_packet);
+  });
+
   it("normalizes structured CLI output", async () => {
     const adapter = new ClaudeAdapter({
       run: async () => ({

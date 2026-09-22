@@ -1,4 +1,5 @@
 export type ExecutionRiskLevel = 'low' | 'medium' | 'high' | 'critical';
+import type { ContextPacket } from './context-packet.js';
 
 export interface BudgetLimits {
   input_tokens?: number;
@@ -24,6 +25,7 @@ export interface TaskContract {
   execution_budget: BudgetLimits;
   preferred_provider?: string;
   evidence_required: string[];
+  context_packet?: ContextPacket;
 }
 
 export type ExecutionStatus = 'success' | 'failure' | 'partial' | 'unavailable' | 'cancelled';
