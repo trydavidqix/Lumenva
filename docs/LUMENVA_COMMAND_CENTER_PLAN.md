@@ -219,6 +219,14 @@ F25 rollout e limpeza de compatibilidade
 - The fallback target has no adapter attached; it is not reported as an executable provider.
 - Coverage: operating-core 20 passed, 2 Docker-dependent tests skipped; typechecks passed.
 
+### F14/F15 progress update — 2026-09-22
+
+- Added canonical `HandoffRequest` with deterministic ID, explicit `broker: maestri`, bounded fields, and no session payload.
+- Added canonical `ResultDigest` derived from `ExecutionResult`; it carries summary, changed files, tests, decisions, risk, evidence references, and usage without commands or full logs.
+- Both contracts are exported by `operating-core` and covered by tests.
+- Full operating-core suite: 23 passed, 2 Docker-dependent tests skipped; Core typecheck passed.
+- Persistence/orchestration of handoffs and digest delivery remains in F16.
+
 ### Gates adicionais do plano completo
 
 O fechamento do Fabric exige evidência para:

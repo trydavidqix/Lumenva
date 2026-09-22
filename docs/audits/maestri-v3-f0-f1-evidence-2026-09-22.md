@@ -45,6 +45,12 @@ Focused provider usage tests: 8/8 passed. Package and Core typechecks passed.
 - When no provider is proven executable, the returned fallback contains `reason: no_healthy_provider_with_verified_quota` and no adapter.
 - Resource Router tests: 3/3 passed; full operating-core suite: 20 passed, 2 Docker-dependent tests skipped.
 
+## F14/F15 contract validation
+
+- `HandoffRequest` is deterministic, bounded, explicitly brokered by `maestri`, and excludes session transcripts.
+- `ResultDigest` is derived from `ExecutionResult` and excludes commands/full logs from the downstream payload.
+- Contract tests passed; full operating-core suite reached 23 passed and 2 Docker-dependent tests skipped.
+
 ## Comandos e resultado
 
 ```text

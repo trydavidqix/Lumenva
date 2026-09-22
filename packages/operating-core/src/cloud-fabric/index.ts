@@ -5,3 +5,5 @@ export * from './codex-adapter.js';
 export * from './claude-adapter.js';
 export * from './antigravity-adapter.js';
 export * from './quota-router.js';
+export * from './handoff.js';
+export * from './result-digest.js';
