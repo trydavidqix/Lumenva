@@ -76,6 +76,13 @@ importers:
         version: 7.0.2
 
   apps/core:
+    dependencies:
+      '@lumenva/knowledge':
+        specifier: workspace:*
+        version: link:../../packages/knowledge
+      '@lumenva/knowledge-graph':
+        specifier: workspace:*
+        version: link:../../packages/knowledge-graph
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

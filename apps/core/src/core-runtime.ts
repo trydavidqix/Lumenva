@@ -1,4 +1,6 @@
 import { CoreEventBus } from "./event-bus.js";
+import { parsePublishedMarkdown, scanKnowledgeBody } from "@lumenva/knowledge";
+import { projectPublishedNote, type KnowledgeGraph } from "@lumenva/knowledge-graph";
 import { MgcUnavailableError, type ContextRequest, type ContextResult, type MgcAdapter } from "./mcg-adapter.js";
 import type { CoreTask } from "./sqlite-store.js";
 import { SqliteStore } from "./sqlite-store.js";
@@ -110,5 +112,33 @@ export class CoreRuntime {
       });
       throw unavailable;
     }
+  }
+
+  async publishKnowledge(taskId: string, graph: Pick<KnowledgeGraph, "addEpisode">, input: {
+    namespace: string;
+    sourcePath: string;
+    markdown: string;
+  }): Promise<{ sourceId: string; version: number; idempotencyKey: string }> {
+    if (this.state !== "running") throw new Error("CoreRuntime is not running");
+    const task = this.store.getTask(taskId);
+    if (!task) throw new Error(`task not found: ${taskId}`);
+    const note = parsePublishedMarkdown(input.markdown, input.sourcePath);
+    scanKnowledgeBody(note.body);
+    await this.eventBus.publish({
+      id: `knowledge-published:${taskId}`,
+      type: "knowledge.published",
+      taskId,
+      traceId: task.traceId,
+      payload: { sourceId: note.sourceId, version: note.version, sourcePath: note.provenance.sourcePath, measurementType: "exact" },
+    });
+    const idempotencyKey = await projectPublishedNote(graph, { ...note, namespace: input.namespace });
+    await this.eventBus.publish({
+      id: `graph-projected:${taskId}`,
+      type: "graph.projected",
+      taskId,
+      traceId: task.traceId,
+      payload: { sourceId: note.sourceId, version: note.version, namespace: input.namespace, idempotencyKey, measurementType: "exact" },
+    });
+    return { sourceId: note.sourceId, version: note.version, idempotencyKey };
   }
 }

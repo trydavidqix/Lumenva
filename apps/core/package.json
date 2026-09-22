@@ -8,6 +8,10 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@lumenva/knowledge": "workspace:*",
+    "@lumenva/knowledge-graph": "workspace:*"
+  },
   "devDependencies": {
     "@types/node": "catalog:",
     "typescript": "catalog:",
