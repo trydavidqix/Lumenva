@@ -19,6 +19,9 @@ import { autonomousDecision } from '../autonomous-policy';
 import { buildValidationCorpus, DEFAULT_VALIDATION_SEEDS } from '../validation-corpus';
 import { ContextResolver } from '../context-resolver';
 import { executeIndependentReview } from '../reviewer-executor';
+import { executeWithRetry } from '../execution-loop';
+import { redactSecrets } from '../redaction';
+import { filterHistory } from '../history-query';
 
 describe('TOKENS workforce fabric', () => {
   it('prefers frontier models for planning', () => {
@@ -194,5 +197,28 @@ describe('TOKENS workforce fabric', () => {
     const { reviewExecution, review } = await executeIndependentReview({ implementation, contract:{task_id:'t',goal:'g',scope:'s',allowed_paths:[],constraints:[],base_sha:'sha'}, risk:'R2', target:{provider:'gemini',port:reviewer} });
     expect(reviewExecution.provider).toBe('gemini');
     expect(review.accepted).toBe(true);
+  });
+
+  it('retries failures with a hard bound', async () => {
+    let calls = 0;
+    const port = {
+      name:'worker',
+      async execute(contract:any){ calls++; return {task_id:contract.task_id,provider:'worker',status:(calls<2?'failure':'success') as 'failure'|'success',files_changed:[],tests:[],evidence:'e'}; },
+      async checkQuota(){ return {provider:'worker',tokens_used:0,cost_usd:0}; }
+    };
+    const result = await executeWithRetry(port,{task_id:'t',goal:'g',scope:'s',allowed_paths:[],constraints:[],base_sha:'sha'},{max_attempts:2,base_delay_ms:0,max_delay_ms:0,retryable_statuses:['failure']},async()=>{});
+    expect(result.attempts).toHaveLength(2);
+    expect(result.result.status).toBe('success');
+  });
+
+  it('redacts common secret shapes before persistence', () => {
+    expect(redactSecrets('api_key=super-secret-value token=abcdef123456')).not.toContain('super-secret-value');
+  });
+
+  it('filters persisted history by time window', () => {
+    const now = Date.parse('2026-09-22T12:00:00Z');
+    const rows = [{created_at:'2026-09-22T10:00:00Z',id:1},{created_at:'2026-08-01T00:00:00Z',id:2}];
+    expect(filterHistory(rows,'TODAY',now).map(x=>x.id)).toEqual([1]);
+    expect(filterHistory(rows,'ALL',now)).toHaveLength(2);
   });
 });
