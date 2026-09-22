@@ -80,6 +80,7 @@ supabase/.branches/
 
 # Local Maestri Context Gateway validation state
 .mcg-validation*/
+state/
 
 # Sentry Config File
 .env.sentry-build-plugin
