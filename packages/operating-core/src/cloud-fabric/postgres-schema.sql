@@ -47,3 +47,29 @@ create table if not exists maestri_routing_observations (
   created_at timestamptz not null default now()
 );
 create index if not exists maestri_routing_observations_model_idx on maestri_routing_observations(model_id, task_type, created_at desc);
+
+create table if not exists maestri_run_states (
+  run_id text primary key,
+  plan_id text not null,
+  state text not null,
+  payload jsonb not null,
+  updated_at timestamptz not null default now()
+);
+create table if not exists maestri_approvals (
+  approval_id text primary key,
+  task_id text not null,
+  risk text not null,
+  status text not null,
+  payload jsonb not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists maestri_approvals_task_idx on maestri_approvals(task_id, created_at desc);
+create table if not exists maestri_telemetry_events (
+  event_id text primary key,
+  event_type text not null,
+  task_id text,
+  execution_id text,
+  payload jsonb not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists maestri_telemetry_task_idx on maestri_telemetry_events(task_id, created_at desc);
