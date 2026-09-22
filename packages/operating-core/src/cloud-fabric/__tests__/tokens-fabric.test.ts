@@ -26,6 +26,9 @@ import { executeWithEscalation } from '../escalating-executor';
 import { ApprovalStore } from '../approval-store';
 import { createApprovalRequest } from '../approval-gate';
 import { telemetryEvent } from '../telemetry-event';
+import { validationReport } from '../validation-report';
+import { InMemoryRunStore } from '../persistent-run-store';
+import { initializeRun } from '../run-state';
 
 describe('TOKENS workforce fabric', () => {
   it('prefers frontier models for planning', () => {
@@ -243,5 +246,18 @@ describe('TOKENS workforce fabric', () => {
   it('redacts telemetry payloads before emission', () => {
     const event=telemetryEvent({event_type:'test',payload:{value:'api_key=super-secret-value'}});
     expect(JSON.stringify(event)).not.toContain('super-secret-value');
+  });
+
+  it('does not validate benchmark claims below 30 samples', () => {
+    expect(validationReport({ total:29, successes:29, success_rate:1, test_pass_rate:1, average_latency_ms:1, total_cost_usd:0 }).state).toBe('VALIDATING');
+    expect(validationReport({ total:30, successes:30, success_rate:1, test_pass_rate:1, average_latency_ms:1, total_cost_usd:0 }).state).toBe('VALIDATED');
+  });
+
+  it('round-trips resumable run state', async () => {
+    const plan=createMasterPlan({objective:'x',tasks:[{task_id:'a',objective:'a',acceptance_criteria:[]}]});
+    const store=new InMemoryRunStore();
+    const state=initializeRun(plan,'run-1');
+    await store.save(state);
+    expect((await store.get('run-1'))?.plan_id).toBe(plan.plan_id);
   });
 });
