@@ -162,4 +162,47 @@ describe("CoreRuntime MCG boundary", () => {
     expect(core.eventsList().find((event) => event.type === "mcp.catalog.resolved")?.payload).toEqual(expect.objectContaining({ serverId: "github", toolsExposed: 1, traceparent: expect.any(String) }));
     await core.stop();
   });
+
+  it("resolves progressive knowledge context before crossing the MCG boundary", async () => {
+    const core = runtime();
+    await core.start();
+    const task = await core.startTask({ id: "task-progressive", type: "task.start", idempotencyKey: "progressive-1", traceId: "trace-progressive", payload: {} });
+    let received: ContextPacket | undefined;
+    const adapter: MgcAdapter = {
+      compile: async (request) => {
+        received = request.packet;
+        return { contextVersion: "v-context-progressive", fragments: [], measurementType: "estimated", source: "context.compiler" };
+      },
+    };
+    const contract: TaskContract = {
+      taskId: task.task.id,
+      goal: "Index knowledge",
+      scope: "packages",
+      allowedPaths: ["packages"],
+      constraints: [],
+      capabilities: ["read_file"],
+      risk: "low",
+      baseSha: "abc123",
+      contextBudget: 500,
+      toolBudget: 2,
+      executionBudget: 1_000,
+      preferredProvider: "codex",
+      evidenceRequired: true,
+    };
+    const result = await core.requestProgressiveContext(task.task.id, adapter, {
+      contract,
+      retriever: {
+        symbols: async () => [{ path: "packages/knowledge/note.md", symbols: ["Context"], content: "bounded context", score: 1 }],
+        excerpts: async (_task, candidates) => candidates,
+      },
+      objective: contract.goal,
+      budgetChars: contract.contextBudget,
+      needsMoreContext: packetValue => packetValue.level < 2,
+    });
+
+    expect(result.packet.level).toBe(2);
+    expect(received?.relevantFiles[0]?.excerpt).toBe("bounded context");
+    expect(result.result.contextVersion).toBe("v-context-progressive");
+    await core.stop();
+  });
 });

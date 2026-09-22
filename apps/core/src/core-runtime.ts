@@ -1,5 +1,6 @@
 import { CoreEventBus } from "./event-bus.js";
 import { evaluateBudget } from "./context-budget.js";
+import { resolveProgressiveContext, type ProgressiveContextRetriever, type TaskContract } from "./context-engine.js";
 import { parsePublishedMarkdown, scanKnowledgeBody } from "@lumenva/knowledge";
 import { projectPublishedNote, type KnowledgeGraph } from "@lumenva/knowledge-graph";
 import { MgcUnavailableError, type ContextRequest, type ContextResult, type MgcAdapter } from "./mcg-adapter.js";
@@ -185,6 +186,27 @@ export class CoreRuntime {
       });
       throw unavailable;
     }
+  }
+
+  async requestProgressiveContext(
+    taskId: string,
+    adapter: MgcAdapter,
+    input: Omit<ContextRequest, "taskId" | "traceId" | "packet"> & {
+      contract: TaskContract;
+      retriever: ProgressiveContextRetriever;
+      instructions?: string[];
+      needsMoreContext?: (packet: Awaited<ReturnType<typeof resolveProgressiveContext>>) => boolean | Promise<boolean>;
+    },
+  ): Promise<{ packet: Awaited<ReturnType<typeof resolveProgressiveContext>>; result: ContextResult }> {
+    const packet = await resolveProgressiveContext({
+      task: input.contract,
+      retriever: input.retriever,
+      instructions: input.instructions,
+      needsMoreContext: input.needsMoreContext,
+    });
+    const { contract: _contract, retriever: _retriever, instructions: _instructions, needsMoreContext: _needsMoreContext, ...request } = input;
+    const result = await this.requestContext(taskId, adapter, { ...request, packet });
+    return { packet, result };
   }
 
   async publishKnowledge(taskId: string, graph: Pick<KnowledgeGraph, "addEpisode">, input: {
