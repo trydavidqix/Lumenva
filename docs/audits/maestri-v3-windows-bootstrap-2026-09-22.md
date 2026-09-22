@@ -42,4 +42,4 @@ Auditoria concluída antes de instalar. Não foi instalado Docker, não foram re
 
 ## Próximo gate
 
-Instalar somente os dois SDKs ausentes no workspace e a extensão oficial `gh-aw`, validar versões/health, e então documentar a arquitetura ausente antes de adicionar Actions/MCPs.
+SDKs locais e `gh-aw` foram instalados e validados: smoke ESM dos SDKs sem chamada externa; `gh aw doctor` PASS; versão `gh-aw v0.88.8`. O próximo gate é configurar MCP/Actions por capability e autenticação, sem criar secrets automaticamente.

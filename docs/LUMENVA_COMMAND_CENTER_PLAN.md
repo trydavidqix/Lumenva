@@ -1834,6 +1834,10 @@ Gaps confirmados, sem instalação automática ainda:
 5. Corrigir/configurar MCP por host usando capability probing, escopo read-only inicial e autenticação oficial; não duplicar servidores existentes.
 6. Validar SDKs, Actions, MCPs, plugins, skills, hooks e workflows com evidência reproduzível na branch `vps`.
 
+Status deste bootstrap: `docs/MAESTRI_AGENT_ARCHITECTURE.md` foi criado como contrato canônico; `@openai/codex-sdk@0.155.1`, `@google/jules-sdk@0.2.0` e a extensão oficial `gh-aw` foram instalados após confirmação de ausência. Smoke tests, health checks MCP, workflows e secrets permanecem gates separados.
+
+Plano operacional detalhado: `docs/superpowers/plans/2026-09-22-maestri-v3-bootstrap.md`.
+
 Fontes oficiais usadas para a matriz:
 
 - OpenAI Codex CLI/SDK/Action: `https://github.com/openai/codex`, `https://github.com/openai/codex/blob/main/sdk/typescript/README.md`, `https://github.com/openai/codex-action`.
