@@ -25,6 +25,7 @@ import { createInboundTurnHandler } from '@/lib/agent-engine/agent/inbound-turn'
 import { createFollowupTurnHandler, type FollowupTurnDeps } from '@/lib/agent-engine/agent/followup-turn';
 import { createCaseReplyTurnHandler } from '@/lib/agent-engine/agent/case-reply-turn';
 import { createOperatorTurnHandler } from '@/lib/agent-engine/agent/operator-turn';
+import { createNotificationDeliveryHandler } from '@/lib/notifications/worker';
 import { Mem0ContextProvider } from '@/lib/agent-engine/context/mem0-context-provider';
 import { GraphitiContextProvider } from '@/lib/agent-engine/context/graphiti-context-provider';
 import { GraphitiClient } from '@/lib/agent-engine/graph/graphiti-client';
@@ -478,6 +479,16 @@ export async function main(): Promise<void> {
   // worker que não conhecesse o kind faria os jobs morrerem em 'dead' sem que
   // ninguém entendesse por quê.
   handlers.set('operator_turn', createOperatorTurnHandler(turnDeps));
+  handlers.set(
+    'notification_delivery',
+    createNotificationDeliveryHandler({
+      supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL,
+      serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+      internalSecret: env.INTERNAL_SECRET,
+      routerEnabled: env.NOTIFICATION_ROUTER_ENABLED,
+      voiceEnabled: env.VOICE_NOTIFICATION_ENABLED,
+    }),
+  );
   await startWorker(env, handlers, log);
 }
 
