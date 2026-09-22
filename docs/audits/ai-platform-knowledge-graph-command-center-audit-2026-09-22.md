@@ -59,6 +59,7 @@ As duas fases têm gate `GO` no AI Platform. Isso prova a implementação no sta
 - Typecheck do Core: PASS.
 - `apps/core`: `CoreRuntime` com `start`, `health`, `stop` e recuperação para `RECOVERING`; 3/3 testes do pacote.
 - `apps/core`: API loopback com health, task idempotente, task get e event replay; 4/4 testes do pacote.
+- `apps/core`: adapter local chama o `compileContext` real do MCG; sucesso registra `context.requested/completed`, falha registra `context.failed` com `MCG_UNAVAILABLE`; 7/7 testes do pacote.
 - Commits: `3c951634`, `124c8448`, `ccb4d3dd`, `91523605`.
 - Ainda não existe Core/event bus nem Graph View conectado; não declarar integração completa.
 
