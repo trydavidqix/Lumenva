@@ -904,3 +904,17 @@ Additional repository-only gaps closed after the definitive validation:
 - tests covering escalation, approval resolution and telemetry redaction
 
 These components remain structural until wired to authenticated runtimes and durable external state. No external PASS is claimed.
+
+
+### Repository closure pass
+
+All remaining safe repository-only items identified in the plan review were implemented:
+- durable run-state interface plus Postgres run-state adapter
+- durable approval persistence adapter
+- redacted Postgres telemetry sink
+- Git worktree driver/manager boundary with exclusive lease enforcement
+- validation report that cannot become VALIDATED below 30 samples
+- Postgres schema extended for runs, approvals and telemetry
+- tests for the 30-sample validation gate and resumable run-state storage
+
+Repository closure status: no further provider-independent implementation is being represented as required for this TOKENS plan. Remaining Definition-of-Done gates require external execution evidence or integration surfaces outside this isolated branch: authenticated provider clients, real quota telemetry, gateway credentials, applying database migrations, live Command Center UI/runtime wiring, real browser/E2E and 30 provider-backed evaluations, followed by authorized rollout. These remain BLOCKED_EXTERNAL and are not PASS.
