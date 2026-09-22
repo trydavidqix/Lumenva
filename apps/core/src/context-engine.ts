@@ -52,6 +52,7 @@ export function resolveContext(input: {
   task: TaskContract;
   candidates?: ContextCandidate[];
   level?: ContextLevel;
+  instructions?: string[];
 }): ContextPacket {
   const { task, level = 0 } = input;
   const budget = Math.max(0, Math.floor(task.contextBudget));
@@ -60,6 +61,7 @@ export function resolveContext(input: {
     .sort(compareCandidates);
   const objective = take(task.goal, budget);
   const constraints = boundedList(task.constraints, Math.max(0, budget - objective.length));
+  const instructions = boundedList(input.instructions ?? [], Math.max(0, budget - characterCount(objective, constraints, [])));
   const files = level === 0 ? [] : candidates.map((candidate) => ({
     path: candidate.path,
     symbols: [...candidate.symbols].sort(),
@@ -71,7 +73,7 @@ export function resolveContext(input: {
     : unique(files.flatMap((file) => file.symbols)).sort();
 
   if (level >= 2) {
-    let remaining = Math.max(0, budget - characterCount(objective, constraints, []));
+    let remaining = Math.max(0, budget - characterCount(objective, [...constraints, ...instructions], []));
     for (const [index, candidate] of candidates.entries()) {
       const excerpt = take(candidate.content, remaining);
       files[index] = { ...files[index], excerpt };
@@ -83,7 +85,7 @@ export function resolveContext(input: {
     taskId: task.taskId,
     level,
     objective,
-    relevantInstructions: [],
+    relevantInstructions: instructions,
     relevantFiles: files,
     relevantSymbols: symbols,
     priorDecisions: [],
@@ -96,7 +98,7 @@ export function resolveContext(input: {
   return {
     ...packetBody,
     contextVersion: createHash("sha256").update(serialized).digest("hex"),
-    characterCount: characterCount(objective, constraints, files),
+    characterCount: characterCount(objective, [...constraints, ...instructions], files),
   };
 }
 

@@ -23,6 +23,13 @@ const candidates: ContextCandidate[] = [
 ];
 
 describe("progressive Context Engine", () => {
+  it("includes resolved instructions before lower-priority file excerpts", () => {
+    const packet = resolveContext({ task: { ...task, contextBudget: 180 }, candidates, level: 2, instructions: ["Follow the repository doctrine", "Do not expose secrets"] });
+
+    expect(packet.relevantInstructions).toEqual(["Follow the repository doctrine", "Do not expose secrets"]);
+    expect(packet.characterCount).toBeLessThanOrEqual(180);
+  });
+
   it("starts at L0 without file content and keeps a deterministic hard cap", () => {
     const packet = resolveContext({ task, candidates, level: 0 });
 
