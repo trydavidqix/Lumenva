@@ -1,0 +1,3 @@
+import type { ExecutionResult } from './execution-port';
+export interface EvidenceBundle{bundle_id:string;task_id:string;execution_id?:string;claims:string[];sources:string[];artifacts:string[];logs:string[];tests:{name?:string;passed:boolean;report:string}[];created_at:string}
+export function buildEvidenceBundle(result:ExecutionResult,claims:string[]=[]):EvidenceBundle{return{bundle_id:`evidence_${result.execution_id??result.task_id}`,task_id:result.task_id,execution_id:result.execution_id,claims,sources:[result.evidence].filter(Boolean),artifacts:result.artifacts??[],logs:result.logs??[],tests:result.tests,created_at:new Date().toISOString()}}
