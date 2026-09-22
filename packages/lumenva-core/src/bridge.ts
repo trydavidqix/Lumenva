@@ -1,7 +1,7 @@
-import type { AgentRuntime } from './agent-runtime.js';
-import type { LumenvaCore } from './core.js';
-import type { TelemetryStore } from './telemetry.js';
-import type { TerminalRuntime } from './terminal-runtime.js';
+import type { AgentRuntime } from './agent-runtime.ts';
+import type { LumenvaCore } from './core.ts';
+import type { TelemetryStore } from './telemetry.ts';
+import type { TerminalRuntime } from './terminal-runtime.ts';
 
 export interface CoreBridge {
  health():ReturnType<LumenvaCore['health']>;
