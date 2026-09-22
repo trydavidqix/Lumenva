@@ -32,7 +32,7 @@ function archiveFor(test) {
 }
 
 function questionFor(test) {
-  const noEvidence = test.no_evidence_question ? '\nIf evidence does not answer "' + test.no_evidence_question + '", answer exactly: Não há evidência suficiente.' : '';
+  const noEvidence = test.no_evidence_question ? '\nThe evidence does not contain the answer to "' + test.no_evidence_question + '". After the requested values, append exactly: Não há evidência suficiente.' : '';
   return test.question + noEvidence + '\nUse the evidence above as authoritative. If it contains the requested values, return every requested value exactly; do not claim insufficient evidence.' + '\nDo not edit files. Return only the requested answer.';
 }
 
