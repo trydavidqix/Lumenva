@@ -15,7 +15,8 @@ export {
   createHandoffRequest,
   createResultDigest,
 } from './cloud-fabric/index.js';
-export type { HandoffRequest, HandoffRequestInput, ResultDigest } from './cloud-fabric/index.js';
+export { MaestriDelegator } from './cloud-fabric/index.js';
+export type { HandoffRequest, HandoffRequestInput, ResultDigest, DelegationContext, DelegationExecutorInput, MaestriDelegatorOptions, DelegationResult } from './cloud-fabric/index.js';
 export type { ExecutionPort, TaskContract, ExecutionResult, ExecutionStatus, QuotaSnapshot, UsageSnapshot, HealthSnapshot } from './cloud-fabric/execution-port.js';
 export * from './knowledge/index.js';
 export * from './memory/index.js';

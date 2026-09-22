@@ -7,3 +7,4 @@ export * from './antigravity-adapter.js';
 export * from './quota-router.js';
 export * from './handoff.js';
 export * from './result-digest.js';
+export * from './delegation.js';

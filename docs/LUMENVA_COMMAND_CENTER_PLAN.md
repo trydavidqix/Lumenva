@@ -227,6 +227,14 @@ F25 rollout e limpeza de compatibilidade
 - Full operating-core suite: 23 passed, 2 Docker-dependent tests skipped; Core typecheck passed.
 - Persistence/orchestration of handoffs and digest delivery remains in F16.
 
+### F16 progress update — 2026-09-22
+
+- Added `MaestriDelegator` as the cross-agent broker boundary.
+- It rejects direct agent-to-agent requests, asks `ResourceRouter` for a proven target, resolves context before execution, and emits a bounded `ResultDigest`.
+- No adapter means an explicit `unavailable` result; no fake execution or full session forwarding occurs.
+- Resolver and executor are injected until Core/MCG share one canonical `ContextPacket` runtime shape.
+- Coverage: operating-core 25 passed, 2 Docker-dependent tests skipped; typechecks passed.
+
 ### Gates adicionais do plano completo
 
 O fechamento do Fabric exige evidência para:

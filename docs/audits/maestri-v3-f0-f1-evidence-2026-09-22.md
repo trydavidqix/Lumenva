@@ -51,6 +51,10 @@ Focused provider usage tests: 8/8 passed. Package and Core typechecks passed.
 - `ResultDigest` is derived from `ExecutionResult` and excludes commands/full logs from the downstream payload.
 - Contract tests passed; full operating-core suite reached 23 passed and 2 Docker-dependent tests skipped.
 
+## F16 delegation validation
+
+`MaestriDelegator` enforces `broker: maestri`, routes through `ResourceRouter`, resolves context before execution, and returns a `ResultDigest`. Direct agent-to-agent requests are rejected. Delegation tests: 2/2 passed; full operating-core suite: 25 passed and 2 Docker-dependent tests skipped.
+
 ## Comandos e resultado
 
 ```text
