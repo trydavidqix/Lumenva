@@ -4,7 +4,15 @@ export * from './event-log-adapter.js';
 export * from './job-claim-store.js';
 export * from './job-engine.js';
 export * from './receipt-store.js';
-export { ResourceRouter, CloudProvider, CodexAdapter, AntigravityAdapter, createCodexSdkRunner } from './cloud-fabric/index.js';
+export {
+  ResourceRouter,
+  CloudProvider,
+  CodexAdapter,
+  AntigravityAdapter,
+  ClaudeAdapter,
+  createCodexSdkRunner,
+  createClaudeCliRunner,
+} from './cloud-fabric/index.js';
 export type { ExecutionPort, TaskContract, ExecutionResult, ExecutionStatus, QuotaSnapshot, UsageSnapshot, HealthSnapshot } from './cloud-fabric/execution-port.js';
 export * from './knowledge/index.js';
 export * from './memory/index.js';

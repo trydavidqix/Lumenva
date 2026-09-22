@@ -2,5 +2,6 @@ export * from './cloud-job.js';
 export * from './resource-router.js';
 export * from './execution-port.js';
 export * from './codex-adapter.js';
+export * from './claude-adapter.js';
 export * from './antigravity-adapter.js';
 export * from './quota-router.js';

@@ -185,6 +185,16 @@ F24 benchmarks baseline vs Fabric
 F25 rollout e limpeza de compatibilidade
 ```
 
+### F10 progress update — 2026-09-22
+
+- `ClaudeAdapter` implements the canonical `ExecutionPort` contract.
+- It uses the existing authenticated Claude CLI; no duplicate installation was performed.
+- Execution is constrained to read-only planning mode, `Read` tool only, no permission prompts, and no session persistence.
+- Structured JSON output is validated before becoming an `ExecutionResult`; malformed provider output becomes an explicit failure.
+- Health, capabilities, usage, quota, resume, and cancel remain truthful when the CLI is unavailable; no simulated success is returned.
+- Unit coverage: 2/2 Claude adapter tests passed; operating-core suite: 13 passed, 2 Docker-dependent tests skipped.
+- The adapter is exported publicly but is not yet selected by `ResourceRouter`; provider routing waits for real Claude usage/quota collection and explicit policy wiring.
+
 ### Gates adicionais do plano completo
 
 O fechamento do Fabric exige evidência para:

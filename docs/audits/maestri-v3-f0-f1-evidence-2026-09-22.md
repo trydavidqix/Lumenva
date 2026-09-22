@@ -14,6 +14,19 @@
 - O health probe Codex verifica `codex --version` e `codex login status`; capabilities declaradas são `execute`, `structured_output` e `read_only`.
 - Testes de integração Postgres são pulados quando Docker/daemon não existem; Docker não foi instalado.
 
+## Claude adapter validation
+
+The existing authenticated Claude CLI was used; no duplicate installation was performed.
+
+```text
+pnpm --dir packages/operating-core exec vitest run src/cloud-fabric/claude-adapter.test.ts
+pnpm --dir packages/operating-core test
+pnpm --dir packages/operating-core typecheck
+pnpm --dir apps/core exec tsc --noEmit
+```
+
+Results: Claude adapter 2/2 passed; operating-core 13 passed and 2 Docker-dependent tests skipped; package and Core typechecks passed.
+
 ## Comandos e resultado
 
 ```text
