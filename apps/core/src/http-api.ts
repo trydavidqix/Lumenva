@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { buildGraphView, type KnowledgeGraph } from "@lumenva/knowledge-graph";
+import { buildGraphView, createKnowledgeGraphFromEnv, type KnowledgeGraph } from "@lumenva/knowledge-graph";
 import { CoreRuntime } from "./core-runtime.js";
 
 export type CoreHttpServer = {
@@ -12,8 +12,9 @@ export async function startCoreHttpServer(
   port: number,
   options: { graph?: Pick<KnowledgeGraph, "search"> } = {},
 ): Promise<CoreHttpServer> {
+  const graph = options.graph ?? createKnowledgeGraphFromEnv().graph;
   const server = createServer((request, response) => {
-    void route(runtime, request, response, options);
+    void route(runtime, request, response, { graph });
   });
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);

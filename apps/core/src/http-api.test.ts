@@ -46,6 +46,23 @@ describe("Core HTTP API", () => {
     expect((await (await fetch(`${server.url}/events`)).json()).events).toHaveLength(1);
   });
 
+  it("keeps the graph endpoint available with an empty read-only fallback when Graphiti is OFF", async () => {
+    const runtime = new CoreRuntime(new SqliteStore(join(mkdtempSync(join(tmpdir(), "lumenva-api-graph-off-")), "core.sqlite")));
+    await runtime.start();
+    const server = await startCoreHttpServer(runtime, 0);
+    closers.push(async () => { await server.close(); await runtime.stop(); });
+
+    const response = await fetch(`${server.url}/graph?namespace=project%3Alumenva&query=context&limit=10`);
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      readOnly: true,
+      namespace: "project:lumenva",
+      query: "context",
+      nodes: [],
+      edges: [],
+    });
+  });
+
   it("serves persisted execution evidence read-only", async () => {
     const runtime = new CoreRuntime(new SqliteStore(join(mkdtempSync(join(tmpdir(), "lumenva-api-execution-")), "core.sqlite")));
     await runtime.start();

@@ -6,3 +6,5 @@ export { GraphitiHttpClient, GraphitiHttpError } from "./graphiti-http.js";
 export type { GraphitiHttpConfig } from "./graphiti-http.js";
 export { buildGraphView } from "./graph-view.js";
 export type { GraphView, GraphViewEdge, GraphViewNode } from "./graph-view.js";
+export { createKnowledgeGraphFromEnv } from "./runtime.js";
+export type { GraphitiMode, GraphitiRuntime, GraphitiRuntimeStatus } from "./runtime.js";

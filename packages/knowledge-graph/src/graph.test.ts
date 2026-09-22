@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createProjectNamespace, GraphitiHttpClient, NullKnowledgeGraph, projectPublishedNote } from "./index.js";
+import { createProjectNamespace, createKnowledgeGraphFromEnv, GraphitiHttpClient, NullKnowledgeGraph, projectPublishedNote } from "./index.js";
 
 describe("knowledge graph contract", () => {
   it("creates a deterministic project namespace", () => {
@@ -10,6 +10,32 @@ describe("knowledge graph contract", () => {
     const graph = new NullKnowledgeGraph();
     await expect(graph.search({ namespace: "project:lumenva", query: "context", limit: 5 })).resolves.toEqual([]);
     await expect(graph.health()).resolves.toEqual({ ok: false, latencyMs: 0 });
+  });
+
+  it("keeps Graphiti OFF by default without constructing a remote client", async () => {
+    const runtime = createKnowledgeGraphFromEnv({});
+
+    expect(runtime.status).toEqual({ mode: "off", provider: "null", reason: "disabled" });
+    await expect(runtime.graph.health()).resolves.toEqual({ ok: false, latencyMs: 0 });
+  });
+
+  it("fails closed when Graphiti is enabled without complete credentials", async () => {
+    const runtime = createKnowledgeGraphFromEnv({ GRAPHITI_MODE: "on", GRAPHITI_BASE_URL: "http://graphiti.test" });
+
+    expect(runtime.status).toEqual({ mode: "on", provider: "null", reason: "invalid_configuration" });
+    await expect(runtime.graph.search({ namespace: "project:lumenva", query: "context", limit: 5 })).resolves.toEqual([]);
+  });
+
+  it("constructs the HTTP provider only when mode and configuration are valid", () => {
+    const runtime = createKnowledgeGraphFromEnv({
+      GRAPHITI_MODE: "on",
+      GRAPHITI_BASE_URL: "http://graphiti.test/",
+      GRAPHITI_API_KEY: "local-test-key",
+      GRAPHITI_TIMEOUT_MS: "1500",
+    });
+
+    expect(runtime.status).toEqual({ mode: "on", provider: "graphiti", reason: "configured" });
+    expect(runtime.graph).toBeInstanceOf(GraphitiHttpClient);
   });
 
   it("projects a published note with deterministic idempotency and provenance", async () => {

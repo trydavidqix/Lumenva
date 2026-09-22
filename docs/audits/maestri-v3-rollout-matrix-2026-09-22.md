@@ -16,6 +16,7 @@ This gate is for the isolated `vps` branch only. It is read-only with respect to
 | Docker | Not required | Docker was not installed |
 | OTLP collector | Optional/unavailable | No external collector installed or started |
 | Graphiti provider | External configuration pending | No endpoint is assumed or fabricated |
+| Graphiti local fallback | Ready | `GRAPHITI_MODE` defaults to `off`; Core returns an empty read-only graph without remote calls |
 | Provider quotas | Unavailable unless officially collected | No quota is fabricated |
 | GitHub Actions/MCP | Configuration pending in the real target environment | No production workflow was triggered |
 | Jules CLI | Not installed | No official local Jules CLI was found or required |
@@ -46,6 +47,8 @@ The unit test covers the allowed state and the three safety classes: wrong branc
 ## F25 conclusion
 
 The local rollout safety gate is implemented. F25 remains open for external configuration and compatibility cleanup: official provider quota sources, Graphiti endpoint/credentials, optional OTLP collector, real GitHub Actions/MCP configuration, and a controlled rollout on `vps`. No merge to `main` and no production deployment are authorized by this gate.
+
+The local Graphiti gate is now closed safely: `createKnowledgeGraphFromEnv()` defaults to `NullKnowledgeGraph`, fails closed for incomplete `on`/`shadow` configuration, and the Core `/graph` endpoint remains read-only with an empty result when the provider is off.
 
 ## Official-source constraints
 

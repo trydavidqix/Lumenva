@@ -66,3 +66,5 @@ O `actionlint v1.7.12` oficial foi instalado após confirmar ausência. A primei
 Consulta read-only ao repositório remoto `trydavidqix/Lumenva` não encontrou secrets de Actions. Os workflows novos e os commits da preparação permanecem apenas no worktree local; nenhum push ou merge foi executado.
 
 Após autorização explícita, `JULES_API_KEY` foi copiada do Google Secret Manager (`project=lumenva`, versão `latest`) para o secret de Actions homônimo. O valor não foi exibido, salvo ou versionado. O workflow Jules continua manual e não foi executado.
+
+O Graphiti standalone foi fechado em modo seguro local: `GRAPHITI_MODE` ausente significa `off`; configuração incompleta não cria cliente HTTP; o Core responde `/graph` com resultado read-only vazio. Nenhum endpoint remoto é chamado nesta configuração.
