@@ -40,4 +40,16 @@ describe("stateless MCP Gateway", () => {
 
     await expect(gateway.health("missing")).resolves.toEqual({ ok: false, code: "CAPABILITY_UNAVAILABLE" });
   });
+
+  it("propagates trace context and validates explicit state handles", async () => {
+    const port = server();
+    const gateway = new McpGateway([port], { ttlMs: 1_000 });
+    const handle = gateway.createStateHandle("github", 10_000, 500);
+    const traceparent = "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01";
+
+    expect(gateway.validateStateHandle(handle.handle, 10_499)).toBe(true);
+    expect(gateway.validateStateHandle(handle.handle, 10_500)).toBe(false);
+    await gateway.catalogWithContext("github", { now: 10_000, traceparent, stateHandle: handle.handle });
+    expect(port.listTools).toHaveBeenLastCalledWith({ traceparent, stateHandle: handle.handle });
+  });
 });
