@@ -55,6 +55,8 @@ As duas fases têm gate `GO` no AI Platform. Isso prova a implementação no sta
 - `packages/knowledge`: publicado local, scanner e provenance implementados; 5/5 testes.
 - `packages/knowledge-graph`: namespace, `NullKnowledgeGraph`, projection worker e adapter HTTP Graphiti; 4/4 testes.
 - Typecheck dos dois pacotes: PASS.
+- `apps/core`: SQLite persistente, migração inicial, tarefas idempotentes, replay ordenado e EventBus; 2/2 testes.
+- Typecheck do Core: PASS.
 - Commits: `3c951634`, `124c8448`, `ccb4d3dd`, `91523605`.
 - Ainda não existe Core/event bus nem Graph View conectado; não declarar integração completa.
 
