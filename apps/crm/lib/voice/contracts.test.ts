@@ -32,8 +32,9 @@ describe("voice core contracts", () => {
   });
 
   it("keeps telephony providers a closed vocabulary", () => {
-    expect(VOICE_PROVIDERS).toEqual(["telnyx"]);
+    expect(VOICE_PROVIDERS).toEqual(["telnyx", "asterisk"]);
     expect(isVoiceProvider("telnyx")).toBe(true);
+    expect(isVoiceProvider("asterisk")).toBe(true);
     expect(isVoiceProvider("anything-else")).toBe(false);
   });
 
