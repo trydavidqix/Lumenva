@@ -9,6 +9,10 @@ import { ContextEngine } from '../../context/context-engine';
 import { evidenceGate } from '../evidence-gate';
 import { budgetSnapshot } from '../budget-policy';
 import { LazyToolRegistry } from '../tool-registry';
+import { IdempotencyStore } from '../idempotency';
+import { requiresOwnerApproval } from '../approval-gate';
+import { WorktreePolicy } from '../worktree-policy';
+import { runtimePolicy } from '../runtime-policy';
 
 describe('TOKENS workforce fabric', () => {
   it('prefers frontier models for planning', () => {
@@ -110,5 +114,33 @@ describe('TOKENS workforce fabric', () => {
     tools.register({ id: 'small', capabilities: ['coding'], risk: 'R1', schema_token_estimate: 50, enabled: true });
     tools.register({ id: 'large', capabilities: ['coding'], risk: 'R1', schema_token_estimate: 500, enabled: true });
     expect(tools.resolve(['coding'], 100).map((tool) => tool.id)).toEqual(['small']);
+  });
+
+  it('deduplicates idempotent execution', async () => {
+    const store = new IdempotencyStore<number>();
+    let calls = 0;
+    const first = await store.once('x', async () => ++calls);
+    const second = await store.once('x', async () => ++calls);
+    expect(first).toBe(1);
+    expect(second).toBe(1);
+    expect(calls).toBe(1);
+  });
+
+  it('requires owner approval for high risk and protected constraints', () => {
+    const base = { task_id: 'x', goal: 'x', scope: 'x', allowed_paths: [], constraints: [], base_sha: 'a' };
+    expect(requiresOwnerApproval({ ...base, risk: 'R3' })).toBe(true);
+    expect(requiresOwnerApproval({ ...base, risk: 'R1', constraints: ['production deploy'] })).toBe(true);
+  });
+
+  it('prevents concurrent worktree writers', () => {
+    const policy = new WorktreePolicy();
+    policy.acquire('j1', 'a1', '/tmp/w');
+    expect(() => policy.acquire('j1', 'a2', '/tmp/w')).toThrow();
+  });
+
+  it('gates protected runtime actions', () => {
+    expect(runtimePolicy({ risk: 'R1' }).allowed).toBe(true);
+    expect(runtimePolicy({ risk: 'R1', touches_secrets: true }).requires_approval).toBe(true);
+    expect(runtimePolicy({ risk: 'R4' }).requires_approval).toBe(true);
   });
 });
