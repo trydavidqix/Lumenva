@@ -55,6 +55,9 @@ async function route(
       const task = runtime.task(decodeURIComponent(url.pathname.slice("/tasks/".length)));
       return task ? send(response, 200, task) : send(response, 404, { error: "TASK_NOT_FOUND" });
     }
+    if (request.method === "GET" && url.pathname === "/executions") {
+      return send(response, 200, { executions: runtime.executions() });
+    }
     if (request.method === "GET" && /^\/executions\/[^/]+$/.test(url.pathname)) {
       const execution = runtime.execution(decodeURIComponent(url.pathname.slice("/executions/".length)));
       return execution ? send(response, 200, execution) : send(response, 404, { error: "EXECUTION_NOT_FOUND" });

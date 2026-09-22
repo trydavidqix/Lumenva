@@ -66,6 +66,9 @@ describe("Core HTTP API", () => {
     const response = await fetch(`${server.url}/executions/${encodeURIComponent(record.id)}`);
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual(expect.objectContaining({ id: record.id, provider: "codex", result }));
+    const list = await fetch(`${server.url}/executions`);
+    expect(list.status).toBe(200);
+    await expect(list.json()).resolves.toEqual({ executions: [expect.objectContaining({ id: record.id, provider: "codex" })] });
   });
 
   it("serves a read-only graph view with source drill-down metadata", async () => {

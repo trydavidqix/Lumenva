@@ -185,6 +185,11 @@ export class SqliteStore {
     return row ? mapExecution(row) : null;
   }
 
+  listExecutions(): ExecutionRecord[] {
+    const rows = this.db().prepare("SELECT * FROM executions ORDER BY created_at ASC, id ASC").all() as unknown as ExecutionRow[];
+    return rows.map(mapExecution);
+  }
+
   replayEvents(): CoreEvent[] {
     const rows = this.db().prepare("SELECT * FROM events ORDER BY sequence ASC").all() as unknown as EventRow[];
     return rows.map(mapEvent);

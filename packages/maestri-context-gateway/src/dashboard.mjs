@@ -140,7 +140,31 @@ export async function health(root = ROOT, wireProbe) {
   const wire = await wireHealth(root, wireProbe); return { dashboard: { host: HOST, port: PORT }, daemon: daemon ? 'ONLINE' : 'OFFLINE', wire: wire.online ? 'ONLINE' : 'OFFLINE', workspace: wire.workspace || 'Lumenva', workspace_online: wire.online, source: 'daemon.pid + Maestri Wire', measurement_type: 'exact', timestamp: new Date().toISOString() };
 }
 
-export async function dashboardStats(root = ROOT) {
+export function createCoreExecutionFeed(baseUrl = process.env.LUMENVA_CORE_URL) {
+  if (!baseUrl) return null;
+  const origin = new URL(baseUrl);
+  if (origin.protocol !== 'http:' || !['127.0.0.1', 'localhost', '::1'].includes(origin.hostname)) throw new Error('Core API must be loopback HTTP');
+  return async () => {
+    const response = await fetch(new URL('/executions', origin), { signal: AbortSignal.timeout(5000) });
+    if (!response.ok) throw new Error(`Core execution feed HTTP ${response.status}`);
+    const body = await response.json();
+    return Array.isArray(body?.executions) ? body.executions : [];
+  };
+}
+
+export async function executionEvidence(executionFeed) {
+  const source = 'Core GET /executions/:id; read-only execution feed';
+  if (!executionFeed) return { status: 'UNAVAILABLE', count: null, executions: null, measurement_type: 'unavailable', source, timestamp: new Date().toISOString() };
+  try {
+    const raw = await executionFeed();
+    const executions = Array.isArray(raw) ? raw : Array.isArray(raw?.executions) ? raw.executions : [];
+    return { status: executions.length ? 'OBSERVED' : 'UNAVAILABLE', count: executions.length || null, executions: executions.length ? executions : null, measurement_type: executions.length ? 'exact' : 'unavailable', source, timestamp: new Date().toISOString() };
+  } catch {
+    return { status: 'UNAVAILABLE', count: null, executions: null, measurement_type: 'unavailable', source, timestamp: new Date().toISOString() };
+  }
+}
+
+export async function dashboardStats(root = ROOT, { executionFeed } = {}) {
   const [tasks, events, resources, evaluation, aggregate] = await Promise.all([
     taskStats(root),
     telemetryEvents(root),
@@ -260,7 +284,8 @@ export async function dashboardStats(root = ROOT) {
     },
     alerts: await alertHistory(root),
     ceo_inbox: await ceoInbox(root),
-    warnings: tasks.filter(task => !task.measurable && task.active).map(task => `${task.task_id}: resultado final ausente`)
+    warnings: tasks.filter(task => !task.measurable && task.active).map(task => `${task.task_id}: resultado final ausente`),
+    execution_evidence: await executionEvidence(executionFeed)
   };
 
   await mkdir(join(root, 'state', 'dashboard'), { recursive: true, mode: 0o700 });
@@ -340,9 +365,9 @@ async function validationView(root) {
   };
 }
 
-export async function dashboardViews(root = ROOT, { graphView } = {}) {
+export async function dashboardViews(root = ROOT, { graphView, executionFeed } = {}) {
   const [stats, history, traces, cache, memory, validation] = await Promise.all([
-    dashboardStats(root), historyView(root), listTraces(root), cacheView(root), memoryView(root), validationView(root)
+    dashboardStats(root, { executionFeed }), historyView(root), listTraces(root), cacheView(root), memoryView(root), validationView(root)
   ]);
   const unavailable = (source) => ({ status: 'UNAVAILABLE', observations: null, measurement_type: 'unavailable', source, timestamp: new Date().toISOString() });
   return {
@@ -355,6 +380,7 @@ export async function dashboardViews(root = ROOT, { graphView } = {}) {
     Plugins: { status: stats.by_plugin.length ? 'OBSERVED' : 'UNAVAILABLE', count: stats.by_plugin.length || null, items: stats.by_plugin.length ? stats.by_plugin : null, measurement_type: stats.by_plugin[0]?.measurement_type || 'unavailable', source: 'explicit task metadata + telemetry', timestamp: new Date().toISOString() },
     MCPs: { status: stats.by_mcp.length ? 'OBSERVED' : 'UNAVAILABLE', count: stats.by_mcp.length || null, items: stats.by_mcp.length ? stats.by_mcp : null, measurement_type: stats.by_mcp[0]?.measurement_type || 'unavailable', source: 'state/telemetry/events.jsonl', timestamp: new Date().toISOString() },
     Graph: graphView ? { ...await graphView(), measurement_type: 'exact', source: 'Core GET /graph; read-only', timestamp: new Date().toISOString() } : unavailable('Core GET /graph; graph provider not configured'),
+    Executions: stats.execution_evidence,
     Cache: cache,
     Memory: memory,
     Validation: validation,
@@ -373,7 +399,7 @@ async function load(){const [stats,tasks,health]=await Promise.all(['/api/stats'
 </script></body></html>`;
 
 const dashboardNav = '<section class="grid"><div class="panel"><h2>Command Center</h2><nav class="view-tabs" aria-label="Dashboard views" role="tablist">' +
-  ['Overview', 'History', 'Traces', 'Tasks', 'Agents', 'Tools', 'Plugins', 'MCPs', 'Graph', 'Cache', 'Memory', 'Validation', 'Alerts']
+  ['Overview', 'History', 'Traces', 'Tasks', 'Agents', 'Tools', 'Plugins', 'MCPs', 'Graph', 'Executions', 'Cache', 'Memory', 'Validation', 'Alerts']
     .map((view, index) => `<button class="view-tab" type="button" role="tab" data-view="${view}" aria-selected="${index === 0 ? 'true' : 'false'}" aria-controls="view-panel">${view}</button>`)
     .join('') +
   '</nav><div id="view-panel" role="tabpanel" tabindex="0"><p class="empty">Carregando views observadas.</p></div></div></section>';
@@ -418,9 +444,9 @@ const dashboardHtml = html
 
 function sendJson(res, body) { res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(body)); }
 
-export function createDashboardServer({ root = ROOT, port = PORT, wireProbe, graphView } = {}) {
+export function createDashboardServer({ root = ROOT, port = PORT, wireProbe, graphView, executionFeed } = {}) {
   const clients = new Set(); let previous = '';
-  const snapshot = async () => ({ stats: await dashboardStats(root), health: await health(root, wireProbe) });
+  const snapshot = async () => ({ stats: await dashboardStats(root, { executionFeed }), health: await health(root, wireProbe) });
   const publish = async () => { const data = await snapshot(); const encoded = JSON.stringify(data); if (encoded === previous) return; previous = encoded; for (const client of clients) client.write(`event: update\ndata: ${encoded}\n\n`); };
   const unsubscribe = getEventBus(root).subscribe(() => { publish().catch(() => {}); });
   let eventWatcher; try { eventWatcher = watch(join(root, 'state', 'events', 'events.jsonl'), () => { publish().catch(() => {}); }); } catch { /* polling remains fallback */ }
@@ -430,8 +456,9 @@ export function createDashboardServer({ root = ROOT, port = PORT, wireProbe, gra
     try {
       if (req.url === '/') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); return res.end(dashboardHtml); }
       if (req.url === '/api/events') { res.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', Connection: 'keep-alive', 'Cache-Control': 'no-cache' }); clients.add(res); await publish(); req.on('close', () => clients.delete(res)); return; }
-      if (req.url === '/api/stats') return sendJson(res, await dashboardStats(root));
-      if (req.url === '/api/views') return sendJson(res, { views: await dashboardViews(root, { graphView }), source: 'dashboard view registry', measurement_type: 'exact', timestamp: new Date().toISOString() });
+      if (req.url === '/api/stats') return sendJson(res, await dashboardStats(root, { executionFeed }));
+      if (req.url === '/api/views') return sendJson(res, { views: await dashboardViews(root, { graphView, executionFeed }), source: 'dashboard view registry', measurement_type: 'exact', timestamp: new Date().toISOString() });
+      if (req.url === '/api/executions') return sendJson(res, await executionEvidence(executionFeed));
       if (req.url === '/api/graph') return graphView ? sendJson(res, await graphView()) : sendJson(res, { error: 'GRAPH_UNAVAILABLE', readOnly: true, measurement_type: 'unavailable', source: 'Core GET /graph' });
       if (req.url === '/api/history') return sendJson(res, await historyView(root));
       if (req.url === '/api/cache') return sendJson(res, await cacheView(root));

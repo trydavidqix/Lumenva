@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { request } from 'node:http';
-import { createDashboardServer } from '../src/dashboard.mjs';
+import { createServer } from 'node:http';
+import { createCoreExecutionFeed, createDashboardServer } from '../src/dashboard.mjs';
 import { recordTelemetry } from '../src/telemetry.mjs';
 
 function get(port, path) {
@@ -162,7 +163,7 @@ test('dashboard exposes every M0.12 view without fake zero observations', async 
   const response = await get(server.address().port, '/api/views');
   assert.equal(response.status, 200);
   const views = JSON.parse(response.body).views;
-  assert.deepEqual(Object.keys(views), ['Overview','History','Traces','Tasks','Agents','Tools','Plugins','MCPs','Graph','Cache','Memory','Validation','Alerts']);
+  assert.deepEqual(Object.keys(views), ['Overview','History','Traces','Tasks','Agents','Tools','Plugins','MCPs','Graph','Executions','Cache','Memory','Validation','Alerts']);
   assert.equal(views.Cache.status, 'UNAVAILABLE');
   assert.equal(views.Cache.samples, null);
   assert.equal(views.Memory.records, null);
@@ -194,6 +195,39 @@ test('dashboard exposes read-only graph view and source drill-down', async t => 
   assert.equal(JSON.parse(graph.body).readOnly, true);
   assert.match((await get(server.address().port, '/')).body, /data-view="Graph"/);
   assert.match((await get(server.address().port, '/')).body, /Graph/);
+});
+
+test('dashboard exposes persisted execution evidence as a read-only view', async t => {
+  const execution = {
+    id: 'execution:task-1:codex',
+    taskId: 'task-1',
+    traceId: 'trace-1',
+    provider: 'codex',
+    status: 'success',
+    result: { task_id: 'task-1', status: 'success', summary: 'probe', files_changed: [], commands: ['git status --short'], tests: [{ passed: true, report: 'clean' }], evidence: ['evidence:probe'] }
+  };
+  const server = await createDashboardServer({ root: process.cwd(), port: 0, executionFeed: async () => [execution] });
+  t.after(() => server.close());
+  const port = server.address().port;
+  const executions = await get(port, '/api/executions');
+  assert.equal(executions.status, 200);
+  assert.deepEqual(JSON.parse(executions.body).executions, [execution]);
+  const views = JSON.parse((await get(port, '/api/views')).body).views;
+  assert.equal(views.Executions.status, 'OBSERVED');
+  assert.equal(views.Executions.count, 1);
+  assert.match((await get(port, '/')).body, /data-view="Executions"/);
+});
+
+test('core execution feed reads only the loopback Core API', async t => {
+  const core = createServer((req, res) => {
+    assert.equal(req.url, '/executions');
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ executions: [{ id: 'execution-1', provider: 'codex' }] }));
+  });
+  await new Promise(resolve => core.listen(0, '127.0.0.1', resolve));
+  t.after(() => core.close());
+  const feed = createCoreExecutionFeed(`http://127.0.0.1:${core.address().port}`);
+  assert.deepEqual(await feed(), [{ id: 'execution-1', provider: 'codex' }]);
 });
 
 test('dashboard periods stay unavailable when no context compile was observed', async t => {

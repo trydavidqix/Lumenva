@@ -45,6 +45,8 @@ Nenhum arquivo foi alterado pela prova.
 - `apps/core` passou `core-runtime` + `sqlite-store`: 4/4 testes; typecheck PASS.
 - API loopback expõe `GET /executions/:id` em modo read-only; TDD observado RED 404 → GREEN 200.
 - Suíte final de `apps/core`: 15 arquivos, 36 testes PASS; typecheck PASS.
+- Core também expõe `GET /executions`; MCG consome apenas URL loopback configurada em `LUMENVA_CORE_URL`.
+- Dashboard adicionou a view read-only `Executions`; MCG passou 36/36 testes.
 
 pnpm --filter @lumenva/core test
 Test Files: 15 passed

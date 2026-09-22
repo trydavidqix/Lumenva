@@ -7,7 +7,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { dispatch, ensureLayout, ingest, loadState, listTasks, compactResult, removeTask, sliceEvidence, waitForTerminal, stats, ROOT } from '../src/core.mjs';
 import { acceptWireMutation, loadWireConfig, openWireFeed, summarizeWireSnapshot, wireRequest, wireSnapshot } from '../src/wire.mjs';
-import { createDashboardServer } from '../src/dashboard.mjs';
+import { createCoreExecutionFeed, createDashboardServer } from '../src/dashboard.mjs';
 import { replayTask, compareReplay } from '../src/replay.mjs';
 
 const args = process.argv.slice(2);
@@ -85,7 +85,7 @@ try {
   } else if (command === 'stats') {
     print(await stats(ROOT, { tokens: args.includes('--tokens') }));
   } else if (command === 'dashboard') {
-    const server = await createDashboardServer();
+    const server = await createDashboardServer({ executionFeed: createCoreExecutionFeed() });
     const url = 'http://127.0.0.1:7435';
     process.stdout.write(`MCG dashboard: ${url}\n`);
     if (!args.includes('--no-open')) spawnSync('cmd.exe', ['/c', 'start', '', url], { windowsHide: true, stdio: 'ignore' });

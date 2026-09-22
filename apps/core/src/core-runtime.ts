@@ -67,6 +67,11 @@ export class CoreRuntime {
     return this.store.getExecution(id);
   }
 
+  executions(): ExecutionRecord[] {
+    if (this.state !== "running") return [];
+    return this.store.listExecutions();
+  }
+
   async startTask(input: {
     id: string;
     type: string;
