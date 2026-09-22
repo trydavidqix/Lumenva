@@ -30,7 +30,7 @@ This gate is for the isolated `vps` branch only. It is read-only with respect to
 | Claude GitHub MCP | Configured but unhealthy | OAuth dynamic registration is unsupported by the configured endpoint |
 | Claude Docs MCP | Healthy | `Connected` |
 | Claude Railway MCP | Configured but unauthenticated | `Needs authentication` |
-| Gemini MCP / gh-aw MCP | No usable configured server | Gemini list was not configured; `gh aw mcp list` found no workflow MCP |
+| Gemini MCP / gh-aw MCP | Gemini configured but disabled by host trust; gh-aw has no MCP | Project settings use official GitHub MCP read-only/lockdown; `gh aw mcp list` found no workflow MCP |
 
 ## Guard
 

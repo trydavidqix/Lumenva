@@ -66,7 +66,7 @@
 
 - [x] Probar os servidores MCP existentes e separar `configured` de `healthy`.
 - [x] Resolver GitHub MCP com o binário oficial em modo read-only/lockdown, sem Docker e sem expor token; Claude confirmou `Connected`.
-- [ ] Configurar Gemini MCP somente com credencial/escopo definidos pelo Owner.
+- [x] Configurar Gemini MCP no escopo do projeto usando o binário GitHub oficial em read-only/lockdown e sem token persistido; o host permanece desabilitado até o workspace ser confiado.
 - [x] Manter read-only inicial e registrar limitações.
 
 ### Task 6: Actions, secrets e integração
