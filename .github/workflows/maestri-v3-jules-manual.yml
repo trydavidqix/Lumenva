@@ -1,0 +1,23 @@
+name: Maestri V3 Jules (manual, vps only)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  jules:
+    if: github.ref_name == 'vps'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Invoke Jules against vps
+        uses: google-labs-code/jules-invoke@v1
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          starting_branch: vps
+          include_last_commit: true
+          include_commit_log: true
+          prompt: |
+            Audit the Maestri V3 implementation on branch vps only.
+            Do not merge to main, deploy production, install Docker, or create secrets.
+            Return a concise evidence-based report; do not implement changes in this run.

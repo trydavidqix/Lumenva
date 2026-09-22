@@ -1,0 +1,27 @@
+name: Maestri V3 Codex (manual, vps only)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  codex:
+    if: github.ref_name == 'vps'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout vps
+        uses: actions/checkout@v5
+        with:
+          ref: vps
+          persist-credentials: false
+
+      - name: Run Codex read-only review
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          permission-profile: ":read-only"
+          prompt: |
+            Review this Maestri V3 vps worktree only.
+            Do not modify files, create commits, push branches, merge pull requests, or access production.
+            Report only verifiable gaps in docs/LUMENVA_COMMAND_CENTER_PLAN.md and the local test evidence.
