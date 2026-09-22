@@ -130,6 +130,13 @@ begin
 end
 $$;
 
+-- Match Supabase's default table ACL before applying the baseline. Without this,
+-- privilege invariants can pass because fresh tables start more restricted than
+-- the real Supabase project.
+alter default privileges for role postgres in schema public grant all on tables to anon;
+alter default privileges for role postgres in schema public grant all on tables to authenticated;
+alter default privileges for role postgres in schema public grant all on tables to service_role;
+
 create schema if not exists auth;
 create schema if not exists extensions;
 
