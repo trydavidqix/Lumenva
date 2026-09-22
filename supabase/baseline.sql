@@ -10785,6 +10785,12 @@ grant all on public.asset_license_records to service_role;
 -- schema: callers should keep reminder body generic unless product policy says
 -- otherwise.
 
+-- Composite FK support for tenant-safe references. contacts.id is already a
+-- PK; this additive unique index lets child tables prove org + contact belong
+-- together at the database boundary.
+create unique index if not exists contacts_org_id_id_unique
+  on public.contacts (organization_id, id);
+
 create table if not exists public.notification_requests (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations(id) on delete cascade,
