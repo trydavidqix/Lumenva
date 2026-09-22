@@ -599,6 +599,9 @@ Esta integração vem do plano separado **AI Platform**, sem CRM:
 
 O nome que estava faltando é **FalkorDB**: banco de grafo open-source/free para o Graphiti. Graphiti é a camada de grafo temporal; FalkorDB é o backend originalmente planejado. A execução anterior registrou uma troca técnica para Neo4j por compatibilidade da imagem oficial do Graphiti. Essa decisão não deve ser perdida nem misturada com o CRM.
 
+Auditoria registrada em `docs/audits/ai-platform-knowledge-graph-command-center-audit-2026-09-22.md`.
+Os gates antigos estão fechados no AI Platform, mas a integração standalone começa em `0%`: os contratos e workers precisam ser extraídos do caminho CRM para `packages/` e `apps/core`.
+
 - **Obsidian Vault:** camada humana de conhecimento curado. Guarda decisões, políticas, playbooks, ADRs, notas e documentação operacional em Markdown versionado. O Context Engine consulta notas relevantes sob demanda; nunca injeta o vault inteiro.
 - **Graphiti + FalkorDB/Neo4j:** grafo temporal derivado. Representa entidades, relações, episódios, decisões, dependências e proveniência para recuperação contextual e visualização. Não é fonte de verdade e não autoriza mutações no CRM.
 - **CRM/Postgres:** fonte canônica dos fatos operacionais, identidade, consentimento, auditoria e estado de negócio.
@@ -1680,13 +1683,15 @@ Não aceitar como PASS:
    16. Fabric F19–F21: OTel/MCP traces e dashboards de contexto/token
    17. terminal runtime + Electron Desktop shell
    18. Canvas + Agent Nodes + Live Office / Pixel Floor
-   19. ObsidianAdapter + KnowledgeGraphPort + GraphProjectionWorker
-   20. Graph View read-only + provenance drill-down
-   21. Scene Editor + auto-spawn de agents
-   22. budgets + alerts + Lumenva Link
-   23. Fabric F22–F25: otimização, integração, benchmark e cleanup de compatibilidade
-   24. mobile/remote
-   25. refinamento visual e acessibilidade
+   19. Portar AI Platform Phase 3: `packages/knowledge` sem dependência de CRM
+   20. Portar AI Platform Phase 4: `packages/knowledge-graph` + Graphiti/Neo4j
+   21. GraphProjectionWorker + Context Engine retrieval progressivo
+   22. Graph View read-only + provenance drill-down
+   23. Scene Editor + auto-spawn de agents
+   24. budgets + alerts + Lumenva Link
+   25. Fabric F22–F25: otimização, integração, benchmark e cleanup de compatibilidade
+   26. mobile/remote
+   27. refinamento visual e acessibilidade
 
 ## Regra de execução contínua
 
