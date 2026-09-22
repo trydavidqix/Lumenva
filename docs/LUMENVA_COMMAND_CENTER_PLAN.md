@@ -1729,7 +1729,7 @@ Só termina quando:
 
 ACTIVE — M0 VALIDATED / F0-F1 CONTRACTS VALIDATED / M1 CORE GREEN / PROVIDER CONFIGURATION NEXT
 
-M0, a dashboard, F0/F1 e M1 Core foram validados no worktree isolado. F0/F1 agora usa contratos canônicos `TaskContract`, `ContextPacket`, `ExecutionPort`, `ExecutionResult` e `ResultDigest`; os adapters Codex/Antigravity não reportam sucesso simulado. A próxima gate é configurar e validar providers reais, começando por capability probing e health/quota sem secrets no Git. A pesquisa de providers e MCP foi incorporada nesta fonte de verdade em 2026-09-22.
+M0, a dashboard, F0/F1 e M1 Core foram validados no worktree isolado. F0/F1 agora usa contratos canônicos `TaskContract`, `ContextPacket`, `ExecutionPort`, `ExecutionResult` e `ResultDigest`; os adapters Codex/Antigravity não reportam sucesso simulado, e o Codex possui runner oficial via SDK com resultado estruturado. A próxima gate é validar execução real/capability probing e health/quota sem secrets no Git. A pesquisa de providers e MCP foi incorporada nesta fonte de verdade em 2026-09-22.
 
 Evidência F0/F1 + M1: `docs/audits/maestri-v3-f0-f1-evidence-2026-09-22.md`.
 

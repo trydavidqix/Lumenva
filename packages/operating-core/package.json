@@ -1,1 +1,1 @@
-{"name":"@lumenva/operating-core","version":"0.1.0","private":true,"type":"module","main":"src/index.ts","scripts":{"typecheck":"tsc --noEmit","test":"vitest run"},"devDependencies":{"vitest":"catalog:"}}
+{"name":"@lumenva/operating-core","version":"0.1.0","private":true,"type":"module","main":"src/index.ts","scripts":{"typecheck":"tsc --noEmit","test":"vitest run"},"dependencies":{"@openai/codex-sdk":"0.155.1"},"devDependencies":{"@types/node":"catalog:","vitest":"catalog:"}}

@@ -36,4 +36,25 @@ describe("ExecutionPort contract", () => {
     await expect(adapter.resume("task-1")).resolves.toMatchObject({ status: "unavailable" });
     await expect(adapter.cancel("task-1")).resolves.toMatchObject({ status: "cancelled" });
   });
+
+  it("normalizes a structured Codex result returned by an injected runner", async () => {
+    const adapter = new CodexAdapter({
+      run: async () => ({
+        finalResponse: JSON.stringify({
+          status: "success",
+          summary: "implemented",
+          files_changed: ["src/example.ts"],
+          commands: ["pnpm test"],
+          tests: [{ passed: true, report: "1 passed" }],
+          evidence: ["test-report"],
+        }),
+      }),
+    });
+
+    await expect(adapter.execute(contract)).resolves.toMatchObject({
+      task_id: "task-1",
+      status: "success",
+      files_changed: ["src/example.ts"],
+    });
+  });
 });

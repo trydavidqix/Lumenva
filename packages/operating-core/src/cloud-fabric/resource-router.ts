@@ -1,6 +1,6 @@
 import { CloudProvider } from './cloud-job.js';
 import { ExecutionPort } from './execution-port.js';
-import { CodexAdapter } from './codex-adapter.js';
+import { CodexAdapter, createCodexSdkRunner } from './codex-adapter.js';
 import { AntigravityAdapter } from './antigravity-adapter.js';
 import { QuotaRouter } from './quota-router.js';
 
@@ -19,7 +19,7 @@ export interface TaskRequirements {
 }
 
 export class ResourceRouter {
-  private codex = new CodexAdapter();
+  private codex = new CodexAdapter(createCodexSdkRunner());
   private antigravity = new AntigravityAdapter();
   private quotaRouter = new QuotaRouter();
 
