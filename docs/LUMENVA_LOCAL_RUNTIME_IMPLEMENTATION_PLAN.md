@@ -1,15 +1,15 @@
 # Lumenva Local Agent Runtime — Inline Implementation Plan
 
-> Execution branch: `lumenva-command-center`
+> Execution branch: `lumenva-local-runtime`
 > Parent architecture: `docs/LUMENVA_COMMAND_CENTER_PLAN.md`
 > Runtime architecture: `docs/LUMENVA_LOCAL_RUNTIME_PLAN.md`
 > Execution mode: INLINE ONLY — no subagents
 > Merge policy: NEVER merge to `main`
-> Human authorization for this implementation session: broad autonomy to edit, refactor, add/remove project files, run available gates, and commit/push only to `lumenva-command-center`. This authorization does not bypass provider/platform safety controls, unavailable credentials, or external approval requirements.
+> Human authorization for this implementation session: broad autonomy to edit, refactor, add/remove project files, run available gates, and commit/push only to `lumenva-local-runtime`. This authorization does not bypass provider/platform safety controls, unavailable credentials, or external approval requirements.
 
 # 0. Mission
 
-Implement the complete Local Agent Runtime described by the two parent plans directly on `lumenva-command-center`, sequentially, without delegating implementation to subagents and without stopping for routine implementation decisions.
+Implement the complete Local Agent Runtime described by the two parent plans directly on `lumenva-local-runtime`, sequentially, without delegating implementation to subagents and without stopping for routine implementation decisions.
 
 The executor should continue phase-to-phase automatically while work is technically possible. Routine code/design/test decisions are delegated to the implementer. Stop only for a genuine external blocker that cannot be resolved from repository code, official documentation, available CI, or safe project-local changes.
 
@@ -19,7 +19,7 @@ These rules are immutable for this execution:
 
 1. Never checkout, update, push, merge, rebase, reset, or otherwise mutate `main`.
 2. Never create a PR whose purpose is to merge this work into `main` unless the owner later explicitly asks.
-3. All implementation commits go to `lumenva-command-center`.
+3. All implementation commits go to `lumenva-local-runtime`.
 4. No subagents, agent delegation, council, swarm, background coding agent, or parallel implementer.
 5. Reuse existing code before creating a competing subsystem.
 6. Never claim a gate passed unless it actually ran and returned success.
