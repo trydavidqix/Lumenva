@@ -70,10 +70,15 @@ export function createAsteriskAriConnection(config: AsteriskAriConfig): AriConne
   const webSocketImpl = config.webSocketImpl ?? WebSocket;
   const authHeader = basicAuthHeader(config.username, config.password);
 
-  async function request(method: string, path: string): Promise<Response> {
+  async function request(method: string, path: string, body?: unknown): Promise<Response> {
     const response = await fetchImpl(`${baseUrl}${path}`, {
       method,
-      headers: { Authorization: authHeader, Accept: "application/json" },
+      headers: {
+        Authorization: authHeader,
+        Accept: "application/json",
+        ...(body === undefined ? {} : { "content-type": "application/json" }),
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       signal: AbortSignal.timeout(timeoutMs),
     });
     if (!response.ok) {
@@ -92,7 +97,11 @@ export function createAsteriskAriConnection(config: AsteriskAriConfig): AriConne
         extension: "s",
         priority: "1",
       });
-      const response = await request("POST", `/ari/channels?${params.toString()}`);
+      const response = await request(
+        "POST",
+        `/ari/channels?${params.toString()}`,
+        input.variables ? { variables: input.variables } : undefined,
+      );
       const payload = (await response.json()) as { id?: unknown };
       if (typeof payload.id !== "string" || !payload.id.trim()) {
         throw new Error("[voice] Asterisk ARI originate response is missing channel id");
