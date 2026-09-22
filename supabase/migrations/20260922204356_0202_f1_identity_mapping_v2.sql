@@ -95,6 +95,10 @@ create trigger identity_user_mapping_audit_immutable
 before update or delete on public.identity_user_mapping_audit
 for each row execute function public.fn_identity_user_mapping_audit_immutable();
 
+revoke execute on function public.fn_identity_user_mapping_audit_immutable()
+  from public, anon, authenticated, service_role, app_runtime, worker_runtime, platform_admin_runtime;
+grant execute on function public.fn_identity_user_mapping_audit_immutable() to migration_admin;
+
 create table if not exists public.identity_migration_flags (
   flag_name text primary key,
   enabled boolean not null default false,

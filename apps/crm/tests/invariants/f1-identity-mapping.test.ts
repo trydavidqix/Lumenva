@@ -26,6 +26,7 @@ describe("F1 identity mapping infrastructure", () => {
     expect(sql).toMatch(/create table if not exists public\.identity_migration_flags/i);
     expect(sql).toMatch(/backfill_identity_user_mappings/i);
     expect(sql).toMatch(/identity_user_mapping_.*immutable/i);
+    expect(sql).toMatch(/revoke\s+execute\s+on\s+function\s+public\.fn_identity_user_mapping_audit_immutable\(\)[\s\S]*?from\s+public,\s*anon,\s*authenticated,\s*service_role,\s*app_runtime,\s*worker_runtime,\s*platform_admin_runtime/i);
     expect(sql).toMatch(/grant\s+execute\s+on\s+function\s+public\.backfill_identity_user_mappings[\s\S]*?to\s+migration_admin/i);
     expect(sql).not.toMatch(/grant\s+execute\s+on\s+function\s+public\.backfill_identity_user_mappings[\s\S]*?to\s+service_role/i);
     expect(sql).toMatch(/revoke\s+all\s+on\s+table\s+public\.identity_user_mapping_candidates/i);
@@ -54,7 +55,13 @@ describe("F1 identity mapping infrastructure", () => {
       set local role migration_admin;
       select persisted from public.backfill_identity_user_mappings('${input}'::jsonb, '${runId}'::uuid, true);
       commit;`);
-    expect(dryRun.trim()).toBe("0");
+    const dryRunResult = dryRun
+      .trim()
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => /^\d+$/.test(line))
+      .at(-1);
+    expect(dryRunResult).toBe("0");
     expect(sql(`select count(*) from public.identity_user_mappings where firebase_uid in ('${activeFirebaseUid}', '${pendingFirebaseUid}');`)).toBe("0");
 
     sql(`begin;
