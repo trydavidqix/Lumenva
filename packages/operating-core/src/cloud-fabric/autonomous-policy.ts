@@ -1,0 +1,3 @@
+import type { RiskLevel } from './execution-port';
+export interface AutonomousDecision{automatic:boolean;requires_review:boolean;requires_owner:boolean}
+export function autonomousDecision(risk:RiskLevel):AutonomousDecision{switch(risk){case'R0':return{automatic:true,requires_review:false,requires_owner:false};case'R1':return{automatic:true,requires_review:false,requires_owner:false};case'R2':return{automatic:true,requires_review:true,requires_owner:false};case'R3':return{automatic:false,requires_review:true,requires_owner:true};case'R4':return{automatic:false,requires_review:true,requires_owner:true}}}
