@@ -1,6 +1,8 @@
 /** Instagram API with Instagram Login (standalone, sem Facebook Page). */
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 const INSTAGRAM_GRAPH = "https://graph.instagram.com/v21.0";
+export const GRAPH = "https://graph.facebook.com/v22.0";
 
 export interface InstagramTokens {
   accessToken: string;
@@ -116,5 +118,23 @@ export async function refreshToken(accessToken: string, userId: string): Promise
   return tokenFromResponse(body, userId);
 }
 
-export { signState, verifyState } from "../meta/oauth";
+export function signState(value: string): string {
+  const secret = process.env.META_APP_SECRET;
+  if (!secret) throw new Error("META_APP_SECRET is required to sign Meta OAuth state");
+  const encoded = Buffer.from(value, "utf8").toString("base64url");
+  const signature = createHmac("sha256", secret).update(encoded).digest("base64url");
+  return `${encoded}.${signature}`;
+}
+
+export function verifyState(value: string | null | undefined): string | null {
+  const secret = process.env.META_APP_SECRET;
+  if (!secret || !value) return null;
+  const [encoded, signature] = value.split(".");
+  if (!encoded || !signature) return null;
+  const expected = createHmac("sha256", secret).update(encoded).digest("base64url");
+  const actualBytes = Buffer.from(signature);
+  const expectedBytes = Buffer.from(expected);
+  if (actualBytes.length !== expectedBytes.length || !timingSafeEqual(actualBytes, expectedBytes)) return null;
+  try { return Buffer.from(encoded, "base64url").toString("utf8"); } catch { return null; }
+}
 export { INSTAGRAM_GRAPH };

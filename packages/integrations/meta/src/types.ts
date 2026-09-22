@@ -1,4 +1,5 @@
 export type WebhookPlatform = "facebook" | "instagram";
+export interface Account { id: string; platform: WebhookPlatform; externalId: string; accessToken: string; }
 export type WebhookEventType = "comment" | "message" | "reaction" | "unknown";
 export interface NormalizedWebhookEvent { platform: WebhookPlatform; externalEventId: string; accountId?: string; eventType: WebhookEventType; accountExternalId?: string; text?: string; actor?: { id?: string; username?: string; name?: string }; postExternalId?: string; parentExternalId?: string; timestamp?: number; payload: Record<string, unknown>; }
 
