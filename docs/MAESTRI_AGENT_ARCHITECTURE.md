@@ -389,7 +389,183 @@ Rules:
 - current intent → TaskContract;
 - current information → ContextPacket.
 
-## 10. Claude CEO harness
+## 10. Agent Factory — mandatory factory standard
+
+All runtime agents MUST be created, validated, registered and versioned through AgentFactory. Manual runtime instantiation is forbidden except temporary diagnostic agents explicitly marked `EPHEMERAL`.
+
+### AgentDefinition
+
+Every agent definition MUST declare:
+
+```text
+id
+name
+role
+purpose
+provider_policy
+model_profile
+instructions
+skills
+allowed_tools
+forbidden_tools
+write_scope
+context_policy
+memory_policy
+network_policy
+secret_policy
+risk_ceiling
+resource_class
+timeout
+tool_budget
+acceptance_contract
+output_schema
+lifecycle
+definition_version
+```
+
+Agent definitions describe capabilities and constraints, not a hard dependency on one model vendor. Provider selection remains a router decision unless a definition has an explicit, policy-approved provider requirement.
+
+### Factory templates
+
+The factory MUST provide validated templates:
+
+```text
+ExplorerTemplate
+PlannerTemplate
+BuilderTemplate
+ReviewerTemplate
+VerifierTemplate
+SecurityTemplate
+ArchitectureTemplate
+QATemplate
+DependencyTemplate
+IncidentTemplate
+ResearchTemplate
+```
+
+Templates provide safe defaults; concrete AgentDefinitions may narrow permissions but MUST NOT silently broaden template permissions.
+
+### Mandatory factory pipeline
+
+```text
+Need agent
+  ↓
+AgentDefinition
+  ↓
+Schema Validator
+  ↓
+Policy Validator
+  ↓
+Capability Resolver
+  ↓
+Provider Compiler
+  ↓
+Capability / Health Probe
+  ↓
+Agent Registry
+  ↓
+READY
+```
+
+A failed stage MUST prevent READY registration.
+
+### Factory validation
+
+At minimum, BLOCK definitions with:
+- missing/duplicate identity;
+- missing role or purpose;
+- missing output schema;
+- unsupported provider capability;
+- unknown/unapproved tool;
+- write capability on a read-only template;
+- risk ceiling incompatible with approval policy;
+- undefined secret/network policy;
+- invalid resource/tool budget;
+- reviewer inheriting builder history when fresh context is required;
+- verifier allowed to mutate the artifact it verifies.
+
+### Provider Compiler
+
+AgentFactory compiles provider-neutral definitions into provider-specific runtime configuration for Claude, Codex or Jules while preserving the same logical role, policy ceiling, skills, tool grants and output contract.
+
+```text
+AgentDefinition
+      ↓
+Provider Compiler
+  ┌───────┼───────┐
+Claude   Codex   Jules
+```
+
+Provider-specific syntax MUST remain an adapter concern and MUST NOT leak into the canonical AgentDefinition.
+
+### Agent Registry
+
+Registry records:
+
+```text
+agent_id
+definition_version
+definition_hash
+template
+provider
+model_profile
+capabilities
+skills
+health
+status
+created_at
+updated_at
+last_probe_at
+```
+
+Only registered `READY` agents may receive production-like Work Packages. `EPHEMERAL` diagnostic agents must be isolated, time-bounded, auditable and incapable of bypassing policy.
+
+### Factory-built initial catalog
+
+The first catalog MUST be produced through AgentFactory, never hand-authored as independent runtime agents:
+
+```text
+explorer
+planner
+builder
+reviewer
+verifier
+security-reviewer
+architecture-reviewer
+plan-reviewer
+qa-reviewer
+dependency-analyst
+incident-diagnostician
+researcher
+```
+
+Reviewer baseline:
+- fresh context;
+- read-only;
+- builder history denied by default;
+- inputs limited to TaskContract, AcceptanceManifest, diff/artifacts and evidence;
+- structured findings/severity/evidence/verdict output.
+
+Verifier baseline:
+- deterministic-first;
+- cannot mutate verified artifact;
+- evidence required;
+- structured PASS/FAIL/BLOCKED output.
+
+### Agent Factory invariants
+
+1. No runtime agent outside AgentFactory.
+2. Role is independent from provider.
+3. Templates may be narrowed, never silently widened.
+4. Every definition is schema validated and versioned.
+5. Every READY registration has a successful capability/health probe.
+6. Definition hash and version are attached to every execution/evidence record.
+7. Provider changes do not change the logical agent identity or acceptance contract.
+8. Agent upgrades create a new definition version; they do not silently mutate historical executions.
+9. R4 capabilities can never be granted solely by factory configuration; Human Gate still applies.
+10. Factory creation itself is observable and auditable.
+
+## 11. Claude CEO harness
 
 Create a Lumenva/Maestri Claude integration layer containing:
 - CEO role instructions;
@@ -410,7 +586,7 @@ Specialist roles:
 
 Use subagents primarily for high-volume reading/exploration and return digests. Agent Teams remain shadow/experimental until benchmarked.
 
-## 11. Hooks
+## 12. Hooks
 
 Canonical runtime events:
 
@@ -449,7 +625,7 @@ after_merge
 
 Claude-specific hooks should map into these canonical events instead of becoming separate business logic.
 
-## 12. MCP Gateway and capability grants
+## 13. MCP Gateway and capability grants
 
 ```text
 Agent
@@ -476,13 +652,13 @@ Capabilities can include:
 - escalate;
 - cancel.
 
-## 13. Master Planner
+## 14. Master Planner
 
 Master Goal → semantic decomposition → dependency analysis → conflict analysis → coherent Work Packages.
 
 Do not map every plan line to one agent task. A provider task may contain many internal PlanSteps.
 
-## 14. Dependency Graph
+## 15. Dependency Graph
 
 States:
 
@@ -503,7 +679,7 @@ CANCELLED
 
 Only READY is schedulable.
 
-## 15. Conflict Graph
+## 16. Conflict Graph
 
 Track:
 - exact file overlap;
@@ -514,7 +690,7 @@ Track:
 
 Aggressive parallel reads are allowed. Concurrent writes require isolated branches/workspaces and conflict approval.
 
-## 16. Prompt Compiler
+## 17. Prompt Compiler
 
 Provider-neutral template:
 
@@ -535,7 +711,7 @@ Provider-neutral template:
 
 Then a Provider Transformer maps it to Claude/Codex/Jules without duplicating global policy.
 
-## 17. Execution Router
+## 18. Execution Router
 
 Routes:
 
@@ -561,7 +737,7 @@ Inputs:
 - latency;
 - host pressure.
 
-## 18. Cloud-first compute
+## 19. Cloud-first compute
 
 If work is reproducible, cloud-capable and does not require local hardware/OS state, offload it.
 
@@ -586,7 +762,7 @@ Keep local:
 - Maestri control plane;
 - Command Center.
 
-## 19. Codex Cloud Environment Manager
+## 20. Codex Cloud Environment Manager
 
 Maintain a minimal reproducible environment:
 - Node;
@@ -601,7 +777,7 @@ Maintain a minimal reproducible environment:
 
 Do not assume setup secrets survive into agent phase. Do not assume caches are durable without probing.
 
-## 20. Network policy
+## 21. Network policy
 
 ```text
 OFF
@@ -614,7 +790,7 @@ FULL
 
 Default OFF. FULL requires explicit justification/policy.
 
-## 21. Secret policy
+## 22. Secret policy
 
 Secret Manager is authority. Agents receive references or short-lived/minimum grants. Never store secret values in:
 - repository;
@@ -624,7 +800,7 @@ Secret Manager is authority. Agents receive references or short-lived/minimum gr
 - prompts intended for persistence;
 - docs.
 
-## 22. Jules Fleet
+## 23. Jules Fleet
 
 Jules is the asynchronous fleet provider. Account/provider limits must be discovered and tracked, not assumed forever.
 
@@ -638,7 +814,7 @@ Quota Guard maintains:
 
 Reserve capacity for urgent/recovery work when practical.
 
-## 23. Jules Plan Validator
+## 24. Jules Plan Validator
 
 Compare Jules plan with:
 - scope;
@@ -652,7 +828,7 @@ Compare Jules plan with:
 Result:
 `PASS | REVISE | BLOCK`.
 
-## 24. Risk model
+## 25. Risk model
 
 ```text
 R0 read/docs/tests        → AUTO
@@ -662,11 +838,11 @@ R3 infra/security         → CLAUDE
 R4 prod/main/secrets/IAM  → HUMAN
 ```
 
-## 25. Jules Swarm
+## 26. Jules Swarm
 
 Use only for high-uncertainty problems where multiple independent approaches have expected value. It consumes explicit budget and never becomes default execution.
 
-## 26. Codex Usage Governor
+## 27. Codex Usage Governor
 
 Do not invent a fixed concurrency limit. Track:
 - available usage signal;
@@ -680,7 +856,7 @@ Do not invent a fixed concurrency limit. Track:
 Resource classes:
 `TINY | LIGHT | NORMAL | HEAVY | EXCLUSIVE`.
 
-## 27. Internal model/capability router
+## 28. Internal model/capability router
 
 Providers may expose multiple model/capability profiles. Route by capability and current documented availability, not hard-coded marketing names.
 
@@ -691,7 +867,7 @@ Profiles:
 - heavy engineer: deep reasoning;
 - verifier: deterministic-first.
 
-## 28. Loop Engine
+## 29. Loop Engine
 
 Canonical loop:
 
@@ -719,7 +895,7 @@ ACT
 
 The loop belongs to Maestri, not to a prompt phrase like “keep trying”.
 
-## 29. Loop Detector
+## 30. Loop Detector
 
 Detect repeated equivalent cycles using:
 - same failing command/test;
@@ -733,7 +909,7 @@ Detect repeated equivalent cycles using:
 On detection:
 `LOOP_DETECTED → FailureClassifier → strategy change / provider change / Claude diagnosis`.
 
-## 30. Failure Classifier
+## 31. Failure Classifier
 
 ```text
 TRANSIENT
@@ -753,7 +929,7 @@ LOOP
 UNKNOWN
 ```
 
-## 31. Escalation Engine
+## 32. Escalation Engine
 
 ```text
 TRANSIENT    → retry same provider
@@ -773,7 +949,7 @@ POLICY       → block
 UNKNOWN      → Claude diagnosis
 ```
 
-## 32. Tool Budget
+## 33. Tool Budget
 
 TaskContract can specify:
 - soft warning;
@@ -784,7 +960,7 @@ TaskContract can specify:
 
 Budget exhaustion creates an event and requires policy-based retry/escalation, not silent looping.
 
-## 33. Evidence model
+## 34. Evidence model
 
 TaskResult:
 
@@ -812,11 +988,11 @@ follow_up
 
 Evidence items should capture command/check, exit code/status, timestamp, commit SHA/context and output digest where applicable.
 
-## 34. Progress Evidence Guard
+## 35. Progress Evidence Guard
 
 Claims such as “tests passed”, “build succeeded”, “migration succeeded”, “PR ready” or “deploy succeeded” must reference evidence. Unsupported claims do not advance AcceptanceManifest.
 
-## 35. Cross-agent review
+## 36. Cross-agent review
 
 Preferred:
 - Jules builder → Codex review;
@@ -825,7 +1001,7 @@ Preferred:
 
 Reviewer must not inherit builder reasoning by default.
 
-## 36. GitHub execution model
+## 37. GitHub execution model
 
 ```text
 Work Package
@@ -849,7 +1025,7 @@ Branch naming:
 
 No concurrent fleet writes directly to `main`.
 
-## 37. CI Fixer
+## 38. CI Fixer
 
 CI failure:
 1. ingest failing checks/log digest;
@@ -859,7 +1035,7 @@ CI failure:
 5. rerun CI;
 6. escalate only after policy threshold.
 
-## 38. Compound Learning Engine
+## 39. Compound Learning Engine
 
 Every completed/failed task may produce a LearningCandidate.
 
@@ -894,7 +1070,7 @@ version
 
 Never blindly convert agent output into permanent memory.
 
-## 39. Memory and provenance
+## 40. Memory and provenance
 
 Domains:
 - PROJECT MEMORY;
@@ -911,7 +1087,7 @@ Every durable memory record needs:
 - evidence;
 - supersedes/expiry when relevant.
 
-## 40. Operational truth
+## 41. Operational truth
 
 ```text
 GitHub = code truth
@@ -945,7 +1121,7 @@ host_metrics
 notifications
 ```
 
-## 41. Scheduler and queues
+## 42. Scheduler and queues
 
 Priorities:
 `urgent | high | normal | low | maintenance`.
@@ -955,14 +1131,14 @@ Waiting states:
 
 Waiting work does not occupy an execution slot.
 
-## 42. PC Resource Guard
+## 43. PC Resource Guard
 
 Observe CPU, RAM, swap, disk and network. Under host pressure:
 - stop dispatching nonessential local compute;
 - prefer Codex Cloud/Jules;
 - preserve control plane and interactive operations.
 
-## 43. Observability
+## 44. Observability
 
 Correlate:
 ```text
@@ -987,7 +1163,7 @@ terminal_status
 
 Trace export failure must never destroy local evidence.
 
-## 44. Command Center
+## 45. Command Center
 
 Main status:
 - Maestri health;
@@ -1004,7 +1180,7 @@ Main status:
 - loop/retry/escalation history;
 - checkpoint/recovery status.
 
-## 45. Repository target
+## 46. Repository target
 
 ```text
 Lumenva/
@@ -1063,7 +1239,7 @@ Lumenva/
         └── github/
 ```
 
-## 46. External Gates — first operational block
+## 47. External Gates — first operational block
 
 The existing detailed plan remains executable at:
 `docs/superpowers/plans/2026-09-22-maestri-v3-first-three-external-gates.md`.
@@ -1092,7 +1268,7 @@ The existing detailed plan remains executable at:
 
 These gates do not authorize main merge, production deploy or secret creation.
 
-## 47. Implementation program
+## 48. Implementation program
 
 ### Phase 0 — Reconcile and freeze
 - audit current `vps`;
@@ -1127,91 +1303,109 @@ Small root map, hierarchical instructions, architecture/plan/decision/quality/se
 ### Phase 7 — Skills
 Implement shared skill catalog with validation and versioning.
 
-### Phase 8 — Claude CEO harness
-CEO role, specialist agents, hooks, Maestri MCP integration and checkpoint events.
+### Phase 8 — Agent Factory
+Implement AgentDefinition schema, factory templates, schema/policy validators, Capability Resolver, Provider Compiler, Agent Registry, definition hashing/versioning, health probes and EPHEMERAL diagnostic policy.
 
-### Phase 9 — Prompt Compiler
+Acceptance:
+- invalid definitions cannot register READY;
+- provider-neutral definition compiles to supported provider configuration;
+- definition version/hash is present in execution evidence;
+- no runtime agent can bypass the factory.
+
+### Phase 9 — Factory Agent Catalog
+Create explorer, planner, builder, reviewer, verifier, security-reviewer, architecture-reviewer, plan-reviewer, qa-reviewer, dependency-analyst, incident-diagnostician and researcher exclusively through AgentFactory.
+
+Acceptance:
+- every catalog agent passes schema/policy/capability/health validation;
+- reviewer is fresh-context/read-only;
+- verifier cannot mutate verified artifacts;
+- tests prove role/provider separation.
+
+### Phase 10 — Claude CEO harness
+CEO role, hooks, Maestri MCP integration and checkpoint events. All Claude specialist agents MUST come from the AgentFactory catalog; no hand-created parallel agent definitions.
+
+### Phase 11 — Prompt Compiler
 Provider-neutral compile + Claude/Codex/Jules transforms.
 
-### Phase 10 — Dependency Graph
+### Phase 12 — Dependency Graph
 Persistence, readiness calculation and UI/event model.
 
-### Phase 11 — Conflict Graph
+### Phase 13 — Conflict Graph
 File/module/semantic conflict detection and serialization.
 
-### Phase 12 — Policy Engine
+### Phase 14 — Policy Engine
 Risk R0–R4, main/prod/secrets/IAM rules and capability grants.
 
-### Phase 13 — Hook Engine
+### Phase 15 — Hook Engine
 Canonical events + provider event adapters.
 
-### Phase 14 — GitHub Adapter
+### Phase 16 — GitHub Adapter
 Branch/commit/PR/check/review/evidence primitives.
 
-### Phase 15 — Codex Adapter
+### Phase 17 — Codex Adapter
 Local/worktree/cloud unified ExecutionPort.
 
-### Phase 16 — Codex Cloud Environment
+### Phase 18 — Codex Cloud Environment
 Minimal reproducible environment and network/secret policy validation.
 
-### Phase 17 — Cloud-first Router
+### Phase 19 — Cloud-first Router
 Offload reproducible compute and respect PC Resource Guard.
 
-### Phase 18 — Jules Adapter
+### Phase 20 — Jules Adapter
 Sessions/tasks/results/plan interaction behind ExecutionPort.
 
-### Phase 19 — Jules provider validation
+### Phase 21 — Jules provider validation
 Gemini/provider capability probing, health and plan semantics.
 
-### Phase 20 — Quota/Usage Governors
+### Phase 22 — Quota/Usage Governors
 Jules rolling/concurrency ledger; adaptive Codex usage governor.
 
-### Phase 21 — Fleet Scheduler
+### Phase 23 — Fleet Scheduler
 Dependency/conflict/risk/quota/resource-aware scheduling.
 
-### Phase 22 — Plan Validator
+### Phase 24 — Plan Validator
 PASS/REVISE/BLOCK with deterministic checks where possible.
 
-### Phase 23 — Loop Engine
+### Phase 25 — Loop Engine
 Plan→act→observe→verify→classify→retry/replan/escalate.
 
-### Phase 24 — Loop Detector
+### Phase 26 — Loop Detector
 Repeated-error/no-progress detection and budget enforcement.
 
-### Phase 25 — Failure Classifier
+### Phase 27 — Failure Classifier
 Canonical taxonomy and tests for representative failures.
 
-### Phase 26 — Escalation Engine
+### Phase 28 — Escalation Engine
 Policy-driven retry, queue, provider change and CEO escalation.
 
-### Phase 27 — Evidence system
+### Phase 29 — Evidence system
 Evidence schema, Progress Evidence Guard and AcceptanceManifest linkage.
 
-### Phase 28 — Fresh Context Reviewer
+### Phase 30 — Fresh Context Reviewer
 Independent review packets with no builder-history contamination.
 
-### Phase 29 — Cross-Agent Review
+### Phase 31 — Cross-Agent Review
 Jules↔Codex and critical Claude review workflows.
 
-### Phase 30 — CI integration
+### Phase 32 — CI integration
 CI fixer loop, check ingestion and evidence correlation.
 
-### Phase 31 — Compound Learning Engine
+### Phase 33 — Compound Learning Engine
 LearningCandidate extraction, validation, dedupe and promotion.
 
-### Phase 32 — Memory/provenance
+### Phase 34 — Memory/provenance
 Project/provider/task memory with evidence and supersession.
 
-### Phase 33 — Telemetry
+### Phase 35 — Telemetry
 Local traces first; optional OTLP; complete correlation.
 
-### Phase 34 — Resource Guard
+### Phase 36 — Resource Guard
 PC pressure telemetry and automatic offload behavior.
 
-### Phase 35 — Command Center
+### Phase 37 — Command Center
 System/fleet/task/evidence/recovery/loop/quota views.
 
-### Phase 36 — E2E long-horizon recovery tests
+### Phase 38 — E2E long-horizon recovery tests
 Prove task survives:
 - provider context compaction;
 - process restart;
@@ -1221,16 +1415,16 @@ Prove task survives:
 - CI failure;
 without losing objective, decisions, acceptance state or evidence.
 
-### Phase 37 — Chaos/failure tests
+### Phase 39 — Chaos/failure tests
 Inject auth, network, quota, dependency, conflict, collector and provider failures.
 
-### Phase 38 — Security validation
+### Phase 40 — Security validation
 Secrets, capabilities, network, prompt injection boundaries, external writes and R4 gates.
 
-### Phase 39 — Production hardening
+### Phase 41 — Production hardening
 Performance, migrations, retention, backup/recovery, operational docs and final release gate.
 
-## 48. Definition of Done
+## 49. Definition of Done
 
 A Work Package is complete only when:
 - requirements satisfied;
@@ -1246,7 +1440,7 @@ A Work Package is complete only when:
 - State Ledger checkpointed;
 - policy gate passes.
 
-## 49. Long-horizon no-forgetting acceptance test
+## 50. Long-horizon no-forgetting acceptance test
 
 The implementation is not accepted until this scenario passes:
 
@@ -1269,7 +1463,7 @@ The implementation is not accepted until this scenario passes:
 17. Policy Gate returns READY FOR HUMAN MERGE.
 18. `main` remains untouched until human action.
 
-## 50. E2E target
+## 51. E2E target
 
 ```text
 Owner → Claude CEO → Master Goal
@@ -1293,13 +1487,13 @@ Owner → Claude CEO → Master Goal
   → READY FOR HUMAN MERGE
 ```
 
-## 51. Sources and design rationale
+## 52. Sources and design rationale
 
 This blueprint follows the agent-first direction documented by OpenAI's harness engineering work: repository knowledge as system of record, progressive disclosure instead of giant instruction manuals, executable plans, agent-to-agent review, worktree isolation and feedback loops. It also follows Anthropic's context-engineering guidance: context is finite, long-horizon work needs compaction/structured state/multi-agent techniques, and context should be curated for high signal.
 
 Implementation must prefer current official provider documentation over copied system prompts, community leaks or stale assumptions.
 
-## 52. Supersession rule
+## 53. Supersession rule
 
 This file is now the **single canonical Maestri V3 architecture and implementation blueprint**.
 
