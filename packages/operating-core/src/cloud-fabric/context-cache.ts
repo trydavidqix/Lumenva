@@ -1,0 +1,2 @@
+import type { ContextPacket } from './execution-port';
+export class ContextPacketCache{private readonly entries=new Map<string,{packet:ContextPacket;expires_at:number}>();constructor(private readonly ttlMs=900000){}get(id:string):ContextPacket|undefined{const e=this.entries.get(id);if(!e)return;if(Date.now()>=e.expires_at){this.entries.delete(id);return}return e.packet}set(packet:ContextPacket):void{this.entries.set(packet.context_packet_id,{packet,expires_at:Date.now()+this.ttlMs})}clear():void{this.entries.clear()}}
