@@ -165,7 +165,9 @@ async function reconcileNotificationLifecycle(
   if (state === "active") {
     await db.query(
       `update notification_delivery_attempts
-          set status = 'delivered', occurred_at = $3::timestamptz
+          set status = 'delivered',
+              delivered_at = coalesce(delivered_at, $3::timestamptz),
+              occurred_at = $3::timestamptz
         where notification_id = $1
           and channel = 'voice'
           and external_id = $2
@@ -180,7 +182,9 @@ async function reconcileNotificationLifecycle(
   if (state === "completed") {
     await db.query(
       `update notification_delivery_attempts
-          set status = 'delivered', occurred_at = $3::timestamptz
+          set status = 'delivered',
+              delivered_at = coalesce(delivered_at, $3::timestamptz),
+              occurred_at = $3::timestamptz
         where notification_id = $1
           and channel = 'voice'
           and external_id = $2
@@ -200,7 +204,9 @@ async function reconcileNotificationLifecycle(
   const errorCode = state === "failed" ? "voice_call_failed" : "voice_call_canceled";
   await db.query(
     `update notification_delivery_attempts
-        set status = 'failed', error_code = $3, occurred_at = $4::timestamptz
+        set status = 'failed', error_code = $3,
+            failed_at = coalesce(failed_at, $4::timestamptz),
+            occurred_at = $4::timestamptz
       where notification_id = $1
         and channel = 'voice'
         and external_id = $2
