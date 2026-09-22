@@ -3,6 +3,7 @@ import { evaluateBudget } from "./context-budget.js";
 import { parsePublishedMarkdown, scanKnowledgeBody } from "@lumenva/knowledge";
 import { projectPublishedNote, type KnowledgeGraph } from "@lumenva/knowledge-graph";
 import { MgcUnavailableError, type ContextRequest, type ContextResult, type MgcAdapter } from "./mcg-adapter.js";
+import type { McpCatalog } from "./mcp-gateway.js";
 import type { CoreTask } from "./sqlite-store.js";
 import { SqliteStore } from "./sqlite-store.js";
 
@@ -93,26 +94,57 @@ export class CoreRuntime {
     if (this.state !== "running") throw new Error("CoreRuntime is not running");
     const task = this.store.getTask(taskId);
     if (!task) throw new Error(`task not found: ${taskId}`);
+    let requestInput = input;
+    let mcpCatalog: McpCatalog | undefined;
+    if (input.mcp) {
+      mcpCatalog = await input.mcp.gateway.catalogWithContext(input.mcp.serverId, {
+        traceparent: input.mcp.traceparent,
+        ...(input.mcp.stateHandle ? { stateHandle: input.mcp.stateHandle } : {}),
+      });
+      requestInput = {
+        ...input,
+        packet: input.packet
+          ? { ...input.packet, availableTools: mcpCatalog.tools.map((tool) => tool.name), mcpCatalogVersion: mcpCatalog.catalogVersion }
+          : input.packet,
+      };
+    }
+    if (mcpCatalog && input.mcp) {
+      await this.eventBus.publish({
+        id: `mcp-catalog-resolved:${taskId}:${mcpCatalog.serverId}`,
+        type: "mcp.catalog.resolved",
+        taskId,
+        traceId: task.traceId,
+        payload: {
+          serverId: mcpCatalog.serverId,
+          catalogVersion: mcpCatalog.catalogVersion,
+          toolsExposed: mcpCatalog.tools.length,
+          traceparent: input.mcp.traceparent,
+          stateHandle: input.mcp.stateHandle,
+          measurementType: "exact",
+        },
+      });
+    }
     await this.eventBus.publish({
       id: `context-requested:${taskId}`,
       type: "context.requested",
       taskId,
       traceId: task.traceId,
-      payload: { objective: input.objective, budgetChars: input.budgetChars, measurementType: "unavailable" },
+      payload: { objective: requestInput.objective, budgetChars: requestInput.budgetChars, mcpCatalogVersion: requestInput.packet?.mcpCatalogVersion, measurementType: "unavailable" },
     });
-    if (input.budgetLimits) {
-      const inputChars = input.packet?.characterCount ?? input.objective.length;
+    const budgetLimits = requestInput.budgetLimits;
+    if (budgetLimits) {
+      const inputChars = requestInput.packet?.characterCount ?? requestInput.objective.length;
       const budget = evaluateBudget({
         inputTokens: Math.ceil(inputChars / 4),
         outputTokens: 0,
         cachedTokens: 0,
-        contextPercent: inputChars / Math.max(1, input.budgetChars) * 100,
-        toolDefinitions: input.packet?.availableTools.length ?? 0,
+        contextPercent: inputChars / Math.max(1, requestInput.budgetChars) * 100,
+        toolDefinitions: requestInput.packet?.availableTools.length ?? 0,
         toolCalls: 0,
         executionMs: 0,
         monetaryCost: 0,
         providerQuota: 0,
-      }, input.budgetLimits);
+      }, budgetLimits);
       if (budget.status === "exceeded") {
         const exceeded = new ContextBudgetExceededError(budget.violations);
         await this.eventBus.publish({
@@ -126,7 +158,7 @@ export class CoreRuntime {
       }
     }
     try {
-      const result = await adapter.compile({ ...input, taskId, traceId: task.traceId });
+      const result = await adapter.compile({ ...requestInput, taskId, traceId: task.traceId });
       await this.eventBus.publish({
         id: `context-completed:${taskId}`,
         type: "context.completed",
@@ -136,7 +168,7 @@ export class CoreRuntime {
           contextVersion: result.contextVersion,
           measurementType: result.measurementType,
           source: result.source,
-          inputChars: input.objective.length,
+          inputChars: requestInput.objective.length,
           outputChars: result.fragments.reduce((total, fragment) => total + fragment.content.length, 0),
           estimatedTokens: Math.ceil(result.fragments.reduce((total, fragment) => total + fragment.content.length, 0) / 4),
         },

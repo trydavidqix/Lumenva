@@ -44,6 +44,7 @@ export type ContextPacket = {
   priorDecisions: string[];
   constraints: string[];
   availableTools: string[];
+  mcpCatalogVersion?: string;
   evidence: string[];
   tokenBudget: number;
   characterCount: number;

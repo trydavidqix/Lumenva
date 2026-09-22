@@ -1,5 +1,6 @@
 import type { ContextPacket } from "./context-engine.js";
 import type { BudgetLimits } from "./context-budget.js";
+import type { McpGateway } from "./mcp-gateway.js";
 
 export type ContextRequest = {
   taskId: string;
@@ -8,6 +9,12 @@ export type ContextRequest = {
   budgetChars: number;
   packet?: ContextPacket;
   budgetLimits?: BudgetLimits;
+  mcp?: {
+    gateway: Pick<McpGateway, "catalogWithContext">;
+    serverId: string;
+    traceparent: string;
+    stateHandle?: string;
+  };
 };
 
 export type ContextResult = {

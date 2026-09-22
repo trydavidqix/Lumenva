@@ -6,6 +6,7 @@ import { CoreRuntime } from "./core-runtime.js";
 import type { BudgetLimits } from "./context-budget.js";
 import { resolveContext, type ContextPacket, type TaskContract } from "./context-engine.js";
 import { createLocalMgcAdapter, type MgcAdapter } from "./mcg-adapter.js";
+import { McpGateway } from "./mcp-gateway.js";
 import { SqliteStore } from "./sqlite-store.js";
 
 function runtime() {
@@ -126,6 +127,39 @@ describe("CoreRuntime MCG boundary", () => {
       .rejects.toMatchObject({ code: "BUDGET_EXCEEDED" });
     expect(called).toBe(false);
     expect(core.eventsList().at(-1)?.payload).toEqual(expect.objectContaining({ code: "BUDGET_EXCEEDED", measurementType: "unavailable" }));
+    await core.stop();
+  });
+
+  it("resolves the MCP catalog inside the Core request and narrows the packet tools", async () => {
+    const core = runtime();
+    await core.start();
+    const task = await core.startTask({ id: "task-1", type: "task.start", idempotencyKey: "start-1", traceId: "trace-1", payload: {} });
+    const gateway = new McpGateway([{
+      id: "github",
+      version: "2026-07-28",
+      listTools: async () => [{ name: "git.read_file", domain: "github", capabilities: ["read_file"], description: "Read" }],
+      listResources: async () => [],
+      health: async () => ({ ok: true, latencyMs: 1 }),
+    }], { ttlMs: 1_000 });
+    const resolved = packet();
+    let received: ContextPacket | undefined;
+    const adapter: MgcAdapter = {
+      compile: async (request) => {
+        received = request.packet;
+        return { contextVersion: "v-context-1", fragments: [], measurementType: "estimated", source: "context.compiler" };
+      },
+    };
+
+    await core.requestContext(task.task.id, adapter, {
+      objective: resolved.objective,
+      budgetChars: 500,
+      packet: resolved,
+      mcp: { gateway, serverId: "github", traceparent: "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01" },
+    });
+
+    expect(received?.availableTools).toEqual(["git.read_file"]);
+    expect(received?.mcpCatalogVersion).toMatch(/^[a-f0-9]{64}$/);
+    expect(core.eventsList().find((event) => event.type === "mcp.catalog.resolved")?.payload).toEqual(expect.objectContaining({ serverId: "github", toolsExposed: 1, traceparent: expect.any(String) }));
     await core.stop();
   });
 });
