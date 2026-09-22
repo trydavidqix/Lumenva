@@ -48,3 +48,12 @@ Auditoria concluída antes de instalar. Não foi instalado Docker, não foram re
 ## Próximo gate
 
 SDKs locais e `gh-aw` foram instalados e validados: smoke ESM dos SDKs sem chamada externa; `gh aw doctor` PASS; versão `gh-aw v0.88.8`. O próximo gate é configurar MCP/Actions por capability e autenticação, sem criar secrets automaticamente. Nenhum workflow foi executado e nenhuma secret foi criada.
+
+## Probing MCP — 2026-09-22
+
+- Codex: servidores locais aparecem configurados, porém o host reporta `Unsupported`; configuração não é tratada como health.
+- Claude: Docs está `Connected`; Railway precisa autenticação; GitHub falha porque o endpoint configurado não suporta dynamic client registration.
+- Gemini: comando disponível, mas nenhum servidor MCP foi configurado nesta branch.
+- Agentic Workflows: `gh aw mcp list` não encontrou workflows com servidores MCP.
+
+O GitHub MCP oficial oferece caminho nativo stdio/OAuth e caminho PAT; o caminho Docker não entra nesta preparação. A documentação oficial do Codex Action exige secret do provider e a do Jules Action exige `JULES_API_KEY`; esses valores não existem no ambiente auditado e não foram inventados.

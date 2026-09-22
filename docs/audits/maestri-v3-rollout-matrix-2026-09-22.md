@@ -20,6 +20,11 @@ This gate is for the isolated `vps` branch only. It is read-only with respect to
 | GitHub Actions/MCP | Configuration pending in the real target environment | No production workflow was triggered |
 | Jules CLI | Not installed | No official local Jules CLI was found or required |
 | Jules SDK / Agentic Workflows | Installed and doctor-validated | SDK smoke passed; `gh-aw v0.88.8`, doctor PASS |
+| Codex MCP host | Configured but not healthy-proven | Local `codex mcp list` reports configured servers as `Unsupported` |
+| Claude GitHub MCP | Configured but unhealthy | OAuth dynamic registration is unsupported by the configured endpoint |
+| Claude Docs MCP | Healthy | `Connected` |
+| Claude Railway MCP | Configured but unauthenticated | `Needs authentication` |
+| Gemini MCP / gh-aw MCP | No usable configured server | Gemini list was not configured; `gh aw mcp list` found no workflow MCP |
 
 ## Guard
 
@@ -36,3 +41,8 @@ The unit test covers the allowed state and the three safety classes: wrong branc
 ## F25 conclusion
 
 The local rollout safety gate is implemented. F25 remains open for external configuration and compatibility cleanup: official provider quota sources, Graphiti endpoint/credentials, optional OTLP collector, real GitHub Actions/MCP configuration, and a controlled rollout on `vps`. No merge to `main` and no production deployment are authorized by this gate.
+
+## Official-source constraints
+
+- The official GitHub MCP Server supports a native stdio binary or PAT/OAuth; the Docker path is explicitly excluded here because Docker is not installed.
+- Codex Action requires a provider API secret in GitHub Actions; Jules Action requires `JULES_API_KEY`. No secrets are created automatically, so those workflows remain unconfigured until the owner supplies names, scope, and environment.
