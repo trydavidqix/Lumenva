@@ -13,6 +13,8 @@ import type { WorkforcePersistence } from './durable-stores';
 import { requiresOwnerApproval } from './approval-gate';
 import { IdempotencyStore, executionIdempotencyKey } from './idempotency';
 import { CostLedger } from './cost-ledger';
+import type { ContextResolver } from './context-resolver';
+import type { LearningRouter } from './learning-router';
 import { evaluateIndependentReview, type ReviewResult } from './independent-review';
 import { readyTasks } from './master-plan';
 
@@ -45,6 +47,8 @@ export class WorkforceOrchestrator {
     private readonly persistence?: WorkforcePersistence,
     private readonly idempotency = new IdempotencyStore<ExecutionResult>(),
     private readonly costLedger = new CostLedger(),
+    private readonly contextResolver?: ContextResolver,
+    private readonly learning?: LearningRouter,
   ) {}
 
   async runPlan(plan: MasterPlan, baseSha: string): Promise<OrchestrationRun> {
@@ -97,12 +101,14 @@ export class WorkforceOrchestrator {
           continue;
         }
 
+        const resolvedContext = this.contextResolver?.resolve(contract) ?? { sources: [], allowed_tools: [], provenance: [] };
         const packetInput: ContextBuildInput = {
           contract,
-          allowed_tools: [],
+          sources: resolvedContext.sources,
+          allowed_tools: resolvedContext.allowed_tools,
           token_budget: 8000,
           expansion_level: 1,
-          provenance: [`masterplan:${plan.plan_id}`],
+          provenance: [`masterplan:${plan.plan_id}`, ...resolvedContext.provenance],
         };
         const packet = this.context.compilePacket(packetInput);
         contract.context_packet_id = packet.context_packet_id;
@@ -139,6 +145,19 @@ export class WorkforceOrchestrator {
             passed: test.passed,
             evidence: test.report,
           })),
+        });
+
+        this.learning?.record({
+          model_id: execution.model ?? execution.provider ?? String(routed.provider),
+          task_type: task.capabilities?.[0] ?? 'general',
+          complexity: task.complexity,
+          risk: task.risk,
+          success: execution.status === 'success',
+          reviewer_accepted: review.accepted,
+          deterministic_passed: execution.tests.length > 0 && execution.tests.every((test) => test.passed),
+          retries: 0,
+          latency_ms: execution.usage?.duration_ms,
+          cost_usd: execution.usage?.cost_usd,
         });
 
         if (!review.accepted) {
