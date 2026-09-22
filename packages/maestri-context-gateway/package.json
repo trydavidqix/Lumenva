@@ -7,6 +7,7 @@
   },
   "scripts": {
     "cli": "node bin/mcg.mjs",
+    "check:rollout": "node bin/maestri-v3-rollout-check.mjs",
     "test": "node --test test/*.test.mjs",
     "test:unit": "node --test test/*.test.mjs",
     "check:syntax": "node scripts/check-syntax.mjs",
