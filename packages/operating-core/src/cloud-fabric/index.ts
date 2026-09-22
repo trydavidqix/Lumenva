@@ -60,3 +60,8 @@ export * from './escalating-executor';
 export * from './approval-store';
 export * from './run-recovery';
 export * from './telemetry-event';
+export * from './persistent-run-store';
+export * from './persistent-approval-store';
+export * from './persistent-telemetry';
+export * from './worktree-manager';
+export * from './validation-report';
