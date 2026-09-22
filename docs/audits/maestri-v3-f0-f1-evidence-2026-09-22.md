@@ -27,6 +27,16 @@ PASS
 pnpm --filter @lumenva/operating-core test -- src/cloud-fabric/execution-port.test.ts
 Tests: 4 passed
 
+## Prova real do provider
+
+Runner read-only do `@openai/codex-sdk` executado no worktree `vps` com sandbox read-only, aprovação `never`, rede desabilitada e web search desabilitado:
+
+```json
+{"status":"ok","branch":"vps","clean":true,"summary":"Working tree is clean."}
+```
+
+Nenhum arquivo foi alterado pela prova.
+
 pnpm --filter @lumenva/core test
 Test Files: 15 passed
 Tests: 33 passed
