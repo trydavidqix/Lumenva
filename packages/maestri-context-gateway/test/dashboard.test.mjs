@@ -38,6 +38,18 @@ test('dashboard serves read-only local endpoints', async t => {
   assert.equal((await get(port, '/missing')).status, 404);
 });
 
+test('dashboard exposes keyboard-accessible view navigation', async t => {
+  const server = await createDashboardServer({ root: process.cwd(), port: 0 });
+  t.after(() => server.close());
+  const home = await get(server.address().port, '/');
+  assert.match(home.body, /aria-label="Dashboard views"/);
+  for (const label of ['Overview', 'History', 'Traces', 'Tasks', 'Agents', 'Tools', 'Plugins', 'MCPs', 'Cache', 'Memory', 'Validation', 'Alerts']) {
+    assert.match(home.body, new RegExp(`data-view="${label}"`));
+  }
+  assert.match(home.body, /role="tablist"/);
+  assert.match(home.body, /role="tabpanel"/);
+});
+
 test('dashboard exposes real telemetry resources from its configured root', async t => {
   const root = await import('node:fs/promises').then(async fs => fs.mkdtemp((await import('node:path')).join((await import('node:os')).tmpdir(), 'mcg-dashboard-')));
   t.after(async () => (await import('node:fs/promises')).rm(root, { recursive: true, force: true }));

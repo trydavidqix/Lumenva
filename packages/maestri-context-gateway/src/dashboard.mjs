@@ -367,6 +367,44 @@ function render(data){cards('kpis',[['TAREFAS CONCLUÍDAS',data.tasks_processed]
 async function load(){const [stats,tasks,health]=await Promise.all(['/api/stats','/api/tasks','/api/health'].map(path=>fetch(path).then(response=>response.json())));render({...stats,tasks:tasks.tasks,health})}let poll;function fallback(){if(poll)return;$('live').textContent='● POLLING · 2s';poll=setInterval(()=>load().catch(()=>{$('live').textContent='● DESCONECTADO'}),2000)}const stream=new EventSource('/api/events');stream.onopen=()=>{$('live').textContent='● AO VIVO';if(poll){clearInterval(poll);poll=null}};stream.addEventListener('update',()=>load().catch(fallback));stream.onerror=()=>{stream.close();fallback()};load().catch(fallback);
 </script></body></html>`;
 
+const dashboardNav = '<section class="grid"><div class="panel"><h2>Command Center</h2><nav class="view-tabs" aria-label="Dashboard views" role="tablist">' +
+  ['Overview', 'History', 'Traces', 'Tasks', 'Agents', 'Tools', 'Plugins', 'MCPs', 'Cache', 'Memory', 'Validation', 'Alerts']
+    .map((view, index) => `<button class="view-tab" type="button" role="tab" data-view="${view}" aria-selected="${index === 0 ? 'true' : 'false'}" aria-controls="view-panel">${view}</button>`)
+    .join('') +
+  '</nav><div id="view-panel" role="tabpanel" tabindex="0"><p class="empty">Carregando views observadas.</p></div></div></section>';
+
+const dashboardScript = `<script>
+const viewData = {};
+const viewPanel = document.getElementById('view-panel');
+const viewTabs = [...document.querySelectorAll('[data-view]')];
+const viewValue = value => value === null || value === undefined ? 'INDISPONÍVEL' : typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
+function renderView(name) {
+  const view = viewData[name];
+  viewTabs.forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.view === name)));
+  if (!view) { viewPanel.innerHTML = '<p class="empty">View indisponível.</p>'; return; }
+  const entries = Object.entries(view).filter(([key]) => !['timestamp', 'source'].includes(key));
+  viewPanel.innerHTML = '<div class="view-meta"><b>' + e(name) + '</b> ' + tag(view.measurement_type) + '<span class="muted">' + e(view.status || 'OBSERVED') + '</span></div>' +
+    '<pre class="view-json">' + e(JSON.stringify(Object.fromEntries(entries.map(([key, value]) => [key, viewValue(value)])), null, 2)) + '</pre>';
+}
+async function loadViewRegistry() {
+  try {
+    const response = await fetch('/api/views');
+    if (!response.ok) throw new Error('view registry unavailable');
+    Object.assign(viewData, (await response.json()).views || {});
+    renderView('Overview');
+  } catch {
+    viewPanel.innerHTML = '<p class="empty">Não foi possível carregar views. <button id="view-retry" type="button">Tentar novamente</button></p>';
+    document.getElementById('view-retry').addEventListener('click', loadViewRegistry);
+  }
+}
+viewTabs.forEach(tab => tab.addEventListener('click', () => renderView(tab.dataset.view)));
+loadViewRegistry();
+</script>`;
+
+const dashboardHtml = html
+  .replace('</header><section class="grid kpis"', `${dashboardNav}</header><section class="grid kpis"`)
+  .replace('</script></body></html>', `</script>${dashboardScript}</body></html>`);
+
 function sendJson(res, body) { res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(body)); }
 
 export function createDashboardServer({ root = ROOT, port = PORT, wireProbe } = {}) {
@@ -379,7 +417,7 @@ export function createDashboardServer({ root = ROOT, port = PORT, wireProbe } = 
   const server = createServer(async (req, res) => {
     if (req.method !== 'GET') { res.writeHead(405, { Allow: 'GET' }); return res.end('Method Not Allowed'); }
     try {
-      if (req.url === '/') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); return res.end(html); }
+      if (req.url === '/') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); return res.end(dashboardHtml); }
       if (req.url === '/api/events') { res.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', Connection: 'keep-alive', 'Cache-Control': 'no-cache' }); clients.add(res); await publish(); req.on('close', () => clients.delete(res)); return; }
       if (req.url === '/api/stats') return sendJson(res, await dashboardStats(root));
       if (req.url === '/api/views') return sendJson(res, { views: await dashboardViews(root), source: 'dashboard view registry', measurement_type: 'exact', timestamp: new Date().toISOString() });
