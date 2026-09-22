@@ -2,15 +2,17 @@ import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 
-import { fail, ok } from "@/lib/api/wrappers";
 import { scheduleCronJob } from "@/lib/agent-engine/cron/scheduler";
 import { getRequestPool } from "@/lib/agent-engine/db/request-pool";
+import { fail, ok } from "@/lib/api/wrappers";
+import { audit } from "@/lib/audit";
 import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const DEFAULT_REMINDER = "Tens um lembrete programado. Confere a aplicação para os detalhes.";
+const NEW_REMINDERS_PER_MINUTE = 60;
 
 const bodySchema = z.object({
   contact_id: z.string().uuid(),
@@ -51,10 +53,24 @@ function organizationId(req: NextRequest): string | null {
 }
 
 function ackToken(): string {
-  // 6 chars, no ambiguous I/O/0/1. Stored as data, never as auth.
+  // 6 chars, no ambiguous I/O/0/1. Stored as data, never as authentication.
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const bytes = randomBytes(6);
   return [...bytes].map((byte) => alphabet[byte % alphabet.length]).join("");
+}
+
+function sameRequest(
+  row: NotificationRow,
+  input: z.infer<typeof bodySchema>,
+  scheduledAt: Date,
+  escalationAt: Date,
+): boolean {
+  return (
+    row.contact_id === input.contact_id &&
+    row.body === input.body &&
+    row.scheduled_at.getTime() === scheduledAt.getTime() &&
+    row.escalation_at.getTime() === escalationAt.getTime()
+  );
 }
 
 async function ensureInitialCron(row: NotificationRow): Promise<void> {
@@ -82,6 +98,119 @@ async function ensureInitialCron(row: NotificationRow): Promise<void> {
   });
 }
 
+async function reserveNotification(
+  orgId: string,
+  input: z.infer<typeof bodySchema>,
+  scheduledAt: Date,
+  escalationAt: Date,
+): Promise<
+  | { kind: "ok"; row: NotificationRow; created: boolean }
+  | { kind: "conflict" }
+  | { kind: "rate_limited" }
+> {
+  const pool = getRequestPool();
+
+  // Idempotent retries do not consume the creation rate budget.
+  const firstLookup = await pool.query<NotificationRow>(
+    `select id, organization_id, contact_id, idempotency_key, body, ack_token,
+            status, scheduled_at, escalation_at
+       from notification_requests
+      where organization_id = $1 and idempotency_key = $2
+      limit 1`,
+    [orgId, input.idempotency_key],
+  );
+  const existing = firstLookup.rows[0];
+  if (existing) {
+    return sameRequest(existing, input, scheduledAt, escalationAt)
+      ? { kind: "ok", row: existing, created: false }
+      : { kind: "conflict" };
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    await client.query(
+      "select pg_advisory_xact_lock(hashtextextended($1, 0))",
+      [`notification-schedule:${orgId}`],
+    );
+
+    // Recheck after the lock: another request may have inserted the same key
+    // while this one was waiting.
+    const raced = await client.query<NotificationRow>(
+      `select id, organization_id, contact_id, idempotency_key, body, ack_token,
+              status, scheduled_at, escalation_at
+         from notification_requests
+        where organization_id = $1 and idempotency_key = $2
+        limit 1`,
+      [orgId, input.idempotency_key],
+    );
+    const racedRow = raced.rows[0];
+    if (racedRow) {
+      await client.query("commit");
+      return sameRequest(racedRow, input, scheduledAt, escalationAt)
+        ? { kind: "ok", row: racedRow, created: false }
+        : { kind: "conflict" };
+    }
+
+    const recent = await client.query<{ count: number }>(
+      `select count(*)::int as count
+         from notification_requests
+        where organization_id = $1
+          and created_at >= now() - interval '1 minute'`,
+      [orgId],
+    );
+    if ((recent.rows[0]?.count ?? 0) >= NEW_REMINDERS_PER_MINUTE) {
+      await client.query("rollback");
+      return { kind: "rate_limited" };
+    }
+
+    let row: NotificationRow | null = null;
+    for (let attempt = 0; attempt < 5 && !row; attempt += 1) {
+      await client.query("savepoint notification_insert");
+      try {
+        const inserted = await client.query<NotificationRow>(
+          `insert into notification_requests
+             (organization_id, contact_id, idempotency_key, body, ack_token,
+              status, scheduled_at, escalation_at)
+           values ($1,$2,$3,$4,$5,'scheduled',$6,$7)
+           returning id, organization_id, contact_id, idempotency_key, body, ack_token,
+                     status, scheduled_at, escalation_at`,
+          [
+            orgId,
+            input.contact_id,
+            input.idempotency_key,
+            input.body,
+            ackToken(),
+            scheduledAt,
+            escalationAt,
+          ],
+        );
+        row = inserted.rows[0] ?? null;
+        await client.query("release savepoint notification_insert");
+      } catch (error) {
+        await client.query("rollback to savepoint notification_insert");
+        const isUniqueViolation =
+          typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          error.code === "23505";
+        if (!isUniqueViolation) throw error;
+
+        // The org+idempotency key is serialized by the org lock, so the only
+        // expected collision here is the globally unique short ack token.
+      }
+    }
+    if (!row) throw new Error("notification_ack_token_collision_exhausted");
+    await client.query("commit");
+    return { kind: "ok", row, created: true };
+  } catch (error) {
+    await client.query("rollback").catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export async function POST(req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
   if (!authorized(req)) {
@@ -106,6 +235,10 @@ export async function POST(req: NextRequest): Promise<Response> {
     });
   }
 
+  const scheduledAt = new Date(parsed.data.scheduled_at);
+  const escalationAt = new Date(
+    scheduledAt.getTime() + parsed.data.escalation_after_minutes * 60_000,
+  );
   const pool = getRequestPool();
   const contact = await pool.query<{ id: string }>(
     `select id from contacts where organization_id = $1 and id = $2 limit 1`,
@@ -113,87 +246,47 @@ export async function POST(req: NextRequest): Promise<Response> {
   );
   if (!contact.rows[0]) return fail("not_found", "Contato não encontrado.", 404, { requestId });
 
-  const scheduledAt = new Date(parsed.data.scheduled_at);
-  const escalationAt = new Date(
-    scheduledAt.getTime() + parsed.data.escalation_after_minutes * 60_000,
-  );
-
-  const existing = await pool.query<NotificationRow>(
-    `select id, organization_id, contact_id, idempotency_key, body, ack_token,
-            status, scheduled_at, escalation_at
-       from notification_requests
-      where organization_id = $1 and idempotency_key = $2
-      limit 1`,
-    [orgId, parsed.data.idempotency_key],
-  );
-
-  let row = existing.rows[0] ?? null;
-  if (row) {
-    const same =
-      row.contact_id === parsed.data.contact_id &&
-      row.body === parsed.data.body &&
-      row.scheduled_at.getTime() === scheduledAt.getTime() &&
-      row.escalation_at.getTime() === escalationAt.getTime();
-    if (!same) {
-      return fail(
-        "idempotency_conflict",
-        "A idempotency_key já existe com parâmetros diferentes.",
-        409,
-        { requestId },
-      );
-    }
-  } else {
-    for (let attempt = 0; attempt < 5 && !row; attempt += 1) {
-      try {
-        const inserted = await pool.query<NotificationRow>(
-          `insert into notification_requests
-             (organization_id, contact_id, idempotency_key, body, ack_token,
-              status, scheduled_at, escalation_at)
-           values ($1,$2,$3,$4,$5,'scheduled',$6,$7)
-           on conflict (organization_id, idempotency_key) do nothing
-           returning id, organization_id, contact_id, idempotency_key, body, ack_token,
-                     status, scheduled_at, escalation_at`,
-          [
-            orgId,
-            parsed.data.contact_id,
-            parsed.data.idempotency_key,
-            parsed.data.body,
-            ackToken(),
-            scheduledAt,
-            escalationAt,
-          ],
-        );
-        row = inserted.rows[0] ?? null;
-      } catch (error) {
-        // ack_token collision is vanishingly rare, but the unique constraint is
-        // intentional and retries must not turn it into an outage.
-        if (!(typeof error === "object" && error !== null && "code" in error && error.code === "23505")) {
-          throw error;
-        }
-      }
-    }
-    if (!row) {
-      const raced = await pool.query<NotificationRow>(
-        `select id, organization_id, contact_id, idempotency_key, body, ack_token,
-                status, scheduled_at, escalation_at
-           from notification_requests
-          where organization_id = $1 and idempotency_key = $2 limit 1`,
-        [orgId, parsed.data.idempotency_key],
-      );
-      row = raced.rows[0] ?? null;
-    }
+  const reserved = await reserveNotification(orgId, parsed.data, scheduledAt, escalationAt);
+  if (reserved.kind === "conflict") {
+    return fail(
+      "idempotency_conflict",
+      "A idempotency_key já existe com parâmetros diferentes.",
+      409,
+      { requestId },
+    );
+  }
+  if (reserved.kind === "rate_limited") {
+    return fail(
+      "rate_limited",
+      "Limite de criação de lembretes atingido para esta organização.",
+      429,
+      { requestId, headers: { "Retry-After": "60" } },
+    );
   }
 
-  if (!row) return fail("internal_error", "Não foi possível reservar o lembrete.", 500, { requestId });
-  await ensureInitialCron(row);
+  await ensureInitialCron(reserved.row);
+  await audit({
+    action: "notification.reminder_scheduled",
+    organizationId: orgId,
+    resourceType: "notification_request",
+    resourceId: reserved.row.id,
+    requestId,
+    bypassedRls: true,
+    metadata: {
+      created: reserved.created,
+      status: reserved.row.status,
+      scheduled_at: reserved.row.scheduled_at.toISOString(),
+      escalation_at: reserved.row.escalation_at.toISOString(),
+    },
+  });
 
   return ok(
     {
-      notification_id: row.id,
-      status: row.status,
-      scheduled_at: row.scheduled_at.toISOString(),
-      escalation_at: row.escalation_at.toISOString(),
-      acknowledgement: `CONFIRMAR ${row.ack_token}`,
+      notification_id: reserved.row.id,
+      status: reserved.row.status,
+      scheduled_at: reserved.row.scheduled_at.toISOString(),
+      escalation_at: reserved.row.escalation_at.toISOString(),
+      acknowledgement: `CONFIRMAR ${reserved.row.ack_token}`,
     },
     { requestId },
   );
