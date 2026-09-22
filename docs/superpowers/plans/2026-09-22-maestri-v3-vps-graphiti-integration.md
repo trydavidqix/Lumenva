@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Integrar o Maestri V3 ao Graphiti/Neo4j que já existe na VPS, preservando o estado `OFF` até validação, sem reinstalar serviços, sem Docker novo e sem alterar `main` ou produção.
+**Goal:** Fechar a integração operacional do Maestri V3 com o Graphiti/Neo4j já existente, sem instalar serviços, sem ativar tenants CRM e sem alterar `main` ou produção.
 
-**Architecture:** A VPS já possui o sidecar `zepai/graphiti:0.22.0` e Neo4j Community no profile `ai-graph`, com comunicação interna pela rede `ai-graph-internal`. O Maestri V3 usará o adapter HTTP existente (`/healthcheck`, `/messages`, `/search`) e receberá configuração via `infisical run`, nunca via Git ou variáveis públicas. A feature continuará desligada até o round-trip sintético, isolamento de namespace, compliance e dashboard passarem.
+**Architecture:** A documentação e a auditoria anterior já comprovam o sidecar `zepai/graphiti:0.22.0`, Neo4j Community e a rede privada `ai-graph-internal`. O código V3 já contém adapter HTTP, runtime `OFF` por padrão, fallback nulo e Graph View read-only. Este plano cobre apenas lacunas V3: contrato de busca/health/erros do adapter, um round-trip sintético atual por caminho privado aprovado e status operacional mascarado na dashboard. A prova live histórica do CRM não será repetida como se fosse prova do adapter V3.
 
 **Tech Stack:** Graphiti REST, Neo4j Community, Infisical `prod`, TypeScript, Vitest, Core Runtime, Maestri Context Gateway, dashboard read-only.
 
@@ -17,27 +17,26 @@
 - The six Graphiti variables were reconciled into Infisical project `DeskcommCRM - Lumenva`, environment `prod`.
 - The documented internal URL is `http://graphiti:8000`; production must not publish Graphiti, Neo4j HTTP, or Bolt ports through Caddy.
 - `GRAPHITI_API_KEY` is a shared app/sidecar secret in the contract, even though the current Graphiti image does not enforce that header; network isolation remains the actual boundary.
-- Graphiti must remain `OFF` by default. `SHADOW` writes real tenant content to the sidecar and external LLM/embedder, so it requires a compliance decision before any real tenant is enabled.
-- The existing documentation does not prove a current Maestri V3 round-trip against the live VPS runtime; that is the missing integration evidence.
-- No approved external OTLP collector is documented in the VPS material; OTLP remains a separate optional gate.
+- O restore/health do stack e o contrato Graphiti REST foram testados e documentados no runbook/evidence anteriores. Isso prova o stack e o adapter CRM daquela fase, não o adapter Maestri V3 atual.
+- `GRAPHITI_MODE=off` continua sendo o default do runtime V3. Não usar `shadow` para testar: no CRM, a flag organizacional aceita `off|shadow|canary|on`, e `shadow` também grava conteúdo real e envia dados ao LLM/embedder configurado.
+- A lacuna live é um round-trip atual do adapter V3 com dados sintéticos. O plano não presume que o processo V3 tenha rota de rede até `graphiti:8000`; o caminho privado de execução precisa ser confirmado antes da chamada.
 
 ## Global Constraints
 
 - Não instalar Docker, Docker Desktop, Compose, Neo4j, FalkorDB ou Graphiti; verificar o runtime existente antes de qualquer ação.
-- Não fazer merge, push para `main`, deploy ou alteração de flags de produção durante a implementação.
-- Manter `GRAPHITI_MODE=off` fora do teste sintético aprovado; não ligar uma organização real em `shadow` automaticamente.
+- Não fazer merge para `main`, deploy ou alteração de flags de produção durante a implementação.
+- Manter o default `GRAPHITI_MODE=off`; executar o probe V3 apenas no namespace sintético isolado da Task 3; não alterar flags de organização CRM.
 - Nunca imprimir, copiar para Git, enviar para logs ou incluir em prompts qualquer valor de secret.
 - Não usar dados reais de CRM no round-trip; usar namespace temporário e episódio sintético sem PII.
 - PostgreSQL/CRM continua sendo a fonte de verdade; Graphiti/Neo4j é projeção reconstruível e read-only para a dashboard.
-- Toda falha de health, timeout, autenticação ou schema deve degradar para `NullKnowledgeGraph` sem quebrar o Core.
+- Configuração ausente/inválida usa `NullKnowledgeGraph`. Falha de rede/schema durante uma chamada deve ser reportada como indisponível, com erro sanitizado e sem encerrar o Core; não afirmar que o client troca automaticamente para `NullKnowledgeGraph` em runtime.
 
 ## Review Focus
 
-- Drift entre Infisical, `.env` da VPS e nomes consumidos pelo Maestri; testar resolução sem expor valores na Task 1.
-- Endpoint interno inacessível a partir do processo Maestri; testar health e timeout na Task 2.
-- Header `X-Api-Key` aceito/ignorado pelo servidor atual; testar contrato e documentar a fronteira de rede na Task 2.
-- Namespace de validação vazando para outro namespace; testar isolamento na Task 3.
-- `SHADOW` confundido com “sem egress”; testar que a promoção exige aprovação de compliance na Task 4.
+- Não assumir que `graphiti:8000` resolve fora da rede Docker privada; confirmar um caminho já existente antes do round-trip.
+- O servidor Graphiti atual não aplica autenticação pelo header `X-Api-Key`; a rede interna é a fronteira efetiva. Não tratar o header como controle de acesso.
+- O namespace sintético deve ser único, isolado e removido ao final; se a limpeza falhar, registrar o identificador e interromper novas tentativas.
+- Não usar modos/flags do CRM como configuração do runtime V3. Nenhuma flag organizacional será alterada neste plano.
 
 ### Task 1: Reconciliar o contrato Maestri com o runtime VPS existente
 
@@ -51,37 +50,36 @@
 - Modify: `docs/LUMENVA_COMMAND_CENTER_PLAN.md`
 
 **Interfaces:**
-- Consumes: `GRAPHITI_BASE_URL`, `GRAPHITI_API_KEY`, `GRAPHITI_TIMEOUT_MS`, `GRAPHITI_LLM_*`, `GRAPHITI_EMBEDDER_MODEL` from Infisical `prod`.
-- Produces: one canonical configuration table mapping the VPS contract to `createKnowledgeGraphFromEnv()` and a list of fields that must remain runtime-only.
+- Consumes: VPS runbooks and the checked-in V3 environment contract; no secret values.
+- Produces: documented mapping from V3 runtime variables to the existing Infisical contract.
 
 - [x] **Step 1: Confirm the current checkout and competing work**
 
   Run `git status --short --branch`, `git branch --show-current`, and inspect active agents before editing. Expected: clean isolated `vps`; no active agent owns this same worktree.
 
-- [x] **Step 2: Compare names without reading values**
+- [x] **Step 2: Compare documented names without reading values**
 
-  Compare only secret names from Infisical/GitHub and env names consumed by `runtime.ts`; do not run a command that prints secret values. Expected mapping: `GRAPHITI_BASE_URL` → `http://graphiti:8000` inside the compose network, `GRAPHITI_API_KEY` → adapter header, and the four sidecar provider settings remain sidecar-only.
+  Compare names recorded in the VPS runbooks with names consumed by `runtime.ts`; do not claim a fresh Infisical query. Expected mapping: `GRAPHITI_BASE_URL` → `http://graphiti:8000` inside the private network, `GRAPHITI_API_KEY` → adapter header, `GRAPHITI_TIMEOUT_MS` → V3 request timeout, and LLM/embedder/Neo4j credentials stay inside the service runtime. A live secret inventory is not needed to finish this documentation task.
 
 - [x] **Step 3: Resolve mode vocabulary explicitly**
 
-  Keep Maestri V3 modes `off`, `shadow`, and `on`. Treat the legacy CRM vocabulary `canary` as an external rollout policy, not as an unreviewed new mode in the V3 runtime. Document that no real tenant flag is changed by this plan.
+  Keep the V3 adapter modes `off`, `shadow`, and `on`. Separately, the CRM tenant feature flag supports `off`, `shadow`, `canary`, and `on`. Do not map one enum to the other or change any tenant flag as part of Maestri V3 integration.
 
 - [x] **Step 4: Record the reconciliation**
 
   Add the mapping, current VPS evidence, and unresolved live round-trip gate to the audit and canonical plan. Run `git diff --check` and commit:
 
   ```powershell
-  git add docs/audits/maestri-v3-rollout-matrix-2026-09-22.md docs/LUMENVA_COMMAND_CENTER_PLAN.md
+  git add docs/audits/maestri-v3-rollout-matrix-2026-09-22.md docs/LUMENVA_COMMAND_CENTER_PLAN.md docs/superpowers/plans/2026-09-22-maestri-v3-vps-graphiti-integration.md
   git commit -m "docs(graph): reconcile Maestri with VPS runtime"
   ```
 
-**Task 1 result — 2026-09-22:** `RECONCILED / LIVE ROUND-TRIP PENDING`.
-The local checkout is clean on `vps`; no competing agent owns this worktree;
-the documented Infisical names match the Maestri adapter contract; V3 keeps
-`off|shadow|on`; legacy `canary` remains external policy. The local Infisical
-wrapper produced no usable version/help/session output, so no values were read
-and no CLI was installed. The next gate requires access to the existing VPS
-runtime or an authenticated names-only Infisical query.
+**Task 1 result — 2026-09-22:** `DOCUMENTED CONTRACT RECONCILED`.
+The local checkout was clean on `vps`; no other active agent owned this
+worktree. Runbooks and V3 source were compared without reading secret values.
+The Infisical names are documented evidence, not a fresh live inventory. The
+V3 adapter enum and CRM tenant enum are distinct. No local Infisical CLI was
+installed to compensate for the unusable wrapper.
 
 ### Task 2: Harden the Maestri Graphiti adapter for the existing service
 
@@ -95,9 +93,9 @@ runtime or an authenticated names-only Infisical query.
 - Consumes: `GraphitiHttpClient`, `KnowledgeGraph`, deterministic namespace strings, and the existing `X-Api-Key` contract.
 - Produces: a bounded, timeout-controlled client that accepts the deployed Graphiti response shapes and fails closed.
 
-- [ ] **Step 1: Write tests for the deployed wire contract**
+- [ ] **Step 1: Add only missing V3 adapter coverage**
 
-  Cover `GET /healthcheck`, `POST /messages`, and `POST /search`; assert the request path, namespace/group ID, timeout, and that the API key never appears in thrown error text. Add a test for non-2xx and malformed JSON responses.
+  Existing `graph.test.ts` already covers `POST /messages`, namespace/group ID, and the `X-Api-Key` header. Add coverage only for `GET /healthcheck`, `POST /search`, timeout/network failure, non-2xx, malformed JSON, and secret redaction. Do not duplicate Graphiti server-contract tests already recorded in `phase-4-graphiti-gate.md`.
 
 - [ ] **Step 2: Run the focused tests and observe RED**
 
@@ -105,7 +103,7 @@ runtime or an authenticated names-only Infisical query.
   pnpm --filter @lumenva/knowledge-graph test -- graph.test.ts
   ```
 
-  Expected: any newly missing assertion fails for the real contract reason, not because of a test typo.
+  Expected: tests establish Maestri adapter behavior without requiring a VPS connection.
 
 - [ ] **Step 3: Implement only the smallest adapter correction**
 
@@ -128,48 +126,48 @@ runtime or an authenticated names-only Infisical query.
   git commit -m "fix(graph): align adapter with VPS Graphiti contract"
   ```
 
-### Task 3: Validate the live VPS sidecar with synthetic data
+### Task 3: Validate the current V3 adapter against the existing VPS sidecar
 
 **Files:**
 - Inspect: `docs/runbooks/graphiti.md`
 - Modify: `docs/audits/maestri-v3-rollout-matrix-2026-09-22.md`
-- Modify: `docs/audits/maestri-v3-windows-bootstrap-2026-09-22.md`
+- Modify: this plan's progress ledger
 - Test: `packages/knowledge-graph/src/graph.test.ts`
 
 **Interfaces:**
 - Consumes: existing VPS internal Graphiti URL and Infisical runtime injection.
-- Produces: health evidence, one synthetic episode/search round-trip, namespace isolation evidence, and rollback evidence with the feature still `OFF`.
+- Produces: health evidence and one isolated synthetic episode/search round-trip through the current V3 adapter; tenant flags remain unchanged.
 
-- [ ] **Step 1: Verify the existing VPS service before changing anything**
+- [ ] **Step 1: Confirm an already-approved private execution path**
 
-  On the VPS, inspect the exact compose project, profiles, service health, networks, and current feature flags. Do not run `up`, `pull`, `down`, `down -v`, volume deletion, or secret rotation. Expected: existing `graphiti` and `neo4j` services/volumes are identified before any request.
+  Confirm whether Maestri V3 is already deployed on the VPS. No current evidence in this plan proves that it is. If it is not deployed, identify an approved way to run the exact V3 adapter from this `vps` checkout inside the existing private network while secrets remain in the VPS runtime. Do not substitute a hand-written HTTP probe; that would test Graphiti, not Maestri. Do not install, start, stop, recreate, or reconfigure services. If no such path exists, mark `BLOCKED_EXTERNAL_ACCESS` and stop before writing data.
 
 - [ ] **Step 2: Inject existing Infisical configuration ephemerally**
 
-  Use the existing `infisical run -- <command>` path from the runbook. Do not copy values into `.env`, GitHub secrets, Windows environment, or chat. Confirm only variable names and masked endpoint host.
+  Use the existing secret injection mechanism only on the approved VPS execution path. Execute o probe como processo descartável, com `GRAPHITI_MODE=on` apenas no ambiente desse processo para atravessar o adapter; nunca persista esse modo em serviço ou organização. Não copie valores de secrets para `.env`, GitHub secrets, ambiente do Windows ou chat. Emita apenas indicadores configurado/ausente e host mascarado.
 
 - [ ] **Step 3: Run health only**
 
-  Call the internal `/healthcheck` with the configured timeout. Expected: success without changing feature flags or tenant state. If it fails, stop the live validation and retain `OFF`.
+  Call `/healthcheck` through the V3 adapter with its configured timeout. Expected: success without changing persistent runtime configuration or CRM tenant state. If it fails, stop the process before any write and record the provider as unavailable.
 
 - [ ] **Step 4: Run one synthetic round-trip**
 
-  Use namespace `lumenva:vps:maestri-validation:<run_id>` and a non-PII episode such as `Maestri validation fact: build 1 passed`. Post one episode, search it, then search a different namespace. Expected: the first query finds the fact and the second does not.
+  Use a unique, non-tenant namespace and non-PII fact. Post and search through the V3 adapter, then query a second namespace and confirm it does not return the fact. This writes one synthetic episode and may invoke the configured LLM/embedder; record that external processing occurred. In `finally`, delete only the unique test group through the documented Graphiti group-delete route and verify deletion. If cleanup cannot be confirmed, stop and report the retained namespace.
 
 - [ ] **Step 5: Verify no production exposure**
 
-  Confirm Graphiti/Neo4j have no public Caddy route or host port and that the feature/tenant flags remain unchanged. Do not enable `shadow` for a real organization.
+  Reuse the documented private-network/no-public-port evidence unless configuration changed. Keep this plan outside CRM: do not read or write organization feature flags, and do not enable CRM `shadow`, `canary`, or `on`.
 
 - [ ] **Step 6: Persist evidence and commit documentation**
 
-  Record only run ID, masked host, status codes, namespace hashes, latency, and flag state. Run `git diff --check` and commit:
+  Record only run ID, masked host, response status codes, namespace hashes, latency, cleanup result, process-scoped mode, and confirmation that no persistent settings changed. Run `git diff --check` and commit:
 
   ```powershell
-  git add docs/audits/maestri-v3-rollout-matrix-2026-09-22.md docs/audits/maestri-v3-windows-bootstrap-2026-09-22.md
+  git add docs/audits/maestri-v3-rollout-matrix-2026-09-22.md docs/superpowers/plans/2026-09-22-maestri-v3-vps-graphiti-integration.md
   git commit -m "docs(graph): record VPS synthetic round-trip"
   ```
 
-### Task 4: Wire live status into Core and dashboard without enabling tenant data flow
+### Task 4: Add masked Graphiti operational status to the existing dashboard
 
 **Files:**
 - Inspect: `apps/core/src/http-api.ts`
@@ -181,15 +179,17 @@ runtime or an authenticated names-only Infisical query.
 
 **Interfaces:**
 - Consumes: Graphiti runtime status, health result, trace/evidence store, and existing read-only graph endpoint.
-- Produces: dashboard fields showing `configured`, `health`, `mode`, `provider`, `last_probe`, and `fallback_reason` without exposing URL, API key, tenant data, or raw Graphiti errors.
+- Produces: a small status view alongside the existing Graph View, showing configuration/health/mode/provider and safe fallback reason, with no URL, API key, tenant data, or raw provider error.
+
+Existing work: Core `GET /graph`, dashboard `/api/graph`, Graph View and read-only fact/source drill-down already exist. Do not rebuild these routes, graph visualization, or evidence stores. Only add operational status if the fields are not already exposed by an existing endpoint.
 
 - [ ] **Step 1: Write failing tests for masked status**
 
-  Assert that the dashboard distinguishes `disabled`, `configured`, `healthy`, `unhealthy`, and `invalid_configuration`; assert that no URL, header, key, raw episode, or placeholder zero is emitted.
+  Assert only the missing masked status fields and safe states. Reuse the existing `/api/graph` and Core contracts. Do not introduce placeholder values or expose URL, header, key, raw episode, or provider error text.
 
 - [ ] **Step 2: Implement read-only status projection**
 
-  Reuse the existing Core/MCG evidence stores. Do not make the dashboard call Graphiti directly, mutate flags, or trigger ingestion.
+  Reuse Core and MCG. A health probe deve ser feita pelo Core com timeout e resultado seguro (`healthy`/`unhealthy`), sem chamada Graphiti direta da dashboard. Respostas de consulta Graphiti indisponível devem usar status `503` e código estável `GRAPH_UNAVAILABLE`, sem texto bruto do provider. Não mutar flags nem disparar ingestão.
 
 - [ ] **Step 3: Run Core and MCG suites**
 
@@ -207,33 +207,25 @@ runtime or an authenticated names-only Infisical query.
   git commit -m "feat(dashboard): expose masked Graphiti runtime status"
   ```
 
-### Task 5: OTLP collector discovery as a separate optional gate
-
-**Files:**
-- Inspect: `apps/core/src/otlp-exporter.ts`
-- Inspect: `docs/architecture/agent-os/observability.md`
-- Modify: `docs/audits/maestri-v3-rollout-matrix-2026-09-22.md`
-- Modify: `docs/LUMENVA_COMMAND_CENTER_PLAN.md`
-
-**Interfaces:**
-- Consumes: an already approved OTLP/HTTP collector, if one exists in the VPS provider inventory.
-- Produces: a documented `not_configured` result when none exists, or a synthetic trace validation without replacing local persistence.
-
-- [ ] **Step 1: Search provider inventory and secret names only**
-- [ ] **Step 2: If no collector exists, record `OPTIONAL_NOT_CONFIGURED` and stop**
-- [ ] **Step 3: If one exists, test one synthetic span and failure fallback**
-- [ ] **Step 4: Never install a collector or expose credentials as part of Graphiti work**
-
 ## Final acceptance gate
 
 The VPS integration is complete only when all are evidenced:
 
 - Existing Graphiti/Neo4j runtime found; no duplicate installation.
-- Infisical `prod` names map to the Maestri runtime without values in Git/logs.
-- Health, synthetic round-trip, malformed response, timeout, and namespace isolation pass.
+- Documented Infisical `prod` names map to the Maestri runtime; live secret values never enter Git/logs.
+- Health, synthetic round-trip, malformed response, timeout, and namespace isolation pass; runtime provider failures remain sanitized and do not terminate Core.
 - Graphiti/Neo4j remain private; no Caddy/public port exposure.
 - Real tenant flags remain unchanged and default `OFF` is preserved.
 - Core/dashboard show masked status and local fallback behavior.
-- OTLP is either verified against an existing collector or explicitly recorded as optional/unconfigured.
-- `pnpm --filter @lumenva/knowledge-graph test`, Core tests/typecheck, MCG tests, `actionlint`, `git diff --check`, and rollout guard pass.
+- Focused knowledge-graph/Core/MCG checks for changed work, `git diff --check`, and the existing rollout guard pass. `actionlint` is unrelated to this integration and is not a gate here.
 - `main` and production remain unchanged.
+
+## Progress ledger
+
+- Task 1 — **complete**: documented contract reconciled; no fresh live secret inventory claimed.
+- Task 2 — **not started**: only missing adapter tests and any evidenced minimal correction.
+- Task 3 — **blocked pending safe VPS execution path**: historical service restore is documented; current V3 round-trip is not.
+- Task 4 — **not started**: Graph View already exists; only masked health/config status remains in scope.
+- OTLP — already has a local exporter; external collector configuration is separate observability/F25 work and excluded from this plan's completion percentage.
+
+Completion is counted across the four Graphiti tasks: Task 1 complete = **25%**. Do not report an overall Maestri V3 percentage from this integration plan.

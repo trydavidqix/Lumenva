@@ -39,7 +39,7 @@ valores de secrets.
 
 | Contract area | Maestri V3 | VPS/documented runtime | Result |
 |---|---|---|---|
-| Mode | `off \| shadow \| on` | Runbook describes legacy CRM `canary` as rollout vocabulary | Reconciled: V3 keeps the three modes; `canary` stays an external legacy policy |
+| Mode | V3 adapter: `off \| shadow \| on` | CRM tenant flag: `off \| shadow \| canary \| on` | Separate contracts; do not translate modes or mutate tenant flags |
 | Endpoint | `GRAPHITI_BASE_URL` | `http://graphiti:8000` on private `ai-graph-internal` network | Name and topology match; no public URL added |
 | App secret | `GRAPHITI_API_KEY` | Shared app/sidecar secret; adapter sends `X-Api-Key` | Name matches; value remains runtime-only |
 | Timeout | `GRAPHITI_TIMEOUT_MS` | Maestri default `2000` ms | Compatible; no secret involved |
@@ -57,8 +57,11 @@ Evidence boundary:
   no secret value was read or printed. A live names-only query therefore remains
   pending VPS/Infisical access, not a reason to install another CLI.
 
-Task 1 decision: **RECONCILED / LIVE ROUND-TRIP PENDING**. Graphiti remains `OFF`
-by default and no real tenant flag is changed.
+Task 1 decision: **DOCUMENTED CONTRACT RECONCILED**. Graphiti remains `OFF`
+by default and no real tenant flag is changed. The existing Core `/graph`,
+dashboard `/api/graph`, and read-only Graph View are already implemented; the
+remaining dashboard gap is masked provider health/configuration status. Existing
+CRM/server wire-contract tests are not evidence for the Maestri V3 adapter.
 
 ## Guard
 
@@ -76,7 +79,7 @@ The unit test covers the allowed state and the three safety classes: wrong branc
 
 The local rollout safety gate is implemented. F25 remains open for external configuration and compatibility cleanup: official provider quota sources, Graphiti endpoint/credentials, optional OTLP collector, real GitHub Actions/MCP configuration, and a controlled rollout on `vps`. No merge to `main` and no production deployment are authorized by this gate.
 
-The local Graphiti gate is now closed safely: `createKnowledgeGraphFromEnv()` defaults to `NullKnowledgeGraph`, fails closed for incomplete `on`/`shadow` configuration, and the Core `/graph` endpoint remains read-only with an empty result when the provider is off.
+The local Graphiti gate is now closed safely: `createKnowledgeGraphFromEnv()` defaults to `NullKnowledgeGraph`, fails closed for incomplete `on`/`shadow` configuration, and the Core `/graph` endpoint remains read-only with an empty result when the provider is off. The V3 `/graph` route and dashboard `/api/graph` already exist; only masked operational status and current live adapter validation remain in the VPS-specific plan.
 
 ## Official-source constraints
 
