@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolveContext, type ContextCandidate, type TaskContract } from "./context-engine.js";
+import { ToolRegistry } from "./tool-registry.js";
 
 const task: TaskContract = {
   taskId: "task-context-1",
@@ -40,6 +41,16 @@ describe("progressive Context Engine", () => {
     expect(packet.contextVersion).toMatch(/^[a-f0-9]{64}$/);
     expect(packet.tokenBudget).toBe(task.contextBudget);
     expect(packet.characterCount).toBeLessThanOrEqual(task.contextBudget);
+  });
+
+  it("places only the lazy tool catalog in availableTools", () => {
+    const catalog = new ToolRegistry([
+      { name: "git.read_file", domain: "github", capabilities: ["read_file"], description: "Read" },
+      { name: "instagram.publish", domain: "social", capabilities: ["publish"], description: "Publish" },
+    ]).resolve({ capabilities: ["read_file"] });
+    const packet = resolveContext({ task, candidates, level: 0, toolCatalog: catalog });
+
+    expect(packet.availableTools).toEqual(["git.read_file"]);
   });
 
   it("expands deterministically from paths/symbols to bounded excerpts", () => {

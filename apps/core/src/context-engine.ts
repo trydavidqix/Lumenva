@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { ToolCatalog } from "./tool-registry.js";
 
 export type TaskContract = {
   taskId: string;
@@ -53,6 +54,7 @@ export function resolveContext(input: {
   candidates?: ContextCandidate[];
   level?: ContextLevel;
   instructions?: string[];
+  toolCatalog?: Pick<ToolCatalog, "tools">;
 }): ContextPacket {
   const { task, level = 0 } = input;
   const budget = Math.max(0, Math.floor(task.contextBudget));
@@ -90,7 +92,7 @@ export function resolveContext(input: {
     relevantSymbols: symbols,
     priorDecisions: [],
     constraints,
-    availableTools: [...task.capabilities].sort(),
+    availableTools: input.toolCatalog ? input.toolCatalog.tools.map((tool) => tool.name) : [...task.capabilities].sort(),
     evidence: [],
     tokenBudget: task.contextBudget,
   };
