@@ -1777,9 +1777,9 @@ Só termina quando:
 
 ## Status atual
 
-ACTIVE — M0 VALIDATED / F0-F1 CONTRACTS VALIDATED / M1 CORE GREEN / PROVIDER CONFIGURATION NEXT
+ACTIVE — M0 VALIDATED / F0-F16 FABRIC CONTRACTS + BROKER VALIDATED / M1 CORE GREEN / F17-F25 INTEGRATION + PROVIDER CONFIGURATION NEXT
 
-M0, a dashboard, F0/F1 e M1 Core foram validados no worktree isolado. F0/F1 agora usa contratos canônicos `TaskContract`, `ContextPacket`, `ExecutionPort`, `ExecutionResult` e `ResultDigest`; os adapters Codex/Antigravity não reportam sucesso simulado, e o Codex possui runner oficial via SDK com resultado estruturado. A próxima gate é validar execução real/capability probing e health/quota sem secrets no Git. A pesquisa de providers e MCP foi incorporada nesta fonte de verdade em 2026-09-22.
+M0, a dashboard, M1 Core e os contratos Fabric F0–F16 foram validados no worktree isolado. O Fabric agora possui `TaskContract`, `ContextPacket` no Core, `ExecutionPort`, `ExecutionResult`, `ResultDigest`, `HandoffRequest`, adapters Codex/Claude truthful, router com probing e `MaestriDelegator`. O Core já tem `KnowledgeContextRetriever` para notas Obsidian `PUBLISHED` e fatos Graphiti, e o MCG já tem telemetria, traces e dashboard read-only. O gap atual é conectar esses retrievers ao broker usando um packet canônico, fechar quota oficial, OTel/MCP end-to-end, dashboard provider usage e benchmarks. A pesquisa de providers e MCP foi incorporada nesta fonte de verdade em 2026-09-22.
 
 Evidência F0/F1 + M1: `docs/audits/maestri-v3-f0-f1-evidence-2026-09-22.md`. O health probe, a prova read-only real do Codex, a persistência de `ExecutionResult`/evidence, os endpoints `/executions` e `/executions/:id` e a view `Executions` da dashboard já passaram. Faltam providers restantes, MCP/Actions e validação de integração em ambiente configurado.
 
