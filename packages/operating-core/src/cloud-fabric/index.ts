@@ -45,3 +45,6 @@ export * from './learning-resource-router';
 export * from './context-resolver';
 export * from './quota-broker';
 export * from './validation-corpus';
+export * from './reviewer-executor';
+export * from './trace-factory';
+export * from './contract-version';
