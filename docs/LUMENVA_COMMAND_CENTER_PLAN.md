@@ -1785,3 +1785,59 @@ remaining BLOCKED only if externally proven
 ```
 
 Se uma implementação anterior já existir, auditar e reutilizar o que estiver correto. Não recomeçar do zero sem necessidade e não marcar como PASS apenas porque há arquivos, endpoints, mocks ou testes isolados.
+
+## Maestri V3 — bootstrap Windows / branch `vps`
+
+Esta seção entra no plano único antes de qualquer instalação ou alteração de configuração. O escopo é preparar o terreno do Maestri V3 na branch `vps`, sem merge em `main` e sem duplicar ferramentas já instaladas.
+
+### Regras de bootstrap
+
+- Auditar primeiro: PATH, versões, instalação global/local, autenticação, MCPs, CLIs, SDKs, plugins, skills, hooks e GitHub Actions.
+- Não reinstalar ferramenta que já esteja instalada e saudável.
+- Não instalar Docker nesta fase. O GitHub MCP será configurado por OAuth/token em host compatível; Docker só entra se houver decisão posterior explícita.
+- Usar somente documentação/repositórios oficiais dos respectivos fornecedores.
+- Segredos não entram no Git, nos logs, no plano ou em arquivos de configuração versionados.
+- Toda configuração deve ser idempotente e validada após a alteração.
+
+### Auditoria inicial Windows — 2026-09-22
+
+Worktree: `C:\Users\David\Desktop\Projetos\Lumenva\.worktrees\vps`
+Branch: `vps`
+Base: `fb830934`
+Main: não alterada.
+
+Passaram na auditoria local:
+
+- Windows 10 build 19045; Git `2.55.0`; GitHub CLI `2.101.0`; Node `24.19.0`; npm `11.17.0`; pnpm `9.15.9`; Python `3.13.15`.
+- Codex CLI `0.155.1`, autenticado via ChatGPT; Claude Code `2.1.278`, autenticado e `claude doctor` sem problemas; Gemini CLI `0.60.0`; Antigravity `2.15.1`; Google Cloud SDK `585.0.0`.
+- GitHub CLI autenticado como `trydavidqix`, protocolo HTTPS, com scopes `repo`, `workflow`, `read:org`, `gist` e `delete_repo` observados.
+- Skills locais e hooks existentes foram inventariados; Claude possui `caveman` e `i-have-adhd`; Codex possui plugins/hooks locais; Gemini encontrou skills globais, mas recusou skills do projeto por trust pendente.
+- GitHub Actions existentes: `ci.yml`, `f2-f3-vertical.yml`, `implementacao-tokens-ci.yml`, `mcg.yml`; workflows desativados permanecem `.disabled`.
+
+Gaps confirmados, sem instalação automática ainda:
+
+- `docs/MAESTRI_AGENT_ARCHITECTURE.md` não existe no checkout nem nos diretórios Lumenva auditados; registrar como documento ausente, sem inventar conteúdo.
+- Jules não possui CLI oficial instalada/publicada; o artefato oficial disponível é `@google/jules-sdk` e a Action `google-labs-code/jules-invoke@v1`.
+- `@openai/codex-sdk` e `@google/jules-sdk` não estão presentes nas dependências do workspace.
+- `gh-aw` não está instalado como extensão GitHub CLI.
+- Gemini não possui MCPs nem extensões configurados.
+- Claude GitHub MCP remoto falha por incompatibilidade de registro OAuth; Codex MCPs locais aparecem `Unsupported` e precisam de capability/health probing antes de qualquer troca.
+- Não há secrets/variables no repositório visíveis via `gh secret list`/`gh variable list`; nenhum secret será criado sem nome, escopo e owner definidos.
+- Docker, kubectl, Supabase CLI e Jules CLI não serão instalados neste bootstrap; não são pré-requisitos comprovados para o caminho escolhido.
+
+### Implementação V3 após a auditoria
+
+1. Criar o documento ausente `docs/MAESTRI_AGENT_ARCHITECTURE.md` somente após consolidar a arquitetura aprovada nesta branch.
+2. Instalar apenas os SDKs confirmados ausentes no workspace: `@openai/codex-sdk` e `@google/jules-sdk`.
+3. Instalar `gh-aw` como extensão oficial e executar `gh aw doctor`; inicializar Agentic Workflows somente depois de revisar permissões, engines, tools e locks.
+4. Adicionar workflows versionados para Codex Action/Jules Action apenas com secrets nomeados e permissões mínimas; não executar em `main` durante esta tarefa.
+5. Corrigir/configurar MCP por host usando capability probing, escopo read-only inicial e autenticação oficial; não duplicar servidores existentes.
+6. Validar SDKs, Actions, MCPs, plugins, skills, hooks e workflows com evidência reproduzível na branch `vps`.
+
+Fontes oficiais usadas para a matriz:
+
+- OpenAI Codex CLI/SDK/Action: `https://github.com/openai/codex`, `https://github.com/openai/codex/blob/main/sdk/typescript/README.md`, `https://github.com/openai/codex-action`.
+- Anthropic Claude Code: `https://docs.anthropic.com/en/docs/claude-code/getting-started`, `https://docs.anthropic.com/en/docs/claude-code/cli-usage`.
+- Google Gemini CLI: `https://github.com/google-gemini/gemini-cli`, `https://github.com/github/github-mcp-server/blob/main/docs/installation-guides/install-gemini-cli.md`.
+- Google Jules: `https://developers.google.com/jules/api`, `https://github.com/google-labs-code/jules-sdk`, `https://github.com/google-labs-code/jules-action`.
+- GitHub MCP/Actions/Agentic Workflows/Secrets: `https://github.com/github/github-mcp-server`, `https://github.github.com/gh-aw/`, `https://docs.github.com/en/actions/concepts/security/secrets`.
