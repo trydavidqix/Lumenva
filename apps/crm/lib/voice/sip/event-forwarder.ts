@@ -42,16 +42,21 @@ export function createSipEventForwarder(deps: { brainClient: SipBrainClient }): 
 
       const technicalE164 = event.direction === "inbound" ? event.calledE164 : event.callerE164;
 
-      const context = await deps.brainClient.resolveContext({
-        provider_call_id: event.providerEventId,
-        connection_id: event.connectionId,
-        caller_e164: event.callerE164,
-        called_e164: event.calledE164,
-        direction: event.direction,
-      });
+      const voiceCallId =
+        event.direction === "outbound" && event.attributes.voiceCallId
+          ? event.attributes.voiceCallId
+          : (
+              await deps.brainClient.resolveContext({
+                provider_call_id: event.providerEventId,
+                connection_id: event.connectionId,
+                caller_e164: event.callerE164,
+                called_e164: event.calledE164,
+                direction: event.direction,
+              })
+            ).voice_call_id;
 
       await deps.brainClient.recordEvent({
-        voice_call_id: context.voice_call_id,
+        voice_call_id: voiceCallId,
         connection_id: event.connectionId,
         phone_e164: technicalE164,
         state,
