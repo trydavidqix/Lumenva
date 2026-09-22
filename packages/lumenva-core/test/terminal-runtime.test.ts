@@ -21,7 +21,7 @@ class FakePty {
 test('terminal runtime owns PTY lifecycle and emits real runtime events', async () => {
   const bus = new EventBus();
   const pty = new FakePty();
-  const adapter: TerminalAdapter = { spawn: () => pty as never };
+  const adapter: TerminalAdapter = { spawn: () => pty };
   const runtime = new TerminalRuntime(bus, adapter);
   const events: Array<{ type: string; payload: unknown }> = [];
   bus.on('*', (event) => events.push({ type: event.type, payload: event.payload }));
@@ -47,7 +47,7 @@ test('terminal runtime owns PTY lifecycle and emits real runtime events', async 
 test('terminal runtime rejects arbitrary writes to missing or exited sessions', async () => {
   const bus = new EventBus();
   const pty = new FakePty();
-  const runtime = new TerminalRuntime(bus, { spawn: () => pty as never });
+  const runtime = new TerminalRuntime(bus, { spawn: () => pty });
   assert.throws(() => runtime.write('missing', 'x'), /terminal_not_found/);
   const session = await runtime.create({ executable: 'codex', cwd: 'C:\\repo' });
   pty.emitExit(1, 0);
