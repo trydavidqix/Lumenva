@@ -21,15 +21,13 @@ Auditoria concluída antes de instalar. Não foi instalado Docker, não foram re
 | GitHub CLI/auth | `2.101.0`, autenticado; scopes observados |
 | Codex MCP | configurado; servidores reportados como `Unsupported` |
 | Claude MCP | Docs conectado; Railway precisa auth; GitHub falha OAuth dynamic registration |
-| Jules | sem CLI; SDK/Action ainda ausentes no workspace |
-| Agentic Workflows | `gh-aw` ausente |
-| GitHub Actions | CI/M1-MCG existentes; Codex/Jules/gh-aw ainda ausentes |
-| Documento de arquitetura | `docs/MAESTRI_AGENT_ARCHITECTURE.md` ausente |
+| Jules | sem CLI oficial; SDK local presente; Action ainda não configurada |
+| Agentic Workflows | extensão oficial `gh-aw v0.88.8`, doctor PASS |
+| GitHub Actions | CI/M1-MCG existentes; Codex/Jules Actions ainda não configuradas |
+| Documento de arquitetura | presente e lido: `docs/MAESTRI_AGENT_ARCHITECTURE.md` |
 
 ## Itens confirmados como ausentes
 
-- Dependências locais `@openai/codex-sdk` e `@google/jules-sdk`.
-- Extensão `gh-aw`.
 - Configuração Gemini MCP/extension.
 - Workflows versionados Codex Action/Jules Action.
 
@@ -45,8 +43,8 @@ Auditoria concluída antes de instalar. Não foi instalado Docker, não foram re
 - `pnpm run maestri:v3:sdk-smoke`: PASS; imports ESM de Codex/Jules, sem chamada externa.
 - `gh aw doctor`: PASS; autenticação GitHub CLI verificada.
 - `gh aw version`: `v0.88.8`.
-- `docker`, `kubectl`, `supabase` e `jules`: ausentes; mantidos fora do escopo conforme decisão do Owner.
+- `docker`, `docker-compose`, `kubectl`, `supabase` e `jules`: ausentes; mantidos fora do escopo conforme decisão do Owner.
 
 ## Próximo gate
 
-SDKs locais e `gh-aw` foram instalados e validados: smoke ESM dos SDKs sem chamada externa; `gh aw doctor` PASS; versão `gh-aw v0.88.8`. O próximo gate é configurar MCP/Actions por capability e autenticação, sem criar secrets automaticamente.
+SDKs locais e `gh-aw` foram instalados e validados: smoke ESM dos SDKs sem chamada externa; `gh aw doctor` PASS; versão `gh-aw v0.88.8`. O próximo gate é configurar MCP/Actions por capability e autenticação, sem criar secrets automaticamente. Nenhum workflow foi executado e nenhuma secret foi criada.

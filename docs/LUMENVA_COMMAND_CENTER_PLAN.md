@@ -1917,12 +1917,12 @@ Gaps confirmados, sem instalação automática ainda:
 
 - `docs/MAESTRI_AGENT_ARCHITECTURE.md` não existe no checkout nem nos diretórios Lumenva auditados; registrar como documento ausente, sem inventar conteúdo.
 - Jules não possui CLI oficial instalada/publicada; o artefato oficial disponível é `@google/jules-sdk` e a Action `google-labs-code/jules-invoke@v1`.
-- `@openai/codex-sdk` e `@google/jules-sdk` não estão presentes nas dependências do workspace.
+- `@openai/codex-sdk@0.155.1` e `@google/jules-sdk@0.2.0` estão presentes nas dependências do workspace e foram validados por smoke import sem chamada externa.
 - `gh-aw` não está instalado como extensão GitHub CLI.
 - Gemini não possui MCPs nem extensões configurados.
 - Claude GitHub MCP remoto falha por incompatibilidade de registro OAuth; Codex MCPs locais aparecem `Unsupported` e precisam de capability/health probing antes de qualquer troca.
 - Não há secrets/variables no repositório visíveis via `gh secret list`/`gh variable list`; nenhum secret será criado sem nome, escopo e owner definidos.
-- Docker, kubectl, Supabase CLI e Jules CLI não serão instalados neste bootstrap; não são pré-requisitos comprovados para o caminho escolhido.
+- Docker, docker-compose, kubectl, Supabase CLI e Jules CLI não serão instalados neste bootstrap; não são pré-requisitos comprovados para o caminho escolhido.
 
 ### Implementação V3 após a auditoria
 
@@ -1933,7 +1933,7 @@ Gaps confirmados, sem instalação automática ainda:
 5. Corrigir/configurar MCP por host usando capability probing, escopo read-only inicial e autenticação oficial; não duplicar servidores existentes.
 6. Validar SDKs, Actions, MCPs, plugins, skills, hooks e workflows com evidência reproduzível na branch `vps`.
 
-Status deste bootstrap: `docs/MAESTRI_AGENT_ARCHITECTURE.md` foi criado como contrato canônico; `@openai/codex-sdk@0.155.1`, `@google/jules-sdk@0.2.0` e a extensão oficial `gh-aw` foram instalados após confirmação de ausência. Smoke tests, health checks MCP, workflows e secrets permanecem gates separados.
+Status deste bootstrap: `docs/MAESTRI_AGENT_ARCHITECTURE.md` é o contrato canônico; `@openai/codex-sdk@0.155.1`, `@google/jules-sdk@0.2.0` e a extensão oficial `gh-aw v0.88.8` foram instalados após confirmação de ausência. Smoke tests e `gh aw doctor` passaram. Health checks MCP, workflows Codex/Jules e secrets permanecem gates separados; nenhuma secret foi criada.
 
 Plano operacional detalhado: `docs/superpowers/plans/2026-09-22-maestri-v3-bootstrap.md`.
 

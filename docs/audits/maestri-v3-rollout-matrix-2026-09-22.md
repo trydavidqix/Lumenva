@@ -18,6 +18,8 @@ This gate is for the isolated `vps` branch only. It is read-only with respect to
 | Graphiti provider | External configuration pending | No endpoint is assumed or fabricated |
 | Provider quotas | Unavailable unless officially collected | No quota is fabricated |
 | GitHub Actions/MCP | Configuration pending in the real target environment | No production workflow was triggered |
+| Jules CLI | Not installed | No official local Jules CLI was found or required |
+| Jules SDK / Agentic Workflows | Installed and doctor-validated | SDK smoke passed; `gh-aw v0.88.8`, doctor PASS |
 
 ## Guard
 
