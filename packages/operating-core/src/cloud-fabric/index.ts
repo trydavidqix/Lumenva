@@ -41,3 +41,7 @@ export * from './capability-registry';
 export * from './contract-validation';
 export * from './autonomous-policy';
 export * from './dashboard-snapshot';
+export * from './learning-resource-router';
+export * from './context-resolver';
+export * from './quota-broker';
+export * from './validation-corpus';
