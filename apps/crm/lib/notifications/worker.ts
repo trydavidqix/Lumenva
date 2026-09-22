@@ -22,6 +22,7 @@ export const notificationDeliveryPayloadSchema = z.object({
 }).strict();
 
 const E164 = /^\+[1-9]\d{6,14}$/;
+const SAFE_VOICE_REMINDER = "Tens um lembrete programado. Confere a aplicação para os detalhes.";
 const TERMINAL = new Set(["acknowledged", "completed", "failed", "canceled"]);
 
 interface NotificationRow {
@@ -577,7 +578,9 @@ async function sendVoice(
       agentId: "notification-router",
       goal: "deliver_scheduled_notification",
       toE164: reserved.phoneE164,
-      firstMessage: reserved.row.body,
+      // Never read the potentially sensitive WhatsApp reminder body aloud.
+      // Rich voice content requires a future explicit policy; default stays generic.
+      firstMessage: SAFE_VOICE_REMINDER,
     });
     await recordAttempt(pool, reserved.row, "voice", "sent", reserved.voiceCallId);
     await pool.query(
