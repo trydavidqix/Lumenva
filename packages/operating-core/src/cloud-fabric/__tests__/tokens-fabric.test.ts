@@ -18,6 +18,7 @@ import { MemoryRetriever } from '../memory-retriever';
 import { autonomousDecision } from '../autonomous-policy';
 import { buildValidationCorpus, DEFAULT_VALIDATION_SEEDS } from '../validation-corpus';
 import { ContextResolver } from '../context-resolver';
+import { executeIndependentReview } from '../reviewer-executor';
 
 describe('TOKENS workforce fabric', () => {
   it('prefers frontier models for planning', () => {
@@ -181,5 +182,17 @@ describe('TOKENS workforce fabric', () => {
     const resolved = new ContextResolver(memory, tools).resolve({ task_id:'t', goal:'g', scope:'s', allowed_paths:[], constraints:[], capabilities:['coding'], base_sha:'sha' });
     expect(resolved.allowed_tools).toEqual(['git']);
     expect(resolved.sources.map(x => x.id)).toEqual(['m']);
+  });
+
+  it('executes review through a distinct reviewer port', async () => {
+    const reviewer = {
+      name: 'gemini',
+      async execute(contract: any) { return { task_id: contract.task_id, provider: 'gemini', status: 'success' as const, files_changed: [], tests: [{ passed: true, report: 'review-ok' }], evidence: 'review-evidence' }; },
+      async checkQuota() { return { provider: 'gemini', tokens_used: 0, cost_usd: 0 }; },
+    };
+    const implementation = { task_id:'t', provider:'codex', status:'success' as const, files_changed:['a.ts'], tests:[{passed:true,report:'ok'}], evidence:'impl-evidence' };
+    const { reviewExecution, review } = await executeIndependentReview({ implementation, contract:{task_id:'t',goal:'g',scope:'s',allowed_paths:[],constraints:[],base_sha:'sha'}, risk:'R2', target:{provider:'gemini',port:reviewer} });
+    expect(reviewExecution.provider).toBe('gemini');
+    expect(review.accepted).toBe(true);
   });
 });
