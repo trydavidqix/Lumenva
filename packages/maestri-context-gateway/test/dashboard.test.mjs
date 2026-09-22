@@ -73,8 +73,20 @@ test('dashboard binds loopback only', async t => {
 });
 
 test('pending task has no fake economy', async t => {
-  const server = await createDashboardServer({ root: process.cwd(), port: 0 });
-  t.after(() => server.close());
+  const fs = await import('node:fs/promises');
+  const path = await import('node:path');
+  const os = await import('node:os');
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'mcg-dashboard-pending-'));
+  await fs.mkdir(path.join(root, 'tasks', 'pending'), { recursive: true });
+  await fs.writeFile(path.join(root, 'tasks', 'pending', 'state.json'), JSON.stringify({
+    task_id: 'pending',
+    executor: 'codex',
+    internal_state: 'DISPATCHED',
+    external_state: null,
+    created_at: new Date().toISOString()
+  }));
+  t.after(async () => { await new Promise(resolve => server.close(resolve)); await fs.rm(root, { recursive: true, force: true }); });
+  const server = await createDashboardServer({ root, port: 0 });
   const response = await get(server.address().port, '/api/tasks');
   const pending = JSON.parse(response.body).tasks.find(task => task.status === 'DISPATCHED');
   assert.ok(pending);
@@ -110,8 +122,12 @@ test('health uses wire workspace when the probe is available and hides secrets',
 });
 
 test('dashboard exposes resource groups, CEO alerts and persisted summary', async t => {
-  const server = await createDashboardServer({ root: process.cwd(), port: 0, wireProbe: async () => ({ online: true, workspace: 'Lumenva', agents: [] }) });
-  t.after(() => server.close());
+  const fs = await import('node:fs/promises');
+  const path = await import('node:path');
+  const os = await import('node:os');
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'mcg-dashboard-summary-'));
+  const server = await createDashboardServer({ root, port: 0, wireProbe: async () => ({ online: true, workspace: 'Lumenva', agents: [] }) });
+  t.after(async () => { await new Promise(resolve => server.close(resolve)); await fs.rm(root, { recursive: true, force: true }); });
   const statsResponse = await get(server.address().port, '/api/stats');
   const stats = JSON.parse(statsResponse.body);
   assert.ok(Array.isArray(stats.by_plugin));
@@ -120,5 +136,5 @@ test('dashboard exposes resource groups, CEO alerts and persisted summary', asyn
   assert.ok(Array.isArray(stats.by_ide));
   assert.ok(Array.isArray(stats.alerts));
   assert.ok(Array.isArray(stats.agents));
-  assert.equal(await import('node:fs/promises').then(fs => fs.access('state/dashboard/tasks.json').then(() => true)), true);
+  assert.equal(await fs.access(path.join(root, 'state', 'dashboard', 'snapshot.json')).then(() => true), true);
 });
