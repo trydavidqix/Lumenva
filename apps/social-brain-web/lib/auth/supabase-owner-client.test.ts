@@ -15,13 +15,13 @@ describe('createSupabaseOwnerClient', () => {
           eq: (_column: string, value: string) => {
             filteredOwnerId = value
             return {
+              limit: () => ({
               maybeSingle: async () => ({
                 data: {
-                  id: 'workspace-1',
-                  name: 'Lumenva Social Brain',
-                  owner_user_id: value,
+                  organization_id: 'workspace-1',
                 },
                 error: null,
+              }),
               }),
             }
           },
@@ -49,7 +49,9 @@ describe('createSupabaseOwnerClient', () => {
       from: () => ({
         select: () => ({
           eq: () => ({
+            limit: () => ({
             maybeSingle: async () => ({ data: null, error: new Error('database failure') }),
+            }),
           }),
         }),
       }),

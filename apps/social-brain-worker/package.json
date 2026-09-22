@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@lumenva/core": "workspace:*",
-    "@lumenva/db": "workspace:*"
+    "@lumenva/db": "workspace:*",
+    "@lumenva/integration-meta": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

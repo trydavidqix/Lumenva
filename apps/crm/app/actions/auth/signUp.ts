@@ -2,7 +2,6 @@
 
 import { headers } from "next/headers";
 
-import { createClient } from "@/lib/supabase/server";
 import { signupSchema, type SignupInput } from "@/lib/auth/schemas";
 import { audit, hashEmail } from "@/lib/audit";
 import { authRateLimited, AUTH_LIMITS } from "@/lib/auth/rate-limit";
@@ -41,29 +40,46 @@ export async function signUp(input: SignupInput): Promise<SignUpResult> {
   const ip = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
   const userAgent = hdrs.get("user-agent") ?? null;
 
-  // Criar conta é fluxo raro por pessoa: teto baixo por IP evita fábrica de
-  // organizações (cada signup provisiona tenant). Issue #64.
   if (await authRateLimited("signup", null, AUTH_LIMITS.signup)) {
     return { ok: false, error: "rate_limited" };
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({
-    email: parsed.data.email,
-    password: parsed.data.password,
-    options: {
-      emailRedirectTo: `${origin}/auth/confirm`,
-      data: { org_name: parsed.data.org_name },
-    },
-  });
+  try {
+    const { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } = await import("firebase/auth");
+    const { auth } = await import("@/lib/firebase/client");
 
-  if (error) {
-    if (error.status === 429) return { ok: false, error: "rate_limited" };
+    const userCredential = await createUserWithEmailAndPassword(auth, parsed.data.email, parsed.data.password);
+    
+    // Armazenar o org_name no displayName temporariamente
+    await updateProfile(userCredential.user, {
+      displayName: parsed.data.org_name
+    });
+
+    await sendEmailVerification(userCredential.user, {
+      url: `${origin}/auth/confirm`,
+    });
+
+    await audit({
+      action: "auth.signup_requested",
+      actorUserId: userCredential.user.uid,
+      metadata: { email_hash: hashEmail(parsed.data.email) },
+      requestId,
+      ip,
+      userAgent,
+    });
+
+    return { ok: true };
+  } catch (error: any) {
+    if (error?.code === "auth/email-already-in-use") {
+      // Anti-enumeração: não devolver erro
+      return { ok: true };
+    }
+    
     await audit({
       action: "auth.signup_failed",
       metadata: {
         email_hash: hashEmail(parsed.data.email),
-        reason: error.message,
+        reason: error?.message ?? "unknown",
       },
       requestId,
       ip,
@@ -71,15 +87,4 @@ export async function signUp(input: SignupInput): Promise<SignUpResult> {
     });
     return { ok: false, error: "signup_failed" };
   }
-
-  await audit({
-    action: "auth.signup_requested",
-    actorUserId: data.user?.id ?? null,
-    metadata: { email_hash: hashEmail(parsed.data.email) },
-    requestId,
-    ip,
-    userAgent,
-  });
-
-  return { ok: true };
 }

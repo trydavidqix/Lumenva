@@ -1,5 +1,5 @@
 import { INSTAGRAM_GRAPH } from "./oauth";
-import { parseMetaError } from "../meta/errors";
+import { parseMetaError } from "./errors";
 
 type GraphErrorBody = { error?: unknown };
 
@@ -25,6 +25,27 @@ export interface InstagramCommentsResult {
 }
 
 export interface InstagramPermission { permission: string; status: string; }
+
+export type MetaInsight = InstagramInsight;
+
+export async function getFacebookInsights(opts: { pageId: string; accessToken: string; metrics: string[]; period?: string }): Promise<MetaInsight[]> {
+  const url = new URL(`${INSTAGRAM_GRAPH}/${encodeURIComponent(opts.pageId)}/insights`);
+  url.searchParams.set("metric", opts.metrics.join(","));
+  if (opts.period) url.searchParams.set("period", opts.period);
+  url.searchParams.set("access_token", opts.accessToken);
+  return (await getJson<{ data?: Array<{ name?: unknown; period?: unknown; values?: Array<{ value?: unknown; end_time?: unknown }>; title?: unknown; description?: unknown }> }>(url)).data?.filter((item) => typeof item.name === "string").map((item) => ({ name: item.name as string, period: typeof item.period === "string" ? item.period : null, values: (item.values ?? []).map((value) => ({ value: typeof value.value === "number" || typeof value.value === "string" ? value.value : null, endTime: typeof value.end_time === "string" ? value.end_time : null })), title: typeof item.title === "string" ? item.title : null, description: typeof item.description === "string" ? item.description : null })) ?? [];
+}
+
+export async function getInstagramMediaInsights(opts: { mediaId: string; accessToken: string; metrics: string[] }): Promise<InstagramInsight[]> {
+  const url = new URL(`${INSTAGRAM_GRAPH}/${encodeURIComponent(opts.mediaId)}/insights`);
+  url.searchParams.set("metric", opts.metrics.join(","));
+  url.searchParams.set("access_token", opts.accessToken);
+  return (await getJson<{ data?: InstagramInsight[] }>(url)).data ?? [];
+}
+
+export async function getFacebookPostInsights(opts: { postId: string; accessToken: string; metrics: string[] }): Promise<MetaInsight[]> {
+  return getFacebookInsights({ pageId: opts.postId, accessToken: opts.accessToken, metrics: opts.metrics });
+}
 
 export async function listInstagramComments(opts: { userId: string; accessToken: string; limit?: number; after?: string }): Promise<InstagramCommentsResult> {
   const limit = Math.min(100, Math.max(1, Math.floor(opts.limit ?? 50)));

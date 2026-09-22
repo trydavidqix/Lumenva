@@ -11,6 +11,7 @@ const sectionLinks = [
   { href: "/app/content-os/competitors", label: "Concorrentes", icon: Buildings },
   { href: "/app/content-os/create", label: "Criar conteúdo", icon: Sparkle },
   { href: "/app/content-os/calendar", label: "Calendário", icon: CalendarBlank },
+  { href: "/app/content-os/accounts", label: "Contas Sociais", icon: Sparkle }, // Reusing Sparkle icon, or something else if needed
 ] as const;
 
 export function ContentOsShell({ children }: { children: React.ReactNode }) {

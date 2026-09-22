@@ -8,6 +8,7 @@
     "./client/server": "./src/client/server.ts",
     "./jobs": "./src/jobs/repository.ts",
     "./social": "./src/social/account-repository.ts",
+    "./social/connections": "./src/social/connections.ts",
     "./content": "./src/content/repository.ts",
     "./content/variants": "./src/content/variant-repository.ts",
     "./content/video-workflow": "./src/content/video-workflow-repository.ts",

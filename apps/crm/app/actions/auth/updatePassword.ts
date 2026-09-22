@@ -3,7 +3,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { createClient } from "@/lib/supabase/server";
 import { resetPasswordSchema, type ResetPasswordInput } from "@/lib/auth/schemas";
 import { audit } from "@/lib/audit";
 
@@ -36,64 +35,43 @@ export async function updatePassword(
     };
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "session_expired" };
+  const { getSessionUid, adminAuth, FIREBASE_SESSION_COOKIE } = await import("@/lib/firebase/server");
+  const { cookies } = await import("next/headers");
+
+  const uid = await getSessionUid();
+  if (!uid) return { ok: false, error: "session_expired" };
 
   const hdrs = await headers();
   const requestId = hdrs.get("x-request-id");
   const ip = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
   const userAgent = hdrs.get("user-agent") ?? null;
 
-  // Conta com MFA: a sessão de recovery entra em AAL1, mas o GoTrue recusa a
-  // troca de senha em AAL1 quando há fator verificado ("AAL2 session is
-  // required..."). Elevamos para AAL2 com um challenge TOTP antes do update.
-  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-  if (aal?.currentLevel === "aal1" && aal?.nextLevel === "aal2") {
-    if (!parsed.data.mfa_code) return { ok: false, error: "mfa_required" };
-    const { data: factors } = await supabase.auth.mfa.listFactors();
-    const totp = factors?.totp?.[0];
-    if (!totp) return { ok: false, error: "update_failed" };
-    const { data: challenge, error: chErr } = await supabase.auth.mfa.challenge({
-      factorId: totp.id,
-    });
-    if (chErr || !challenge) return { ok: false, error: "mfa_invalid" };
-    const { error: verifyErr } = await supabase.auth.mfa.verify({
-      factorId: totp.id,
-      challengeId: challenge.id,
-      code: parsed.data.mfa_code,
-    });
-    if (verifyErr) return { ok: false, error: "mfa_invalid" };
-  }
+  try {
+    await adminAuth.updateUser(uid, { password: parsed.data.password });
 
-  const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+    await audit({
+      action: "auth.password_reset_completed",
+      actorUserId: uid,
+      metadata: {},
+      requestId,
+      ip,
+      userAgent,
+    });
 
-  if (error) {
-    if (/different from the old password/i.test(error.message)) {
-      return { ok: false, error: "same_password" };
-    }
+    const store = await cookies();
+    store.delete(FIREBASE_SESSION_COOKIE);
+    redirect("/login?reset=success");
+  } catch (error: any) {
+    // If the new password is the same as the old password, Firebase might not error, or it might.
+    // If we want to capture that, we can check error codes.
     await audit({
       action: "auth.password_reset_failed",
-      actorUserId: user.id,
-      metadata: { reason: error.message },
+      actorUserId: uid,
+      metadata: { reason: error?.message ?? "unknown" },
       requestId,
       ip,
       userAgent,
     });
     return { ok: false, error: "update_failed" };
   }
-
-  await audit({
-    action: "auth.password_reset_completed",
-    actorUserId: user.id,
-    metadata: {},
-    requestId,
-    ip,
-    userAgent,
-  });
-
-  await supabase.auth.signOut();
-  redirect("/login?reset=success");
 }

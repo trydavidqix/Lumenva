@@ -39,6 +39,21 @@ export interface SocialPublishingPort {
   getPublicationStatus(input: PublicationStatusRequest): Promise<PublicationRef>
 }
 
+export type MediaUploadInput =
+  | { source: { type: 'url'; url: string }; idempotencyKey?: string }
+  | { source: { type: 'bytes'; bytes: Uint8Array; filename: string; mimeType: string }; idempotencyKey?: string }
+
+export type MediaAssetRef = {
+  providerMediaAssetId: string
+  processingStatus: string
+}
+
+export interface SocialMediaPort {
+  readonly provider: string
+  uploadMedia(input: MediaUploadInput): Promise<MediaAssetRef>
+  getMediaStatus(providerMediaAssetId: string): Promise<MediaAssetRef>
+}
+
 export interface VideoGenerator {
   readonly provider: string
   submit(input: VideoGenerationInput): Promise<VideoJobRef>

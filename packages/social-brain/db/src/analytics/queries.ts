@@ -119,7 +119,7 @@ export function createSupabaseAnalyticsQueryStore(
 
     async getWorkspace(workspaceId) {
       const { data, error } = await client
-        .from('workspaces')
+        .from('organizations')
         .select('*')
         .eq('id', workspaceId)
         .maybeSingle()

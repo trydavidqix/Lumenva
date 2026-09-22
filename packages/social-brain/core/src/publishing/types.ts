@@ -3,6 +3,7 @@ export type PublishState =
   | 'scheduled'
   | 'publishing'
   | 'published'
+  | 'reconcile_required'
   | 'failed'
   | 'unknown'
 

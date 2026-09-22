@@ -16,6 +16,40 @@ export type SocialAccountRepository = {
   listAccounts(workspaceId: string): Promise<StoredSocialAccount[]>
 }
 
+export function createSupabaseSocialConnectionRepository(
+  client: SupabaseClient<Database>,
+) {
+  return {
+    async upsertConnection(input: {
+      workspaceId: string
+      provider: string
+      platform: string
+      providerAccountId: string
+      externalAccountId: string
+      status: string
+      tokenExpiresAt: Date | null
+      scopes: string[]
+      accessToken: string
+      refreshToken: string | null
+    }) {
+      const { error } = await client.from('social_connections').upsert({
+        workspace_id: input.workspaceId,
+        provider: input.provider,
+        platform: input.platform,
+        provider_account_id: input.providerAccountId,
+        external_account_id: input.externalAccountId,
+        status: input.status,
+        token_expires_at: input.tokenExpiresAt?.toISOString() ?? null,
+        scopes: input.scopes,
+        access_token: input.accessToken,
+        refresh_token: input.refreshToken,
+      } as never)
+
+      if (error) throw new Error('Failed to upsert social connection')
+    },
+  }
+}
+
 export function createSocialAccountRepository(
   store: SocialAccountStore,
   now: () => Date = () => new Date(),
@@ -94,6 +128,68 @@ export function createSupabaseSocialAccountStore(
         .in('id', ids)
 
       if (error) throw new Error('Failed to disable stale social account mappings')
+    },
+  }
+}
+
+import { db } from '../client/drizzle'
+import { socialAccounts } from '../schema/social-accounts'
+import { eq, inArray, sql } from 'drizzle-orm'
+import type { Json } from '../types'
+
+export function createDrizzleSocialAccountStore(): SocialAccountStore {
+  return {
+    async list(workspaceId) {
+      const data = await db
+        .select()
+        .from(socialAccounts)
+        .where(eq(socialAccounts.workspaceId, workspaceId))
+        .orderBy(socialAccounts.platform)
+
+      return data.map(row => ({
+        ...row,
+        workspace_id: row.workspaceId,
+        external_account_id: row.externalAccountId,
+        brightbean_account_id: row.brightbeanAccountId,
+        display_name: row.displayName,
+        metadata: row.metadata as Json,
+        created_at: row.createdAt.toISOString(),
+        updated_at: row.updatedAt.toISOString(),
+      }))
+    },
+
+    async upsert(rows, onConflict) {
+      for (const row of rows) {
+        await db
+          .insert(socialAccounts)
+          .values({
+            workspaceId: row.workspace_id,
+            platform: row.platform,
+            externalAccountId: row.external_account_id,
+            brightbeanAccountId: row.brightbean_account_id,
+            displayName: row.display_name,
+            status: row.status,
+            metadata: row.metadata,
+          })
+          .onConflictDoUpdate({
+            target: [socialAccounts.workspaceId, socialAccounts.platform, socialAccounts.brightbeanAccountId],
+            set: {
+              externalAccountId: row.external_account_id,
+              displayName: row.display_name,
+              status: row.status,
+              metadata: row.metadata,
+              updatedAt: row.updated_at ? new Date(row.updated_at) : new Date(),
+            }
+          })
+      }
+    },
+
+    async disable(ids, updatedAt) {
+      if (ids.length === 0) return
+      await db
+        .update(socialAccounts)
+        .set({ status: 'disabled', updatedAt: new Date(updatedAt) })
+        .where(inArray(socialAccounts.id, ids))
     },
   }
 }

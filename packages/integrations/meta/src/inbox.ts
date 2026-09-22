@@ -1,6 +1,4 @@
-import type { Account } from "@/lib/db/schema";
-import { persistInboxEvent } from "@/lib/inbox/normalize";
-import type { NormalizedWebhookEvent } from "@/lib/webhooks/types";
+import type { Account, NormalizedWebhookEvent } from "./types";
 import { INSTAGRAM_GRAPH } from "./oauth";
 
 type Json = Record<string, unknown>;
@@ -47,9 +45,10 @@ export async function syncInstagramInbox(account: Account, limit = 25): Promise<
         actor: { id: str(actor.id) ?? "unknown", username: str(actor.username), name: str(actor.name) },
         timestamp: num(message.created_time) ?? Math.floor(Date.now() / 1000), payload: detail,
       };
-      const result = persistInboxEvent(event, account.id);
-      if (!result) continue;
-      messageCount++; if (result.duplicate) duplicates++;
+      // Integration package has no database dependency. Persistence belongs to
+      // application adapter; this read-only sync reports normalized messages.
+      void event;
+      messageCount++;
     }
   }
   return { conversations: conversations.length, messages: messageCount, duplicates };

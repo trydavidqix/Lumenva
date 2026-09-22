@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": "22.x"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "next dev",
@@ -15,6 +15,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@lumenva/integration-meta": "workspace:*",
     "@supabase/ssr": "0.12.4",
     "@supabase/supabase-js": "2.111.0",
     "next": "16.3.2",

@@ -90,6 +90,92 @@ export function createSupabaseContentItemStore(
   }
 }
 
+import { db } from '../client/drizzle'
+import { contentItems } from '../schema/content-items'
+import { eq } from 'drizzle-orm'
+
+export function createDrizzleContentItemStore(): ContentItemStore {
+  return {
+    async insert(input) {
+      const rows = await db
+        .insert(contentItems)
+        .values({
+          workspaceId: input.workspace_id,
+          topic: input.topic,
+          objective: input.objective,
+          hook: input.hook,
+          script: input.script,
+          videoBrief: input.video_brief,
+          status: input.status ?? 'DRAFT',
+          proposedPublishMode: input.proposed_publish_mode,
+          proposedScheduledFor: input.proposed_scheduled_for,
+          scheduleRationale: input.schedule_rationale,
+          reviewSnapshotJson: input.review_snapshot_json,
+          reviewSnapshotHash: input.review_snapshot_hash,
+          createdAt: input.created_at ? new Date(input.created_at) : new Date(),
+          updatedAt: input.updated_at ? new Date(input.updated_at) : new Date(),
+        })
+        .returning()
+      
+      const r = rows[0]
+      if (!r) throw new Error('Failed to create content item')
+      return {
+        ...r,
+        workspace_id: r.workspaceId,
+        video_brief: r.videoBrief as Json | null,
+        created_at: r.createdAt.toISOString(),
+      }
+    },
+
+    async update(id, patch) {
+      const rows = await db
+        .update(contentItems)
+        .set({
+          objective: patch.objective,
+          topic: patch.topic,
+          hook: patch.hook,
+          script: patch.script,
+          videoBrief: patch.video_brief,
+          status: patch.status,
+          proposedPublishMode: patch.proposed_publish_mode,
+          proposedScheduledFor: patch.proposed_scheduled_for,
+          scheduleRationale: patch.schedule_rationale,
+          reviewSnapshotJson: patch.review_snapshot_json,
+          reviewSnapshotHash: patch.review_snapshot_hash,
+          updatedAt: patch.updated_at ? new Date(patch.updated_at) : new Date(),
+        })
+        .where(eq(contentItems.id, id))
+        .returning()
+
+      const r = rows[0]
+      if (!r) throw new Error('Failed to update content item')
+      return {
+        ...r,
+        workspace_id: r.workspaceId,
+        video_brief: r.videoBrief as Json | null,
+        created_at: r.createdAt.toISOString(),
+      }
+    },
+
+    async get(id) {
+      const rows = await db
+        .select()
+        .from(contentItems)
+        .where(eq(contentItems.id, id))
+        .limit(1)
+
+      const r = rows[0]
+      if (!r) return null
+      return {
+        ...r,
+        workspace_id: r.workspaceId,
+        video_brief: r.videoBrief as Json | null,
+        created_at: r.createdAt.toISOString(),
+      }
+    },
+  }
+}
+
 function toInsert(input: CreateContentItemInput): ContentItemInsert {
   return {
     workspace_id: input.workspaceId,

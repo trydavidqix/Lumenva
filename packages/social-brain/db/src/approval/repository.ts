@@ -237,16 +237,172 @@ export function createSupabaseApprovalStore(
 
     async isWorkspaceOwner(workspaceId, userId) {
       const { data, error } = await approvalClient
-        .from('workspaces')
-        .select('owner_user_id')
-        .eq('id', workspaceId)
-        .maybeSingle()
+        .from('user_organizations')
+        .select('user_id')
+        .eq('organization_id', workspaceId)
+        .eq('user_id', userId)
+        .limit(1)
+        .maybeSingle() as any
 
       if (error) throw new Error('Failed to verify workspace owner')
-      return data?.owner_user_id === userId
+      return !!data
     },
   }
 }
+
+import { db } from '../client/drizzle'
+import { contentItems, mediaAssets, contentVariants, socialAccounts, approvals, userOrganizations } from '../schema'
+import { eq, and, isNotNull, desc, sql as dSql } from 'drizzle-orm'
+
+export function createDrizzleApprovalStore(): ApprovalStore {
+  return {
+    async getContent(contentItemId) {
+      const rows = await db
+        .select({
+          id: contentItems.id,
+          workspace_id: contentItems.workspaceId,
+          status: contentItems.status,
+          script: contentItems.script,
+          proposed_publish_mode: contentItems.proposedPublishMode,
+          proposed_scheduled_for: contentItems.proposedScheduledFor,
+          review_snapshot_json: contentItems.reviewSnapshotJson,
+          review_snapshot_hash: contentItems.reviewSnapshotHash,
+        })
+        .from(contentItems)
+        .where(eq(contentItems.id, contentItemId))
+        .limit(1)
+
+      const row = rows[0]
+      if (!row) return null
+
+      return {
+        ...row,
+        review_snapshot_json: row.review_snapshot_json as Json,
+      }
+    },
+
+    async listReadyMedia(contentItemId) {
+      const rows = await db
+        .select({ id: mediaAssets.id })
+        .from(mediaAssets)
+        .where(
+          and(
+            eq(mediaAssets.contentItemId, contentItemId),
+            eq(mediaAssets.status, 'ready'),
+            isNotNull(mediaAssets.storagePath)
+          )
+        )
+        .orderBy(mediaAssets.createdAt)
+
+      return rows
+    },
+
+    async listVariants(contentItemId) {
+      const rows = await db
+        .select({
+          platform: contentVariants.platform,
+          caption: contentVariants.caption,
+          title: contentVariants.title,
+          hashtags: contentVariants.hashtags,
+        })
+        .from(contentVariants)
+        .where(eq(contentVariants.contentItemId, contentItemId))
+        .orderBy(contentVariants.platform)
+
+      return rows
+    },
+
+    async listActiveAccounts(workspaceId) {
+      const rows = await db
+        .select({
+          id: socialAccounts.id,
+          platform: socialAccounts.platform,
+        })
+        .from(socialAccounts)
+        .where(
+          and(
+            eq(socialAccounts.workspaceId, workspaceId),
+            eq(socialAccounts.status, 'active')
+          )
+        )
+        .orderBy(socialAccounts.platform)
+
+      return rows
+    },
+
+    async savePending(contentItemId, patch) {
+      await db
+        .update(contentItems)
+        .set({
+          reviewSnapshotJson: patch.review_snapshot_json,
+          reviewSnapshotHash: patch.review_snapshot_hash,
+          status: patch.status,
+        })
+        .where(eq(contentItems.id, contentItemId))
+    },
+
+    async finalizeDecision(input) {
+      const res = await db.execute(dSql`
+        SELECT * FROM finalize_content_decision(
+          ${input.contentItemId}::uuid,
+          ${input.decision},
+          ${input.reason},
+          ${toJson(input.snapshot)}::jsonb,
+          ${input.snapshotHash},
+          ${input.publishMode},
+          ${input.decidedBy}::uuid
+        )
+      `)
+      
+      const row = res.rows[0] as any
+      if (!row) throw new Error('Failed to finalize approval decision')
+      return row as ApprovalStoredDecisionRow
+    },
+
+    async getLatestApproved(contentItemId) {
+      const rows = await db
+        .select()
+        .from(approvals)
+        .where(
+          and(
+            eq(approvals.contentItemId, contentItemId),
+            eq(approvals.decision, 'approved')
+          )
+        )
+        .orderBy(desc(approvals.decidedAt))
+        .limit(1)
+        
+      if (!rows[0]) return null
+      const r = rows[0]
+      return {
+        ...r,
+        workspace_id: r.workspaceId,
+        content_item_id: r.contentItemId,
+        review_snapshot_json: r.reviewSnapshotJson as Json,
+        snapshot_hash: r.snapshotHash,
+        publish_mode: r.publishMode,
+        decided_by: r.decidedBy,
+        decided_at: r.decidedAt.toISOString(),
+      }
+    },
+
+    async isWorkspaceOwner(workspaceId, userId) {
+      const rows = await db
+        .select({ userId: userOrganizations.userId })
+        .from(userOrganizations)
+        .where(
+          and(
+            eq(userOrganizations.organizationId, workspaceId),
+            eq(userOrganizations.userId, userId)
+          )
+        )
+        .limit(1)
+
+      return rows.length > 0
+    },
+  }
+}
+
 
 function resolveDestinationAccounts(accounts: ApprovalAccountRow[]): string[] {
   return SUPPORTED_PLATFORMS.map((platform) => {

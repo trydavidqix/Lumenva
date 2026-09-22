@@ -11,6 +11,24 @@ export interface PublishResult {
   id: string; // post id devolvido pela Graph API
 }
 
+export async function publishFacebookText(opts: { pageId: string; pageAccessToken: string; caption: string }): Promise<PublishResult> {
+  const response = await fetch(`${GRAPH}/${encodeURIComponent(opts.pageId)}/feed`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ message: opts.caption, access_token: opts.pageAccessToken }) });
+  const body: unknown = await response.json().catch(() => undefined);
+  if (!response.ok) throw parseMetaError(body);
+  const id = (body as { id?: unknown; post_id?: unknown } | undefined)?.post_id ?? (body as { id?: unknown } | undefined)?.id;
+  if (typeof id !== 'string' || !id) throw new Error('Meta não devolveu o ID da publicação do Facebook');
+  return { id };
+}
+
+export async function publishFacebookVideo(opts: { pageId: string; pageAccessToken: string; videoUrl: string; caption: string }): Promise<PublishResult> {
+  const response = await fetch(`${GRAPH}/${encodeURIComponent(opts.pageId)}/videos`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ file_url: opts.videoUrl, description: opts.caption, access_token: opts.pageAccessToken }) });
+  const body: unknown = await response.json().catch(() => undefined);
+  if (!response.ok) throw parseMetaError(body);
+  const id = (body as { id?: unknown } | undefined)?.id;
+  if (typeof id !== 'string' || !id) throw new Error('Meta não devolveu o ID do vídeo do Facebook');
+  return { id };
+}
+
 export async function publishFacebookPhoto(opts: {
   pageId: string;
   pageAccessToken: string;

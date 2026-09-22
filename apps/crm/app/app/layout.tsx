@@ -1,10 +1,9 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { isMfaEnrolled, loadAuthUser, requiresMfa, resolveActiveOrg } from "@/lib/auth/server";
+import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import { DEFAULT_VISIBILITY_MODE, type VisibilityMode } from "@/lib/auth/types";
 import { AuthProvider } from "@/hooks/auth/AuthProvider";
 import { AppShell } from "./_components/AppShell";
-import { MfaEnrollGate } from "@/components/auth/MfaEnrollGate";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { readImpersonateCookie, verifyImpersonateCookie } from "@/lib/impersonate/cookie";
 import {
@@ -64,21 +63,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     }
   }
 
-  const enrolled = await isMfaEnrolled();
-  const needsMfaGate = requiresMfa(activeOrg?.role, user.is_platform_admin);
   const shell = <AppShell sidebarCollapsed={collapsed}>{children}</AppShell>;
 
   return (
     <AuthProvider user={user} activeOrg={activeOrg}>
       <ImpersonateBanner impersonating={impersonating} />
-      {needsMfaGate ? (
-        // Gate always mounted for MFA-required roles; it latches the blocking
-        // decision client-side so the enroll Server Action's revalidation
-        // can't tear down the recovery-codes screen mid-flow.
-        <MfaEnrollGate enrolled={enrolled}>{shell}</MfaEnrollGate>
-      ) : (
-        shell
-      )}
+      {shell}
     </AuthProvider>
   );
 }

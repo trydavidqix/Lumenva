@@ -2,7 +2,6 @@
 
 import { headers } from "next/headers";
 
-import { createClient } from "@/lib/supabase/server";
 import { forgotPasswordSchema, type ForgotPasswordInput } from "@/lib/auth/schemas";
 import { audit, hashEmail } from "@/lib/audit";
 import { authRateLimited, AUTH_LIMITS } from "@/lib/auth/rate-limit";
@@ -39,24 +38,33 @@ export async function requestPasswordReset(
   const ip = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
   const userAgent = hdrs.get("user-agent") ?? null;
 
-  // Sem teto, este endpoint é uma metralhadora de e-mail contra terceiros e um
-  // oráculo de enumeração de conta. Issue #64.
   if (await authRateLimited("reset", parsed.data.email, AUTH_LIMITS.reset)) {
     return { ok: false, error: "rate_limited" };
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: `${origin}/auth/confirm`,
-  });
+  try {
+    const { sendPasswordResetEmail } = await import("firebase/auth");
+    const { auth } = await import("@/lib/firebase/client");
+    
+    await sendPasswordResetEmail(auth, parsed.data.email, {
+      url: `${origin}/login?reset=success`,
+    });
 
-  if (error) {
-    if (error.status === 429) return { ok: false, error: "rate_limited" };
+    await audit({
+      action: "auth.password_reset_requested",
+      metadata: { email_hash: hashEmail(parsed.data.email) },
+      requestId,
+      ip,
+      userAgent,
+    });
+
+    return { ok: true };
+  } catch (error: any) {
     await audit({
       action: "auth.password_reset_request_failed",
       metadata: {
         email_hash: hashEmail(parsed.data.email),
-        reason: error.message,
+        reason: error?.message ?? "unknown",
       },
       requestId,
       ip,
@@ -64,14 +72,4 @@ export async function requestPasswordReset(
     });
     return { ok: false, error: "request_failed" };
   }
-
-  await audit({
-    action: "auth.password_reset_requested",
-    metadata: { email_hash: hashEmail(parsed.data.email) },
-    requestId,
-    ip,
-    userAgent,
-  });
-
-  return { ok: true };
 }

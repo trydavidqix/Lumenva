@@ -3,7 +3,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { createClient } from "@/lib/supabase/server";
 import { loginSchema, type LoginInput } from "@/lib/auth/schemas";
 import { audit, hashEmail } from "@/lib/audit";
 import {
@@ -43,15 +42,11 @@ export async function signInWithPassword(
     };
   }
 
-  const supabase = await createClient();
   const hdrs = await headers();
   const requestId = hdrs.get("x-request-id");
   const ip = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
   const userAgent = hdrs.get("user-agent") ?? null;
 
-  // Antes de falar com o GoTrue: sem isto, tentar senha era de graça e
-  // ilimitado (issue #64). Conta por IP e por conta — o ataque distribuído
-  // contra um e-mail só não aparece na contagem por IP.
   if (
     (await authRateLimited("login", null, AUTH_LIMITS.login)) ||
     (await contaBloqueadaPorFalhas(parsed.data.email, AUTH_LIMITS.login))
@@ -66,13 +61,40 @@ export async function signInWithPassword(
     return { ok: false, error: "rate_limited" };
   }
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: parsed.data.email,
-    password: parsed.data.password,
-  });
+  const { signInWithEmailAndPassword } = await import("firebase/auth");
+  const { auth } = await import("@/lib/firebase/client");
+  const { createSessionCookie, FIREBASE_SESSION_COOKIE } = await import("@/lib/firebase/server");
+  const { cookies } = await import("next/headers");
 
-  if (error || !data.user) {
-    // Só senha errada gasta o orçamento da conta.
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, parsed.data.email, parsed.data.password);
+    const idToken = await userCredential.user.getIdToken();
+    
+    // Create session cookie (expires in 5 days)
+    const expiresIn = 60 * 60 * 24 * 5 * 1000;
+    const sessionCookie = await createSessionCookie(idToken, expiresIn);
+    
+    const cookieStore = await cookies();
+    cookieStore.set(FIREBASE_SESSION_COOKIE, sessionCookie, {
+      maxAge: expiresIn / 1000,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      sameSite: "lax",
+    });
+
+    await audit({
+      action: "auth.login_success",
+      actorUserId: userCredential.user.uid,
+      metadata: {},
+      requestId,
+      ip,
+      userAgent,
+    });
+
+    return { ok: true } as any;
+
+  } catch (error: any) {
     await registrarFalhaDeLogin(parsed.data.email, AUTH_LIMITS.login);
     await audit({
       action: "auth.login_failed",
@@ -86,24 +108,4 @@ export async function signInWithPassword(
     });
     return { ok: false, error: "invalid_credentials" };
   }
-
-  // MFA gating — if the user has any verified TOTP factor enrolled, they must
-  // complete the challenge in /login/mfa before reaching the app.
-  const { data: factorsData } = await supabase.auth.mfa.listFactors();
-  const verifiedTotp = factorsData?.totp?.find((f) => f.status === "verified");
-  if (verifiedTotp) {
-    return { ok: false, error: "mfa_required", challengeId: verifiedTotp.id };
-  }
-
-  await audit({
-    action: "auth.login_success",
-    actorUserId: data.user.id,
-    metadata: {},
-    requestId,
-    ip,
-    userAgent,
-  });
-
-  // Server-side redirect ensures fresh session cookie is sent to browser.
-  redirect(next || "/app/inbox");
 }

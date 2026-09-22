@@ -57,6 +57,12 @@ enable_signup = true
 double_confirm_changes = true
 enable_confirmations = true
 
+[auth.external.google]
+enabled = true
+client_id = "COLOQUE_SEU_CLIENT_ID_AQUI"
+secret = "COLOQUE_SEU_SECRET_AQUI"
+redirect_uri = "http://localhost:3000/auth/callback"
+
 # Templates apontam para /auth/confirm (fluxo token_hash do @supabase/ssr).
 # Self-host GoTrue: ver docs/deploy-selfhost (GOTRUE_MAILER_TEMPLATES_*).
 [auth.email.template.confirmation]

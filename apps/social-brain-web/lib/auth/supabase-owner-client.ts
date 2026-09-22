@@ -8,10 +8,12 @@ type WorkspaceRow = {
 
 type SupabaseLike = {
   auth: SupabaseOwnerClient['auth']
-  from(table: 'workspaces'): {
-    select(columns: 'id,name,owner_user_id'): {
-      eq(column: 'owner_user_id', value: string): {
-        maybeSingle(): Promise<{ data: WorkspaceRow | null; error: unknown | null }>
+  from(table: 'user_organizations'): {
+    select(columns: 'organization_id'): {
+      eq(column: 'user_id', value: string): {
+        limit(count: number): {
+          maybeSingle(): Promise<{ data: { organization_id: string } | null; error: unknown | null }>
+        }
       }
     }
   }
@@ -22,16 +24,23 @@ export function createSupabaseOwnerClient(supabase: SupabaseLike): SupabaseOwner
     auth: supabase.auth,
     async findOwnedWorkspace(userId: string) {
       const { data, error } = await supabase
-        .from('workspaces')
-        .select('id,name,owner_user_id')
-        .eq('owner_user_id', userId)
-        .maybeSingle()
+        .from('user_organizations')
+        .select('organization_id')
+        .eq('user_id', userId)
+        .limit(1)
+        .maybeSingle() as any
 
       if (error) {
         throw error
       }
 
-      return data
+      if (!data) return null
+
+      return {
+        id: data.organization_id,
+        name: 'Workspace',
+        owner_user_id: userId
+      }
     },
   }
 }

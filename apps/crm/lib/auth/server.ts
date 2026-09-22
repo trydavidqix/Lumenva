@@ -9,7 +9,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { logger } from "@/lib/logger";
-import { createClient } from "@/lib/supabase/server";
 import type { AuthUser, Role, UserOrgMembership, ActiveOrg } from "./types";
 
 const ACTIVE_ORG_COOKIE = "active_org";
@@ -30,53 +29,40 @@ interface RawMembershipRow {
  * - platform_admins: only platform admins read (so non-admins get null — correct)
  */
 export async function loadAuthUser(): Promise<AuthUser | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  const { getSessionUid, adminAuth } = await import("@/lib/firebase/server");
+  const { createAdminClient } = await import("@/lib/supabase/admin");
 
-  // Platform admin? (active = no revoked_at). RLS returns null for non-admins.
-  //
-  // ⚠️ O erro é capturado de propósito: aqui `data: null` é AMBÍGUO — significa tanto
-  // "não é platform admin" (RLS filtrou, estado normal) quanto "a query falhou".
-  // Sem separar os dois, um banco instável rebaixa silenciosamente um super-admin.
-  const { data: paRow, error: paErro } = await supabase
+  const uid = await getSessionUid();
+  if (!uid) return null;
+
+  let firebaseUser;
+  try {
+    firebaseUser = await adminAuth.getUser(uid);
+  } catch (err) {
+    return null;
+  }
+
+  const supabaseAdmin = createAdminClient();
+
+  // Platform admin? (active = no revoked_at).
+  const { data: paRow, error: paErro } = await supabaseAdmin
     .from("platform_admins")
     .select("user_id, revoked_at")
-    .eq("user_id", user.id)
+    .eq("user_id", uid)
     .is("revoked_at", null)
     .maybeSingle();
 
   // Org memberships (only active = not revoked, accepted)
-  const { data: rawMemberships, error: membErro } = await supabase
+  const { data: rawMemberships, error: membErro } = await supabaseAdmin
     .from("user_organizations")
     .select("organization_id, role, organizations(display_name)")
-    .eq("user_id", user.id)
+    .eq("user_id", uid)
     .is("revoked_at", null);
 
-  /**
-   * FALHA ALTO, não baixo.
-   *
-   * Antes, o erro destas duas queries era descartado e `rawMemberships` nulo virava
-   * `[]` — ou seja, "usuário sem organização". O resultado é que uma instabilidade do
-   * banco chega ao operador como **"você não pertence a nenhuma organização"**: as
-   * telas de admin somem, as rotas devolvem 403, e nada indica que a causa é
-   * infraestrutura.
-   *
-   * Medido em 2026-07-30: com o PostgREST devolvendo `name resolution failed` depois
-   * de um restart do Docker, TODOS os cards de admin sumiram do hub de configurações.
-   * Custou seis diagnósticos errados — build velho, processo velho, cache, filtro de
-   * papel — antes de alguém olhar a causa real.
-   *
-   * Degradar permissão em silêncio é o pior desfecho possível num caminho de auth:
-   * parece uma decisão de autorização e é um defeito de infra. Melhor estourar e
-   * mostrar erro do que renderizar uma UI mentirosa.
-   */
   if (paErro || membErro) {
     const detalhe = (paErro ?? membErro)!;
     logger.error("[auth] não foi possível resolver permissões do usuário", {
-      user_id: user.id,
+      user_id: uid,
       onde: paErro ? "platform_admins" : "user_organizations",
       code: detalhe.code,
       message: detalhe.message,
@@ -98,14 +84,11 @@ export async function loadAuthUser(): Promise<AuthUser | null> {
     };
   });
 
-  const fullName = (user.user_metadata?.full_name as string | undefined) ?? null;
-  const avatarUrl = (user.user_metadata?.avatar_url as string | undefined) ?? null;
-
   return {
-    id: user.id,
-    email: user.email ?? "",
-    full_name: fullName,
-    avatar_url: avatarUrl,
+    id: uid,
+    email: firebaseUser.email ?? "",
+    full_name: firebaseUser.displayName ?? null,
+    avatar_url: firebaseUser.photoURL ?? null,
     is_platform_admin: !!paRow,
     organizations: memberships,
   };
@@ -139,22 +122,4 @@ export async function requireAuth(): Promise<AuthUser> {
   const user = await loadAuthUser();
   if (!user) redirect("/login");
   return user;
-}
-
-/**
- * Returns true if the current session has at least one verified TOTP factor.
- * Use only in Server Components / Server Actions (cookie session).
- */
-export async function isMfaEnrolled(): Promise<boolean> {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.mfa.listFactors();
-  return !!data?.totp?.some((f) => f.status === "verified");
-}
-
-/**
- * MFA enforcement policy: platform admins and tenant `admin` role MUST enroll.
- * `manager`/`agent`/`viewer` are optional in MVP.
- */
-export function requiresMfa(role: Role | undefined, isPlatformAdmin: boolean): boolean {
-  return isPlatformAdmin || role === "admin";
 }

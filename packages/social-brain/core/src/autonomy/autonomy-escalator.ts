@@ -73,7 +73,7 @@ export class AutonomyEscalator {
       return currentState;
     }
 
-    const nextState = this.stateOrder[currentIndex + 1];
+    const nextState = this.stateOrder[currentIndex + 1]!;
     const policy = this.policies[nextState];
 
     if (evidence.evalScore >= policy.minEvalScore && evidence.confidence >= policy.minConfidence) {

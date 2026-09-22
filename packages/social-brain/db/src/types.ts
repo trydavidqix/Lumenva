@@ -365,6 +365,10 @@ export type Database = {
       agent_runs: TableDefinition<AgentRunRow, AgentRunInsert>
       audit_events: TableDefinition<AuditEventRow, AuditEventInsert>
       background_jobs: TableDefinition<BackgroundJobRow, BackgroundJobInsert>
+      social_connections: TableDefinition<any, any>
+      user_organizations: TableDefinition<any, any>
+      platform_admins: TableDefinition<any, any>
+      organizations: TableDefinition<any, any>
     }
     Views: {
       [_ in never]: never

@@ -3,6 +3,15 @@ import { INSTAGRAM_GRAPH } from "./oauth";
 
 export interface InstagramPublishResult { id: string }
 
+export async function uploadReelContainer(opts: { igUserId: string; accessToken: string; videoUrl: string; caption: string }): Promise<{ containerId: string }> {
+  const response = await fetch(`${INSTAGRAM_GRAPH}/${encodeURIComponent(opts.igUserId)}/media`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ media_type: 'REELS', video_url: opts.videoUrl, caption: opts.caption, access_token: opts.accessToken }) });
+  const body: unknown = await response.json().catch(() => undefined);
+  if (!response.ok) throw parseMetaError(body);
+  const id = (body as { id?: unknown } | undefined)?.id;
+  if (typeof id !== 'string' || !id) throw new Error('Instagram API não devolveu o container do reel');
+  return { containerId: id };
+}
+
 type InstagramPublishOptions = {
   igUserId: string;
   accessToken: string;
