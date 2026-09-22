@@ -592,8 +592,15 @@ Nenhuma memória candidata pode virar verdade da empresa apenas porque um modelo
 
 Os dois componentes fazem parte do produto, mas não são a mesma coisa:
 
+Esta integração vem do plano separado **AI Platform**, sem CRM:
+
+- `docs/superpowers/plans/2026-08-10-ai-platform-phase-3-knowledge.md` — **Knowledge / Obsidian / LlamaIndex**.
+- `docs/superpowers/plans/2026-08-10-ai-platform-phase-4-graphiti.md` — **Graphiti + FalkorDB**.
+
+O nome que estava faltando é **FalkorDB**: banco de grafo open-source/free para o Graphiti. Graphiti é a camada de grafo temporal; FalkorDB é o backend originalmente planejado. A execução anterior registrou uma troca técnica para Neo4j por compatibilidade da imagem oficial do Graphiti. Essa decisão não deve ser perdida nem misturada com o CRM.
+
 - **Obsidian Vault:** camada humana de conhecimento curado. Guarda decisões, políticas, playbooks, ADRs, notas e documentação operacional em Markdown versionado. O Context Engine consulta notas relevantes sob demanda; nunca injeta o vault inteiro.
-- **Graphiti/Neo4j:** grafo temporal derivado. Representa entidades, relações, episódios, decisões, dependências e proveniência para recuperação contextual e visualização. Não é fonte de verdade e não autoriza mutações no CRM.
+- **Graphiti + FalkorDB/Neo4j:** grafo temporal derivado. Representa entidades, relações, episódios, decisões, dependências e proveniência para recuperação contextual e visualização. Não é fonte de verdade e não autoriza mutações no CRM.
 - **CRM/Postgres:** fonte canônica dos fatos operacionais, identidade, consentimento, auditoria e estado de negócio.
 
 Pipeline obrigatório:
