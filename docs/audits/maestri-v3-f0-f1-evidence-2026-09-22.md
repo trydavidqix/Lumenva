@@ -67,6 +67,20 @@ Focused provider usage tests: 8/8 passed. Package and Core typechecks passed.
 
 The read-only `Executions` view now aggregates exact `ExecutionResult.usage` values from Core: input, cached, output, duration, and cost. Without provider usage it returns `UNAVAILABLE` instead of synthetic zeros. Focused dashboard tests: 14/14 passed.
 
+## F24 benchmark evidence
+
+Suite `suite-1790091180340-8e6276c6` ran 20 paired cases / 40 real Codex CLI read-only executions from `validation.jsonl`.
+
+- Baseline success: 100%.
+- Fabric success: 100%.
+- Context recall: 100%.
+- Evidence grounding: 100%.
+- Hallucination rate: 0%.
+- Exact token reduction: 7.81%.
+- Trust: `VALIDATING` (20/30 minimum paired cases).
+
+Raw benchmark state is isolated under `.lumenva-benchmark-state`; it is not production state and does not modify `main`.
+
 ## Comandos e resultado
 
 ```text

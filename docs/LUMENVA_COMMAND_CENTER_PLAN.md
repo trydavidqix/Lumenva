@@ -249,6 +249,15 @@ F25 rollout e limpeza de compatibilidade
 - Missing usage remains `UNAVAILABLE`; no zero-value fake metric is shown.
 - Dashboard regression: 14/14 focused tests passed; full MCG suite remains green.
 
+### F24 benchmark progress — 2026-09-22
+
+- Real paired benchmark completed with 20 cases / 40 read-only Codex executions.
+- Baseline success: 100%; Fabric success: 100%.
+- Context recall: 100%; evidence grounding: 100%; hallucination rate: 0%.
+- Exact token reduction: 7.81%.
+- Trust status: `VALIDATING`, because the plan requires 30 paired tasks minimum.
+- Suite: `suite-1790091180340-8e6276c6`, source `real Codex CLI paired validation`; raw evidence remains in the isolated `.lumenva-benchmark-state`.
+
 ### Gates adicionais do plano completo
 
 O fechamento do Fabric exige evidência para:
