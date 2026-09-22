@@ -1,0 +1,4 @@
+import type { BenchmarkSummary } from './benchmark-harness';
+export type ValidationState='UNVALIDATED'|'VALIDATING'|'VALIDATED';
+export interface ValidationReport{state:ValidationState;samples:number;success_rate:number;test_pass_rate:number;average_latency_ms:number;total_cost_usd:number;reasons:string[]}
+export function validationReport(s:BenchmarkSummary):ValidationReport{const reasons:string[]=[];const state:ValidationState=s.total>=30&&s.success_rate>=.8&&s.test_pass_rate>=.8?'VALIDATED':s.total>0?'VALIDATING':'UNVALIDATED';if(s.total<30)reasons.push('minimum_30_samples_not_met');if(s.success_rate<.8)reasons.push('success_threshold_not_met');if(s.test_pass_rate<.8)reasons.push('test_threshold_not_met');return{state,samples:s.total,success_rate:s.success_rate,test_pass_rate:s.test_pass_rate,average_latency_ms:s.average_latency_ms,total_cost_usd:s.total_cost_usd,reasons}}
