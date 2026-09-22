@@ -10,6 +10,9 @@ import { ContextEngine, type ContextBuildInput } from '../context/context-engine
 import { toResultDigest } from './result-digest';
 import { evidenceGate } from './evidence-gate';
 import type { WorkforcePersistence } from './durable-stores';
+import { requiresOwnerApproval } from './approval-gate';
+import { IdempotencyStore, executionIdempotencyKey } from './idempotency';
+import { CostLedger } from './cost-ledger';
 import { evaluateIndependentReview, type ReviewResult } from './independent-review';
 import { readyTasks } from './master-plan';
 
@@ -40,6 +43,8 @@ export class WorkforceOrchestrator {
     private readonly ports: PortResolver,
     private readonly context: ContextEngine = new ContextEngine(),
     private readonly persistence?: WorkforcePersistence,
+    private readonly idempotency = new IdempotencyStore<ExecutionResult>(),
+    private readonly costLedger = new CostLedger(),
   ) {}
 
   async runPlan(plan: MasterPlan, baseSha: string): Promise<OrchestrationRun> {
@@ -71,6 +76,12 @@ export class WorkforceOrchestrator {
 
       for (const task of ready) {
         const contract = this.contractFor(plan, task, baseSha);
+        if (requiresOwnerApproval(contract)) {
+          blocked.add(task.task_id);
+          results.push({ task, contract, status: 'blocked', reason: 'owner_approval_required' });
+          continue;
+        }
+
         const routed = await this.router.route({
           capability: task.capabilities ?? [],
           priority: 1,
@@ -96,7 +107,9 @@ export class WorkforceOrchestrator {
         const packet = this.context.compilePacket(packetInput);
         contract.context_packet_id = packet.context_packet_id;
 
-        const execution = await port.execute(contract);
+        const executionKey = executionIdempotencyKey(plan.plan_id, task.task_id, baseSha, 1);
+        const execution = await this.idempotency.once(executionKey, () => port.execute(contract));
+        this.costLedger.record(execution);
         await this.persistence?.saveExecution(execution);
         const gate = evidenceGate(execution, task.risk);
         if (execution.status !== 'success' || !gate.passed) {
