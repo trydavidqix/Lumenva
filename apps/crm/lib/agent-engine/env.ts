@@ -20,6 +20,18 @@ const envSchema = z.object({
   // service-role. Mesmos valores do .env.local do app.
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  // Internal control-plane auth used by Notification Router -> Voice SIP worker.
+  // Optional at boot so WhatsApp-only installs keep working; voice delivery
+  // fails closed when enabled without the secret.
+  INTERNAL_SECRET: z.string().min(1).optional(),
+  NOTIFICATION_ROUTER_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  VOICE_NOTIFICATION_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
   // Chave LLM de plataforma (fallback quando a org não tem BYOK em
   // ai_provider_credentials). Opcional no boot: sem ela e sem BYOK, o turno
   // falha com erro instrutivo — nunca silêncio.
