@@ -9,7 +9,7 @@
 # SEMPRE derrubado no EXIT (sucesso ou falha), nos dois engines.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 BASELINE="$ROOT/supabase/baseline.sql"
 PORT="${TEST_DB_PORT:-54329}"
 CONTAINER="deskcomm-test-db-$$"
