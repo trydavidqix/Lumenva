@@ -1,0 +1,2 @@
+import type { MasterPlan } from './execution-port';import type { PlanRunState } from './run-state';
+export function recoverableTasks(plan:MasterPlan,state:PlanRunState):string[]{return plan.tasks.filter(t=>{const s=state.tasks[t.task_id];if(!s||s.state==='COMPLETED'||s.state==='WAITING_FOR_APPROVAL')return false;return(t.depends_on??[]).every(d=>state.tasks[d]?.state==='COMPLETED')}).map(t=>t.task_id)}
