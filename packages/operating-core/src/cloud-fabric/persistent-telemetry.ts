@@ -1,0 +1,3 @@
+import type { WorkforceTelemetryEvent } from './telemetry-event';import { sanitizeTrace } from './redaction';import type { SqlExecutor } from './postgres-persistence';
+export interface TelemetrySink{emit(event:WorkforceTelemetryEvent):Promise<void>}
+export class PostgresTelemetrySink implements TelemetrySink{constructor(private readonly db:SqlExecutor){}async emit(event:WorkforceTelemetryEvent){const safe=sanitizeTrace(event);await this.db.query('insert into maestri_telemetry_events(event_id,event_type,task_id,execution_id,payload,created_at) values($1,$2,$3,$4,$5::jsonb,$6)',[safe.event_id,safe.event_type,safe.task_id??null,safe.execution_id??null,JSON.stringify(safe),safe.created_at])}}
