@@ -11,6 +11,16 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BASELINE="$ROOT/supabase/baseline.sql"
+
+# Direct invocation must fail before starting Postgres when the test runner is
+# unavailable. Otherwise a shell-level `vitest: command not found` can get
+# buried after a successful baseline setup and look like a green DB run.
+if ! command -v vitest >/dev/null 2>&1; then
+  echo "ERRO: vitest não está no PATH — a suíte de invariantes não rodaria." >&2
+  echo "      Use pnpm test:db para incluir node_modules/.bin no PATH." >&2
+  exit 1
+fi
+
 PORT="${TEST_DB_PORT:-54329}"
 CONTAINER="deskcomm-test-db-$$"
 IMAGE="pgvector/pgvector:pg17"
