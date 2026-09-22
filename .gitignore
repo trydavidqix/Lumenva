@@ -121,6 +121,7 @@ scripts/lead-pipeline/bin/
 
 # Maestri (config local da estação, não é doutrina compartilhada)
 .maestri/
+.jules/
 
 # caches locais de pesquisa (SQLite gerado, não é fonte)
 docs/pesquisa/**/*.db
