@@ -1,8 +1,11 @@
+import type { ContextPacket } from "./context-engine.js";
+
 export type ContextRequest = {
   taskId: string;
   traceId: string;
   objective: string;
   budgetChars: number;
+  packet?: ContextPacket;
 };
 
 export type ContextResult = {
@@ -39,8 +42,14 @@ export async function createLocalMgcAdapter(): Promise<MgcAdapter> {
   const compiler = await import(moduleUrl) as unknown as MgcCompilerModule;
   return {
     async compile(request) {
+      const fragments = [
+        { id: `${request.taskId}:objective`, category: "must_keep", priority: 100, content: request.objective },
+        ...(request.packet?.relevantFiles
+          .filter((file) => Boolean(file.excerpt))
+          .map((file) => ({ id: file.path, category: "relevant_file", priority: Math.round(file.score * 100), content: file.excerpt! })) ?? []),
+      ];
       const result = compiler.compileContext({
-        fragments: [{ id: `${request.taskId}:objective`, category: "must_keep", priority: 100, content: request.objective }],
+        fragments,
         budget_chars: request.budgetChars,
       });
       return {

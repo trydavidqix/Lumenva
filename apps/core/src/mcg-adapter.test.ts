@@ -3,11 +3,35 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CoreRuntime } from "./core-runtime.js";
+import { resolveContext, type ContextPacket, type TaskContract } from "./context-engine.js";
 import { createLocalMgcAdapter, type MgcAdapter } from "./mcg-adapter.js";
 import { SqliteStore } from "./sqlite-store.js";
 
 function runtime() {
   return new CoreRuntime(new SqliteStore(join(mkdtempSync(join(tmpdir(), "lumenva-mcg-")), "core.sqlite")));
+}
+
+function packet(): ContextPacket {
+  const task: TaskContract = {
+    taskId: "task-1",
+    goal: "Index knowledge",
+    scope: "packages",
+    allowedPaths: ["packages"],
+    constraints: [],
+    capabilities: ["read_file"],
+    risk: "low",
+    baseSha: "abc123",
+    contextBudget: 500,
+    toolBudget: 2,
+    executionBudget: 1_000,
+    preferredProvider: "codex",
+    evidenceRequired: true,
+  };
+  return resolveContext({
+    task,
+    candidates: [{ path: "packages/knowledge/src/index.ts", symbols: ["publish"], content: "export function publish() {}", score: 1 }],
+    level: 2,
+  });
 }
 
 describe("CoreRuntime MCG boundary", () => {
@@ -18,6 +42,31 @@ describe("CoreRuntime MCG boundary", () => {
     expect(result.contextVersion).toMatch(/^v[0-9a-f]{12}$/);
     expect(result.fragments).toEqual([expect.objectContaining({ id: "task-1:objective", content: "Index knowledge" })]);
     expect(result.source).toBe("context.compiler");
+  });
+
+  it("passes a resolved packet through the Core and compiles its excerpts locally", async () => {
+    const resolved = packet();
+    const adapter = await createLocalMgcAdapter();
+    const result = await adapter.compile({ taskId: "task-1", traceId: "trace-1", objective: resolved.objective, budgetChars: 500, packet: resolved });
+
+    expect(result.fragments).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "task-1:objective", content: "Index knowledge" }),
+      expect.objectContaining({ id: "packages/knowledge/src/index.ts", content: "export function publish() {}" }),
+    ]));
+
+    const core = runtime();
+    await core.start();
+    const task = await core.startTask({ id: "task-1", type: "task.start", idempotencyKey: "start-1", traceId: "trace-1", payload: {} });
+    let received: ContextPacket | undefined;
+    const observingAdapter: MgcAdapter = {
+      compile: async (request) => {
+        received = request.packet;
+        return { contextVersion: "v-context-1", fragments: [], measurementType: "estimated", source: "context.compiler" };
+      },
+    };
+    await core.requestContext(task.task.id, observingAdapter, { objective: resolved.objective, budgetChars: 500, packet: resolved });
+    expect(received).toEqual(resolved);
+    await core.stop();
   });
 
   it("records context request/completion and preserves MCG provenance", async () => {
