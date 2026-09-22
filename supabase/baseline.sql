@@ -10841,6 +10841,11 @@ create table if not exists public.notification_delivery_attempts (
   status text not null check (status in ('queued','sent','delivered','acknowledged','failed','skipped')),
   external_id text null check (external_id is null or char_length(external_id) <= 256),
   error_code text null check (error_code is null or char_length(error_code) <= 120),
+  queued_at timestamptz null,
+  sent_at timestamptz null,
+  delivered_at timestamptz null,
+  acknowledged_at timestamptz null,
+  failed_at timestamptz null,
   occurred_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
   unique (notification_id, channel, attempt)
