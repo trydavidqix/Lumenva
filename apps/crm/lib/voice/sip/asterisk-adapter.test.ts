@@ -75,6 +75,39 @@ describe("Asterisk/ARI SIP gateway (Fase 2)", () => {
     },
   );
 
+  it("parses governed outbound ARI events without using the customer destination as tenant authority", async () => {
+    const directory = directoryResolving("org-1");
+    const gateway = createAsteriskSipGateway({
+      directory,
+      ariClient: { originate: vi.fn() },
+      outboundContext: "lumenva-voice",
+    });
+    const raw = JSON.stringify({
+      type: "StasisStart",
+      timestamp: "2026-09-22T12:00:00.000Z",
+      channel: {
+        id: "channel-out-1",
+        caller: { number: "+37255501234" },
+        connected: { number: "+351912345678" },
+        channelvars: {
+          SIP_CONNECTION_ID: "twilio-ee",
+          VOICE_DIRECTION: "outbound",
+          VOICE_CALL_ID: "11111111-1111-4111-8111-111111111111",
+        },
+      },
+    });
+
+    await expect(gateway.parseInboundEvent(raw)).resolves.toMatchObject({
+      organizationId: "org-1",
+      connectionId: "twilio-ee",
+      direction: "outbound",
+      callerE164: "+37255501234",
+      calledE164: "+351912345678",
+      attributes: { voiceCallId: "11111111-1111-4111-8111-111111111111" },
+    });
+    expect(directory.resolveOrganizationByConnection).toHaveBeenCalledWith("twilio-ee", "+37255501234");
+  });
+
   it("rejects a channel with no SIP_CONNECTION_ID — connection unknown", async () => {
     const gateway = createAsteriskSipGateway({
       directory: directoryResolving("org-1"),
@@ -126,6 +159,7 @@ describe("Asterisk/ARI SIP gateway (Fase 2)", () => {
 
     await expect(
       gateway.initiateOutboundCall({
+        voiceCallId: "11111111-1111-4111-8111-111111111111",
         organizationId: "org-1",
         connectionId: "sip-conn-abc",
         contactId: "contact-1",
@@ -141,6 +175,11 @@ describe("Asterisk/ARI SIP gateway (Fase 2)", () => {
       endpoint: "PJSIP/+351911234567@sip-conn-abc",
       callerId: "+351211234567",
       context: "lumenva-voice",
+      variables: {
+        SIP_CONNECTION_ID: "sip-conn-abc",
+        VOICE_DIRECTION: "outbound",
+        VOICE_CALL_ID: "11111111-1111-4111-8111-111111111111",
+      },
     });
   });
 
@@ -153,6 +192,7 @@ describe("Asterisk/ARI SIP gateway (Fase 2)", () => {
 
     await expect(
       gateway.initiateOutboundCall({
+        voiceCallId: "11111111-1111-4111-8111-111111111111",
         organizationId: "org-1",
         connectionId: "sip-conn-abc",
         contactId: "contact-1",
@@ -173,6 +213,7 @@ describe("Asterisk/ARI SIP gateway (Fase 2)", () => {
 
     await expect(
       gateway.initiateOutboundCall({
+        voiceCallId: "11111111-1111-4111-8111-111111111111",
         organizationId: "org-1",
         connectionId: "sip-conn-abc",
         contactId: "contact-1",
@@ -191,6 +232,7 @@ describe("Asterisk/ARI SIP gateway (Fase 2)", () => {
       outboundContext: "lumenva-voice",
     });
     const base = {
+      voiceCallId: "11111111-1111-4111-8111-111111111111",
       organizationId: "org-1",
       connectionId: "sip-conn-abc",
       fromE164: "+351211234567",
