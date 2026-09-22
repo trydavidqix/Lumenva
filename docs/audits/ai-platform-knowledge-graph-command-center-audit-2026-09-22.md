@@ -23,7 +23,7 @@ As duas fases têm gate `GO` no AI Platform. Isso prova a implementação no sta
 | Graphiti temporal | `GO` / SHADOW | `0%` | portar `KnowledgeGraphPort` e cliente para o Core |
 | FalkorDB | substituído | `não usar por padrão` | plano original; incompatível com a imagem Graphiti validada |
 | Neo4j Community | validado e gratuito self-host | `0%` | backend atual do Graphiti, atrás do gateway |
-| Graph View | não entregue no gate antigo | `0%` | criar view read-only no Command Center |
+| Graph View | não entregue no gate antigo | `100%` (endpoint read-only) | conectar renderer/dashboard e drill-down visual |
 
 ## O que já está comprovado
 
@@ -53,7 +53,7 @@ As duas fases têm gate `GO` no AI Platform. Isso prova a implementação no sta
 ## Progresso standalone — 2026-09-22
 
 - `packages/knowledge`: publicado local, scanner e provenance implementados; 5/5 testes.
-- `packages/knowledge-graph`: namespace, `NullKnowledgeGraph`, projection worker e adapter HTTP Graphiti; 4/4 testes.
+- `packages/knowledge-graph`: namespace, `NullKnowledgeGraph`, projection worker, adapter HTTP Graphiti e `GraphView` read-only determinístico; 5/5 testes.
 - Typecheck dos dois pacotes: PASS.
 - `apps/core`: SQLite persistente, migração inicial, tarefas idempotentes, replay ordenado e EventBus; 2/2 testes.
 - Typecheck do Core: PASS.
@@ -75,7 +75,8 @@ As duas fases têm gate `GO` no AI Platform. Isso prova a implementação no sta
 - `apps/core`: `CoreRuntime.requestContext` resolve o catálogo MCP, restringe `ContextPacket.availableTools`, emite `mcp.catalog.resolved` e o sink/dashboard expõem `mcp.catalog` em `by_mcp`; 26/26 testes do pacote e typecheck PASS.
 - `apps/core`: `CoreTraceSink` grava traces/spans no trace store MCG existente, incluindo `mcp.catalog`, `mcp_name`, trace ID e status; 27/27 testes do pacote e typecheck PASS.
 - Commits: `3c951634`, `124c8448`, `ccb4d3dd`, `91523605`.
-- Graph View conectado e Context Engine progressivo continuam pendentes.
+- `apps/core`: endpoint `GET /graph` expõe a projeção read-only com namespace/query/limit, nós de fact/source e edges com sourceId/confidence/validFrom/validUntil; 28/28 testes do pacote e typecheck PASS.
+- Graph View visual no renderer/dashboard, drill-down visual e Context Engine progressivo ligado a retrieval real continuam pendentes.
 
 ## Gates antes de ativar
 

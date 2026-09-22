@@ -44,4 +44,22 @@ describe("Core HTTP API", () => {
     expect((await (await fetch(`${server.url}/tasks/task-1`)).json()).status).toBe("QUEUED");
     expect((await (await fetch(`${server.url}/events`)).json()).events).toHaveLength(1);
   });
+
+  it("serves a read-only graph view with source drill-down metadata", async () => {
+    const runtime = new CoreRuntime(new SqliteStore(join(mkdtempSync(join(tmpdir(), "lumenva-api-graph-")), "core.sqlite")));
+    await runtime.start();
+    const server = await startCoreHttpServer(runtime, 0, {
+      graph: {
+        search: async () => [{ id: "fact-1", text: "Fact", sourceId: "note-1", confidence: 0.9, validFrom: "2026-01-01", validUntil: null }],
+      },
+    });
+    closers.push(async () => {
+      await server.close();
+      await runtime.stop();
+    });
+
+    const response = await fetch(`${server.url}/graph?namespace=project%3Alumenva&query=context&limit=10`);
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual(expect.objectContaining({ readOnly: true, namespace: "project:lumenva", edges: [expect.objectContaining({ sourceId: "note-1", confidence: 0.9 })] }));
+  });
 });
