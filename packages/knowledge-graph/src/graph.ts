@@ -8,8 +8,20 @@ export type GraphFact = {
 };
 
 export type KnowledgeGraph = {
+  addEpisode(input: GraphEpisode): Promise<void>;
   search(input: { namespace: string; query: string; limit: number }): Promise<GraphFact[]>;
   health(): Promise<{ ok: boolean; latencyMs: number }>;
+};
+
+export type GraphEpisode = {
+  namespace: string;
+  sourceId: string;
+  sourceVersion: string;
+  title: string;
+  body: string;
+  referenceTime: string;
+  provenance: { sourcePath: string; sourceType: "obsidian" };
+  idempotencyKey: string;
 };
 
 export function createProjectNamespace(projectName: string): string {
@@ -25,6 +37,8 @@ export function createProjectNamespace(projectName: string): string {
 }
 
 export class NullKnowledgeGraph implements KnowledgeGraph {
+  async addEpisode(_input: GraphEpisode): Promise<void> {}
+
   async search(_input: { namespace: string; query: string; limit: number }): Promise<GraphFact[]> {
     return [];
   }
