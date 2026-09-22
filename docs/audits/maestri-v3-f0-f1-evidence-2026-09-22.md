@@ -81,6 +81,18 @@ Suite `suite-1790091180340-8e6276c6` ran 20 paired cases / 40 real Codex CLI rea
 
 Raw benchmark state is isolated under `.lumenva-benchmark-state`; it is not production state and does not modify `main`.
 
+Final aggregate after 30 paired cases:
+
+- Baseline: `916321` exact tokens.
+- Fabric: `968573` exact tokens.
+- Token delta: `-5.70%` (regression; Fabric used more tokens).
+- Task success/recall/grounding: `100%`; hallucination: `0%`.
+- Trust: `DEGRADED`; quality-preserving savings not approved.
+
+This evidence advances the plan but does not pass F24. F22 must reduce redundant context without reducing quality before re-running the benchmark.
+
+F22 first optimization increment: the MCG compiler deduplicates identical fragments before budget selection, retaining the highest-priority item deterministically. MCG regression suite remained 36/36 green. End-to-end benchmark impact is not yet claimed.
+
 ## Comandos e resultado
 
 ```text

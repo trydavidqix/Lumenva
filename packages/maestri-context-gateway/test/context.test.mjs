@@ -12,6 +12,11 @@ try {
   const compiled = compileContext({ fragments: [critical, { id: 'old', category: 'historical', content: 'x'.repeat(100) }], budget_chars: 10 });
   assert.equal(compiled.fragments.some(item => item.id === 'owner'), true);
   assert.equal(compiled.dropped.some(item => item.id === 'owner'), false);
+  const deduped = compileContext({ fragments: [
+    { id: 'duplicate-low', category: 'recent', content: 'same context', priority: 50 },
+    { id: 'duplicate-high', category: 'decisions', content: 'same context', priority: 95 },
+  ], budget_chars: 100 });
+  assert.deepEqual(deduped.fragments.map(item => item.id), ['duplicate-high']);
   const changed = diffContext([{ id: 'a', content: 'one' }], [{ id: 'a', content: 'two' }, { id: 'b', content: 'new' }]);
   assert.equal(changed.changed.length, 1); assert.equal(changed.added.length, 1);
   const first = await cacheContext(root, compiled.fragments); const second = await cacheContext(root, compiled.fragments);

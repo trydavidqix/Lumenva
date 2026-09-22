@@ -258,6 +258,22 @@ F25 rollout e limpeza de compatibilidade
 - Trust status: `VALIDATING`, because the plan requires 30 paired tasks minimum.
 - Suite: `suite-1790091180340-8e6276c6`, source `real Codex CLI paired validation`; raw evidence remains in the isolated `.lumenva-benchmark-state`.
 
+### F24 final aggregate — 2026-09-22
+
+- 30 paired cases / 60 real Codex CLI read-only executions are now persisted without duplicating the first 20 cases.
+- Baseline: `916321` exact tokens; Fabric: `968573` exact tokens.
+- Task success, context recall, evidence grounding: `100%` in both lanes; hallucination rate: `0%`.
+- Fabric token delta: `-5.70%` (Fabric used more tokens), so quality was preserved but token efficiency regressed.
+- Trust: `DEGRADED`; `quality_preserving_saving` is not approved.
+- F24 is measured, not passed. F22 automatic context optimization is now the blocking implementation gate before another benchmark.
+
+### F22 progress update — 2026-09-22
+
+- MCG compiler now deduplicates fragments with identical content before priority ordering and hard-cap selection.
+- The highest-priority fragment is retained deterministically; ties use stable ID ordering.
+- This is an optimization primitive, not yet proof of end-to-end savings.
+- MCG regression suite: 36/36 passed.
+
 ### Gates adicionais do plano completo
 
 O fechamento do Fabric exige evidência para:

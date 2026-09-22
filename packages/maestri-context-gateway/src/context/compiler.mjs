@@ -34,7 +34,7 @@ export function diffContext(previous = [], next = []) {
 }
 
 export function compileContext({ fragments = [], budget_chars = Infinity, previous = [], context_version = null } = {}) {
-  const normalized = fragments.map(normalizeFragment);
+  const normalized = deduplicateFragments(fragments.map(normalizeFragment));
   const mustKeep = normalized.filter(item => item.must_keep).sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id));
   const optional = normalized.filter(item => !item.must_keep).sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id));
   const selected = [...mustKeep];
@@ -47,6 +47,16 @@ export function compileContext({ fragments = [], budget_chars = Infinity, previo
   const delta_chars = diff.delta_chars;
   const version = context_version || `v${hash(selected.map(item => `${item.id}:${item.hash}`).join('|')).slice(0, 12)}`;
   return { context_version: version, fragments: selected, dropped: normalized.filter(item => !selected.some(kept => kept.id === item.id) && !item.must_keep), full_context_chars, delta_chars, delta_reuse_percent: full_context_chars ? Number(((Math.max(0, full_context_chars - delta_chars) / full_context_chars) * 100).toFixed(2)) : 0, estimated_tokens_avoided: Math.ceil(Math.max(0, full_context_chars - delta_chars) / 4), cache_hits: 0, cache_misses: selected.length, measurement_type: 'estimated', source: 'context.compiler', timestamp: new Date().toISOString() };
+}
+
+function deduplicateFragments(fragments) {
+  const unique = new Map();
+  for (const fragment of fragments) {
+    const key = fragment.hash + '\u0000' + fragment.content;
+    const current = unique.get(key);
+    if (!current || fragment.priority > current.priority || (fragment.priority === current.priority && fragment.id < current.id)) unique.set(key, fragment);
+  }
+  return [...unique.values()];
 }
 
 export { LEVELS };
