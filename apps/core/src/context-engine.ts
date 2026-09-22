@@ -50,6 +50,30 @@ export type ContextPacket = {
   characterCount: number;
 };
 
+export type ProgressiveContextRetriever = {
+  symbols(task: TaskContract): Promise<ContextCandidate[]>;
+  excerpts(task: TaskContract, candidates: ContextCandidate[]): Promise<ContextCandidate[]>;
+};
+
+export async function resolveProgressiveContext(input: {
+  task: TaskContract;
+  retriever: ProgressiveContextRetriever;
+  instructions?: string[];
+  toolCatalog?: Pick<ToolCatalog, "tools">;
+  needsMoreContext?: (packet: ContextPacket) => boolean | Promise<boolean>;
+}): Promise<ContextPacket> {
+  const needsMoreContext = input.needsMoreContext ?? (() => true);
+  let packet = resolveContext({ task: input.task, level: 0, instructions: input.instructions, toolCatalog: input.toolCatalog });
+  if (!(await needsMoreContext(packet))) return packet;
+
+  const candidates = await input.retriever.symbols(input.task);
+  packet = resolveContext({ task: input.task, candidates, level: 1, instructions: input.instructions, toolCatalog: input.toolCatalog });
+  if (!(await needsMoreContext(packet))) return packet;
+
+  const enrichedCandidates = await input.retriever.excerpts(input.task, candidates);
+  return resolveContext({ task: input.task, candidates: enrichedCandidates, level: 2, instructions: input.instructions, toolCatalog: input.toolCatalog });
+}
+
 export function resolveContext(input: {
   task: TaskContract;
   candidates?: ContextCandidate[];

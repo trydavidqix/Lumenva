@@ -76,7 +76,7 @@ As duas fases têm gate `GO` no AI Platform. Isso prova a implementação no sta
 - `apps/core`: `CoreTraceSink` grava traces/spans no trace store MCG existente, incluindo `mcp.catalog`, `mcp_name`, trace ID e status; 27/27 testes do pacote e typecheck PASS.
 - Commits: `3c951634`, `124c8448`, `ccb4d3dd`, `91523605`.
 - `apps/core`: endpoint `GET /graph` expõe a projeção read-only com namespace/query/limit, nós de fact/source e edges com sourceId/confidence/validFrom/validUntil; 28/28 testes do pacote e typecheck PASS.
-- Graph View visual, drill-down e endpoint dashboard estão entregues; falta ligar provider Graphiti real e filtros de produção. Context Engine progressivo ligado a retrieval real continua pendente.
+- Graph View visual, drill-down e endpoint dashboard estão entregues; falta ligar provider Graphiti real e filtros de produção. `resolveProgressiveContext` agora implementa os gates L0→L1→L2; retrieval real Obsidian/Graphiti continua pendente.
 
 ## Gates antes de ativar
 

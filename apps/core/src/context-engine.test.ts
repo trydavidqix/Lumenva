@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveContext, type ContextCandidate, type TaskContract } from "./context-engine.js";
+import { resolveContext, resolveProgressiveContext, type ContextCandidate, type TaskContract } from "./context-engine.js";
 import { ToolRegistry } from "./tool-registry.js";
 
 const task: TaskContract = {
@@ -66,5 +66,37 @@ describe("progressive Context Engine", () => {
     expect(levelTwo.relevantFiles.some((file) => file.excerpt)).toBe(true);
     expect(levelTwo.characterCount).toBeLessThanOrEqual(task.contextBudget);
     expect(levelTwo).toEqual(repeated);
+  });
+
+  it("requests only the next context level when the execution gate needs it", async () => {
+    const calls: string[] = [];
+    const result = await resolveProgressiveContext({
+      task,
+      retriever: {
+        symbols: async () => { calls.push("symbols"); return candidates; },
+        excerpts: async () => { calls.push("excerpts"); return candidates; },
+      },
+      needsMoreContext: packet => packet.level < 2,
+    });
+
+    expect(result.level).toBe(2);
+    expect(calls).toEqual(["symbols", "excerpts"]);
+    expect(result.relevantFiles.some(file => file.excerpt)).toBe(true);
+  });
+
+  it("stops at L1 when symbols satisfy the execution gate", async () => {
+    const calls: string[] = [];
+    const result = await resolveProgressiveContext({
+      task,
+      retriever: {
+        symbols: async () => { calls.push("symbols"); return candidates; },
+        excerpts: async () => { calls.push("excerpts"); return candidates; },
+      },
+      needsMoreContext: packet => packet.level < 1,
+    });
+
+    expect(result.level).toBe(1);
+    expect(calls).toEqual(["symbols"]);
+    expect(result.relevantFiles.every(file => file.excerpt === undefined)).toBe(true);
   });
 });
