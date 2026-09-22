@@ -54,8 +54,8 @@ SDKs locais e `gh-aw` foram instalados e validados: smoke ESM dos SDKs sem chama
 - Codex: servidores locais aparecem configurados, porém o host reporta `Unsupported`; configuração não é tratada como health.
 - GitHub MCP: o registro do worktree foi corrigido para o binário oficial `github-mcp-server stdio --read-only --lockdown-mode`; o host Codex ainda reporta auth `Unsupported`, enquanto Claude confirma `Connected`.
 - Claude: Docs está `Connected`; Railway precisa autenticação; GitHub falha porque o endpoint configurado não suporta dynamic client registration.
-- Gemini: GitHub MCP oficial configurado no escopo do projeto, read-only/lockdown, mas o CLI o desabilita porque o worktree ainda não está marcado como confiável; nenhum OAuth foi iniciado.
-- O CLI Gemini oferece `--skip-trust` para confiar no workspace apenas durante uma sessão. Essa opção não foi aplicada automaticamente; confiar no worktree é uma decisão explícita do Owner.
+- Gemini: GitHub MCP oficial configurado no escopo do projeto, read-only/lockdown. O Owner autorizou `--skip-trust`; o trust local passou.
+- O OAuth Google concluiu no navegador, mas o CLI recusou o fluxo individual com a mensagem de cliente não suportado para Gemini Code Assist. O fallback Vertex AI usando o projeto `lumenva` também retornou `403 (#3501)`, licença válida ausente. Não foi criada API key nem instalado Antigravity.
 - Agentic Workflows: `gh aw mcp list` não encontrou workflows com servidores MCP.
 
 O GitHub MCP oficial oferece caminho nativo stdio/OAuth e caminho PAT; o caminho Docker não entra nesta preparação. A documentação oficial do Codex Action exige secret do provider e a do Jules Action exige `JULES_API_KEY`; esses valores não existem no ambiente auditado e não foram inventados.
