@@ -20,7 +20,7 @@ jobs:
         uses: openai/codex-action@v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-          permission-profile: ":read-only"
+          safety-strategy: read-only
           prompt: |
             Review this Maestri V3 vps worktree only.
             Do not modify files, create commits, push branches, merge pull requests, or access production.
