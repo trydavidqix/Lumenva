@@ -67,7 +67,9 @@ fi
 cleanup() {
   if [ "$ENGINE" = docker ]; then
     echo "==> teardown: removendo container $CONTAINER"
-    docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+    # pgvector declares an anonymous data volume; -v prevents every run from
+    # leaving that volume behind after the container is removed.
+    docker rm -fv "$CONTAINER" >/dev/null 2>&1 || true
   elif [ -n "$PGDATA" ]; then
     echo "==> teardown: parando postgres nativo e removendo $PGDATA"
     "$PG_BIN/pg_ctl" -D "$PGDATA" -m immediate stop >/dev/null 2>&1 || true

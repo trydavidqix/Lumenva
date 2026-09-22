@@ -9,4 +9,5 @@ const dockerStart = script.indexOf("docker run");
 
 assert.notEqual(guard, -1);
 assert.ok(guard < dockerStart);
+assert.match(script, /docker rm -fv \"\$CONTAINER\"/);
 console.log("PASS test-db vitest guard contract");
