@@ -1731,7 +1731,7 @@ ACTIVE — M0 VALIDATED / KNOWLEDGE + GRAPH STANDALONE IN PROGRESS / M1 NEXT
 
 M0 e a dashboard foram validados no worktree isolado. O próximo gate é F0/F1 + M1 Core, agora sob os contratos canônicos `TaskContract`, `ContextPacket`, `ExecutionPort`, `ExecutionResult` e `ResultDigest`. A pesquisa de providers e MCP foi incorporada nesta fonte de verdade em 2026-09-22.
 
-O port standalone avançou: `packages/knowledge` já valida/exporta notas Obsidian `PUBLISHED` com scanner e provenance; `packages/knowledge-graph` já define namespace determinístico, projection worker, degradação segura e adapter HTTP Graphiti/Neo4j atrás do contrato; `apps/core` já tem SQLite persistente, migração inicial, tarefas idempotentes, replay e EventBus. Próximo entregável: `CoreRuntime` com health/recovery e integração dos adapters, sem CRM.
+O port standalone avançou: `packages/knowledge` já valida/exporta notas Obsidian `PUBLISHED` com scanner e provenance; `packages/knowledge-graph` já define namespace determinístico, projection worker, degradação segura e adapter HTTP Graphiti/Neo4j atrás do contrato; `apps/core` já tem SQLite persistente, migração inicial, tarefas idempotentes, replay, EventBus, health, shutdown e recovery para `RECOVERING`. Próximo entregável: API loopback e integração dos adapters, sem CRM.
 
 Este documento é a fonte de verdade única da branch Lumenva Command Center.
 Não criar um segundo plano concorrente para o mesmo escopo; atualizar este arquivo.
