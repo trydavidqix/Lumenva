@@ -141,12 +141,16 @@ export async function health(root = ROOT, wireProbe) {
 }
 
 export async function dashboardStats(root = ROOT) {
-  const [tasks, events, resources, evaluation] = await Promise.all([
+  const [tasks, events, resources, evaluation, aggregate] = await Promise.all([
     taskStats(root),
     telemetryEvents(root),
     discoverResources(root),
-    latestEvaluation(root)
+    latestEvaluation(root),
+    aggregatePairedEvaluations(root)
   ]);
+  const validation = aggregate?.dataset_size > 0
+    ? { ...aggregate, trust: trustScore({ ...aggregate, last_validation: aggregate.timestamp }) }
+    : evaluation;
   const contextMetrics = contextMetricsFromEvents(events);
   const summary = taskTokenSummary(tasks, contextMetrics.compiles);
   const groups = aggregateTelemetry(events);
@@ -179,7 +183,7 @@ export async function dashboardStats(root = ROOT) {
     .filter(event => event.timestamp && now - Date.parse(event.timestamp) <= days * 86_400_000)
     .reduce((sum, event) => sum + Math.ceil(Math.max(0, event.input_chars - event.output_chars) / 4), 0);
 
-  const trust = evaluation?.trust || trustScore({
+  const trust = validation?.trust || trustScore({
     baseline: {},
     mcg: {},
     context_recall: null,
@@ -187,31 +191,31 @@ export async function dashboardStats(root = ROOT) {
     hallucination_rate: null
   });
 
-  const workflow_token_savings = evaluation?.baseline?.total_tokens != null
-    && evaluation?.mcg?.total_tokens != null
-    && evaluation.baseline.total_tokens > 0
-    ? Number(((evaluation.baseline.total_tokens - evaluation.mcg.total_tokens) / evaluation.baseline.total_tokens * 100).toFixed(2))
+  const workflow_token_savings = validation?.baseline?.total_tokens != null
+    && validation?.mcg?.total_tokens != null
+    && validation.baseline.total_tokens > 0
+    ? Number(((validation.baseline.total_tokens - validation.mcg.total_tokens) / validation.baseline.total_tokens * 100).toFixed(2))
     : null;
 
   const workflowMeasurement = workflow_token_savings == null
     ? 'unavailable'
-    : evaluation?.baseline?.measurement_type === 'exact' && evaluation?.mcg?.measurement_type === 'exact'
+    : validation?.baseline?.measurement_type === 'exact' && validation?.mcg?.measurement_type === 'exact'
       ? 'exact'
       : 'estimated';
 
-  const efficiency = evaluation?.baseline && evaluation?.mcg
+  const efficiency = validation?.baseline && validation?.mcg
     ? efficiencyScore({
         real_token_saving: workflow_token_savings,
-        task_success: evaluation.mcg.task_success ? 100 : 0,
-        context_retention: evaluation.mcg.context_recall,
-        evidence_grounding: evaluation.mcg.evidence_grounding,
-        hallucination_rate: evaluation.mcg.hallucination_rate,
-        dataset_size: evaluation.trust?.dataset_size ?? 0
+        task_success: validation.mcg.task_success ? 100 : 0,
+        context_retention: validation.mcg.context_recall,
+        evidence_grounding: validation.mcg.evidence_grounding,
+        hallucination_rate: validation.mcg.hallucination_rate,
+        dataset_size: validation.trust?.dataset_size ?? 0
       })
     : efficiencyScore({});
 
-  const regression = evaluation?.baseline && evaluation?.mcg
-    ? regressionWatch(evaluation.baseline, evaluation.mcg, { dataset_size: evaluation.trust?.dataset_size ?? 0 })
+  const regression = validation?.baseline && validation?.mcg
+    ? regressionWatch(validation.baseline, validation.mcg, { dataset_size: validation.trust?.dataset_size ?? 0 })
     : { status: 'UNVALIDATED', regressions: [], source: 'baseline vs MCG', measurement_type: 'unavailable', timestamp: new Date().toISOString() };
 
   const result = {
