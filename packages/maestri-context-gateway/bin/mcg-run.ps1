@@ -13,7 +13,7 @@ param(
     [ValidateSet("read-only","workspace-write")]
     [string]$Sandbox = "workspace-write",
 
-    [string]$Project = "C:\Users\David\Desktop\Projetos\Lumenva"
+    [string]$Project = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
 )
 
 $ErrorActionPreference = "Stop"
