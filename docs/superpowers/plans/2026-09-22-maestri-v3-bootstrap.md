@@ -58,24 +58,24 @@
 - [x] Confirmar `gh-aw` ausente.
 - [x] Instalar a extensão oficial `github/gh-aw`.
 - [x] Executar `gh aw doctor` e registrar versão/health.
-- [ ] Só depois criar workflow `.md` revisado com permissões mínimas.
+- [x] Criar workflows manuais YAML revisados com permissões mínimas e guard `vps`; Agentic Workflow Markdown permanece fora do escopo deste repositório.
 
 ### Task 5: MCP e autenticação por capability
 
 **Files:** configuração local dos hosts; documentação de integração
 
-- [ ] Probar os servidores MCP existentes e separar `configured` de `healthy`.
-- [ ] Resolver GitHub MCP por OAuth/token oficial sem Docker e sem expor token.
+- [x] Probar os servidores MCP existentes e separar `configured` de `healthy`.
+- [x] Resolver GitHub MCP com o binário oficial em modo read-only/lockdown, sem Docker e sem expor token; Claude confirmou `Connected`.
 - [ ] Configurar Gemini MCP somente com credencial/escopo definidos pelo Owner.
-- [ ] Manter read-only inicial e registrar limitações.
+- [x] Manter read-only inicial e registrar limitações.
 
 ### Task 6: Actions, secrets e integração
 
 **Files:** `.github/workflows/`, documentação de secrets
 
-- [ ] Adicionar Codex Action e Jules Action somente com secrets nomeados e permissões mínimas.
-- [ ] Não criar secrets automaticamente; registrar nomes, owners e ambientes necessários.
-- [ ] Validar YAML, compilação gh-aw, permissões e dry-run em `vps`.
+- [x] Adicionar Codex Action e Jules Action somente com secrets nomeados e permissões mínimas; ambos são manuais e restritos a `vps`.
+- [x] Não criar secrets automaticamente; registrar nomes, owners e ambientes necessários. `JULES_API_KEY` foi configurada depois por autorização explícita do Owner.
+- [x] Validar YAML, permissões e guard estático em `vps`; `gh aw validate` não se aplica porque não existem workflows Markdown Agentic.
 
 ### Task 7: Prova e fechamento
 
@@ -83,4 +83,4 @@
 
 - [x] Rodar smoke tests dos SDKs, CLIs e adapters.
 - [x] Rodar gates de docs, lockfile, secret scan e `git diff --check`.
-- [ ] Registrar branch, commits, evidências e pendências; não fazer merge em `main`.
+- [x] Registrar branch, commits, evidências e pendências; não fazer merge em `main`.
