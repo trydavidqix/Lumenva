@@ -68,6 +68,7 @@ As duas fases têm gate `GO` no AI Platform. Isso prova a implementação no sta
 - `apps/core`: preflight de budget bloqueia requests excedentes antes do adapter, persiste `context.failed` com `BUDGET_EXCEEDED` e mantém o adapter sem chamada; 16/16 testes do pacote e typecheck PASS.
 - `apps/core`: Instruction Resolver hierárquico carrega `AGENTS.md`, adapta `CLAUDE.md`/`GEMINI.md`, mantém ordem root→escopo e aplica hard cap; 18/18 testes do pacote e typecheck PASS.
 - `apps/core`: instruções resolvidas entram no `ContextPacket` antes dos excerpts e são contabilizadas no hard cap; 19/19 testes do pacote e typecheck PASS.
+- `apps/core`: Tool Registry lazy filtra capabilities/domínios, aplica cap de definições, omite catálogo global e gera versão determinística; 21/21 testes do pacote e typecheck PASS.
 - Commits: `3c951634`, `124c8448`, `ccb4d3dd`, `91523605`.
 - Graph View conectado e Context Engine progressivo continuam pendentes.
 
