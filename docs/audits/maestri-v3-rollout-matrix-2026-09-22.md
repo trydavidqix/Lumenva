@@ -20,7 +20,7 @@ This gate is for the isolated `vps` branch only. It is read-only with respect to
 | GitHub Actions/MCP | Configuration pending in the real target environment | No production workflow was triggered |
 | Jules CLI | Not installed | No official local Jules CLI was found or required |
 | Jules SDK / Agentic Workflows | Installed and doctor-validated | SDK smoke passed; `gh-aw v0.88.8`, doctor PASS |
-| Codex MCP host | Configured but not healthy-proven | Local `codex mcp list` reports configured servers as `Unsupported` |
+| Codex GitHub MCP | Configured with official native binary | Worktree `.codex/config.toml` uses read-only + lockdown; Codex host auth probe remains `Unsupported` |
 | Claude GitHub MCP | Configured but unhealthy | OAuth dynamic registration is unsupported by the configured endpoint |
 | Claude Docs MCP | Healthy | `Connected` |
 | Claude Railway MCP | Configured but unauthenticated | `Needs authentication` |

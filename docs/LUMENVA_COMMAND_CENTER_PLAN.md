@@ -1933,7 +1933,7 @@ Gaps confirmados, sem instalação automática ainda:
 5. Corrigir/configurar MCP por host usando capability probing, escopo read-only inicial e autenticação oficial; não duplicar servidores existentes.
 6. Validar SDKs, Actions, MCPs, plugins, skills, hooks e workflows com evidência reproduzível na branch `vps`.
 
-Status deste bootstrap: `docs/MAESTRI_AGENT_ARCHITECTURE.md` é o contrato canônico; `@openai/codex-sdk@0.155.1`, `@google/jules-sdk@0.2.0` e a extensão oficial `gh-aw v0.88.8` foram instalados após confirmação de ausência. Smoke tests e `gh aw doctor` passaram. Health checks MCP, workflows Codex/Jules e secrets permanecem gates separados; nenhuma secret foi criada.
+Status deste bootstrap: `docs/MAESTRI_AGENT_ARCHITECTURE.md` é o contrato canônico; `@openai/codex-sdk@0.155.1`, `@google/jules-sdk@0.2.0`, a extensão oficial `gh-aw v0.88.8` e o binário oficial GitHub MCP Server `v1.12.2` foram instalados após confirmação de ausência. Smoke tests, `gh aw doctor` e health do GitHub MCP no Claude passaram; o host Codex ainda reporta auth `Unsupported`. Workflows Codex/Jules e secrets permanecem gates separados; nenhuma secret foi criada.
 
 Plano operacional detalhado: `docs/superpowers/plans/2026-09-22-maestri-v3-bootstrap.md`.
 
