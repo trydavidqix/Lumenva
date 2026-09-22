@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { CoreRuntime } from "./core-runtime.js";
 import { startCoreHttpServer } from "./http-api.js";
 import { SqliteStore } from "./sqlite-store.js";
+import type { ExecutionResult } from "@lumenva/operating-core";
 
 const closers: Array<() => Promise<void>> = [];
 afterEach(async () => {
@@ -23,7 +24,7 @@ describe("Core HTTP API", () => {
 
     const health = await fetch(`${server.url}/health`);
     expect(health.status).toBe(200);
-    expect(await health.json()).toEqual({ ok: true, state: "running", schemaVersion: 1 });
+    expect(await health.json()).toEqual({ ok: true, state: "running", schemaVersion: 2 });
 
     const created = await fetch(`${server.url}/tasks`, {
       method: "POST",
@@ -43,6 +44,28 @@ describe("Core HTTP API", () => {
 
     expect((await (await fetch(`${server.url}/tasks/task-1`)).json()).status).toBe("QUEUED");
     expect((await (await fetch(`${server.url}/events`)).json()).events).toHaveLength(1);
+  });
+
+  it("serves persisted execution evidence read-only", async () => {
+    const runtime = new CoreRuntime(new SqliteStore(join(mkdtempSync(join(tmpdir(), "lumenva-api-execution-")), "core.sqlite")));
+    await runtime.start();
+    await runtime.startTask({ id: "task-exec", type: "agent.execute", idempotencyKey: "exec-1", traceId: "trace-exec", payload: {} });
+    const result: ExecutionResult = {
+      task_id: "task-exec",
+      status: "success",
+      summary: "probe",
+      files_changed: [],
+      commands: ["git status --short"],
+      tests: [{ passed: true, report: "clean" }],
+      evidence: ["evidence:probe"],
+    };
+    const record = await runtime.recordExecutionResult("task-exec", "codex", result);
+    const server = await startCoreHttpServer(runtime, 0);
+    closers.push(async () => { await server.close(); await runtime.stop(); });
+
+    const response = await fetch(`${server.url}/executions/${encodeURIComponent(record.id)}`);
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual(expect.objectContaining({ id: record.id, provider: "codex", result }));
   });
 
   it("serves a read-only graph view with source drill-down metadata", async () => {

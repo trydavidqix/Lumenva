@@ -55,6 +55,10 @@ async function route(
       const task = runtime.task(decodeURIComponent(url.pathname.slice("/tasks/".length)));
       return task ? send(response, 200, task) : send(response, 404, { error: "TASK_NOT_FOUND" });
     }
+    if (request.method === "GET" && /^\/executions\/[^/]+$/.test(url.pathname)) {
+      const execution = runtime.execution(decodeURIComponent(url.pathname.slice("/executions/".length)));
+      return execution ? send(response, 200, execution) : send(response, 404, { error: "EXECUTION_NOT_FOUND" });
+    }
     if (request.method === "POST" && url.pathname === "/tasks") {
       const input = await readJson(request) as {
         id: string; type: string; idempotencyKey: string; traceId: string; payload: unknown;

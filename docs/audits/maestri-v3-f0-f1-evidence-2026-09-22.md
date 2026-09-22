@@ -43,6 +43,8 @@ Nenhum arquivo foi alterado pela prova.
 - `CoreRuntime.recordExecutionResult()` persiste o `ExecutionResult` e publica `execution.recorded`.
 - `CoreRuntime.execution()` permite leitura posterior do resultado persistido.
 - `apps/core` passou `core-runtime` + `sqlite-store`: 4/4 testes; typecheck PASS.
+- API loopback expõe `GET /executions/:id` em modo read-only; TDD observado RED 404 → GREEN 200.
+- Suíte final de `apps/core`: 15 arquivos, 36 testes PASS; typecheck PASS.
 
 pnpm --filter @lumenva/core test
 Test Files: 15 passed
