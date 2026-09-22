@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { requirePlatformAdminApi } from "../../lib/auth/require-platform-admin-api";
-import { resolvePlatformAdmin } from "../../lib/auth/requirePlatformAdmin";
+import { resolvePlatformAdmin, type PlatformAdminContext } from "../../lib/auth/requirePlatformAdmin";
 
 vi.mock("../../lib/auth/requirePlatformAdmin", () => ({
   resolvePlatformAdmin: vi.fn(),
@@ -71,8 +71,14 @@ describe("requirePlatformAdminApi", () => {
   });
 
   it("returns ok true and context when result is ok", async () => {
-    const mockContext = {
-      user: { id: "u-1" } as any,
+    const mockContext: PlatformAdminContext = {
+      user: {
+        id: "u-1",
+        app_metadata: {},
+        user_metadata: {},
+        aud: "authenticated",
+        created_at: "2026-09-22T00:00:00.000Z",
+      },
       platformAdmin: { user_id: "u-1", scope: "*", mfa_required: true },
     };
     vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: true, context: mockContext });
