@@ -2,18 +2,23 @@
 
 > Regra modular compartilhada. Em caso de conflito, `CLAUDE.md` da raiz vence.
 
-## GitHub Actions desabilitado (permanente, 2026-08-20)
+## GitHub Actions ativo (decisão revertida em 2026-09-22)
 
-Decisão explícita do dono do repositório: Actions está desligado a nível de repositório
-(`enabled: false` em `repos/{owner}/{repo}/actions/permissions`), não só arquivo de workflow.
-`ci.yml`, `e2e.yml`, `perf.yml` e `publish-image.yml` continuam no repo mas ficam inertes — não
-disparam em push/PR/manual, mesmo que alguém os edite ou adicione um workflow novo. Não reative
-sem autorização explícita, e não trate "adicionar workflow novo" como solução — a trava é a
-configuração do repositório, não a ausência de arquivo.
+Decisão explícita do dono do repositório: GitHub Actions está ativo a nível de repositório
+(`enabled: true` em `repos/{owner}/{repo}/actions/permissions`). Os workflows versionados
+(`ci.yml`, `e2e.yml`, `perf.yml` e `publish-image.yml`) podem executar em push, PR e disparo
+manual. Esta decisão reverte a desativação permanente registrada em 2026-08-20, depois que o
+repositório se tornou público.
 
-Consequência direta: não existe mais gate de CI em PR. Verificação local
-(`pnpm typecheck && pnpm lint && pnpm test:unit`; `pnpm test:db` quando schema/RLS mudou) e Vercel
-Preview passam a ser a prova primária, não um complemento ao que o CI cobriria.
+Para mudanças relevantes, use os dois canais de teste: Codex Cloud no environment correto e
+GitHub Actions no PR real. Leia a nota do canvas **Doutrina de Testes — Cloud + Actions** para
+identidade do environment, estado do setup e regra de confiança. Run manual isolado não substitui
+a confirmação dos checks no PR que será mergeado.
+
+Verificação local continua obrigatória quando aplicável
+(`pnpm typecheck && pnpm lint && pnpm test:unit`; `pnpm test:db` quando schema/RLS mudou), junto
+com Cloud e Actions. Vercel Preview prova o comportamento visual e de build quando o raio de dano
+exige.
 
 **Incidente 2026-08-22 (resolvido):** todo deploy Vercel (Preview e produção) ficou em `ERROR`
 desde o commit `07874472` (bem antes de 2026-08-20) — `app/api/v1/cron/flywheel-judge-loop/route.ts`
