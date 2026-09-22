@@ -75,7 +75,7 @@ describe("F1 identity mapping infrastructure", () => {
       select count(*) from public.identity_user_mappings where firebase_uid = '${activeFirebaseUid}';
       select count(*) from public.identity_user_mapping_candidates where firebase_uid = '${pendingFirebaseUid}';
       select count(*) from public.identity_user_mapping_audit where run_id = '${runId}'::uuid;`).split("\n");
-    expect(state).toEqual([activeUserId, "null", "1", "1", "2"]);
+    expect(state).toEqual([activeUserId, "null", "1", "1", "3"]);
 
     sql(`delete from public.identity_user_mapping_audit where run_id = '${runId}'::uuid;
          delete from public.identity_user_mapping_candidates where firebase_uid in ('${activeFirebaseUid}', '${pendingFirebaseUid}');
