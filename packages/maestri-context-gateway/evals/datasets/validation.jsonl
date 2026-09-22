@@ -1,0 +1,1 @@
+{"id":"validation-recall","evidence":"CUTOVER_REQUIRES = owner-approval\nDEPLOY_POLICY = no-deploy-without-owner","question":"List cutover and deployment constraints."}

@@ -1,0 +1,13 @@
+# Runtime state stays local.
+state/
+tasks/
+logs/
+events/inbox/
+*.pid
+*.log
+
+# Local Wire credentials stay outside Git.
+config/wire.json
+
+# Editor and recovery backups stay outside Git.
+*.bak-*

@@ -1,0 +1,10 @@
+{
+  "global": { "token_budget": null, "warning_percent": 50, "critical_percent": 80 },
+  "executors": {},
+  "agents": {},
+  "plugins": {},
+  "mcps": {},
+  "ides": {},
+  "runtimes": {},
+  "tools": {}
+}

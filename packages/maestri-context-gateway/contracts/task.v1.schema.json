@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"task.v1","type":"object","required":["task_id"],"properties":{"task_id":{"type":"string"},"trace_id":{"type":"string"},"status":{"type":"string"},"source":{"type":"string"},"measurement_type":{"enum":["exact","estimated","unavailable"]}}}

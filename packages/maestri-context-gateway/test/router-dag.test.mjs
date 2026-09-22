@@ -1,0 +1,8 @@
+import assert from 'node:assert/strict';
+import { CircuitBreaker, classifyRisk, retryPlan, selectRoute } from '../src/routing/router.mjs';
+import { readyNodes, validateDag } from '../src/scheduler/dag.mjs';
+
+assert.equal(classifyRisk({ delete: true }), 'R4'); assert.equal(selectRoute({ type: 'HEAVY', capability: 'code' }, [{ name: 'sol', capabilities: ['code'], success_rate: 99 }]).reasoning, 'high'); assert.equal(retryPlan(4, {}).strategy, 'alternate-executor'); assert.equal(retryPlan(5).strategy, 'BLOCKED');
+const breaker = new CircuitBreaker({ threshold: 2 }); breaker.failure('429'); breaker.failure('429'); assert.equal(breaker.allow(), false); assert.equal(breaker.state().status, 'CIRCUIT_OPEN');
+const nodes = [{ node_id: 'a', status: 'DONE', depends_on: [] }, { node_id: 'b', status: 'READY', depends_on: ['a'] }]; assert.equal(validateDag(nodes).valid, true); assert.equal(readyNodes(nodes)[0].node_id, 'b');
+console.log('router/dag tests: 1 passed');

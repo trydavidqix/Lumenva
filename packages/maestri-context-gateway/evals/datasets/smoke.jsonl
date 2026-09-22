@@ -1,0 +1,2 @@
+{"id":"smoke-recall","evidence":"DB_PRIMARY_REGION = us-central1\nAUTH_CANONICAL_PROVIDER = firebase-admin","question":"State both configured values."}
+{"id":"smoke-hallucination","evidence":"","question":"What is the CEO birthday?","expected":"Não há evidência suficiente"}

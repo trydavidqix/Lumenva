@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"eval.v1","type":"object","required":["run_id","variant"],"properties":{"run_id":{"type":"string"},"variant":{"enum":["baseline","mcg"]}}}

@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"agent.v1","type":"object","required":["name","status","source"],"properties":{"name":{"type":"string"},"status":{"type":"string"},"source":{"type":"string"}}}
