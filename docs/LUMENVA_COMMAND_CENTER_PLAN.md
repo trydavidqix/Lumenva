@@ -1935,7 +1935,7 @@ Gaps confirmados, sem instalação automática ainda:
 
 Status deste bootstrap: `docs/MAESTRI_AGENT_ARCHITECTURE.md` é o contrato canônico; `@openai/codex-sdk@0.155.1`, `@google/jules-sdk@0.2.0`, a extensão oficial `gh-aw v0.88.8`, o binário oficial GitHub MCP Server `v1.12.2` e `actionlint v1.7.12` foram instalados após confirmação de ausência. Smoke tests, `gh aw doctor`, actionlint e health do GitHub MCP no Claude passaram; o host Codex ainda reporta auth `Unsupported`. Workflows Codex/Jules manuais e protegidos por `vps` foram adicionados, mas não executados; `JULES_API_KEY` agora está configurada no GitHub Actions a partir do Google Secret Manager, enquanto `OPENAI_API_KEY` continua opcional e ausente. Graphiti local agora falha fechado em `OFF` por padrão e o Core mantém `/graph` read-only vazio sem endpoint remoto. Gemini MCP foi configurado no projeto com o mesmo servidor oficial e o trust local foi autorizado. O OAuth Google terminou, mas o cliente individual foi recusado como não suportado; o teste Vertex AI com `lumenva` retornou `403 (#3501)` por licença ausente. Gemini permanece opcional e sem API key; não foi instalado Antigravity.
 
-Plano operacional detalhado: `docs/superpowers/plans/2026-09-22-maestri-v3-bootstrap.md`.
+Plano operacional detalhado: `docs/superpowers/plans/2026-09-22-maestri-v3-bootstrap.md`. Os três primeiros gates externos restantes estão decompostos em `docs/superpowers/plans/2026-09-22-maestri-v3-first-three-external-gates.md`: Actions reais Jules/Codex, Graphiti remoto sem Docker e collector OTLP opcional.
 
 Fontes oficiais usadas para a matriz:
 
