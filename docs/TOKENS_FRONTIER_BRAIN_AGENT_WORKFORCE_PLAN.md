@@ -796,3 +796,21 @@ Additional implementation completed:
 - expanded tests for evidence, PAYG budget states, and lazy tool loading
 
 Current hard external gates remain authenticated provider runtimes, real quota telemetry, real gateway credentials, durable database adapter selection/migration, and execution of provider-backed benchmark/E2E suites. These gates must not be represented as PASS until real evidence exists.
+
+
+### Maximum inline implementation pass
+
+Further completed:
+- resumable plan/task run-state primitives
+- execution idempotency keys/store
+- owner approval gate for R3/R4 and protected operations
+- bounded retry controller with exponential backoff policy
+- ContextPacket TTL cache
+- token/cost ledger
+- exclusive worktree lease policy
+- Postgres persistence adapter contract and SQL schema for plans, executions, digests, routing traces and learning observations
+- runtime policy for production/destructive/secrets/financial boundaries
+- orchestrator enforcement of owner approval, idempotent execution and cost recording
+- expanded tests for idempotency, approvals, worktree isolation and runtime gates
+
+Important deployment note: `postgres-schema.sql` is an implementation artifact only; it has NOT been applied to production. Applying migrations, connecting authenticated provider runtimes, supplying gateway credentials, collecting real provider quotas, and running real provider/E2E benchmarks remain external execution gates.
