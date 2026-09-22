@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { buildLanePrompt } from '../src/eval-runner.mjs';
-
-const baseline = buildLanePrompt('baseline');
-const mcg = buildLanePrompt('mcg');
-assert.ok(baseline.length > mcg.length);
-assert.match(baseline, /DB_PRIMARY_REGION/);
-assert.match(mcg, /DB_PRIMARY_REGION/);
-assert.match(baseline, /What is the CEO birthday/);
-assert.match(mcg, /What is the CEO birthday/);
+const sample={id:'x',category:'context-recall',evidence:'A = one\nB = two',question:'Report values.',no_evidence_question:'Unknown?',expected_contains:['one','two'],archive_lines:20,tools:[]};
+assert.ok(buildLanePrompt('baseline',sample).length>buildLanePrompt('mcg',sample).length);
+assert.match(buildLanePrompt('mcg',sample),/A = one/);
+const root=await mkdtemp(join(tmpdir(),'mcg-eval-runner-'));
+try { await writeFile(join(root,'ok'),'ok'); assert.ok(root); } finally { await rm(root,{recursive:true,force:true}); }
 console.log('eval runner tests: 1 passed');

@@ -12,6 +12,8 @@
     "check:syntax": "node scripts/check-syntax.mjs",
     "scan:sensitive": "node scripts/scan-sensitive.mjs",
     "smoke:dashboard": "node --test test/dashboard.test.mjs",
-    "smoke:contracts": "node --test test/contracts.test.mjs"
+    "smoke:contracts": "node --test test/contracts.test.mjs",
+    "eval:smoke": "node bin/mcg-eval.mjs smoke",
+    "eval:validation": "node bin/mcg-eval.mjs validation"
   }
 }
