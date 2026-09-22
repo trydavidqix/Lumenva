@@ -16,6 +16,8 @@ import { runtimePolicy } from '../runtime-policy';
 import { validateMasterPlan, validateTaskContract } from '../contract-validation';
 import { MemoryRetriever } from '../memory-retriever';
 import { autonomousDecision } from '../autonomous-policy';
+import { buildValidationCorpus, DEFAULT_VALIDATION_SEEDS } from '../validation-corpus';
+import { ContextResolver } from '../context-resolver';
 
 describe('TOKENS workforce fabric', () => {
   it('prefers frontier models for planning', () => {
@@ -164,5 +166,20 @@ describe('TOKENS workforce fabric', () => {
   it('keeps R2 autonomous but independently reviewed', () => {
     expect(autonomousDecision('R2')).toEqual({ automatic: true, requires_review: true, requires_owner: false });
     expect(autonomousDecision('R4').requires_owner).toBe(true);
+  });
+
+  it('builds a 30-case validation corpus across six categories', () => {
+    const corpus = buildValidationCorpus(DEFAULT_VALIDATION_SEEDS, 'sha');
+    expect(corpus).toHaveLength(30);
+    expect(new Set(corpus.map(x => x.task_type)).size).toBe(6);
+  });
+
+  it('resolves only relevant memory and tool schemas into context', () => {
+    const memory = new MemoryRetriever([{ id:'m', text:'known', provenance:'validated:test', validated:true, tags:['coding'], token_estimate:5, updated_at:'2026-01-01T00:00:00Z' }]);
+    const tools = new LazyToolRegistry();
+    tools.register({ id:'git', capabilities:['coding'], risk:'R1', schema_token_estimate:10, enabled:true });
+    const resolved = new ContextResolver(memory, tools).resolve({ task_id:'t', goal:'g', scope:'s', allowed_paths:[], constraints:[], capabilities:['coding'], base_sha:'sha' });
+    expect(resolved.allowed_tools).toEqual(['git']);
+    expect(resolved.sources.map(x => x.id)).toEqual(['m']);
   });
 });
