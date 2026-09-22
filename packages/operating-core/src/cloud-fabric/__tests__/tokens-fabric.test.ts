@@ -1,0 +1,90 @@
+import { describe, expect, it } from 'vitest';
+import { ModelRegistry } from '../model-registry';
+import { scoreModel } from '../routing-policy';
+import { quotaState } from '../quota-router';
+import { nextEscalation } from '../escalation-engine';
+import { createMasterPlan, readyTasks } from '../master-plan';
+import { evaluateIndependentReview } from '../independent-review';
+import { ContextEngine } from '../../context/context-engine';
+
+describe('TOKENS workforce fabric', () => {
+  it('prefers frontier models for planning', () => {
+    const registry = new ModelRegistry();
+    const models = registry.candidates({
+      capabilities: ['architecture'],
+      risk: 'R3',
+      complexity: 'HEAVY',
+      minTier: 2,
+      maxTier: 3,
+    });
+    const decisions = models.map((model) => scoreModel(model, {
+      capabilities: ['architecture'],
+      risk: 'R3',
+      complexity: 'HEAVY',
+      phase: 'plan',
+      providerQuota: { claude: 'GREEN', codex: 'GREEN' },
+    }));
+    expect(decisions.some((decision) => decision.tier === 3)).toBe(true);
+  });
+
+  it('classifies quota thresholds', () => {
+    expect(quotaState({ provider: 'x', tokens_used: 0, cost_usd: 0, remaining_percent: 80 })).toBe('GREEN');
+    expect(quotaState({ provider: 'x', tokens_used: 0, cost_usd: 0, remaining_percent: 30 })).toBe('YELLOW');
+    expect(quotaState({ provider: 'x', tokens_used: 0, cost_usd: 0, remaining_percent: 15 })).toBe('RED');
+    expect(quotaState({ provider: 'x', tokens_used: 0, cost_usd: 0, remaining_percent: 5 })).toBe('RESERVE');
+  });
+
+  it('bounds escalation', () => {
+    expect(nextEscalation({ worker_attempts: 0, professional_attempts: 0, frontier_attempts: 0, replans: 0 })).toBe('retry-worker');
+    expect(nextEscalation({ worker_attempts: 2, professional_attempts: 1, frontier_attempts: 1, replans: 1 })).toBe('blocked');
+  });
+
+  it('validates master plan dependencies and ready tasks', () => {
+    const plan = createMasterPlan({
+      objective: 'ship feature',
+      tasks: [
+        { task_id: 'a', objective: 'db', acceptance_criteria: ['done'] },
+        { task_id: 'b', objective: 'api', depends_on: ['a'], acceptance_criteria: ['done'] },
+      ],
+    });
+    expect(readyTasks(plan, []).map((task) => task.task_id)).toEqual(['a']);
+    expect(readyTasks(plan, ['a']).map((task) => task.task_id)).toEqual(['b']);
+  });
+
+  it('rejects same-provider independent review', () => {
+    const review = evaluateIndependentReview({
+      implementation: {
+        task_id: 't1',
+        provider: 'codex',
+        status: 'success',
+        files_changed: [],
+        tests: [{ passed: true, report: 'ok' }],
+        evidence: 'evidence',
+      },
+      reviewer_provider: 'codex',
+      risk: 'R2',
+      deterministic_checks: [{ name: 'test', passed: true }],
+    });
+    expect(review.accepted).toBe(false);
+  });
+
+  it('compiles bounded context packets', () => {
+    const packet = new ContextEngine().compilePacket({
+      contract: {
+        task_id: 't1',
+        goal: 'test',
+        scope: 'test',
+        allowed_paths: [],
+        constraints: [],
+        base_sha: 'abc',
+      },
+      token_budget: 256,
+      expansion_level: 1,
+      sources: [
+        { id: 'a', kind: 'instruction', source: 'AGENTS.md', reason: 'rules', content: 'x'.repeat(40), priority: 10 },
+        { id: 'b', kind: 'file', source: 'big.ts', reason: 'code', content: 'x'.repeat(4000), priority: 1 },
+      ],
+    });
+    expect(packet.references.map((ref) => ref.id)).toEqual(['a']);
+  });
+});
