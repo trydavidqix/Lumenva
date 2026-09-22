@@ -63,6 +63,32 @@ describe("SIP event forwarder (Fase 3, closes the loop to the CRM)", () => {
     );
   });
 
+  it("uses the preallocated governed call id for outbound instead of creating a second context", async () => {
+    const brainClient = fakeBrainClient();
+    const forwarder = createSipEventForwarder({ brainClient });
+
+    await forwarder.forward({
+      status: "normalized",
+      event: normalizedEvent({
+        direction: "outbound",
+        callerE164: "+37255501234",
+        calledE164: "+351912345678",
+        attributes: {
+          callControlId: "channel-1",
+          callSessionId: null,
+          voiceCallId: "11111111-1111-4111-8111-111111111111",
+        },
+      }),
+    });
+
+    expect(brainClient.resolveContext).not.toHaveBeenCalled();
+    expect(brainClient.recordEvent).toHaveBeenCalledWith(expect.objectContaining({
+      voice_call_id: "11111111-1111-4111-8111-111111111111",
+      phone_e164: "+37255501234",
+      state: "active",
+    }));
+  });
+
   it("uses the caller number as the technical number for outbound direction", async () => {
     const brainClient = fakeBrainClient();
     const forwarder = createSipEventForwarder({ brainClient });
