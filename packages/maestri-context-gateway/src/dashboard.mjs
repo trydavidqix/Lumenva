@@ -154,13 +154,26 @@ export function createCoreExecutionFeed(baseUrl = process.env.LUMENVA_CORE_URL) 
 
 export async function executionEvidence(executionFeed) {
   const source = 'Core GET /executions/:id; read-only execution feed';
-  if (!executionFeed) return { status: 'UNAVAILABLE', count: null, executions: null, measurement_type: 'unavailable', source, timestamp: new Date().toISOString() };
+  const unavailableUsage = { input_tokens: null, cached_tokens: null, output_tokens: null, duration_ms: null, cost_usd: null, measurement_type: 'unavailable', source: 'Core GET /executions usage' };
+  if (!executionFeed) return { status: 'UNAVAILABLE', count: null, executions: null, usage: unavailableUsage, measurement_type: 'unavailable', source, timestamp: new Date().toISOString() };
   try {
     const raw = await executionFeed();
     const executions = Array.isArray(raw) ? raw : Array.isArray(raw?.executions) ? raw.executions : [];
-    return { status: executions.length ? 'OBSERVED' : 'UNAVAILABLE', count: executions.length || null, executions: executions.length ? executions : null, measurement_type: executions.length ? 'exact' : 'unavailable', source, timestamp: new Date().toISOString() };
+    const usageRows = executions.map(execution => execution?.result?.usage).filter(usage => usage && Number.isFinite(usage.input_tokens) && Number.isFinite(usage.output_tokens));
+    const usage = usageRows.length
+      ? {
+          input_tokens: usageRows.reduce((sum, row) => sum + row.input_tokens, 0),
+          cached_tokens: usageRows.reduce((sum, row) => sum + (row.cached_tokens || 0), 0),
+          output_tokens: usageRows.reduce((sum, row) => sum + row.output_tokens, 0),
+          duration_ms: usageRows.reduce((sum, row) => sum + (row.duration_ms || 0), 0),
+          cost_usd: usageRows.reduce((sum, row) => sum + (row.cost_usd || 0), 0),
+          measurement_type: 'exact',
+          source: 'Core GET /executions usage'
+        }
+      : unavailableUsage;
+    return { status: executions.length ? 'OBSERVED' : 'UNAVAILABLE', count: executions.length || null, executions: executions.length ? executions : null, usage, measurement_type: executions.length ? 'exact' : 'unavailable', source, timestamp: new Date().toISOString() };
   } catch {
-    return { status: 'UNAVAILABLE', count: null, executions: null, measurement_type: 'unavailable', source, timestamp: new Date().toISOString() };
+    return { status: 'UNAVAILABLE', count: null, executions: null, usage: unavailableUsage, measurement_type: 'unavailable', source, timestamp: new Date().toISOString() };
   }
 }
 
@@ -241,6 +254,7 @@ export async function dashboardStats(root = ROOT, { executionFeed } = {}) {
   const regression = validation?.baseline && validation?.mcg
     ? regressionWatch(validation.baseline, validation.mcg, { dataset_size: validation.trust?.dataset_size ?? 0 })
     : { status: 'UNVALIDATED', regressions: [], source: 'baseline vs MCG', measurement_type: 'unavailable', timestamp: new Date().toISOString() };
+  const executionEvidenceData = await executionEvidence(executionFeed);
 
   const result = {
     ...summary,
@@ -285,7 +299,8 @@ export async function dashboardStats(root = ROOT, { executionFeed } = {}) {
     alerts: await alertHistory(root),
     ceo_inbox: await ceoInbox(root),
     warnings: tasks.filter(task => !task.measurable && task.active).map(task => `${task.task_id}: resultado final ausente`),
-    execution_evidence: await executionEvidence(executionFeed)
+    execution_evidence: executionEvidenceData,
+    execution_usage: executionEvidenceData.usage
   };
 
   await mkdir(join(root, 'state', 'dashboard'), { recursive: true, mode: 0o700 });

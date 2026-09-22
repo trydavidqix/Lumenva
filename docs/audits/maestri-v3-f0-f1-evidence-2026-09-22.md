@@ -62,6 +62,10 @@ Focused provider usage tests: 8/8 passed. Package and Core typechecks passed.
 - Core MCP/trace tests: 5/5 passed; MCG regression suite: 36/36 passed.
 - External OpenTelemetry export is still pending; local trace provenance is exact and persisted.
 
+## F20/F21 dashboard usage validation
+
+The read-only `Executions` view now aggregates exact `ExecutionResult.usage` values from Core: input, cached, output, duration, and cost. Without provider usage it returns `UNAVAILABLE` instead of synthetic zeros. Focused dashboard tests: 14/14 passed.
+
 ## Comandos e resultado
 
 ```text

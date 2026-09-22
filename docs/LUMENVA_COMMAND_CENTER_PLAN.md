@@ -242,6 +242,13 @@ F25 rollout e limpeza de compatibilidade
 - Core MCP/trace tests: 5 passed; MCG suite: 36 passed.
 - This closes local propagation evidence; an external OpenTelemetry exporter/collector remains pending.
 
+### F20/F21 progress update — 2026-09-22
+
+- The Command Center `Executions` view now aggregates exact provider usage from Core execution evidence.
+- It exposes input tokens, cached tokens, output tokens, duration, and cost with provenance `Core GET /executions usage`.
+- Missing usage remains `UNAVAILABLE`; no zero-value fake metric is shown.
+- Dashboard regression: 14/14 focused tests passed; full MCG suite remains green.
+
 ### Gates adicionais do plano completo
 
 O fechamento do Fabric exige evidência para:

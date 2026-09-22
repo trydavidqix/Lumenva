@@ -204,7 +204,7 @@ test('dashboard exposes persisted execution evidence as a read-only view', async
     traceId: 'trace-1',
     provider: 'codex',
     status: 'success',
-    result: { task_id: 'task-1', status: 'success', summary: 'probe', files_changed: [], commands: ['git status --short'], tests: [{ passed: true, report: 'clean' }], evidence: ['evidence:probe'] }
+    result: { task_id: 'task-1', status: 'success', summary: 'probe', files_changed: [], commands: ['git status --short'], tests: [{ passed: true, report: 'clean' }], evidence: ['evidence:probe'], usage: { input_tokens: 10, cached_tokens: 3, output_tokens: 4, duration_ms: 50, cost_usd: 0.01 } }
   };
   const server = await createDashboardServer({ root: process.cwd(), port: 0, executionFeed: async () => [execution] });
   t.after(() => server.close());
@@ -215,6 +215,7 @@ test('dashboard exposes persisted execution evidence as a read-only view', async
   const views = JSON.parse((await get(port, '/api/views')).body).views;
   assert.equal(views.Executions.status, 'OBSERVED');
   assert.equal(views.Executions.count, 1);
+  assert.deepEqual(views.Executions.usage, { input_tokens: 10, cached_tokens: 3, output_tokens: 4, duration_ms: 50, cost_usd: 0.01, measurement_type: 'exact', source: 'Core GET /executions usage' });
   assert.match((await get(port, '/')).body, /data-view="Executions"/);
 });
 
