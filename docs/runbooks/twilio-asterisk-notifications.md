@@ -179,6 +179,43 @@ where organization_id = '<ORG_UUID>'
 
 Associar o control endpoint HTTPS do SIP worker em `voice_worker_endpoints.connection_id`.
 
+Antes de habilitar voz no Notification Router, criar a política fail-closed do tenant. Durante o rollout inicial, autorize **somente o telefone físico de teste**:
+
+```sql
+insert into notification_delivery_policies (
+  organization_id,
+  timezone,
+  voice_escalation_enabled,
+  allowed_voice_destinations,
+  whatsapp_max_attempts,
+  voice_max_attempts,
+  max_voice_calls_per_hour,
+  max_voice_calls_per_day,
+  voice_cooldown_seconds,
+  quiet_hours_start,
+  quiet_hours_end
+)
+values (
+  '<ORG_UUID>',
+  'Europe/Lisbon',
+  true,
+  array['<TEST_DESTINATION_E164>']::text[],
+  2,
+  1,
+  2,
+  4,
+  600,
+  '22:00',
+  '07:00'
+)
+on conflict (organization_id) do update set
+  voice_escalation_enabled = excluded.voice_escalation_enabled,
+  allowed_voice_destinations = excluded.allowed_voice_destinations,
+  updated_at = now();
+```
+
+A allowlist é de correspondência E.164 exata. Lista vazia = nenhuma chamada outbound permitida. A aplicação também aplica cooldown e tetos horários/24h antes de reservar `voice_calls`; duas reservas concorrentes da mesma organização são serializadas por advisory lock.
+
 Nunca criar duas rotas Asterisk habilitadas para a mesma organização sem seleção explícita: o resolver falha fechado em ambiguidade.
 
 ## 7. Reload controlado
