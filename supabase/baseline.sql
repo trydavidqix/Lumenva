@@ -11111,3 +11111,6 @@ revoke execute on function public.backfill_identity_user_mappings(jsonb, uuid, b
   from public, anon, authenticated, service_role, app_runtime, worker_runtime, platform_admin_runtime;
 grant execute on function public.backfill_identity_user_mappings(jsonb, uuid, boolean)
   to migration_admin;
+REVOKE ALL ON TABLE public.platform_admins FROM anon, authenticated, service_role, public;
+GRANT SELECT ON TABLE public.platform_admins TO authenticated;
+GRANT SELECT ON TABLE public.platform_admins TO service_role;
