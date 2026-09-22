@@ -47,8 +47,8 @@ describe("F1 identity mapping infrastructure", () => {
       { firebase_uid: pendingFirebaseUid, match_status: "pending", collision: "missing_membership", email_snapshot: "pending@f1.test" },
     ]).replace(/'/g, "''");
 
-    sql(`delete from public.identity_user_mapping_audit where run_id = '${runId}'::uuid;
-         delete from public.identity_user_mapping_candidates where firebase_uid in ('${activeFirebaseUid}', '${pendingFirebaseUid}');
+    // Audit rows are append-only; the ephemeral test database retains them.
+    sql(`delete from public.identity_user_mapping_candidates where firebase_uid in ('${activeFirebaseUid}', '${pendingFirebaseUid}');
          delete from public.identity_user_mappings where firebase_uid in ('${activeFirebaseUid}', '${pendingFirebaseUid}');`);
 
     const dryRun = sql(`begin;
@@ -77,8 +77,7 @@ describe("F1 identity mapping infrastructure", () => {
       select count(*) from public.identity_user_mapping_audit where run_id = '${runId}'::uuid;`).split("\n");
     expect(state).toEqual([activeUserId, "null", "1", "1", "3"]);
 
-    sql(`delete from public.identity_user_mapping_audit where run_id = '${runId}'::uuid;
-         delete from public.identity_user_mapping_candidates where firebase_uid in ('${activeFirebaseUid}', '${pendingFirebaseUid}');
+    sql(`delete from public.identity_user_mapping_candidates where firebase_uid in ('${activeFirebaseUid}', '${pendingFirebaseUid}');
          delete from public.identity_user_mappings where firebase_uid in ('${activeFirebaseUid}', '${pendingFirebaseUid}');`);
   });
 });
