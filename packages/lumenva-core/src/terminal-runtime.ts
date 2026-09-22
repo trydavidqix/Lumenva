@@ -1,6 +1,27 @@
 import { randomUUID } from 'node:crypto';
-import { spawn, type IPty, type IPtyForkOptions, type IPtyForkOptions as SpawnOptions } from 'node-pty';
 import type { EventBus } from './event-bus.js';
+
+export interface PtyProcess {
+  pid: number;
+  onData(handler: (data: string) => void): { dispose(): void };
+  onExit(handler: (event: { exitCode: number; signal: number }) => void): { dispose(): void };
+  write(data: string): void;
+  resize(cols: number, rows: number): void;
+  kill(signal?: string): void;
+}
+
+export interface PtySpawnOptions {
+  name: string;
+  cols: number;
+  rows: number;
+  cwd: string;
+  env: Record<string, string>;
+  useConpty: boolean;
+}
+
+export interface TerminalAdapter {
+  spawn(executable: string, args: string[], options: PtySpawnOptions): PtyProcess;
+}
 
 export type TerminalStatus = 'RUNNING' | 'EXITED';
 
@@ -35,18 +56,12 @@ export interface TerminalOutput {
   data: string;
 }
 
-export interface TerminalAdapter {
-  spawn(executable: string, args: string[], options: SpawnOptions): IPty;
-}
-
-const nodePtyAdapter: TerminalAdapter = { spawn };
-
 export class TerminalRuntime {
-  #sessions = new Map<string, { pty: IPty; snapshot: TerminalSnapshot }>();
+  #sessions = new Map<string, { pty: PtyProcess; snapshot: TerminalSnapshot }>();
 
   constructor(
     private readonly events: EventBus,
-    private readonly adapter: TerminalAdapter = nodePtyAdapter,
+    private readonly adapter: TerminalAdapter,
   ) {}
 
   list(): TerminalSnapshot[] {
@@ -66,16 +81,14 @@ export class TerminalRuntime {
     const cols = request.cols ?? 120;
     const rows = request.rows ?? 30;
     const args = request.args ?? [];
-    const options: IPtyForkOptions = {
+    const pty = this.adapter.spawn(request.executable, args, {
       name: 'xterm-256color',
       cols,
       rows,
       cwd: request.cwd,
       env: { ...process.env, ...request.env } as Record<string, string>,
       useConpty: process.platform === 'win32',
-    };
-
-    const pty = this.adapter.spawn(request.executable, args, options);
+    });
     const snapshot: TerminalSnapshot = {
       id,
       executable: request.executable,
@@ -93,36 +106,32 @@ export class TerminalRuntime {
     this.#sessions.set(id, { pty, snapshot });
 
     pty.onData((data) => {
-      void this.events.emit<TerminalOutput>(
-        'terminal.output',
-        { terminalId: id, data },
-        { source: request.source ?? 'terminal-runtime', traceId: request.traceId },
-      );
+      void this.events.emit<TerminalOutput>('terminal.output', { terminalId: id, data }, {
+        source: request.source ?? 'terminal-runtime',
+        traceId: request.traceId,
+      });
     });
-
     pty.onExit(({ exitCode, signal }) => {
       snapshot.status = 'EXITED';
       snapshot.exitCode = exitCode;
       snapshot.signal = signal;
       snapshot.exitedAt = new Date().toISOString();
-      void this.events.emit(
-        'terminal.exited',
-        { terminalId: id, exitCode, signal },
-        { source: request.source ?? 'terminal-runtime', traceId: request.traceId },
-      );
+      void this.events.emit('terminal.exited', { terminalId: id, exitCode, signal }, {
+        source: request.source ?? 'terminal-runtime',
+        traceId: request.traceId,
+      });
     });
-
-    await this.events.emit(
-      'terminal.created',
-      { terminalId: id, executable: request.executable, pid: pty.pid, cwd: request.cwd },
-      { source: request.source ?? 'terminal-runtime', traceId: request.traceId },
-    );
+    await this.events.emit('terminal.created', {
+      terminalId: id,
+      executable: request.executable,
+      pid: pty.pid,
+      cwd: request.cwd,
+    }, { source: request.source ?? 'terminal-runtime', traceId: request.traceId });
     return { ...snapshot };
   }
 
   write(id: string, data: string): void {
-    const session = this.#requireRunning(id);
-    session.pty.write(data);
+    this.#requireRunning(id).pty.write(data);
   }
 
   resize(id: string, cols: number, rows: number): void {
