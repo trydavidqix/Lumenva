@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 import { loadAuthUser } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
-import { resolvePlatformAdmin, type PlatformAdminContext } from "@/lib/auth/requirePlatformAdmin";
+import { resolvePlatformAdmin } from "@/lib/auth/requirePlatformAdmin";
 import { requirePlatformAdminApi } from "@/lib/auth/require-platform-admin-api";
 import { fail } from "@/lib/api/wrappers";
 
@@ -16,16 +16,6 @@ vi.mock("@/lib/auth/require-platform-admin-api", () => ({ requirePlatformAdminAp
 
 const OWNER = { id: "11111111-1111-4111-8111-111111111111", email: "dono@x.com", is_platform_admin: true };
 const MEMBRO = { ...OWNER, id: "22222222-2222-4222-8222-222222222222", is_platform_admin: false };
-const OWNER_CONTEXT: PlatformAdminContext = {
-  user: {
-    id: OWNER.id,
-    app_metadata: {},
-    user_metadata: {},
-    aud: "authenticated",
-    created_at: "2026-09-22T00:00:00.000Z",
-  },
-  platformAdmin: { user_id: OWNER.id, scope: "*", mfa_required: true },
-};
 
 let versionRow: Record<string, unknown>;
 let runRow: Record<string, unknown> | null;
@@ -56,8 +46,8 @@ beforeEach(() => {
     update_requested_at: null,
   };
 
-  vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: true, context: OWNER_CONTEXT });
-  vi.mocked(requirePlatformAdminApi).mockResolvedValue({ ok: true, context: OWNER_CONTEXT });
+  vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: true, context: { user: OWNER as unknown, platformAdmin: { user_id: OWNER.id, scope: "*", mfa_required: true } } });
+  vi.mocked(requirePlatformAdminApi).mockResolvedValue({ ok: true, context: { user: OWNER as unknown, platformAdmin: { user_id: OWNER.id, scope: "*", mfa_required: true } } });
 
   vi.mocked(createAdminClient).mockReturnValue({
     from: (table: string) => {
@@ -95,7 +85,7 @@ beforeEach(() => {
         },
       };
     },
-  } as never);
+  } as unknown);
 });
 
 function get() {
@@ -116,21 +106,21 @@ describe("GET /api/v1/system/version", () => {
   });
 
   it("quando a leitura de system_version falha, devolve 500", async () => {
-    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as unknown);
     versionSelectError = { message: "conexão caiu" };
     const { GET } = await import("./route");
     expect((await GET(get())).status).toBe(500);
   });
 
   it("quando a leitura do run mais recente falha, devolve 500", async () => {
-    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as unknown);
     runSelectError = { message: "conexão caiu" };
     const { GET } = await import("./route");
     expect((await GET(get())).status).toBe(500);
   });
 
   it("entrega só a versão para quem não é dono do servidor", async () => {
-    vi.mocked(loadAuthUser).mockResolvedValue(MEMBRO as never);
+    vi.mocked(loadAuthUser).mockResolvedValue(MEMBRO as unknown);
     vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: false, reason: "forbidden" });
     const { GET } = await import("./route");
     const body = await (await GET(get())).json();
@@ -141,7 +131,7 @@ describe("GET /api/v1/system/version", () => {
   });
 
   it("entrega o estado completo e a seção do CHANGELOG para o dono", async () => {
-    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as unknown);
     const { GET } = await import("./route");
     const body = await (await GET(get())).json();
     expect(body.data.update_available).toBe(true);
@@ -152,7 +142,7 @@ describe("GET /api/v1/system/version", () => {
   it("entrega compare_failed para a tela poder dizer 'não sei' em vez de 'está em dia'", async () => {
     versionRow.latest_version = "";
     versionRow.compare_failed = true;
-    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as unknown);
     const { GET } = await import("./route");
     const body = await (await GET(get())).json();
     expect(body.data.compare_failed).toBe(true);
@@ -163,7 +153,7 @@ describe("GET /api/v1/system/version", () => {
     versionRow.latest_version = "";
     versionRow.off_release = true;
     versionRow.has_known_release = false;
-    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as unknown);
     const { GET } = await import("./route");
     const body = await (await GET(get())).json();
     expect(body.data.has_known_release).toBe(false);
@@ -171,7 +161,7 @@ describe("GET /api/v1/system/version", () => {
 
   it("has_known_release default true quando a coluna nunca foi tocada por um heartbeat", async () => {
     delete versionRow.has_known_release;
-    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as unknown);
     const { GET } = await import("./route");
     const body = await (await GET(get())).json();
     expect(body.data.has_known_release).toBe(true);
@@ -179,7 +169,7 @@ describe("GET /api/v1/system/version", () => {
 
   it("marca o agente como offline quando o heartbeat é velho", async () => {
     versionRow.agent_last_seen_at = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
-    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as unknown);
     const { GET } = await import("./route");
     const body = await (await GET(get())).json();
     expect(body.data.agent_online).toBe(false);
@@ -196,7 +186,7 @@ describe("GET /api/v1/system/version", () => {
       to_version: "1.1.0",
       log_tail: "✖ o app não respondeu ok",
     };
-    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as unknown);
     const { GET } = await import("./route");
     const body = await (await GET(get())).json();
     expect(body.data.run.from_version).toBe("1.0.0");
@@ -217,7 +207,7 @@ describe("GET /api/v1/system/version", () => {
       to_version: "1.1.0",
       log_tail: "",
     };
-    vi.mocked(loadAuthUser).mockResolvedValue(MEMBRO as never);
+    vi.mocked(loadAuthUser).mockResolvedValue(MEMBRO as unknown);
     vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: false, reason: "forbidden" });
     const { GET } = await import("./route");
     const body = await (await GET(get())).json();
@@ -231,7 +221,7 @@ describe("GET /api/v1/system/version", () => {
       last_step: "banco",
       dispatched_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
     };
-    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as unknown);
     const { GET } = await import("./route");
     const body = await (await GET(get())).json();
     expect(body.data.run.status).toBe("unknown");
@@ -240,7 +230,7 @@ describe("GET /api/v1/system/version", () => {
 
 describe("POST /api/v1/system/update", () => {
   it("exige sessão", async () => {
-    vi.mocked(requirePlatformAdminApi).mockResolvedValue({ ok: false, response: fail("unauthenticated", "Faça login", 401) });
+    vi.mocked(requirePlatformAdminApi).mockResolvedValue({ ok: false, response: fail("unauthenticated", "Faça login", 401) as unknown });
     const { POST } = await import("../update/route");
     const res = await POST(post());
     expect(res.status).toBe(401);
@@ -249,7 +239,7 @@ describe("POST /api/v1/system/update", () => {
   });
 
   it("nega para quem não é dono do servidor", async () => {
-    vi.mocked(requirePlatformAdminApi).mockResolvedValue({ ok: false, response: fail("forbidden", "Proibido", 403) });
+    vi.mocked(requirePlatformAdminApi).mockResolvedValue({ ok: false, response: fail("forbidden", "Proibido", 403) as unknown });
     const { POST } = await import("../update/route");
     expect((await POST(post())).status).toBe(403);
     expect(inserted).toBeNull();

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { fail, ok } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { createClient } from "@/lib/supabase/server";
