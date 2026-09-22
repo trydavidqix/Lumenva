@@ -29,6 +29,15 @@ Results: Claude adapter 2/2 passed; operating-core 13 passed and 2 Docker-depend
 
 Antigravity remains unavailable by design: the installed application has no runnable CLI/SDK entrypoint in this runtime. The adapter contract test verifies `unavailable` status and empty capabilities; no installation was duplicated.
 
+## F12 usage/quota validation
+
+- Codex SDK types expose `turn.usage` with `input_tokens`, `cached_input_tokens`, `output_tokens`, and reasoning tokens. The adapter now maps the exact provider values and execution duration into `UsageSnapshot`.
+- Claude CLI was probed with the existing authenticated installation using read-only planning flags. Its JSON result exposed `usage`, `total_cost_usd`, and `duration_ms`; the adapter maps input, cache creation/read, output, cost, and duration.
+- The authenticated CLIs expose no local official quota command: `codex --help` exposes login/doctor but no quota command, and `claude auth status --json` exposes authentication/subscription metadata but no remaining quota.
+- Therefore `quota()` remains explicitly unavailable rather than returning fabricated capacity. This is a known F12 partial gate, not a hidden estimate.
+
+Focused provider usage tests: 8/8 passed. Package and Core typechecks passed.
+
 ## Comandos e resultado
 
 ```text

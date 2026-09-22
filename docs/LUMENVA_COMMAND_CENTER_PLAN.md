@@ -202,6 +202,15 @@ F25 rollout e limpeza de compatibilidade
 - A contract test now locks this behavior: unavailable execution and empty capabilities.
 - No duplicate Antigravity installation was attempted.
 
+### F12 progress update — 2026-09-22
+
+- Codex maps the official SDK `turn.usage` into `ExecutionResult.usage` and retains the last exact measurement through `adapter.usage()`.
+- Claude maps the official CLI JSON `usage`, `total_cost_usd`, and `duration_ms` into the same canonical `UsageSnapshot`.
+- Claude cache creation and cache read input tokens are preserved as `cached_tokens`.
+- Usage is persisted with the execution evidence already exposed by Core and the dashboard.
+- Provider quota remains `unavailable` when the authenticated CLIs expose no official local quota endpoint; no quota value is fabricated.
+- F12 remains partial until a documented provider quota collector or explicit quota service is connected.
+
 ### Gates adicionais do plano completo
 
 O fechamento do Fabric exige evidência para:

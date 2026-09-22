@@ -35,4 +35,22 @@ describe("Claude execution adapter", () => {
     await expect(adapter.health()).resolves.toMatchObject({ ok: false, status: "unavailable" });
     await expect(adapter.capabilities()).resolves.toEqual([]);
   });
+
+  it("preserves exact Claude JSON usage metadata", async () => {
+    const adapter = new ClaudeAdapter({
+      run: async () => ({
+        output: JSON.stringify({
+          type: "result",
+          result: JSON.stringify({ status: "success", summary: "measured", files_changed: [], commands: [], tests: [], evidence: [] }),
+          usage: { input_tokens: 2, cache_creation_input_tokens: 30, cache_read_input_tokens: 7, output_tokens: 4 },
+          total_cost_usd: 0.14,
+          duration_ms: 1683,
+        }),
+      }),
+    });
+
+    const result = await adapter.execute(contract);
+    expect(result.usage).toEqual({ input_tokens: 2, cached_tokens: 37, output_tokens: 4, duration_ms: 1683, cost_usd: 0.14 });
+    await expect(adapter.usage()).resolves.toEqual(result.usage);
+  });
 });

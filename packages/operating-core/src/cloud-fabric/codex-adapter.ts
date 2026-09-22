@@ -1,4 +1,5 @@
 import { Codex } from '@openai/codex-sdk';
+import type { Usage as CodexUsage } from '@openai/codex-sdk';
 import { spawnSync } from 'node:child_process';
 import { cancelledResult, ExecutionPort, HealthSnapshot, TaskContract, ExecutionResult, QuotaSnapshot, unavailableQuota, unavailableResult, UsageSnapshot } from './execution-port.js';
 
@@ -11,6 +12,17 @@ export interface CodexRunner {
   run(contract: TaskContract): Promise<CodexRunnerResult>;
   health?: () => Promise<HealthSnapshot>;
   capabilities?: () => Promise<string[]>;
+}
+
+function mapCodexUsage(usage: CodexUsage | null | undefined, durationMs: number): UsageSnapshot | undefined {
+  if (!usage) return undefined;
+  return {
+    input_tokens: usage.input_tokens,
+    cached_tokens: usage.cached_input_tokens,
+    output_tokens: usage.output_tokens,
+    duration_ms: durationMs,
+    cost_usd: 0,
+  };
 }
 
 const executionSchema = {
@@ -40,6 +52,7 @@ export function createCodexSdkRunner(): CodexRunner {
       return ['execute', 'structured_output', 'read_only'];
     },
     async run(contract) {
+      const startedAt = Date.now();
       const codex = new Codex();
       const thread = codex.startThread({
         workingDirectory: process.cwd(),
@@ -49,7 +62,7 @@ export function createCodexSdkRunner(): CodexRunner {
         webSearchMode: 'disabled',
       });
       const turn = await thread.run(JSON.stringify({ contract, instruction: 'Execute only within the contract and return the required structured result.' }), { outputSchema: executionSchema });
-      return { finalResponse: turn.finalResponse, usage: undefined };
+      return { finalResponse: turn.finalResponse, usage: mapCodexUsage(turn.usage, Date.now() - startedAt) };
     },
   };
 }
@@ -77,6 +90,7 @@ function parseResult(taskId: string, response: string, usage?: UsageSnapshot): E
 
 export class CodexAdapter implements ExecutionPort {
   public name = 'codex';
+  private lastUsage: UsageSnapshot = { input_tokens: 0, cached_tokens: 0, output_tokens: 0, duration_ms: 0, cost_usd: 0 };
 
   constructor(private readonly runner?: CodexRunner) {}
 
@@ -84,6 +98,7 @@ export class CodexAdapter implements ExecutionPort {
     if (!this.runner) return unavailableResult(contract.task_id, this.name, 'Codex execution adapter is not configured for this runtime');
     try {
       const result = await this.runner.run(contract);
+      if (result.usage) this.lastUsage = result.usage;
       return parseResult(contract.task_id, result.finalResponse, result.usage);
     } catch (error) {
       return unavailableResult(contract.task_id, this.name, error instanceof Error ? error.message : 'Codex execution failed');
@@ -109,7 +124,7 @@ export class CodexAdapter implements ExecutionPort {
   }
 
   async usage(): Promise<UsageSnapshot> {
-    return { input_tokens: 0, cached_tokens: 0, output_tokens: 0, duration_ms: 0, cost_usd: 0 };
+    return this.lastUsage;
   }
 
   async quota(): Promise<QuotaSnapshot> {

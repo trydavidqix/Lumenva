@@ -68,4 +68,17 @@ describe("ExecutionPort contract", () => {
     await expect(adapter.health()).resolves.toEqual({ ok: true, status: "healthy" });
     await expect(adapter.capabilities()).resolves.toEqual(["execute", "structured_output"]);
   });
+
+  it("preserves exact Codex usage from the provider turn", async () => {
+    const adapter = new CodexAdapter({
+      run: async () => ({
+        finalResponse: JSON.stringify({ status: "success", summary: "measured", files_changed: [], commands: [], tests: [], evidence: [] }),
+        usage: { input_tokens: 10, cached_tokens: 4, output_tokens: 6, duration_ms: 25, cost_usd: 0 },
+      }),
+    });
+
+    const result = await adapter.execute(contract);
+    expect(result.usage).toEqual({ input_tokens: 10, cached_tokens: 4, output_tokens: 6, duration_ms: 25, cost_usd: 0 });
+    await expect(adapter.usage()).resolves.toEqual(result.usage);
+  });
 });

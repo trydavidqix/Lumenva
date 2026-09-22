@@ -7,6 +7,27 @@ const execFileAsync = promisify(execFile);
 export interface ClaudeRunnerResult { output: string; usage?: UsageSnapshot; }
 export interface ClaudeRunner { run(contract: TaskContract): Promise<ClaudeRunnerResult>; health?: () => Promise<HealthSnapshot>; capabilities?: () => Promise<string[]>; }
 
+function numberOrZero(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function claudeUsage(output: string): UsageSnapshot | undefined {
+  try {
+    const payload = JSON.parse(output) as Record<string, unknown>;
+    const usage = payload.usage as Record<string, unknown> | undefined;
+    if (!usage) return undefined;
+    return {
+      input_tokens: numberOrZero(usage.input_tokens),
+      cached_tokens: numberOrZero(usage.cache_creation_input_tokens) + numberOrZero(usage.cache_read_input_tokens),
+      output_tokens: numberOrZero(usage.output_tokens),
+      duration_ms: numberOrZero(payload.duration_ms),
+      cost_usd: numberOrZero(payload.total_cost_usd),
+    };
+  } catch {
+    return undefined;
+  }
+}
+
 const executionSchema = {
   type: "object",
   properties: {
@@ -40,7 +61,7 @@ export function createClaudeCliRunner(): ClaudeRunner {
         "--print", prompt, "--output-format", "json", "--json-schema", JSON.stringify(executionSchema),
         "--tools", "Read", "--permission-mode", "plan", "--permission-prompts", "none", "--no-session-persistence",
       ], { cwd: process.cwd(), timeout: 120_000, maxBuffer: 8 * 1024 * 1024, windowsHide: true });
-      return { output: result.stdout };
+      return { output: result.stdout, usage: claudeUsage(result.stdout) };
     },
   };
 }
@@ -58,17 +79,23 @@ function parseResult(taskId: string, output: string, usage?: UsageSnapshot): Exe
 
 export class ClaudeAdapter implements ExecutionPort {
   public name = "claude";
+  private lastUsage: UsageSnapshot = { input_tokens: 0, cached_tokens: 0, output_tokens: 0, duration_ms: 0, cost_usd: 0 };
   constructor(private readonly runner?: ClaudeRunner) {}
   async execute(contract: TaskContract): Promise<ExecutionResult> {
     if (!this.runner) return unavailableResult(contract.task_id, this.name, "Claude execution adapter is not configured for this runtime");
-    try { const result = await this.runner.run(contract); return parseResult(contract.task_id, result.output, result.usage); }
+    try {
+      const result = await this.runner.run(contract);
+      const usage = result.usage ?? claudeUsage(result.output);
+      if (usage) this.lastUsage = usage;
+      return parseResult(contract.task_id, result.output, usage);
+    }
     catch (error) { return unavailableResult(contract.task_id, this.name, error instanceof Error ? error.message : "Claude execution failed"); }
   }
   async resume(taskId: string): Promise<ExecutionResult> { return unavailableResult(taskId, this.name, "Claude resume is unavailable because no execution handle is configured"); }
   async cancel(taskId: string): Promise<ExecutionResult> { return cancelledResult(taskId, this.name); }
   async health(): Promise<HealthSnapshot> { return this.runner?.health ? this.runner.health() : { ok: false, status: "unavailable", message: "Claude health probe is not configured" }; }
   async capabilities(): Promise<string[]> { return this.runner?.capabilities ? this.runner.capabilities() : []; }
-  async usage(): Promise<UsageSnapshot> { return { input_tokens: 0, cached_tokens: 0, output_tokens: 0, duration_ms: 0, cost_usd: 0 }; }
+  async usage(): Promise<UsageSnapshot> { return this.lastUsage; }
   async quota(): Promise<QuotaSnapshot> { return unavailableQuota(this.name); }
   async checkQuota(): Promise<QuotaSnapshot> { return this.quota(); }
 }
