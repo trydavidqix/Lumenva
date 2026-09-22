@@ -11,7 +11,9 @@ import {
 
 const E164 = /^\+[1-9]\d{6,14}$/;
 
-async function resolveAsteriskRoute(db: pg.Pool, organizationId: string): Promise<VoiceOutboundRoute | null> {
+type VoiceRouteQueryable = Pick<pg.Pool, "query">;
+
+async function resolveAsteriskRoute(db: VoiceRouteQueryable, organizationId: string): Promise<VoiceOutboundRoute | null> {
   const { rows } = await db.query<{
     control_url: string;
     phone_e164: string;
@@ -47,7 +49,7 @@ async function resolveAsteriskRoute(db: pg.Pool, organizationId: string): Promis
   };
 }
 
-async function resolveLegacyTelnyxRoute(db: pg.Pool, organizationId: string): Promise<VoiceOutboundRoute | null> {
+async function resolveLegacyTelnyxRoute(db: VoiceRouteQueryable, organizationId: string): Promise<VoiceOutboundRoute | null> {
   const { rows } = await db.query<{ control_url: string; phone_e164: string }>(
     `select vwe.control_url, vpn.phone_e164
        from voice_phone_numbers vpn
@@ -71,6 +73,51 @@ async function resolveLegacyTelnyxRoute(db: pg.Pool, organizationId: string): Pr
   };
 }
 
+export async function resolveProductionVoiceOutboundRoute(
+  db: VoiceRouteQueryable,
+  organizationId: string,
+): Promise<VoiceOutboundRoute | null> {
+  const asterisk = await resolveAsteriskRoute(db, organizationId);
+  if (asterisk) return asterisk;
+  return resolveLegacyTelnyxRoute(db, organizationId);
+}
+
+export async function dialProductionVoiceRoute(
+  route: VoiceOutboundRoute,
+  internalSecret: string,
+  input: {
+    voiceCallId: string;
+    organizationId: string;
+    contactId: string;
+    agentId: string;
+    goal: string;
+    toE164: string;
+    firstMessage: string;
+  },
+): Promise<void> {
+  const response = await fetch(`${route.endpoint}/v1/calls`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-internal-secret": internalSecret,
+    },
+    body: JSON.stringify({
+      voice_call_id: input.voiceCallId,
+      organization_id: input.organizationId,
+      contact_id: input.contactId,
+      agent_id: input.agentId,
+      goal: input.goal,
+      provider: route.provider,
+      connection_id: route.connectionId,
+      from_e164: route.phoneE164,
+      to_e164: input.toE164,
+      first_message: input.firstMessage,
+    }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) throw new Error(`voice_worker_http_${response.status}`);
+}
+
 export function createProductionVoiceOutboundService(db: pg.Pool, internalSecret: string) {
   const kernel = createVoiceProductionKernel(db);
   const authorizeDelivery = createProductAgentVoiceDeliveryAuthorizer();
@@ -92,9 +139,7 @@ export function createProductionVoiceOutboundService(db: pg.Pool, internalSecret
       // New canonical path: verified SIP/BYOC through Asterisk. The old
       // Telnyx worker remains an explicit rollback route only when no
       // verified Asterisk route exists.
-      const asterisk = await resolveAsteriskRoute(db, organizationId);
-      if (asterisk) return asterisk;
-      return resolveLegacyTelnyxRoute(db, organizationId);
+      return resolveProductionVoiceOutboundRoute(db, organizationId);
     },
 
     async createCall(input) {
@@ -131,27 +176,15 @@ export function createProductionVoiceOutboundService(db: pg.Pool, internalSecret
     },
 
     async dial(input) {
-      const response = await fetch(`${input.route.endpoint}/v1/calls`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-internal-secret": internalSecret,
-        },
-        body: JSON.stringify({
-          voice_call_id: input.voiceCallId,
-          organization_id: input.organizationId,
-          contact_id: input.contactId,
-          agent_id: input.agentId,
-          goal: input.goal,
-          provider: input.route.provider,
-          connection_id: input.route.connectionId,
-          from_e164: input.route.phoneE164,
-          to_e164: input.toE164,
-          first_message: input.firstMessage,
-        }),
-        signal: AbortSignal.timeout(15_000),
+      await dialProductionVoiceRoute(input.route, internalSecret, {
+        voiceCallId: input.voiceCallId,
+        organizationId: input.organizationId,
+        contactId: input.contactId,
+        agentId: input.agentId,
+        goal: input.goal,
+        toE164: input.toE164,
+        firstMessage: input.firstMessage,
       });
-      if (!response.ok) throw new Error(`voice_worker_http_${response.status}`);
     },
 
     async markFailed(organizationId, voiceCallId, provider: VoiceOutboundProvider, reason) {
