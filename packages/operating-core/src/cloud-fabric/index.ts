@@ -56,3 +56,7 @@ export * from './provider-selection';
 export * from './history-persistence';
 export * from './dashboard-service';
 export * from './plan-status';
+export * from './escalating-executor';
+export * from './approval-store';
+export * from './run-recovery';
+export * from './telemetry-event';
