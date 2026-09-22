@@ -2,7 +2,7 @@
 type: threat-model
 project: DeskcommCRM
 status: maintained (reconciled; exploitability still not live-tested)
-last_updated: 2026-08-28
+last_updated: 2026-09-22
 generated_by: auditoria documental sincronizada — leitura de rotas, guards, proxy.ts e lib/env.ts
 confidence: média-alta (superfície e guards são CONFIRMADO por leitura de código; explorabilidade é INFERIDO — nada foi testado contra instância viva)
 audited_against: codex/crm-consolidated @ 54e86839 (2026-08-28)
@@ -40,19 +40,20 @@ São conclusões de leitura de código.
 | `/api/v1/webhooks/nuvemshop/*` | HMAC + Zod/event validation | ✅ 30–60/min por loja |
 | `/api/v1/cron/*` (9 rotas) | `Bearer INTERNAL_CRON_SECRET\|INTERNAL_SECRET`, **fail-closed** | ❌ |
 | `/api/internal/*` | `x-internal-secret` ou `Bearer INTERNAL_SECRET`, comparação em tempo constante | ❌ |
-| `/api/mcp` | `Bearer tok_...` validado contra `api_tokens` (hash SHA256) | ❌ |
+| `/api/mcp` | `Bearer dsk_...` validado contra `api_tokens` (hash SHA256) | ✅ 30 falhas/60s por endereço antes do lookup; 120/min por organização após auth |
 | `/account-suspended`, `/403`, `/404`, `/500`, `/503`, `/admin/forbidden` | — | ❌ |
 
 **Leitura:** a autenticação de cada superfície está bem construída — HMAC com
 `timingSafeEqual` em 6 módulos distintos, crons fail-closed, bearer só via header
-(nunca query string), plaintext do token nunca persistido. O problema **não é o guard;
-é a ausência de limite de tentativas na frente dele.**
+(nunca query string), plaintext do token nunca persistido. O MCP agora consulta o
+contador de falhas antes do lookup em `api_tokens` e registra somente respostas 401;
+o limite de organização continua depois da autenticação.
 
 ---
 
 ## 2. Riscos por ordem de exploração
 
-### T1 — Rate limit incompleto nas superfícies públicas 🟠 RECONCILIADO EM 2026-08-25
+### T1 — Rate limit incompleto nas superfícies públicas 🟠 RECONCILIADO EM 2026-09-22
 
 O achado original dizia que `checkRateLimit` só existia em dois pontos. Isso já não
 descreve a árvore atual: auth/API sensíveis e os webhooks públicos Meta, WAHA e Nuvemshop
@@ -69,10 +70,13 @@ Continuam sem rate limit dedicado, por decisão ou por lacuna residual:
   sondar indefinidamente e sem custo, e sem gerar sinal de alerta.
 - **Os 10 crons e `/api/internal/*`** — o secret é forte e a comparação é em tempo
   constante, mas nada limita o volume de tentativas.
-- **`/api/mcp`** — enumeração de bearer token.
+- **`/api/mcp`** — enumeração de bearer token é limitada a 30 falhas/60s por endereço
+  identificável antes do lookup; se o runtime não expõe endereço, não há balde global
+  (para não transformar tentativas falsificadas em DoS compartilhado).
 
 **Mitigação residual:** confirmar em cada instalação que Redis distribuído está configurado
-e decidir se login/convite precisam de limite adicional por identidade, não só por request.
+e que o proxy/runtime preserva o endereço do cliente para o MCP; decidir se login/convite
+precisam de limite adicional por identidade, não só por request.
 
 ### T2 — Fallback in-memory do rate limit anula o limite que existe 🟠 CONFIRMADO
 
