@@ -27,6 +27,8 @@ pnpm --dir apps/core exec tsc --noEmit
 
 Results: Claude adapter 2/2 passed; operating-core 13 passed and 2 Docker-dependent tests skipped; package and Core typechecks passed.
 
+Antigravity remains unavailable by design: the installed application has no runnable CLI/SDK entrypoint in this runtime. The adapter contract test verifies `unavailable` status and empty capabilities; no installation was duplicated.
+
 ## Comandos e resultado
 
 ```text

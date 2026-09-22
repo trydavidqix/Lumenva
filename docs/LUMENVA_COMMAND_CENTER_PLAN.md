@@ -195,6 +195,13 @@ F25 rollout e limpeza de compatibilidade
 - Unit coverage: 2/2 Claude adapter tests passed; operating-core suite: 13 passed, 2 Docker-dependent tests skipped.
 - The adapter is exported publicly but is not yet selected by `ResourceRouter`; provider routing waits for real Claude usage/quota collection and explicit policy wiring.
 
+### F11 progress update — 2026-09-22
+
+- Antigravity was audited as an installed application, but no runnable `antigravity` CLI or SDK entrypoint is available in this Windows runtime.
+- `AntigravityAdapter` remains explicitly unavailable and advertises no capabilities; it cannot return simulated success.
+- A contract test now locks this behavior: unavailable execution and empty capabilities.
+- No duplicate Antigravity installation was attempted.
+
 ### Gates adicionais do plano completo
 
 O fechamento do Fabric exige evidência para:
