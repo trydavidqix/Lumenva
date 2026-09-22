@@ -1503,3 +1503,900 @@ Older Maestri V3 plan text is superseded by this file except:
 - source-specific operational instructions that do not conflict with this blueprint.
 
 If another document conflicts, this blueprint wins unless a newer explicitly approved canonical document supersedes it.
+
+
+# Implementation Addendum — Maestri Cloud Control Plane Consolidation
+
+## Status
+
+This addendum turns the existing Maestri architecture into a concrete implementation program that consolidates what already exists in the repository and removes the dependency on the current Maestri desktop app as the system core.
+
+The target is:
+
+```text
+OWNER
+  |
+  v
+Lumenva Command Center
+/command/chat
+  |
+  v
+Maestri Gateway
+  |
+  v
+Task Compiler
+  |
+  v
+Durable State + Job Engine + Scheduler
+  |
+  v
+Provider Router
+  |
+  +--> Claude Cloud
+  +--> Codex Cloud
+  +--> Gemini / Jules
+  |
+  v
+GitHub / branches / PRs
+  |
+  v
+Evidence + Verification + Fresh Review
+  |
+  v
+Human Gate
+```
+
+The permanent component is Maestri, not a permanently-open Claude session.
+
+## A. Reuse map — what already exists and must be consolidated
+
+### A1. Command Center
+
+Reuse:
+- `/command`
+- `/command/chat`
+- `/command/agents`
+- existing activity/agent-office concepts
+
+Target role:
+- primary user interface;
+- chat, status, approvals, task controls and notifications;
+- mobile/browser-first operation.
+
+### A2. Operating Core
+
+Reuse:
+- ResourceRouter;
+- job/claim concepts;
+- approvals;
+- evidence;
+- policy and authority concepts;
+- tenant isolation;
+- event/audit patterns;
+- resource/usage routing.
+
+Target role:
+- server-side operational kernel of Maestri.
+
+### A3. Existing Maestri MCP
+
+Current surface already includes:
+- `maestri.status`
+- `maestri.agents.list`
+- `maestri.jobs.create`
+- `maestri.jobs.get`
+- `maestri.context.get`
+- `maestri.tasks.dispatch`
+
+Current problem:
+- several handlers are still stub/simulated.
+
+Target role:
+- MCP becomes only an interface to Maestri Core;
+- no business truth or runtime truth lives in the MCP handler itself.
+
+### A4. Existing architecture docs
+
+Reuse and reconcile:
+- `docs/MISSION.md`
+- `docs/ARCHITECTURE.md`
+- `docs/ROADMAP.md`
+- `docs/DECISIONS.md`
+- `docs/MAESTRI_HANDOFF.md`
+- `CLAUDE.md`
+- `docs/adr/veredito-estrutura-autoridade.md`
+- the current canonical V3 architecture in this file;
+- `docs/PERSONAL_AI_ENGINEERING_OS_MEGA_BLUEPRINT.md`.
+
+### A5. Agent Factory
+
+Reuse the factory-standard AgentDefinition and Provider Compiler model already defined in this blueprint.
+
+Target role:
+- logical agent definition is provider-neutral;
+- adapters compile to Claude, Codex or Gemini-specific runtime configuration;
+- native provider agents are reused where equivalent.
+
+## B. Architectural changes
+
+### B1. Maestri becomes the permanent control plane
+
+Old dependency:
+```text
+Owner -> Claude app -> Maestri -> workers
+```
+
+New model:
+```text
+Owner -> Command Center -> Maestri -> providers
+```
+
+Claude becomes a provider/runtime role, not the place where Maestri lives.
+
+### B2. Durable state leaves conversation context
+
+Authoritative state:
+- Postgres operational state;
+- event log;
+- TaskContract;
+- State Ledger;
+- AcceptanceManifest;
+- Evidence;
+- GitHub code state.
+
+Conversation history is never authoritative.
+
+### B3. Provider router
+
+Add:
+- ClaudeCloudAdapter;
+- CodexCloudAdapter;
+- GeminiAdapter;
+- JulesAdapter where useful;
+- local adapters only as fallback/debug paths.
+
+Routing inputs:
+- task type;
+- required capabilities;
+- dependency state;
+- risk;
+- provider availability;
+- quota;
+- cost;
+- latency;
+- required context;
+- expected verification mode.
+
+### B4. Cloud Execution Fabric
+
+New layer:
+
+```text
+Maestri Scheduler
+      |
+Provider Router
+      |
+Cloud Execution Fabric
+      |
++-----+------+------+
+|            |      |
+Claude      Codex  Gemini/Jules
+```
+
+Responsibilities:
+- dispatch;
+- provider health;
+- quotas;
+- retry/fallback;
+- provider session correlation;
+- branch/worktree identity;
+- result collection;
+- timeout handling;
+- evidence capture.
+
+### B5. GitHub remains code source of truth
+
+GitHub is used for:
+- source;
+- branches;
+- PRs;
+- CI;
+- diffs;
+- review artifacts;
+- commit identity.
+
+Maestri owns:
+- tasks;
+- dependencies;
+- state;
+- provider execution;
+- policy;
+- acceptance;
+- evidence metadata;
+- approvals.
+
+## C. User interaction model
+
+Primary:
+- `/command/chat`
+
+Secondary:
+- MCP clients;
+- GitHub issues/PR events;
+- CLI/API;
+- optional Claude interface connector later.
+
+The user should be able to write:
+- "continue the project";
+- "pause everything";
+- "what is blocked?";
+- "let Codex continue but pause Gemini";
+- "show approvals";
+- "resume task X".
+
+Maestri converts natural-language commands into explicit operations and TaskContracts.
+
+## D. Core services
+
+Implement these services as independent modules behind stable interfaces:
+
+1. Maestri Gateway
+2. Intent Parser
+3. Task Compiler
+4. TaskContract Store
+5. State Ledger
+6. Job Engine
+7. Dependency Graph
+8. Conflict Graph
+9. Scheduler
+10. Provider Router
+11. Cloud Execution Fabric
+12. Agent Factory
+13. Capability Registry
+14. Policy Engine
+15. Approval Engine
+16. Quota Governor
+17. Usage/Cost Governor
+18. Context Engine
+19. Checkpoint Engine
+20. Recovery Engine
+21. Evidence Engine
+22. Verification Engine
+23. Fresh Context Reviewer
+24. Memory Gateway
+25. Learning Candidate Pipeline
+26. Notification Router
+27. Telemetry/Audit
+28. Command Center API
+
+## E. Data model
+
+At minimum create/reuse normalized tables for:
+
+- maestri_tasks
+- maestri_task_dependencies
+- maestri_task_conflicts
+- maestri_task_attempts
+- maestri_jobs
+- maestri_provider_runs
+- maestri_agent_definitions
+- maestri_agent_registry
+- maestri_state_checkpoints
+- maestri_acceptance_items
+- maestri_evidence
+- maestri_approvals
+- maestri_events
+- maestri_provider_health
+- maestri_provider_usage
+- maestri_notifications
+- maestri_learning_candidates
+
+All records must be tenant-scoped where applicable.
+
+## F. Job lifecycle
+
+Canonical lifecycle:
+
+```text
+CREATED
+-> PLANNED
+-> READY
+-> DISPATCHED
+-> RUNNING
+-> VERIFYING
+-> REVIEWING
+-> WAITING_APPROVAL
+-> COMPLETED
+```
+
+Exceptional states:
+- BLOCKED_DEPENDENCY
+- BLOCKED_CONFLICT
+- WAITING_PROVIDER
+- WAITING_QUOTA
+- WAITING_SECRET
+- WAITING_HUMAN
+- RETRYING
+- FAILED
+- CANCELLED
+
+Transitions must be deterministic and persisted.
+
+## G. Provider adapter contract
+
+Each adapter implements:
+
+- probe()
+- capabilities()
+- dispatch(task, context)
+- poll(run)
+- cancel(run)
+- collectResult(run)
+- collectEvidence(run)
+- normalizeFailure(run)
+- normalizeUsage(run)
+
+Provider-specific behavior stays outside core scheduling logic.
+
+## H. Cloud skills/config bootstrap
+
+All cloud executions pin an Engineering OS version.
+
+Task metadata includes:
+- engineering_os_version;
+- constitution_version;
+- skill_set_version;
+- agent_definition_version;
+- provider_adapter_version.
+
+Execution bootstrap:
+1. checkout target repo/ref;
+2. fetch pinned AIEngineeringOS release;
+3. compile/mount provider-native instructions;
+4. mount required Skills only;
+5. configure required tools/MCP only;
+6. validate permissions;
+7. start provider run;
+8. capture ResultDigest + Evidence.
+
+Local machine configuration is never assumed to exist in cloud workers.
+
+## I. API first
+
+Implement Maestri Core as API/service first.
+
+Minimum endpoints:
+
+```text
+POST /maestri/messages
+POST /maestri/tasks
+GET  /maestri/tasks/:id
+POST /maestri/tasks/:id/pause
+POST /maestri/tasks/:id/resume
+POST /maestri/tasks/:id/cancel
+GET  /maestri/tasks/:id/evidence
+GET  /maestri/tasks/:id/approvals
+POST /maestri/approvals/:id/decision
+GET  /maestri/agents
+GET  /maestri/providers
+GET  /maestri/status
+```
+
+MCP tools call this API rather than implementing orchestration logic themselves.
+
+## J. Implementation phases
+
+### Phase 0 — Branch inventory and reuse proof
+
+Before creating new modules:
+- inspect all Maestri/Command Center/Operating Core implementation across existing branches;
+- classify each candidate as REUSE / ADAPT / REPLACE / DROP;
+- document exact source branch/path;
+- identify conflicting migrations and schemas;
+- produce consolidation matrix.
+
+No blind merges.
+
+### Phase 1 — Canonical contracts
+
+Implement/finalize:
+- TaskContract;
+- AcceptanceManifest;
+- Evidence;
+- ResultDigest;
+- FailureDigest;
+- StateCheckpoint;
+- ProviderRun;
+- AgentDefinition.
+
+Add schema tests.
+
+### Phase 2 — Maestri database kernel
+
+Implement or reconcile:
+- task tables;
+- dependencies;
+- attempts;
+- jobs;
+- events;
+- evidence;
+- acceptance;
+- approvals;
+- checkpoints.
+
+Requirements:
+- idempotency;
+- tenant isolation;
+- atomic transitions;
+- retry-safe claims.
+
+### Phase 3 — Real Job Engine
+
+Replace simulated job creation/status behavior.
+
+Deliver:
+- persisted create;
+- claim;
+- start;
+- heartbeat;
+- complete;
+- fail;
+- retry;
+- cancel;
+- resume.
+
+### Phase 4 — Dependency and Conflict Graph
+
+Deliver:
+- dependency resolution;
+- cycle rejection;
+- conflict detection;
+- READY calculation;
+- downstream unlock after successful acceptance.
+
+### Phase 5 — Scheduler
+
+Deliver:
+- priority queue;
+- resource classes;
+- concurrency limits;
+- dependency-aware dispatch;
+- provider availability awareness;
+- retry scheduling;
+- timeout handling.
+
+### Phase 6 — Capability Registry
+
+Inventory:
+- provider capabilities;
+- MCP/tools;
+- network requirements;
+- write scopes;
+- secrets references;
+- provider health.
+
+No task can receive undeclared capability.
+
+### Phase 7 — Provider Router
+
+Implement provider-neutral routing using:
+- required capability;
+- risk;
+- availability;
+- quota;
+- context size;
+- resource class;
+- preferred provider;
+- fallback policy.
+
+### Phase 8 — Claude Cloud Adapter
+
+Implement capability probe and a real dispatch path supported by the chosen Claude cloud surface.
+
+Return normalized:
+- run id;
+- state;
+- result;
+- evidence;
+- usage;
+- errors.
+
+### Phase 9 — Codex Cloud Adapter
+
+Replace fake Codex success paths.
+
+Deliver:
+- real dispatch;
+- run tracking;
+- branch/commit correlation;
+- result retrieval;
+- failure normalization;
+- evidence persistence.
+
+### Phase 10 — Gemini / Jules Adapter
+
+Implement Gemini cloud execution path and optional Jules implementation path behind one provider family abstraction.
+
+### Phase 11 — Cloud Execution Fabric
+
+Unify adapters under:
+- provider run state machine;
+- timeout;
+- cancellation;
+- retry;
+- failover;
+- provider health;
+- quota signals;
+- result normalization.
+
+### Phase 12 — Engineering OS bootstrap
+
+Integrate `PERSONAL_AI_ENGINEERING_OS_MEGA_BLUEPRINT`.
+
+Cloud workers must receive:
+- pinned constitution;
+- required shared Skills;
+- provider-native config;
+- AgentDefinition;
+- TaskContract;
+- ContextPacket;
+- permission envelope.
+
+### Phase 13 — Agent Factory runtime
+
+Connect the canonical Agent Factory to real provider adapters.
+
+Implement:
+- AgentDefinition validation;
+- native role reuse;
+- provider compile;
+- health probe;
+- registry;
+- version/hash binding to runs.
+
+### Phase 14 — Context Engine
+
+Implement:
+- ContextPacket;
+- context budget;
+- progressive disclosure;
+- exact source references;
+- provider-specific context assembly.
+
+### Phase 15 — Checkpoint and Recovery
+
+Implement:
+- durable checkpoints;
+- pre-context-loss checkpoint;
+- run recovery;
+- provider/session replacement;
+- exact next action.
+
+Acceptance test:
+kill provider/session and continue without user re-explaining the task.
+
+### Phase 16 — Evidence Engine
+
+Every completion claim maps to persisted evidence.
+
+Support:
+- command/test evidence;
+- CI;
+- diff/commit;
+- logs;
+- provider result;
+- reviewer finding;
+- external blocker.
+
+### Phase 17 — Deterministic Verification
+
+Implement verifier profiles:
+- test;
+- lint;
+- typecheck;
+- build;
+- migration checks;
+- policy checks;
+- diff checks.
+
+LLM confidence never substitutes deterministic checks.
+
+### Phase 18 — Fresh Context Review
+
+Implement read-only reviewer runs with:
+- no builder conversation history;
+- TaskContract;
+- AcceptanceManifest;
+- diff;
+- evidence;
+- architecture constraints.
+
+### Phase 19 — Policy and Approval Engine
+
+Consolidate existing authority work.
+
+Order:
+```text
+tenant/RLS
+-> entitlement
+-> dependency/conflict
+-> capability/role
+-> P0-P4 authority
+-> approval
+-> action
+```
+
+Maestri orchestrates; it does not self-grant authority.
+
+### Phase 20 — Quota and Usage Governor
+
+Track:
+- provider;
+- task;
+- run;
+- token/request usage when available;
+- cost when available;
+- rate-limit state;
+- quota state.
+
+Support WAITING_QUOTA and fallback.
+
+### Phase 21 — Real MCP bridge
+
+Replace stubs in `apps/social-brain-mcp/src/tools/maestri.ts`.
+
+MCP calls API/service methods:
+- status;
+- agents list;
+- jobs/tasks create;
+- get;
+- context;
+- dispatch.
+
+No simulated success remains.
+
+### Phase 22 — Command Center chat backend
+
+Connect `/command/chat` to Maestri Gateway.
+
+Flow:
+```text
+message
+-> intent
+-> command or TaskContract
+-> persisted event
+-> response
+```
+
+### Phase 23 — Command Center task UI
+
+Add:
+- task list;
+- state;
+- provider;
+- dependency;
+- blockers;
+- evidence;
+- attempts;
+- approvals;
+- usage.
+
+### Phase 24 — Agent Office integration
+
+Use real Agent Registry and ProviderRun state.
+
+States:
+- READY;
+- RUNNING;
+- WAITING;
+- BLOCKED;
+- PAUSED;
+- ERROR;
+- OFFLINE.
+
+Remove UI-only/fake states.
+
+### Phase 25 — User controls
+
+Implement:
+- pause all;
+- resume all;
+- pause provider;
+- resume provider;
+- cancel task;
+- retry task;
+- approve/reject;
+- re-route task;
+- request review.
+
+All commands produce audit events.
+
+### Phase 26 — Notifications
+
+Notify only actionable events:
+- approval required;
+- blocker requires owner;
+- provider unavailable beyond threshold;
+- task/program complete;
+- repeated failure/escalation.
+
+### Phase 27 — Memory Gateway
+
+Memory remains derived and provenance-bound.
+
+Scopes:
+- project;
+- task;
+- provider;
+- global engineering preference.
+
+No provider conversation becomes authority automatically.
+
+### Phase 28 — Compound Learning
+
+Create LearningCandidates from verified outcomes.
+
+Possible promotion:
+- Skill;
+- rule;
+- hook;
+- runbook;
+- memory;
+- provider routing heuristic.
+
+Promotion requires validation.
+
+### Phase 29 — Observability
+
+Add correlation ids:
+- message_id;
+- task_id;
+- attempt_id;
+- job_id;
+- provider_run_id;
+- agent_definition_hash;
+- checkpoint_id;
+- evidence_id.
+
+Add metrics/traces/logs without secret leakage.
+
+### Phase 30 — GitHub event integration
+
+Support:
+- issue trigger;
+- PR trigger;
+- CI failure;
+- scheduled maintenance;
+- dependency update;
+- review completion.
+
+GitHub events enter Maestri through authenticated ingress and policy checks.
+
+### Phase 31 — GitHub Agentic Workflows optional execution bridge
+
+GitHub Agentic Workflows currently support Claude Code, Codex and Gemini engines.
+
+Use as an optional execution/event bridge, not Maestri authority.
+
+Maestri remains source of operational state and decides when/how to invoke the bridge.
+
+### Phase 32 — Security hardening
+
+Test:
+- prompt injection through GitHub input;
+- cross-tenant task access;
+- self-grant;
+- secret extraction;
+- replay;
+- duplicate dispatch;
+- forged provider callback;
+- unsafe external write;
+- destructive operation without approval.
+
+### Phase 33 — Provider outage/failover
+
+Chaos cases:
+- Claude unavailable;
+- Codex quota exhausted;
+- Gemini unavailable;
+- provider returns malformed result;
+- run disappears;
+- duplicate completion callback;
+- timeout.
+
+Expected outcome is deterministic WAIT/FALLBACK/FAIL, not silent success.
+
+### Phase 34 — Long-running recovery test
+
+Start a multi-task program.
+
+During execution:
+- restart Maestri;
+- terminate provider run;
+- rotate worker;
+- create quota failure;
+- close client UI.
+
+System must reconstruct state and continue safely.
+
+### Phase 35 — Mobile Command Center validation
+
+Validate primary operations from phone/browser:
+- send message;
+- see status;
+- approve;
+- pause/resume;
+- inspect blocker;
+- receive notification.
+
+### Phase 36 — Remove desktop-app dependency
+
+Gate:
+- all core Maestri state exists server-side;
+- chat works without Maestri desktop app;
+- provider dispatch works;
+- MCP works;
+- recovery works;
+- approvals work.
+
+Only after this gate can the current desktop Maestri app become optional/legacy.
+
+### Phase 37 — Cleanup and deprecation
+
+Deprecate:
+- simulated MCP paths;
+- app-only orchestration;
+- duplicate provider routing;
+- stale docs that contradict canonical architecture;
+- duplicate schemas/components discovered in branch audit.
+
+Never delete historical material without a migration/reference decision.
+
+## K. Migration strategy
+
+Do not big-bang replace.
+
+Use:
+
+```text
+SHADOW
+-> MIRROR
+-> ASSISTED
+-> PRIMARY
+-> LEGACY OFF
+```
+
+Example:
+- current Maestri remains usable;
+- new server-side Job Engine mirrors state;
+- compare outcomes;
+- move read paths;
+- move dispatch path;
+- move chat;
+- prove recovery;
+- then remove dependency.
+
+## L. Definition of Done
+
+The new Maestri is considered operational only when:
+
+1. `/command/chat` works without the current Maestri desktop app.
+2. Tasks persist in Postgres.
+3. State survives service restart.
+4. Real provider dispatch exists for Claude, Codex and Gemini/Jules chosen surfaces.
+5. Provider results are normalized and persisted.
+6. Skills/config are bootstrapped from pinned Engineering OS versions.
+7. Agent Factory binds version/hash to each run.
+8. No fake/stub success exists in the production orchestration path.
+9. Dependency scheduling works.
+10. Evidence gates completion.
+11. Deterministic verification runs.
+12. Fresh-context review works.
+13. Approval/policy gates work.
+14. Quota/provider failure is explicit.
+15. MCP is a client of Maestri Core.
+16. Command Center shows real runtime state.
+17. Pause/resume/cancel are durable.
+18. Recovery from terminated session/provider is proven.
+19. GitHub remains code source of truth.
+20. `main` is never changed or merged automatically.
