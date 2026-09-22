@@ -1,0 +1,42 @@
+; TEMPLATE ONLY — NOT ACTIVE.
+; Twilio Elastic SIP Trunk termination: Asterisk -> Twilio -> PSTN.
+; Do not place real credentials in Git. Substitute placeholders at deploy time
+; from Infisical/secret store and keep the generated file outside the repository.
+;
+; IMPORTANT CONTRACT:
+; voice_sip_connections.external_connection_id MUST equal the PJSIP endpoint
+; name used by ARI. With this template that value is: twilio-outbound
+;
+; Twilio Elastic SIP Trunking does NOT use SIP registration. The trunk is
+; identified by its Termination SIP URI plus ACL and/or digest credentials.
+
+[twilio-outbound-auth]
+type=auth
+auth_type=userpass
+username=<TWILIO_SIP_USERNAME>
+password=<TWILIO_SIP_PASSWORD_FROM_SECRET_STORE>
+
+[twilio-outbound-aor]
+type=aor
+; Use the exact Termination URI configured in Twilio Console.
+; Europe example:
+;   <TRUNK>.pstn.dublin.twilio.com
+; or <TRUNK>.pstn.frankfurt.twilio.com
+contact=sip:<TWILIO_TERMINATION_URI>
+qualify_frequency=60
+
+[twilio-outbound]
+type=endpoint
+transport=transport-udp
+context=voice-outbound-twilio
+disallow=all
+allow=ulaw
+allow=alaw
+aors=twilio-outbound-aor
+outbound_auth=twilio-outbound-auth
+from_user=<TWILIO_DID_E164_OR_NORMALIZED>
+from_domain=<TWILIO_TERMINATION_URI>
+direct_media=no
+rtp_symmetric=yes
+force_rport=yes
+rewrite_contact=yes
