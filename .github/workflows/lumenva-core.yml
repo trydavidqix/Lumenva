@@ -1,0 +1,22 @@
+name: Lumenva Core gates
+on:
+  push:
+    branches: [lumenva-command-center]
+    paths: ['packages/lumenva-core/**','.github/workflows/lumenva-core.yml','pnpm-lock.yaml']
+  pull_request:
+    paths: ['packages/lumenva-core/**','.github/workflows/lumenva-core.yml','pnpm-lock.yaml']
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @lumenva/lumenva-core typecheck
+      - run: pnpm --filter @lumenva/lumenva-core test:unit
