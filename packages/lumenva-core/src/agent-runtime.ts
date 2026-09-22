@@ -15,6 +15,7 @@ export interface AgentManifest {
   contextPolicy: string;
   telemetry: boolean;
   reasoning: 'low' | 'medium' | 'high' | 'extra-high';
+  invocation?: { promptArg?: string; interactive: boolean };
 }
 
 export interface AgentInstance {
@@ -28,12 +29,12 @@ export interface AgentInstance {
 }
 
 export const DEFAULT_AGENT_MANIFESTS: readonly AgentManifest[] = [
-  { id:'claude-ceo', name:'Claude CEO', role:'CEO', executable:'claude', workspaceIsolation:'shared', risk:'R2', contextPolicy:'executive-private', telemetry:true, reasoning:'high' },
-  { id:'codex-cto', name:'Codex CTO', role:'CTO', executable:'codex', workspaceIsolation:'worktree', risk:'R2', contextPolicy:'engineering-private', telemetry:true, reasoning:'high' },
-  { id:'codex-reviewer', name:'Codex Reviewer', role:'Reviewer', executable:'codex', workspaceIsolation:'worktree', risk:'R1', contextPolicy:'review-readonly', telemetry:true, reasoning:'high' },
-  { id:'codex-tester', name:'Codex Tester', role:'Tester', executable:'codex', workspaceIsolation:'worktree', risk:'R1', contextPolicy:'test-isolated', telemetry:true, reasoning:'medium' },
-  { id:'codex-mcg', name:'Codex MCG', role:'MCG', executable:'codex', workspaceIsolation:'worktree', risk:'R1', contextPolicy:'mcg-evidence', telemetry:true, reasoning:'high' },
-  { id:'antigravity-cio', name:'Antigravity CIO', role:'CIO', executable:'gemini', workspaceIsolation:'shared', risk:'R1', contextPolicy:'research-private', telemetry:true, reasoning:'high' },
+  { id:'claude-ceo', name:'Claude CEO', role:'CEO', executable:'claude', workspaceIsolation:'shared', risk:'R2', contextPolicy:'executive-private', telemetry:true, reasoning:'high', invocation:{interactive:true} },
+  { id:'codex-cto', name:'Codex CTO', role:'CTO', executable:'codex', workspaceIsolation:'worktree', risk:'R2', contextPolicy:'engineering-private', telemetry:true, reasoning:'high', invocation:{interactive:true} },
+  { id:'codex-reviewer', name:'Codex Reviewer', role:'Reviewer', executable:'codex', workspaceIsolation:'worktree', risk:'R1', contextPolicy:'review-readonly', telemetry:true, reasoning:'high', invocation:{interactive:true} },
+  { id:'codex-tester', name:'Codex Tester', role:'Tester', executable:'codex', workspaceIsolation:'worktree', risk:'R1', contextPolicy:'test-isolated', telemetry:true, reasoning:'medium', invocation:{interactive:true} },
+  { id:'codex-mcg', name:'Codex MCG', role:'MCG', executable:'codex', workspaceIsolation:'worktree', risk:'R1', contextPolicy:'mcg-evidence', telemetry:true, reasoning:'high', invocation:{interactive:true} },
+  { id:'antigravity-cio', name:'Antigravity CIO', role:'CIO', executable:'gemini', workspaceIsolation:'shared', risk:'R1', contextPolicy:'research-private', telemetry:true, reasoning:'high', invocation:{interactive:true} },
 ] as const;
 
 export class AgentRuntime {
