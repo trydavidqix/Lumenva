@@ -1,0 +1,3 @@
+export interface MemoryRecord{id:string;text:string;provenance:string;validated:boolean;tags:string[];token_estimate:number;updated_at:string}
+export class MemoryRetriever{constructor(private readonly records:MemoryRecord[]=[]){}
+retrieve(input:{tags:string[];token_budget:number;require_validated?:boolean}):MemoryRecord[]{let used=0;return this.records.filter(r=>(!input.require_validated||r.validated)&&input.tags.some(t=>r.tags.includes(t))).sort((a,b)=>Date.parse(b.updated_at)-Date.parse(a.updated_at)).filter(r=>{if(used+r.token_estimate>input.token_budget)return false;used+=r.token_estimate;return true})}}
