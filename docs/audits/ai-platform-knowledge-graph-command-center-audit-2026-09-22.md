@@ -23,7 +23,7 @@ As duas fases têm gate `GO` no AI Platform. Isso prova a implementação no sta
 | Graphiti temporal | `GO` / SHADOW | `0%` | portar `KnowledgeGraphPort` e cliente para o Core |
 | FalkorDB | substituído | `não usar por padrão` | plano original; incompatível com a imagem Graphiti validada |
 | Neo4j Community | validado e gratuito self-host | `0%` | backend atual do Graphiti, atrás do gateway |
-| Graph View | não entregue no gate antigo | `100%` (endpoint read-only) | conectar renderer/dashboard e drill-down visual |
+| Graph View | não entregue no gate antigo | `100%` (endpoint + dashboard read-only) | ligar provider Graphiti real e filtros de produção |
 
 ## O que já está comprovado
 
@@ -76,7 +76,7 @@ As duas fases têm gate `GO` no AI Platform. Isso prova a implementação no sta
 - `apps/core`: `CoreTraceSink` grava traces/spans no trace store MCG existente, incluindo `mcp.catalog`, `mcp_name`, trace ID e status; 27/27 testes do pacote e typecheck PASS.
 - Commits: `3c951634`, `124c8448`, `ccb4d3dd`, `91523605`.
 - `apps/core`: endpoint `GET /graph` expõe a projeção read-only com namespace/query/limit, nós de fact/source e edges com sourceId/confidence/validFrom/validUntil; 28/28 testes do pacote e typecheck PASS.
-- Graph View visual no renderer/dashboard, drill-down visual e Context Engine progressivo ligado a retrieval real continuam pendentes.
+- Graph View visual, drill-down e endpoint dashboard estão entregues; falta ligar provider Graphiti real e filtros de produção. Context Engine progressivo ligado a retrieval real continua pendente.
 
 ## Gates antes de ativar
 
