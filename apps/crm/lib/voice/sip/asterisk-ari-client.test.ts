@@ -5,7 +5,7 @@
 // inside its undici-based WebSocket client (ERR_INVALID_ARG_TYPE). This file
 // exercises the real Node WebSocket client against a real local server, so it
 // needs Node's actual globals, not jsdom's.
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createAsteriskAriConnection } from "./asterisk-ari-client";
 import { startFakeAriServer, type FakeAriServer } from "./testing/fake-ari-server";
 
@@ -35,6 +35,46 @@ describe("Asterisk ARI concrete client (Fase 3, real wire protocol)", () => {
     expect(fakeAri.lastRequest?.method).toBe("POST");
     expect(fakeAri.lastRequest?.url).toContain("/ari/channels?");
     expect(fakeAri.lastRequest?.url).toContain("endpoint=PJSIP%2F%2B351911234567%40sip-conn-abc");
+  });
+
+  it("passes correlation variables in the ARI originate JSON body", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ id: "channel-out" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    const client = createAsteriskAriConnection({
+      baseUrl: "http://127.0.0.1:8088",
+      username: "voicecore",
+      password: "s3cret",
+      fetchImpl: fetchImpl as typeof fetch,
+    });
+
+    await client.originate({
+      endpoint: "PJSIP/+351912345678@twilio-ee",
+      callerId: "+37255501234",
+      context: "lumenva-voice",
+      variables: {
+        SIP_CONNECTION_ID: "twilio-ee",
+        VOICE_DIRECTION: "outbound",
+        VOICE_CALL_ID: "11111111-1111-4111-8111-111111111111",
+      },
+    });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.stringContaining("/ari/channels?"),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          variables: {
+            SIP_CONNECTION_ID: "twilio-ee",
+            VOICE_DIRECTION: "outbound",
+            VOICE_CALL_ID: "11111111-1111-4111-8111-111111111111",
+          },
+        }),
+      }),
+    );
   });
 
   it("throws with the real status and body when Asterisk rejects authentication", async () => {
