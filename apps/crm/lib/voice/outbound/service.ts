@@ -60,6 +60,8 @@ export function createGovernedVoiceOutboundService(deps: GovernedVoiceOutboundDe
       contactId: string;
       agentId: string;
       goal: string;
+      /** Internal-only deterministic opening; public routes never expose this field. */
+      deterministicOpening?: string;
     }): Promise<GovernedVoiceOutboundResult> {
       const toE164 = await deps.resolveContactPhone(input.organizationId, input.contactId);
       if (toE164 === null) return { kind: "blocked", reason: "contact_phone_missing" };
@@ -82,13 +84,15 @@ export function createGovernedVoiceOutboundService(deps: GovernedVoiceOutboundDe
         provider: route.provider,
       });
 
-      const opening = await deps.generateOpening({
-        organizationId: input.organizationId,
-        contactId: input.contactId,
-        voiceCallId,
-        agentId: input.agentId,
-        goal: input.goal,
-      });
+      const opening = input.deterministicOpening === undefined
+        ? await deps.generateOpening({
+            organizationId: input.organizationId,
+            contactId: input.contactId,
+            voiceCallId,
+            agentId: input.agentId,
+            goal: input.goal,
+          })
+        : { kind: "reply" as const, text: input.deterministicOpening.slice(0, 500) };
       if (opening.kind === "blocked") {
         await deps.markFailed(input.organizationId, voiceCallId, route.provider, opening.reason);
         return { kind: "blocked", reason: opening.reason, voiceCallId };
