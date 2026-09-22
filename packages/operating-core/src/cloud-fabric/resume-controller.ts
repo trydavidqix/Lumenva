@@ -1,0 +1,2 @@
+import type { ExecutionPort,ExecutionResult,TaskContract } from './execution-port';
+export async function resumeExecution(port:ExecutionPort,executionId:string,contract:TaskContract):Promise<ExecutionResult>{if(!port.resume)return{task_id:contract.task_id,provider:port.name,status:'blocked',summary:'Runtime does not support resume.',files_changed:[],tests:[],evidence:'resume_not_supported',risks:['resume_not_supported']};return port.resume(executionId,contract)}
