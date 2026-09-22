@@ -588,6 +588,35 @@ experiência
 
 Nenhuma memória candidata pode virar verdade da empresa apenas porque um modelo afirmou algo.
 
+## Obsidian + Knowledge Graph
+
+Os dois componentes fazem parte do produto, mas não são a mesma coisa:
+
+- **Obsidian Vault:** camada humana de conhecimento curado. Guarda decisões, políticas, playbooks, ADRs, notas e documentação operacional em Markdown versionado. O Context Engine consulta notas relevantes sob demanda; nunca injeta o vault inteiro.
+- **Graphiti/Neo4j:** grafo temporal derivado. Representa entidades, relações, episódios, decisões, dependências e proveniência para recuperação contextual e visualização. Não é fonte de verdade e não autoriza mutações no CRM.
+- **CRM/Postgres:** fonte canônica dos fatos operacionais, identidade, consentimento, auditoria e estado de negócio.
+
+Pipeline obrigatório:
+
+```text
+CRM / docs / commits / eventos
+          -> extrator idempotente
+          -> facts + edges + provenance
+          -> Graphiti/Neo4j
+          -> Graph Retriever
+          -> ContextPacket
+```
+
+Entregáveis específicos:
+
+1. `ObsidianAdapter`: leitura segura, indexação incremental, backlinks/wikilinks, frontmatter, ACL e origem por arquivo/SHA.
+2. `KnowledgeGraphPort`: consulta de vizinhança, caminho, dependências, episódios temporais, namespace e provenance.
+3. `GraphProjectionWorker`: projeção idempotente de documentos, decisões, commits e eventos; suporta rebuild e invalidação.
+4. `Memory/Knowledge Retriever`: combina Obsidian, Graphiti, CRM e RAG sem misturar `project`, `tenant`, `customer` e `agent`.
+5. `Graph View` no Command Center: visualização read-only de entidades, relações, jobs, agentes, tools e evidências; cada nó precisa abrir sua fonte.
+
+Regras: Obsidian não vira memória de cliente automaticamente; Graphiti não duplica autoridade do CRM; nenhuma inferência vira regra sem aprovação; toda aresta exibida precisa de source, timestamp, namespace e confidence.
+
 ## Ownership e fontes de verdade da memória
 
 Cada classe de informação deve ter owner explícito.
@@ -1640,15 +1669,17 @@ Não aceitar como PASS:
   12. Fabric F5–F8: Instruction Resolver, progressive retrieval, Tool Registry lazy e MCP Gateway moderno com fallback
   13. M1 Core + contracts + event bus + storage persistente
   14. Fabric F9–F13: ExecutionPorts, usage/quota e Resource Router V2
-  15. Fabric F14–F18: handoffs, ResultDigest, delegation e retrieval de Memory/code
-  16. Fabric F19–F21: OTel/MCP traces e dashboards de contexto/token
-  17. terminal runtime + Electron Desktop shell
-  18. Canvas + Agent Nodes + Live Office / Pixel Floor
-  19. Scene Editor + auto-spawn de agents
-  20. budgets + alerts + Lumenva Link
-  21. Fabric F22–F25: otimização, integração, benchmark e cleanup de compatibilidade
-  22. mobile/remote
-  23. refinamento visual e acessibilidade
+   15. Fabric F14–F18: handoffs, ResultDigest, delegation e retrieval de Memory/code
+   16. Fabric F19–F21: OTel/MCP traces e dashboards de contexto/token
+   17. terminal runtime + Electron Desktop shell
+   18. Canvas + Agent Nodes + Live Office / Pixel Floor
+   19. ObsidianAdapter + KnowledgeGraphPort + GraphProjectionWorker
+   20. Graph View read-only + provenance drill-down
+   21. Scene Editor + auto-spawn de agents
+   22. budgets + alerts + Lumenva Link
+   23. Fabric F22–F25: otimização, integração, benchmark e cleanup de compatibilidade
+   24. mobile/remote
+   25. refinamento visual e acessibilidade
 
 ## Regra de execução contínua
 
