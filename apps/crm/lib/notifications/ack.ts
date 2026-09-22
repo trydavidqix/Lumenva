@@ -22,7 +22,7 @@ export async function tryAcknowledgeNotification(
     body: string;
   },
 ): Promise<NotificationAckResult> {
-  const token = ACK.exec(input.body.trim())?.[1]?.toUpperCase();
+  const token = parseNotificationAckToken(input.body);
   if (!token) return { acknowledged: false, notificationId: null };
 
   const { data: found, error: findError } = await admin
