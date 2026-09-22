@@ -1,1 +1,62 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"trace.v1","type":"object","required":["trace_id","timestamp","source"],"properties":{"trace_id":{"type":"string"},"session_id":{"type":"string"},"task_id":{"type":"string"},"timestamp":{"type":"string"},"source":{"type":"string"}}}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "lumenva.trace.v1",
+  "type": "object",
+  "required": [
+    "trace_id",
+    "timestamp",
+    "source"
+  ],
+  "properties": {
+    "trace_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "session_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "task_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "span_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "status": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "measurement_type": {
+      "enum": [
+        "exact",
+        "estimated",
+        "unavailable"
+      ]
+    },
+    "provenance": {
+      "type": [
+        "object",
+        "string",
+        "null"
+      ]
+    }
+  }
+}

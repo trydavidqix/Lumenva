@@ -1,1 +1,74 @@
-[]
+[
+  {
+    "id": "claude-code",
+    "name": "Claude Code",
+    "version": "1",
+    "capabilities": [
+      "agent-runtime",
+      "terminal"
+    ],
+    "health": "UNAVAILABLE",
+    "last_seen": null,
+    "success_rate": null,
+    "failure_rate": null,
+    "latency": null,
+    "usage": null,
+    "measurement_type": "unavailable",
+    "source": "docs/LUMENVA_COMMAND_CENTER_PLAN.md",
+    "runtime": "Claude Code"
+  },
+  {
+    "id": "codex-cli",
+    "name": "Codex CLI",
+    "version": "1",
+    "capabilities": [
+      "agent-runtime",
+      "jsonl-usage",
+      "read-only-eval"
+    ],
+    "health": "UNAVAILABLE",
+    "last_seen": null,
+    "success_rate": null,
+    "failure_rate": null,
+    "latency": null,
+    "usage": null,
+    "measurement_type": "unavailable",
+    "source": "packages/maestri-context-gateway/src/eval-runner.mjs",
+    "runtime": "Codex CLI"
+  },
+  {
+    "id": "antigravity-cli",
+    "name": "Antigravity CLI",
+    "version": "1",
+    "capabilities": [
+      "agent-runtime",
+      "terminal"
+    ],
+    "health": "UNAVAILABLE",
+    "last_seen": null,
+    "success_rate": null,
+    "failure_rate": null,
+    "latency": null,
+    "usage": null,
+    "measurement_type": "unavailable",
+    "source": "docs/LUMENVA_COMMAND_CENTER_PLAN.md",
+    "runtime": "Antigravity CLI"
+  },
+  {
+    "id": "maestri-terminal",
+    "name": "Maestri terminal",
+    "version": "1",
+    "capabilities": [
+      "orchestration-bridge"
+    ],
+    "health": "UNAVAILABLE",
+    "last_seen": null,
+    "success_rate": null,
+    "failure_rate": null,
+    "latency": null,
+    "usage": null,
+    "measurement_type": "unavailable",
+    "source": "docs/LUMENVA_COMMAND_CENTER_PLAN.md",
+    "runtime": "Maestri terminal"
+  }
+]

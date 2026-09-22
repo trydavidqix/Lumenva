@@ -1,1 +1,78 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"agent.v1","type":"object","required":["name","status","source"],"properties":{"name":{"type":"string"},"status":{"type":"string"},"source":{"type":"string"}}}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "lumenva.agent.v1",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "status",
+    "source",
+    "measurement_type"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "role": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "minLength": 1
+    },
+    "runtime": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "health": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "last_seen": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "measurement_type": {
+      "enum": [
+        "exact",
+        "estimated",
+        "unavailable"
+      ]
+    },
+    "provenance": {
+      "type": [
+        "object",
+        "string",
+        "null"
+      ]
+    }
+  }
+}

@@ -1,1 +1,57 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"event.v1","type":"object","required":["timestamp","source"],"properties":{"timestamp":{"type":"string"},"source":{"type":"string"},"trace_id":{"type":"string"},"task_id":{"type":"string"}}}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "lumenva.event.v1",
+  "type": "object",
+  "required": [
+    "timestamp",
+    "source"
+  ],
+  "properties": {
+    "event_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "type": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "trace_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "task_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "measurement_type": {
+      "enum": [
+        "exact",
+        "estimated",
+        "unavailable"
+      ]
+    },
+    "provenance": {
+      "type": [
+        "object",
+        "string",
+        "null"
+      ]
+    }
+  }
+}

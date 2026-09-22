@@ -1,1 +1,64 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"alert.v1","type":"object","required":["alert_id","created_at","delivery_status"],"properties":{"alert_id":{"type":"string"},"created_at":{"type":"string"},"delivery_status":{"enum":["queued","delivered","acknowledged","unavailable"]}}}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "lumenva.alert.v1",
+  "type": "object",
+  "required": [
+    "alert_id",
+    "created_at",
+    "delivery_status",
+    "source",
+    "measurement_type"
+  ],
+  "properties": {
+    "alert_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "delivery_status": {
+      "enum": [
+        "queued",
+        "delivered",
+        "acknowledged",
+        "unavailable"
+      ]
+    },
+    "severity": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "scope": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "measurement_type": {
+      "enum": [
+        "exact",
+        "estimated",
+        "unavailable"
+      ]
+    },
+    "provenance": {
+      "type": [
+        "object",
+        "string",
+        "null"
+      ]
+    }
+  }
+}
