@@ -30,8 +30,15 @@ describe("F2 tenant isolation matrix", () => {
       select set_config('app.organization_id', '${ORG_A}', true);
       select count(*) from public.f2_tenant_isolation_probe;
       select count(*) from public.f2_tenant_isolation_probe where id = '${ROW_B}';
-      select count(*) from public.f2_tenant_isolation_probe where label ilike '%fixture%' order by id limit 1;
-      select count(*) from public.f2_tenant_isolation_probe where id > '00000000-0000-0000-0000-000000000000' order by id limit 100;
+      select count(*) from (
+        select id from public.f2_tenant_isolation_probe
+        where label ilike '%fixture%' order by id limit 1
+      ) fixture_search;
+      select count(*) from (
+        select id from public.f2_tenant_isolation_probe
+        where id > '00000000-0000-0000-0000-000000000000'
+        order by id limit 100
+      ) fixture_page;
       select count(*) from public.f2_tenant_isolation_probe;
       do $$begin
         begin
