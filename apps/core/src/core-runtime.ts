@@ -5,7 +5,8 @@ import { parsePublishedMarkdown, scanKnowledgeBody } from "@lumenva/knowledge";
 import { projectPublishedNote, type KnowledgeGraph } from "@lumenva/knowledge-graph";
 import { MgcUnavailableError, type ContextRequest, type ContextResult, type MgcAdapter } from "./mcg-adapter.js";
 import type { McpCatalog } from "./mcp-gateway.js";
-import type { ExecutionResult } from "@lumenva/operating-core";
+import type { DelegationResult, ExecutionResult, MaestriDelegator, TaskContract as FabricTaskContract } from "@lumenva/operating-core";
+import type { HandoffRequest } from "@lumenva/operating-core";
 import type { CoreTask, ExecutionRecord } from "./sqlite-store.js";
 import { SqliteStore } from "./sqlite-store.js";
 
@@ -121,6 +122,21 @@ export class CoreRuntime {
       },
     });
     return record;
+  }
+
+  async delegateTask(
+    taskId: string,
+    delegator: Pick<MaestriDelegator, "delegate">,
+    input: { request: HandoffRequest; contract: FabricTaskContract },
+  ): Promise<DelegationResult> {
+    if (this.state !== "running") throw new Error("CoreRuntime is not running");
+    const task = this.store.getTask(taskId);
+    if (!task) throw new Error(`task not found: ${taskId}`);
+    if (input.contract.task_id !== taskId || input.request.task_id !== taskId) throw new Error("delegation_task_mismatch");
+    const delegated = await delegator.delegate(input);
+    if (delegated.result.task_id !== taskId) throw new Error("execution_task_mismatch");
+    await this.recordExecutionResult(taskId, String(delegated.target.provider), delegated.result);
+    return delegated;
   }
 
   events(): CoreEventBus {

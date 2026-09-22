@@ -104,6 +104,8 @@ F19 increment: `apps/core` now provides an optional native-fetch OTLP/HTTP expor
 
 Provider wiring increment: `TaskContract.context_packet` is now the canonical handoff field. `MaestriDelegator` injects the resolved packet before execution; Codex and Claude runners receive it through their existing serialized contract path. Operating-core validation passed 26 tests, with 2 Docker-dependent tests skipped, and typecheck passed.
 
+Core execution increment: `CoreRuntime.delegateTask()` now validates task identity, invokes Maestri, persists the selected provider result, and makes that record available to the existing `/executions` feed consumed by the dashboard. Core validation passed 43/43 tests and typecheck.
+
 The homogeneous v2 dataset was completed with 30 unique pairs, using offset execution so no earlier case was repeated: baseline `1171978` versus Fabric `842666` total tokens (`28.10%` reduction), and baseline `2128743` versus Fabric `1593713` context tokens (`25.13%` reduction). Quality stayed at 100% for success, recall, and grounding with 0% hallucination. Trust is `VALIDATED` with score `81.28`.
 
 ## Comandos e resultado

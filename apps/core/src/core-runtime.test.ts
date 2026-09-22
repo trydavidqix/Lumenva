@@ -4,7 +4,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CoreRuntime } from "./core-runtime.js";
 import { SqliteStore } from "./sqlite-store.js";
-import type { ExecutionResult } from "@lumenva/operating-core";
+import type { ExecutionResult, TaskContract as FabricTaskContract } from "@lumenva/operating-core";
+import { createHandoffRequest } from "@lumenva/operating-core";
 
 describe("CoreRuntime", () => {
   it("recovers non-terminal tasks after restart and reports health", async () => {
@@ -49,6 +50,38 @@ describe("CoreRuntime", () => {
     expect(runtime.eventsList()).toEqual(expect.arrayContaining([
       expect.objectContaining({ type: "execution.recorded", taskId: "task-exec" }),
     ]));
+    await runtime.stop();
+  });
+
+  it("runs a Maestri delegation and persists the provider result", async () => {
+    const dbPath = join(mkdtempSync(join(tmpdir(), "lumenva-runtime-delegation-")), "core.sqlite");
+    const runtime = new CoreRuntime(new SqliteStore(dbPath));
+    await runtime.start();
+    await runtime.startTask({ id: "task-delegate", type: "agent.execute", idempotencyKey: "delegate-idem", traceId: "trace-delegate", payload: {} });
+    const result: ExecutionResult = {
+      task_id: "task-delegate", status: "success", summary: "delegated", files_changed: [], commands: [], tests: [], evidence: ["evidence:delegated"],
+    };
+    const fabricContract: FabricTaskContract = {
+      task_id: "task-delegate", goal: "delegated", scope: "read-only", allowed_paths: [], constraints: [], capabilities: ["read_only"],
+      risk: "low", base_sha: "abc123", context_budget: { input_tokens: 1000 }, tool_budget: { calls: 1 }, execution_budget: { seconds: 30 },
+      preferred_provider: "codex", evidence_required: [],
+    };
+    const delegator = {
+      delegate: async () => ({
+        target: { provider: "codex" as const }, context: undefined, result, digest: {
+          task_id: "task-delegate", status: "success" as const, summary: "delegated", changed: [], tests: [], important_decisions: [], risk: "low", evidence: ["evidence:delegated"],
+        },
+      }),
+    };
+
+    const delegated = await runtime.delegateTask("task-delegate", delegator, {
+      request: createHandoffRequest({ task_id: "task-delegate", trace_id: "trace-delegate", from_agent: "claude", to_agent: "codex", goal: "delegated" }),
+      contract: fabricContract,
+    });
+
+    expect(delegated.result).toEqual(result);
+    expect(runtime.executions()).toHaveLength(1);
+    expect(runtime.executions()[0]?.provider).toBe("codex");
     await runtime.stop();
   });
 });
