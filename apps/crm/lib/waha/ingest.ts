@@ -18,6 +18,7 @@ import { ackToStatus } from "@/lib/types/messaging";
 import type { WahaEnvelope, WahaPayload } from "@/lib/waha/envelope";
 import { bareWaMessageId, chatIdFromWaMessageId } from "@/lib/waha/message-id";
 import { logger } from "@/lib/logger";
+import { tryAcknowledgeNotification } from "@/lib/notifications/ack";
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -430,10 +431,29 @@ async function handleInbound(
     metadata: { conversation_id: conversationId, type: p.type, external_id: p.id },
   });
 
+  // Operational confirmation is deterministic and handled before AI dispatch.
+  // A valid notification token cancels the future voice escalation and should
+  // not spend an agent turn just to interpret "CONFIRMAR ABC123".
+  let notificationAcknowledged = false;
+  if (insertedMessage?.id && p.body) {
+    try {
+      const ack = await tryAcknowledgeNotification(admin, {
+        organizationId: session.organization_id,
+        contactId,
+        body: p.body,
+      });
+      notificationAcknowledged = ack.acknowledged;
+    } catch (error) {
+      logger.error("waha.ingest: notification acknowledgement failed", {
+        error: error instanceof Error ? error.message.slice(0, 160) : "unknown",
+      });
+    }
+  }
+
   // Dispara o agent-dispatcher worker (fire-and-forget; falha não quebra o 200).
   if (insertedMessage?.id) {
     const inboundMessageId = insertedMessage.id;
-    admin
+    if (!notificationAcknowledged) admin
       .rpc("emit_event" as never, {
         p_event_type: "ai_agent.dispatch_requested",
         p_entity_kind: "message",
