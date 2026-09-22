@@ -161,7 +161,7 @@ describe("F3 Task 3 - Mutation Gates RBAC", () => {
       } satisfies QueryMock;
       vi.mocked(createClient).mockResolvedValue(asSupabaseClient(mockSupabase));
 
-      vi.mocked(queryTolerantToMissingArchived).mockResolvedValueOnce({ data: null, error: null });
+      vi.mocked(queryTolerantToMissingArchived).mockResolvedValueOnce({ error: null, schemaOutdated: false });
 
       const req = new NextRequest("http://localhost/api/v1/onboarding/whatsapp/session", { method: "POST" });
       const res = await sessionPost(req);
