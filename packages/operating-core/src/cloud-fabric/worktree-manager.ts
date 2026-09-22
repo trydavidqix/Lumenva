@@ -1,0 +1,3 @@
+import { WorktreePolicy,type WorktreeLease } from './worktree-policy';
+export interface GitWorktreeDriver{create(path:string,branch:string,baseSha:string):Promise<void>;remove(path:string):Promise<void>}
+export class WorktreeManager{constructor(private readonly driver:GitWorktreeDriver,private readonly policy=new WorktreePolicy()){}async allocate(input:{job_id:string;agent_id:string;path:string;branch:string;base_sha:string}):Promise<WorktreeLease>{const lease=this.policy.acquire(input.job_id,input.agent_id,input.path);try{await this.driver.create(input.path,input.branch,input.base_sha);return lease}catch(e){this.policy.release(input.path,input.agent_id);throw e}}async release(path:string,agentId:string){await this.driver.remove(path);this.policy.release(path,agentId)}}
