@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@lumenva/knowledge": "workspace:*",
-    "@lumenva/knowledge-graph": "workspace:*"
+    "@lumenva/knowledge-graph": "workspace:*",
+    "@lumenva/operating-core": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

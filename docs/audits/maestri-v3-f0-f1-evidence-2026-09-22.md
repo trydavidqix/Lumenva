@@ -37,6 +37,13 @@ Runner read-only do `@openai/codex-sdk` executado no worktree `vps` com sandbox 
 
 Nenhum arquivo foi alterado pela prova.
 
+## Persistência de execução
+
+- SQLite agora possui a tabela `executions` na mesma fonte de estado do Core.
+- `CoreRuntime.recordExecutionResult()` persiste o `ExecutionResult` e publica `execution.recorded`.
+- `CoreRuntime.execution()` permite leitura posterior do resultado persistido.
+- `apps/core` passou `core-runtime` + `sqlite-store`: 4/4 testes; typecheck PASS.
+
 pnpm --filter @lumenva/core test
 Test Files: 15 passed
 Tests: 33 passed

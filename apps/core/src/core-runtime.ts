@@ -5,7 +5,8 @@ import { parsePublishedMarkdown, scanKnowledgeBody } from "@lumenva/knowledge";
 import { projectPublishedNote, type KnowledgeGraph } from "@lumenva/knowledge-graph";
 import { MgcUnavailableError, type ContextRequest, type ContextResult, type MgcAdapter } from "./mcg-adapter.js";
 import type { McpCatalog } from "./mcp-gateway.js";
-import type { CoreTask } from "./sqlite-store.js";
+import type { ExecutionResult } from "@lumenva/operating-core";
+import type { CoreTask, ExecutionRecord } from "./sqlite-store.js";
 import { SqliteStore } from "./sqlite-store.js";
 
 export class ContextBudgetExceededError extends Error {
@@ -61,6 +62,11 @@ export class CoreRuntime {
     return this.store.getTask(id);
   }
 
+  execution(id: string): ExecutionRecord | null {
+    if (this.state !== "running") return null;
+    return this.store.getExecution(id);
+  }
+
   async startTask(input: {
     id: string;
     type: string;
@@ -81,6 +87,35 @@ export class CoreRuntime {
       });
     }
     return { task, created: existing === null };
+  }
+
+  async recordExecutionResult(taskId: string, provider: string, result: ExecutionResult): Promise<ExecutionRecord> {
+    if (this.state !== "running") throw new Error("CoreRuntime is not running");
+    const task = this.store.getTask(taskId);
+    if (!task) throw new Error(`task not found: ${taskId}`);
+    if (result.task_id !== taskId) throw new Error("execution_task_mismatch");
+    const record = this.store.recordExecution({
+      id: `execution:${taskId}:${provider}`,
+      taskId,
+      traceId: task.traceId,
+      provider,
+      result,
+    });
+    await this.eventBus.publish({
+      id: `execution-recorded:${record.id}`,
+      type: "execution.recorded",
+      taskId,
+      traceId: task.traceId,
+      payload: {
+        provider,
+        status: result.status,
+        summary: result.summary,
+        evidenceCount: result.evidence.length,
+        filesChanged: result.files_changed.length,
+        measurementType: "exact",
+      },
+    });
+    return record;
   }
 
   events(): CoreEventBus {

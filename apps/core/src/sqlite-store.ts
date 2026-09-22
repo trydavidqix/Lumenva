@@ -1,4 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
+import type { ExecutionResult } from "@lumenva/operating-core";
 
 export type CoreTask = {
   id: string;
@@ -21,6 +22,16 @@ export type CoreEvent = {
   createdAt?: string;
 };
 
+export type ExecutionRecord = {
+  id: string;
+  taskId: string;
+  traceId: string;
+  provider: string;
+  status: ExecutionResult["status"];
+  result: ExecutionResult;
+  createdAt: string;
+};
+
 type TaskRow = {
   id: string;
   type: string;
@@ -38,6 +49,15 @@ type EventRow = {
   task_id: string | null;
   trace_id: string;
   payload_json: string;
+  created_at: string;
+};
+type ExecutionRow = {
+  id: string;
+  task_id: string;
+  trace_id: string;
+  provider: string;
+  status: ExecutionRecord["status"];
+  result_json: string;
   created_at: string;
 };
 
@@ -74,10 +94,22 @@ export class SqliteStore {
         payload_json TEXT NOT NULL,
         created_at TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS executions (
+        id TEXT PRIMARY KEY,
+        task_id TEXT NOT NULL,
+        trace_id TEXT NOT NULL,
+        provider TEXT NOT NULL,
+        status TEXT NOT NULL,
+        result_json TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
     `);
     this.database.prepare(
       "INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (?, ?)",
     ).run(1, new Date().toISOString());
+    this.database.prepare(
+      "INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (?, ?)",
+    ).run(2, new Date().toISOString());
   }
 
   close(): void {
@@ -138,6 +170,21 @@ export class SqliteStore {
     return mapEvent(row);
   }
 
+  recordExecution(input: Pick<ExecutionRecord, "id" | "taskId" | "traceId" | "provider" | "result"> & { createdAt?: string }): ExecutionRecord {
+    const createdAt = input.createdAt ?? new Date().toISOString();
+    this.db().prepare(`
+      INSERT OR REPLACE INTO executions
+        (id, task_id, trace_id, provider, status, result_json, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(input.id, input.taskId, input.traceId, input.provider, input.result.status, JSON.stringify(input.result), createdAt);
+    return this.getExecution(input.id) as ExecutionRecord;
+  }
+
+  getExecution(id: string): ExecutionRecord | null {
+    const row = this.db().prepare("SELECT * FROM executions WHERE id = ?").get(id) as ExecutionRow | undefined;
+    return row ? mapExecution(row) : null;
+  }
+
   replayEvents(): CoreEvent[] {
     const rows = this.db().prepare("SELECT * FROM events ORDER BY sequence ASC").all() as unknown as EventRow[];
     return rows.map(mapEvent);
@@ -175,6 +222,18 @@ function mapEvent(row: EventRow): CoreEvent {
     taskId: row.task_id,
     traceId: row.trace_id,
     payload: JSON.parse(row.payload_json) as unknown,
+    createdAt: row.created_at,
+  };
+}
+
+function mapExecution(row: ExecutionRow): ExecutionRecord {
+  return {
+    id: row.id,
+    taskId: row.task_id,
+    traceId: row.trace_id,
+    provider: row.provider,
+    status: row.status,
+    result: JSON.parse(row.result_json) as ExecutionResult,
     createdAt: row.created_at,
   };
 }
