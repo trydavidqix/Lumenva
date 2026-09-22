@@ -1,4 +1,5 @@
 import { CoreEventBus } from "./event-bus.js";
+import { MgcUnavailableError, type ContextRequest, type ContextResult, type MgcAdapter } from "./mcg-adapter.js";
 import type { CoreTask } from "./sqlite-store.js";
 import { SqliteStore } from "./sqlite-store.js";
 
@@ -75,5 +76,39 @@ export class CoreRuntime {
 
   eventsList() {
     return this.store.replayEvents();
+  }
+
+  async requestContext(taskId: string, adapter: MgcAdapter, input: Omit<ContextRequest, "taskId" | "traceId">): Promise<ContextResult> {
+    if (this.state !== "running") throw new Error("CoreRuntime is not running");
+    const task = this.store.getTask(taskId);
+    if (!task) throw new Error(`task not found: ${taskId}`);
+    await this.eventBus.publish({
+      id: `context-requested:${taskId}`,
+      type: "context.requested",
+      taskId,
+      traceId: task.traceId,
+      payload: { objective: input.objective, budgetChars: input.budgetChars, measurementType: "unavailable" },
+    });
+    try {
+      const result = await adapter.compile({ ...input, taskId, traceId: task.traceId });
+      await this.eventBus.publish({
+        id: `context-completed:${taskId}`,
+        type: "context.completed",
+        taskId,
+        traceId: task.traceId,
+        payload: { contextVersion: result.contextVersion, measurementType: result.measurementType, source: result.source },
+      });
+      return result;
+    } catch (error) {
+      const unavailable = new MgcUnavailableError(error);
+      await this.eventBus.publish({
+        id: `context-failed:${taskId}`,
+        type: "context.failed",
+        taskId,
+        traceId: task.traceId,
+        payload: { code: unavailable.code, measurementType: "unavailable" },
+      });
+      throw unavailable;
+    }
   }
 }
