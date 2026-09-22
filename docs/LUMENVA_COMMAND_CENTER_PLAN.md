@@ -273,6 +273,7 @@ F25 rollout e limpeza de compatibilidade
 - MCG compiler now deduplicates fragments with identical content before priority ordering and hard-cap selection.
 - The highest-priority fragment is retained deterministically; ties use stable ID ordering.
 - Benchmark accounting now exposes `context_tokens` separately from `total_tokens` and hydrates legacy records from their raw JSONL evidence.
+- Core Context Engine now deduplicates identical candidate content before L1/L2 expansion, keeping the highest-score candidate with deterministic path tie-breaking; Core validation: 38/38 tests and typecheck passed.
 - Existing 30-pair evidence remains `DEGRADED`: deduplication is covered by unit tests, but end-to-end savings are not proven.
 - MCG regression suite: 36/36 passed.
 

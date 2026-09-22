@@ -83,8 +83,8 @@ export function resolveContext(input: {
 }): ContextPacket {
   const { task, level = 0 } = input;
   const budget = Math.max(0, Math.floor(task.contextBudget));
-  const candidates = (input.candidates ?? [])
-    .filter((candidate) => isAllowedPath(candidate.path, task.allowedPaths))
+  const candidates = deduplicateCandidates((input.candidates ?? [])
+    .filter((candidate) => isAllowedPath(candidate.path, task.allowedPaths)))
     .sort(compareCandidates);
   const objective = take(task.goal, budget);
   const constraints = boundedList(task.constraints, Math.max(0, budget - objective.length));
@@ -131,6 +131,16 @@ export function resolveContext(input: {
 
 function compareCandidates(left: ContextCandidate, right: ContextCandidate): number {
   return right.score - left.score || left.path.localeCompare(right.path);
+}
+
+function deduplicateCandidates(candidates: ContextCandidate[]): ContextCandidate[] {
+  const unique = new Map<string, ContextCandidate>();
+  for (const candidate of candidates) {
+    const key = createHash("sha256").update(candidate.content).digest("hex");
+    const current = unique.get(key);
+    if (!current || compareCandidates(candidate, current) < 0) unique.set(key, candidate);
+  }
+  return [...unique.values()];
 }
 
 function isAllowedPath(path: string, allowedPaths: string[]): boolean {

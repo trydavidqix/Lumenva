@@ -68,6 +68,16 @@ describe("progressive Context Engine", () => {
     expect(levelTwo).toEqual(repeated);
   });
 
+  it("deduplicates identical candidate content before expanding context", () => {
+    const duplicateCandidates: ContextCandidate[] = [
+      { path: "apps/core/src/low.ts", symbols: ["low"], content: "same implementation", score: 0.4 },
+      { path: "apps/core/src/high.ts", symbols: ["high"], content: "same implementation", score: 0.9 },
+    ];
+    const packet = resolveContext({ task: { ...task, contextBudget: 200 }, candidates: duplicateCandidates, level: 2 });
+
+    expect(packet.relevantFiles.map((file) => file.path)).toEqual(["apps/core/src/high.ts"]);
+  });
+
   it("requests only the next context level when the execution gate needs it", async () => {
     const calls: string[] = [];
     const result = await resolveProgressiveContext({

@@ -96,6 +96,8 @@ F22 first optimization increment: the MCG compiler deduplicates identical fragme
 
 The evaluation contract now reports `context_tokens` separately from `total_tokens`. Legacy paired records are hydrated from their already-persisted raw Codex JSONL evidence; no benchmark task was rerun. The measured result remains negative in both views, so this change improves attribution but does not pass F22/F24.
 
+F22 increment after the benchmark: Core now removes identical candidate content before progressive L1/L2 expansion, selecting the highest score and using the path as deterministic tie-breaker. Core validation passed with 38/38 tests and TypeScript typecheck. This is a local optimization proof; a new benchmark with unique cases is still required to establish end-to-end savings.
+
 ## Comandos e resultado
 
 ```text
