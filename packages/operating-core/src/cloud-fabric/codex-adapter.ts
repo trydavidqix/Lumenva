@@ -1,4 +1,5 @@
 import { Codex } from '@openai/codex-sdk';
+import { spawnSync } from 'node:child_process';
 import { cancelledResult, ExecutionPort, HealthSnapshot, TaskContract, ExecutionResult, QuotaSnapshot, unavailableQuota, unavailableResult, UsageSnapshot } from './execution-port.js';
 
 export interface CodexRunnerResult {
@@ -8,6 +9,8 @@ export interface CodexRunnerResult {
 
 export interface CodexRunner {
   run(contract: TaskContract): Promise<CodexRunnerResult>;
+  health?: () => Promise<HealthSnapshot>;
+  capabilities?: () => Promise<string[]>;
 }
 
 const executionSchema = {
@@ -26,6 +29,16 @@ const executionSchema = {
 
 export function createCodexSdkRunner(): CodexRunner {
   return {
+    async health() {
+      const executable = process.platform === 'win32' ? 'codex.cmd' : 'codex';
+      const version = spawnSync(executable, ['--version'], { encoding: 'utf8', stdio: 'pipe' });
+      const auth = spawnSync(executable, ['login', 'status'], { encoding: 'utf8', stdio: 'pipe' });
+      if (version.status === 0 && auth.status === 0) return { ok: true, status: 'healthy' };
+      return { ok: false, status: 'unavailable', message: 'Codex CLI or authentication is unavailable' };
+    },
+    async capabilities() {
+      return ['execute', 'structured_output', 'read_only'];
+    },
     async run(contract) {
       const codex = new Codex();
       const thread = codex.startThread({
@@ -86,11 +99,13 @@ export class CodexAdapter implements ExecutionPort {
   }
 
   async health(): Promise<HealthSnapshot> {
-    return { ok: false, status: 'unavailable', message: 'Codex execution adapter is not configured' };
+    if (!this.runner?.health) return { ok: false, status: 'unavailable', message: 'Codex health probe is not configured' };
+    return this.runner.health();
   }
 
   async capabilities(): Promise<string[]> {
-    return [];
+    if (!this.runner?.capabilities) return [];
+    return this.runner.capabilities();
   }
 
   async usage(): Promise<UsageSnapshot> {

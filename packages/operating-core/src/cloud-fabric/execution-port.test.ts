@@ -57,4 +57,15 @@ describe("ExecutionPort contract", () => {
       files_changed: ["src/example.ts"],
     });
   });
+
+  it("reports the injected provider health and capabilities instead of assuming them", async () => {
+    const adapter = new CodexAdapter({
+      run: async () => ({ finalResponse: "{}" }),
+      health: async () => ({ ok: true, status: "healthy" }),
+      capabilities: async () => ["execute", "structured_output"],
+    });
+
+    await expect(adapter.health()).resolves.toEqual({ ok: true, status: "healthy" });
+    await expect(adapter.capabilities()).resolves.toEqual(["execute", "structured_output"]);
+  });
 });

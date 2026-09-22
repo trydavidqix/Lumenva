@@ -11,6 +11,7 @@
 - `ExecutionPort` agora define `execute`, `resume`, `cancel`, `health`, `capabilities`, `usage` e `quota`.
 - Codex e Antigravity não retornam mais `success` sem execução; retornam `unavailable` com `provider_unavailable`.
 - Codex possui runner oficial via `@openai/codex-sdk`; o runner é injetável em testes e só aceita `ExecutionResult` estruturado.
+- O health probe Codex verifica `codex --version` e `codex login status`; capabilities declaradas são `execute`, `structured_output` e `read_only`.
 - Testes de integração Postgres são pulados quando Docker/daemon não existem; Docker não foi instalado.
 
 ## Comandos e resultado
@@ -22,6 +23,9 @@ Tests: 10 passed, 2 skipped
 
 pnpm --filter @lumenva/operating-core typecheck
 PASS
+
+pnpm --filter @lumenva/operating-core test -- src/cloud-fabric/execution-port.test.ts
+Tests: 4 passed
 
 pnpm --filter @lumenva/core test
 Test Files: 15 passed
