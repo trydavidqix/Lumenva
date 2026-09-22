@@ -225,16 +225,18 @@ export async function getContactHandler(
   let cpfDecryptDenied = false;
 
   if (input.decryptPurpose && _cpfHash && ctx.actor.type === "user") {
-    const { data: membership } = await supabase
-      .from("user_organizations")
-      .select("role")
-      .eq("user_id", ctx.actor.id)
-      .eq("organization_id", contact.organization_id)
-      .is("revoked_at", null)
-      .maybeSingle();
+    // Utilize ctx.actor.role (resolvido pelo auth/require-role.ts).
+    // O fallback RLS/RPC é se não vier no contexto, mas o GET/PATCH usa o
+    // requireRole que injeta. Para GET de /api/v1/contacts/[id], a rota
+    // já foi interceptada pelo novo helper se necessário, ou usamos fallback RLS.
+    let rank = ctx.actor.role ? (ROLE_RANK[ctx.actor.role] ?? 0) : 0;
+    if (!ctx.actor.role) {
+      const { data: effectiveRole } = await supabase.rpc("fn_user_role_in_org", {
+        p_org: contact.organization_id,
+      });
+      rank = effectiveRole ? (ROLE_RANK[effectiveRole] ?? 0) : 0;
+    }
 
-    const role = membership?.role as string | undefined;
-    const rank = role ? (ROLE_RANK[role] ?? 0) : 0;
     if (rank < ROLE_RANK.manager!) {
       cpfDecryptDenied = true;
     } else {

@@ -20,7 +20,6 @@ import { ok, fail } from "@/lib/api/wrappers";
 import { ApiError } from "@/lib/api/types";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
-import { ROLE_RANK } from "@/lib/auth/types";
 import { availabilityPatchSchema, validateRequest } from "@/lib/schemas";
 import { createClient } from "@/lib/supabase/server";
 
@@ -36,19 +35,24 @@ export async function PATCH(
   const requestId = randomUUID();
   const { user_id: targetUserId } = await ctx.params;
 
+  // Call requireRole once to determine agent+ base access, capturing user/org info.
+  // We can't conditionally call it because we need `authUser.id` to know if it's self.
   const authz = await requireRole("agent", { requestId, resource: "attendant_availability" });
   if (!authz.ok) return authz.response;
   const { user: authUser, org: activeOrg } = authz;
 
   const isSelf = targetUserId === authUser.id;
-  const isManager = ROLE_RANK[activeOrg.role] >= ROLE_RANK.manager;
-  if (!isSelf && !isManager) {
-    return fail(
-      "forbidden_role",
-      "Só o próprio atendente ou um manager pode alterar esta disponibilidade.",
-      403,
-      { requestId },
-    );
+
+  if (!isSelf) {
+    const managerAuthz = await requireRole("manager", { requestId, resource: "attendant_availability" });
+    if (!managerAuthz.ok) {
+      return fail(
+        "forbidden_role",
+        "Só o próprio atendente ou um manager pode alterar esta disponibilidade.",
+        403,
+        { requestId },
+      );
+    }
   }
 
   let input;
