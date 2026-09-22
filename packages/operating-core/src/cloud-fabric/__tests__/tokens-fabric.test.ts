@@ -6,6 +6,9 @@ import { nextEscalation } from '../escalation-engine';
 import { createMasterPlan, readyTasks } from '../master-plan';
 import { evaluateIndependentReview } from '../independent-review';
 import { ContextEngine } from '../../context/context-engine';
+import { evidenceGate } from '../evidence-gate';
+import { budgetSnapshot } from '../budget-policy';
+import { LazyToolRegistry } from '../tool-registry';
 
 describe('TOKENS workforce fabric', () => {
   it('prefers frontier models for planning', () => {
@@ -86,5 +89,26 @@ describe('TOKENS workforce fabric', () => {
       ],
     });
     expect(packet.references.map((ref) => ref.id)).toEqual(['a']);
+  });
+  it('blocks PASS without evidence and tests for non-R0 work', () => {
+    expect(evidenceGate({
+      task_id: 't',
+      status: 'success',
+      files_changed: [],
+      tests: [],
+      evidence: '',
+    }, 'R2').passed).toBe(false);
+  });
+
+  it('enforces PAYG budget states', () => {
+    expect(budgetSnapshot(10, { monthly_limit_usd: 50, warning_percent: 50, critical_percent: 80, reserve_percent: 90 }).state).toBe('GREEN');
+    expect(budgetSnapshot(46, { monthly_limit_usd: 50, warning_percent: 50, critical_percent: 80, reserve_percent: 90 }).state).toBe('RESERVE');
+  });
+
+  it('loads tool schemas lazily within budget', () => {
+    const tools = new LazyToolRegistry();
+    tools.register({ id: 'small', capabilities: ['coding'], risk: 'R1', schema_token_estimate: 50, enabled: true });
+    tools.register({ id: 'large', capabilities: ['coding'], risk: 'R1', schema_token_estimate: 500, enabled: true });
+    expect(tools.resolve(['coding'], 100).map((tool) => tool.id)).toEqual(['small']);
   });
 });
