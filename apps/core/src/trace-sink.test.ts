@@ -35,6 +35,7 @@ describe("Core trace sink", () => {
     const rows = readFileSync(join(root, "state", "telemetry", "traces", files[0]!), "utf8");
     expect(rows).toContain('"operation_type":"mcp.catalog"');
     expect(rows).toContain('"mcp_name":"github"');
+    expect(rows).toContain('"traceparent":"00-0123456789abcdef0123456789abcdef-0123456789abcdef-01"');
     expect(rows).toContain('"status":"completed"');
   });
 });

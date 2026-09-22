@@ -235,6 +235,13 @@ F25 rollout e limpeza de compatibilidade
 - Resolver and executor are injected until Core/MCG share one canonical `ContextPacket` runtime shape.
 - Coverage: operating-core 25 passed, 2 Docker-dependent tests skipped; typechecks passed.
 
+### F19 progress update — 2026-09-22
+
+- MCP `traceparent` now validates W3C format before forwarding to a server.
+- Core passes the validated trace context into the MCG trace sink, and MCG persists it on the MCP span.
+- Core MCP/trace tests: 5 passed; MCG suite: 36 passed.
+- This closes local propagation evidence; an external OpenTelemetry exporter/collector remains pending.
+
 ### Gates adicionais do plano completo
 
 O fechamento do Fabric exige evidência para:

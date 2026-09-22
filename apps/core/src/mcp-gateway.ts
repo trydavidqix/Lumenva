@@ -14,6 +14,14 @@ export type McpRequestContext = {
   stateHandle?: string;
 };
 
+export function isValidTraceparent(value: string): boolean {
+  const match = /^(?<version>[\da-f]{2})-(?<trace>[\da-f]{32})-(?<span>[\da-f]{16})-(?<flags>[\da-f]{2})$/i.exec(value);
+  if (!match?.groups) return false;
+  if (match.groups.version.toLowerCase() === "ff") return false;
+  if (/^0+$/.test(match.groups.trace) || /^0+$/.test(match.groups.span)) return false;
+  return true;
+}
+
 export type McpCatalog = {
   serverId: string;
   version: string;
@@ -42,6 +50,7 @@ export class McpGateway {
   }
 
   async catalogWithContext(serverId: string, context: McpRequestContext & { now?: number }): Promise<McpCatalog> {
+    if (!isValidTraceparent(context.traceparent)) throw new Error("INVALID_TRACEPARENT");
     const { now, ...requestContext } = context;
     return this.loadCatalog(serverId, now ?? Date.now(), requestContext);
   }

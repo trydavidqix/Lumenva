@@ -55,6 +55,13 @@ Focused provider usage tests: 8/8 passed. Package and Core typechecks passed.
 
 `MaestriDelegator` enforces `broker: maestri`, routes through `ResourceRouter`, resolves context before execution, and returns a `ResultDigest`. Direct agent-to-agent requests are rejected. Delegation tests: 2/2 passed; full operating-core suite: 25 passed and 2 Docker-dependent tests skipped.
 
+## F19 trace propagation validation
+
+- MCP rejects malformed W3C `traceparent` values.
+- Valid trace context is forwarded to the MCP server and persisted on the MCG `mcp.catalog` span.
+- Core MCP/trace tests: 5/5 passed; MCG regression suite: 36/36 passed.
+- External OpenTelemetry export is still pending; local trace provenance is exact and persisted.
+
 ## Comandos e resultado
 
 ```text

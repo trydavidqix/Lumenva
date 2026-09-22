@@ -52,4 +52,10 @@ describe("stateless MCP Gateway", () => {
     await gateway.catalogWithContext("github", { now: 10_000, traceparent, stateHandle: handle.handle });
     expect(port.listTools).toHaveBeenLastCalledWith({ traceparent, stateHandle: handle.handle });
   });
+
+  it("rejects malformed W3C trace context instead of forwarding it", async () => {
+    const gateway = new McpGateway([server()], { ttlMs: 1_000 });
+
+    await expect(gateway.catalogWithContext("github", { traceparent: "not-a-traceparent" })).rejects.toThrow("INVALID_TRACEPARENT");
+  });
 });

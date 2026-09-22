@@ -37,6 +37,7 @@ export class CoreTraceSink {
       operation_type: operationType,
       runtime: "lumenva-core",
       mcp_name: typeof payload.serverId === "string" ? payload.serverId : undefined,
+      traceparent: typeof payload.traceparent === "string" ? payload.traceparent : undefined,
       source: "core.mcg",
       measurement_type: typeof payload.measurementType === "string" ? payload.measurementType : "unavailable",
       input_chars: typeof payload.inputChars === "number" ? payload.inputChars : undefined,
