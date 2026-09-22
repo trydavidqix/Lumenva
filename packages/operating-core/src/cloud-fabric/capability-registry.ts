@@ -1,0 +1,2 @@
+import type { CapabilitySnapshot } from './execution-port';
+export class CapabilityRegistry{private readonly entries=new Map<string,CapabilitySnapshot>();upsert(snapshot:CapabilitySnapshot):void{this.entries.set(`${snapshot.provider}:${snapshot.model??'*'}`,snapshot)}list():CapabilitySnapshot[]{return[...this.entries.values()]}healthy(capability:string):CapabilitySnapshot[]{return this.list().filter(x=>x.health==='healthy'&&x.capabilities.includes(capability))}}
