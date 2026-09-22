@@ -15,7 +15,9 @@ import { IdempotencyStore, executionIdempotencyKey } from './idempotency';
 import { CostLedger } from './cost-ledger';
 import type { ContextResolver } from './context-resolver';
 import type { LearningRouter } from './learning-router';
-import { evaluateIndependentReview, type ReviewResult } from './independent-review';
+import type { ReviewResult } from './independent-review';
+import { executeIndependentReview } from './reviewer-executor';
+import { createRoutingTrace } from './trace-factory';
 import { readyTasks } from './master-plan';
 
 export interface PortResolver {
@@ -114,6 +116,7 @@ export class WorkforceOrchestrator {
         contract.context_packet_id = packet.context_packet_id;
 
         const executionKey = executionIdempotencyKey(plan.plan_id, task.task_id, baseSha, 1);
+        await this.persistence?.saveRoutingTrace(createRoutingTrace({ task_id: task.task_id, phase: 'execute', decision: routed, context_packet_id: packet.context_packet_id }));
         const execution = await this.idempotency.once(executionKey, () => port.execute(contract));
         this.costLedger.record(execution);
         await this.persistence?.saveExecution(execution);
@@ -135,19 +138,22 @@ export class WorkforceOrchestrator {
           phase: 'verify',
         });
         const reviewerProvider = String(reviewTarget.provider);
-        const review = evaluateIndependentReview({
+        const reviewerPort = reviewTarget.adapter ?? this.ports.resolve(reviewerProvider, reviewTarget.model?.model);
+        if (!reviewerPort || reviewerProvider === (execution.provider ?? String(routed.provider))) {
+          failed.add(task.task_id);
+          results.push({ task, contract, execution, status: 'failed', reason: 'independent_reviewer_unavailable' });
+          continue;
+        }
+        await this.persistence?.saveRoutingTrace(createRoutingTrace({ task_id: task.task_id, phase: 'verify', decision: reviewTarget, execution_id: execution.execution_id, context_packet_id: packet.context_packet_id }));
+        const { reviewExecution, review } = await executeIndependentReview({
           implementation: execution,
-          reviewer_provider: reviewerProvider,
-          reviewer_model: reviewTarget.model?.model,
+          contract,
           risk: task.risk,
-          deterministic_checks: execution.tests.map((test, index) => ({
-            name: test.name ?? `test-${index + 1}`,
-            passed: test.passed,
-            evidence: test.report,
-          })),
+          target: { provider: reviewerProvider, model: reviewTarget.model?.model, port: reviewerPort },
         });
+        await this.persistence?.saveExecution(reviewExecution);
 
-        this.learning?.record({
+        const observation = {
           model_id: execution.model ?? execution.provider ?? String(routed.provider),
           task_type: task.capabilities?.[0] ?? 'general',
           complexity: task.complexity,
@@ -158,7 +164,9 @@ export class WorkforceOrchestrator {
           retries: 0,
           latency_ms: execution.usage?.duration_ms,
           cost_usd: execution.usage?.cost_usd,
-        });
+        };
+        this.learning?.record(observation);
+        await this.persistence?.saveObservation(observation);
 
         if (!review.accepted) {
           failed.add(task.task_id);
