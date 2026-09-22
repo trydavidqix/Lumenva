@@ -1,202 +1,157 @@
-# Maestri Agent Architecture
+# Lumenva Maestri V3 — Agentic Engineering OS Master Implementation Blueprint
 
-Status: arquitetura canônica para implantação Maestri V3; implementação incremental na branch `vps`.
+Status: **CANONICAL / SINGLE SOURCE OF TRUTH**  
+Branch: `vps`  
+Main policy: **never merge or push to `main` automatically**  
+Supersedes: previous Maestri V3 architecture plan while preserving all valid constraints and the three external gates.  
+External gate plan: `docs/superpowers/plans/2026-09-22-maestri-v3-first-three-external-gates.md`
 
-## Objetivo
+## 0. Mission
 
-Definir como o Maestri coordena Claude, Codex, Jules, verificadores e ferramentas MCP sem duplicar runtime, sem despejar contexto integral e sem transformar o canvas em fonte única de estado.
+Build Maestri as an **Agentic Engineering OS** that separates specification, context, harness, loop, execution, verification and compound learning.
 
-## Fonte e limites
+Core principle:
 
-- O estado durável fica no runtime do Lumenva: tarefas, eventos, checkpoints, evidências, budgets e decisões.
-- O Maestri é control plane visual e transporte; não é banco de dados nem autoridade de aprovação.
-- O `docs/AGENTIC ENGINEERING OS - MASTER IMPLEMENTATION BLUEPRINT.md` é a referência operacional existente para loop, worktree, risco, verificação e human gate.
-- Este documento é a referência específica de adapters, bootstrap e integração de agentes da V3.
-- `main` não é alterada automaticamente; toda implementação deste ciclo ocorre na branch `vps`.
+> Humans steer. Maestri governs. Agents execute. Evidence decides completion.
 
-## Topologia
+The system must survive long-running work, context-window renewal, compaction, provider failures, quota pressure and session changes **without relying on conversational memory as the source of truth**.
 
-```text
-OWNER / HUMAN GATE
-        │
-        ▼
-MAESTRI CONTROL PLANE
-        │ TaskContract + ContextPacket + capability grants
-        ▼
-MAESTRI RUNTIME
-  Job Engine · Context Engine · Budget Engine · Policy Engine
-        │
-        ├── Claude Maestro  (manager / orchestration)
-        ├── Codex            (builder / execution)
-        ├── Jules            (optional external execution)
-        ├── Verifier         (deterministic checks)
-        └── Reviewer         (fresh, read-only, independent)
-        │
-        ▼
-MCP Gateway + ExecutionPorts + Evidence/Trace Store
-```
+## 1. Non-negotiable invariants
 
-## Contratos canônicos
+1. `vps` is the implementation branch for this cycle.
+2. No automatic merge to `main`.
+3. No production deploy without the applicable policy/human gate.
+4. No secret value in Git, prompts persisted to evidence, logs, traces or documentation.
+5. Do not install Docker during the current bootstrap/external-gate phase.
+6. Before installing/configuring anything, detect and reuse healthy existing capability.
+7. GitHub is code truth; Postgres is operational truth.
+8. Conversation context is cache, never durable truth.
+9. Agent claims are not evidence.
+10. A task is COMPLETE only when its acceptance manifest and evidence pass.
+11. Read parallelism can be aggressive; write parallelism is conflict-controlled.
+12. Providers are replaceable behind adapters.
+13. Critical policy is deterministic, not prompt-only.
+14. Reproducible compute should be offloaded from the PC when policy/provider capability permits.
+15. Context must use progressive disclosure: map first, relevant detail on demand.
 
-`TaskContract` é o único contrato de entrada:
+## 2. Target architecture
 
 ```text
-task_id, goal, scope, allowed_paths, constraints,
-capabilities, risk, base_sha, context_budget, tool_budget,
-execution_budget, preferred_provider, evidence_required
-```
-
-`ContextPacket` contém somente o necessário para a etapa atual:
-
-```text
-objective, relevant_instructions, relevant_files, relevant_symbols,
-prior_decisions, constraints, available_tools, evidence, token_budget
-```
-
-`ExecutionResult` uniformiza adapters:
-
-```text
-task_id, status, summary, files_changed, commands, tests,
-evidence, usage, context_used, error
-```
-
-O próximo agente recebe `ResultDigest`, não a sessão ou logs completos. Logs ficam no evidence store com hash e referência recuperável.
-
-## Regras de contexto e ferramentas
-
-1. Resolver contrato, instruções, código, memória e ferramentas antes da execução.
-2. Começar com contexto mínimo e expandir sob demanda por pedido explícito.
-3. Expor tools por capability e tarefa; nunca enviar o catálogo global por padrão.
-4. Aplicar hard caps de tokens, bytes, arquivos, chamadas e tempo.
-5. Registrar `context_packet_id`, ferramentas expostas/chamadas e evidência.
-
-## Adapters e MCP
-
-- `ExecutionPort` abstrai `execute`, `resume`, `cancel`, `health`, `capabilities`, `usage` e `quota`.
-- Claude, Codex e Jules são providers substituíveis; nenhum conhece a lógica completa do Maestri.
-- Cross-agent ocorre por `HandoffRequest` → Maestri → novo `ContextPacket`.
-- MCP é gateway stateless/cacheável quando suportado pelo servidor; catálogos têm ordenação determinística e TTL explícito.
-- Capability probing e health checks são obrigatórios; configuração presente não significa tool utilizável.
-- O escopo inicial é read-only. Escrita externa, secrets, produção, merge e deploy exigem policy e Human Gate.
-
-## Bootstrap Windows V3
-
-O bootstrap documentado em `docs/audits/maestri-v3-windows-bootstrap-2026-09-22.md` entra antes das fases de adapter e gateway:
-
-1. Auditar instalações, versões, PATH, autenticação, MCP, CLI, SDK, plugin, skill, hook e Actions.
-2. Reutilizar instalação saudável; instalar somente dependência comprovadamente ausente.
-3. Não instalar Docker nesta fase. Sandbox/container continua uma capacidade condicionada ao risco, não pré-requisito do bootstrap.
-4. Manter secrets fora do Git; Actions recebem apenas referências a secrets previamente criados pelo Owner.
-5. Validar cada instalação e registrar comando, versão, health e limitação.
-
-Estado inicial da V3:
-
-- Codex CLI, Claude Code, Gemini CLI, GitHub CLI e ferramentas locais principais estão instalados.
-- `@openai/codex-sdk`, `@google/jules-sdk` e `gh-aw` foram adicionados após confirmação de ausência.
-- `docs/MAESTRI_AGENT_ARCHITECTURE.md` passa a ser este contrato canônico.
-- GitHub MCP, Gemini MCP, Actions Codex/Jules e secrets continuam gates separados de configuração e autenticação.
-
-## Observabilidade
-
-Cada execução deve correlacionar `trace_id`, `job_id`, `task_id`, `agent_id`, `execution_id` e `context_packet_id`, além de tokens de entrada/cache/saída, bytes de contexto, tools, arquivos lidos, duração, custo, provider, retries, policy e terminal status.
-
-## Gates de aceite
-
-- nenhuma ferramenta global desnecessária;
-- nenhum contexto sem hard cap;
-- ContextPacket reproduzível;
-- expansão de contexto sob demanda;
-- provider substituível sem alterar `TaskContract`;
-- Claude ↔ Codex via Maestri e digest;
-- fallback, quota, usage e resume reais;
-- evidência persistida e trace atravessando MCP;
-- nenhuma dependência dos stubs antigos;
-- benchmark baseline versus Context Fabric sem regressão de sucesso.
-
-## Fontes oficiais
-
-- Codex CLI/SDK/Action: https://github.com/openai/codex · https://github.com/openai/codex/blob/main/sdk/typescript/README.md · https://github.com/openai/codex-action
-- Claude Code: https://docs.anthropic.com/en/docs/claude-code/getting-started · https://docs.anthropic.com/en/docs/claude-code/cli-usage
-- Gemini CLI: https://github.com/google-gemini/gemini-cli
-- Jules API/SDK/Action: https://developers.google.com/jules/api · https://github.com/google-labs-code/jules-sdk · https://github.com/google-labs-code/jules-action
-- GitHub MCP/Agentic Workflows/Secrets: https://github.com/github/github-mcp-server · https://github.github.com/gh-aw/ · https://docs.github.com/en/actions/concepts/security/secrets
-
-
-# Maestri V3 — Mega Blueprint Consolidado
-
-Este capítulo consolida a arquitetura alvo completa para Claude CEO + Maestri + Codex CTO + Codex Cloud + Jules/Gemini 3.1 Pro + GitHub, sem substituir os gates externos já documentados.
-
-## Princípio operacional
-
-Planejar centralmente. Executar distribuído. Validar objetivamente. Registrar tudo.
-
-```text
-VOCÊ
+OWNER
   ↓
 CLAUDE CODE — CEO
-  ↓
-MAESTRI
+  ↓ Master Goal
+MAESTRI AGENTIC ENGINEERING OS
+  ├── Spec Engine
   ├── Master Planner
   ├── Dependency Graph
   ├── Work Package Compiler
   ├── Conflict Graph
+  ├── Context Engine
+  │    ├── ContextPacket
+  │    ├── Context Budget Manager
+  │    ├── State Ledger
+  │    ├── Context Recovery Engine
+  │    ├── ResultDigest
+  │    └── FailureDigest
+  ├── Harness Engine
+  │    ├── Skills
+  │    ├── MCP Gateway
+  │    ├── Hooks
+  │    ├── Capability Grants
+  │    └── Provider Adapters
+  ├── Loop Engine
+  │    ├── Observe
+  │    ├── Verify
+  │    ├── Loop Detector
+  │    ├── Failure Classifier
+  │    ├── Retry / Replan
+  │    └── Escalation
   ├── Prompt Compiler
-  ├── Policy Engine
-  ├── Hook Engine
   ├── Scheduler / Queue
-  ├── Quota + Resource Managers
-  ├── Failure Classifier
-  ├── Escalation Engine
+  ├── Resource Router
+  ├── Quota / Usage Governors
+  ├── Policy Engine
   ├── Evidence Validator
+  ├── Fresh Context Reviewer
+  ├── Compound Learning Engine
   ├── Memory / Provenance
-  └── Observability
-       ↓
-┌───────────────────────────────┬───────────────────────────────┐
-│ CODEX CTO                     │ JULES CTO                     │
-│ Local / Worktree / Cloud      │ Gemini 3.1 Pro Fleet         │
-│ deep engineering              │ high-throughput async work    │
-└───────────────┬───────────────┴───────────────┬───────────────┘
-                ↓                               ↓
-                         GitHub
-                           ↓
-                    PR → Actions → CI
-                           ↓
-                    Cross-Agent Review
-                           ↓
-                    Evidence Validator
-                           ↓
-                      Policy Gate
-                           ↓
-                      Claude Review
-                           ↓
-                       Human Merge
+  └── Telemetry / Audit
+          ↓
+   ┌───────────────┬────────────────┐
+   │ CODEX CTO     │ JULES CTO      │
+   │ local         │ fleet          │
+   │ worktree      │ swarm          │
+   │ cloud         │ Gemini 3.1 Pro │
+   └───────┬───────┴───────┬────────┘
+           ↓               ↓
+                  GitHub
+                    ↓
+               PR / Actions
+                    ↓
+              Cross Review
+                    ↓
+            Evidence Validator
+                    ↓
+               Policy Gate
+                    ↓
+              Claude CEO Review
+                    ↓
+               HUMAN MERGE
 ```
 
-## Papéis
+## 3. Engineering layers
+
+### L0 — Provider system
+Native OpenAI / Anthropic / Google system behavior. Never copy leaked prompts into the product.
+
+### L1 — Lumenva constitution
+Stable repository rules, architecture invariants and safety boundaries in hierarchical `AGENTS.md` / Claude project instructions.
+
+### L2 — Role
+CEO, planner, builder, explorer, verifier, reviewer, incident diagnostician.
+
+### L3 — Skill
+Reusable methodology for a bounded kind of work.
+
+### L4 — TaskContract
+Exact current job.
+
+### L5 — ContextPacket
+Smallest high-signal context required for the next inference.
+
+### L6 — Runtime state
+Progress, decisions, evidence, failures, budgets, checkpoints.
+
+### L7 — Dynamic instructions
+Corrections, failure recovery, user changes and runtime policy decisions.
+
+## 4. Roles
 
 ### Claude Code — CEO
+Owns intent, architecture decisions, master planning, delegation, escalation, conflict resolution and release readiness. It should not be the default executor for mechanical or cloud-reproducible compute.
 
-Responsável por intenção, decisões arquiteturais, decomposição macro, priorização, resolução de conflitos e release readiness. Não é o executor padrão para builds pesados, lint em massa, backlog mecânico ou tarefas reproduzíveis que possam ir para Cloud.
-
-### Maestri — sistema operacional
-
-Maestri governa, não compete com os modelos. Centraliza contratos, contexto, dependências, conflitos, roteamento, quota, risco, hooks, estado, evidência, memória e telemetria.
+### Maestri — governor
+Owns durable state, contracts, context selection, routing, dependencies, conflicts, budgets, policy, evidence and orchestration. It must not depend on one provider's private runtime semantics.
 
 ### Codex — CTO Engineering
+Deep repository reasoning, complex debugging, cross-module refactors, migrations, difficult implementation, code/security review and CI diagnosis.
 
-Responsável por deep repository reasoning, debugging complexo, refactors cross-module, migrations grandes, integração difícil, review e CI diagnosis. Modos: LOCAL, WORKTREE e CLOUD.
+Execution modes:
+- `CODEX_LOCAL`
+- `CODEX_WORKTREE`
+- `CODEX_CLOUD`
 
 ### Jules — CTO Cloud/Fleet
+Independent work packages, maintenance, tests, docs, isolated bugs, frontend work and high-throughput asynchronous execution.
 
-Responsável por work packages independentes, backlog, manutenção, docs, testes, bugs isolados e alto paralelismo. Modelo alvo: Gemini 3.1 Pro. Limites operacionais conhecidos devem ser tratados pelo Quota Guard, nunca hard-coded sem fonte atual.
+### Verifier
+Deterministic checks first. Receives TaskContract + AcceptanceManifest + diff/artifacts/evidence, not builder conversation history.
 
-### GitHub — control plane do código
+### Fresh Context Reviewer
+Independent review from a clean context. It receives only the specification, diff, evidence and relevant repository map.
 
-GitHub é a fonte de verdade do código, branches, commits, PRs, checks e CI. Postgres é a fonte de verdade operacional do runtime e dos agentes.
-
-## Universal TaskContract
-
-O contrato universal deve suportar, no mínimo:
+## 5. Universal TaskContract
 
 ```text
 id
@@ -224,92 +179,312 @@ acceptance_criteria
 risk_level
 priority
 timeout
+context_budget
+tool_budget
+execution_budget
+resource_class
 preferred_provider
 fallback_policy
 requested_by
 created_at
 ```
 
-Nenhum provider recebe responsabilidade de inventar política global fora deste contrato.
+TaskContract is provider-neutral and immutable by workers except through an explicit revision event.
 
-## Prompt Compiler
+## 6. AcceptanceManifest
 
-O Prompt Compiler transforma TaskContract em um envelope específico do provider:
+Every non-trivial Work Package gets machine-readable acceptance state:
 
 ```text
-# OBJECTIVE
-# CONTEXT
-# SOURCE OF TRUTH
-# CURRENT STATE
-# SCOPE
-# REQUIREMENTS
-# TARGETS
-# CONSTRAINTS
-# DEPENDENCIES
-# VERIFICATION
-# ACCEPTANCE CRITERIA
-# DELIVERY
+AC01: PASS | FAIL | PENDING | BLOCKED
+AC02: PASS | FAIL | PENDING | BLOCKED
+...
 ```
 
-O objetivo é manter prompts curtos, específicos e reproduzíveis.
+Each item stores:
+- requirement reference;
+- verification method;
+- evidence IDs;
+- last verification timestamp;
+- verifier;
+- failure reason.
 
-## Constituição compartilhada
+Completion requires all mandatory acceptance items PASS.
 
-A hierarquia recomendada:
+## 7. Context engineering
+
+### 7.1 ContextPacket
+
+```text
+objective
+relevant_instructions
+relevant_files
+relevant_symbols
+prior_decisions
+constraints
+available_tools
+current_acceptance_state
+relevant_evidence
+token_budget
+```
+
+### 7.2 ContextBudget
+
+```text
+max_tokens
+max_files
+max_bytes
+retrieval_depth
+expansion_count
+expansion_budget
+```
+
+Start small. Expand only when needed.
+
+### 7.3 State Ledger
+
+Durable execution state:
+
+```text
+objective
+current_phase
+completed_work
+current_work
+remaining_work
+decisions
+assumptions
+tests_passed
+tests_failed
+blockers
+branches
+commits
+prs
+evidence
+next_action
+checkpoint_version
+```
+
+### 7.4 Context Recovery Engine
+
+Before continuing a long-running/restarted/compacted task:
+
+```text
+TaskContract
+  ↓
+State Ledger
+  ↓
+AcceptanceManifest
+  ↓
+git status / log / diff
+  ↓
+latest evidence
+  ↓
+open blockers
+  ↓
+provider/session state
+  ↓
+construct fresh ContextPacket
+  ↓
+continue
+```
+
+No critical fact may exist only in the chat transcript.
+
+### 7.5 Compaction protocol
+
+Before provider compaction/context renewal:
+1. checkpoint State Ledger;
+2. persist decisions with provenance;
+3. persist unresolved blockers;
+4. persist AcceptanceManifest;
+5. persist current branch/commit/PR;
+6. persist evidence references;
+7. persist exact next action;
+8. generate a compact recovery digest.
+
+After compaction, recovery must rebuild from durable state rather than trusting the summary alone.
+
+### 7.6 ResultDigest
+
+Successful handoff:
+
+```text
+objective
+result
+files_changed
+decisions
+tests
+evidence
+remaining_risk
+git_state
+follow_up
+```
+
+### 7.7 FailureDigest
+
+Failed/escalated handoff:
+
+```text
+objective
+attempt
+changes
+error_class
+error
+tests
+hypotheses
+evidence
+git_state
+recommended_next_strategy
+```
+
+## 8. Repository knowledge model
+
+Do not build one giant instruction file. Use a small stable map with progressive disclosure.
+
+Target:
 
 ```text
 /AGENTS.md
+/docs/architecture/
+/docs/plans/
+/docs/decisions/
+/docs/quality/
+/docs/security/
 /packages/maestri/AGENTS.md
 /apps/web/AGENTS.md
 /services/*/AGENTS.md
 ```
 
-Regras permanentes vivem em AGENTS.md; metodologia em Skills; trabalho atual em TaskContract.
+Complex execution plans are versioned first-class artifacts with progress and decision logs.
 
-## Skills compartilhadas
+Add documentation freshness checks and eventually a doc-gardening agent.
 
-Estrutura alvo:
+## 9. Skills
+
+Target shared skills:
 
 ```text
 .agents/skills/
-├── implement-feature/
-├── debug-complex-bug/
-├── repository-audit/
-├── architecture-review/
-├── database-migration/
-├── frontend-validation/
-├── test-generation/
-├── security-review/
-├── fix-ci/
-├── dependency-upgrade/
-├── performance-review/
-├── documentation/
-└── release-validation/
+ implement-feature/
+ debug-complex-bug/
+ repository-audit/
+ architecture-review/
+ database-migration/
+ frontend-validation/
+ test-generation/
+ security-review/
+ fix-ci/
+ dependency-upgrade/
+ performance-review/
+ documentation/
+ release-validation/
+ context-recovery/
+ evidence-validation/
+ incident-diagnosis/
 ```
 
-## Master Planner e Work Packages
+Rules:
+- permanent rule → constitution;
+- reusable method → skill;
+- current intent → TaskContract;
+- current information → ContextPacket.
 
-Planos grandes não são convertidos diretamente em uma task por etapa. O Master Planner agrupa semanticamente, detecta dependências e conflitos e cria Work Packages coerentes.
+## 10. Claude CEO harness
+
+Create a Lumenva/Maestri Claude integration layer containing:
+- CEO role instructions;
+- project settings;
+- approved hooks;
+- skills;
+- bounded specialist agents;
+- Maestri MCP access;
+- session/checkpoint integration.
+
+Specialist roles:
+- architecture reviewer;
+- security reviewer;
+- plan reviewer;
+- QA reviewer;
+- dependency analyst;
+- incident diagnostician.
+
+Use subagents primarily for high-volume reading/exploration and return digests. Agent Teams remain shadow/experimental until benchmarked.
+
+## 11. Hooks
+
+Canonical runtime events:
 
 ```text
-Master Goal
-  ↓
-Master Planner
-  ↓
-Dependency Graph
-  ↓
-Work Package Compiler
-  ↓
-Conflict Graph
-  ↓
-READY queue
+before_task
+before_route
+after_route
+before_dispatch
+after_dispatch
+on_started
+on_plan
+before_plan_approval
+after_plan_approval
+on_progress
+on_tool_call
+on_waiting
+on_rate_limit
+before_checkpoint
+after_checkpoint
+before_compaction
+after_recovery
+before_commit
+after_commit
+before_pr
+after_pr
+on_ci_failure
+on_security_failure
+on_timeout
+on_agent_failure
+on_loop_detected
+before_complete
+on_complete
+before_merge
+after_merge
 ```
 
-Um Work Package pode conter várias etapas internas do provider.
+Claude-specific hooks should map into these canonical events instead of becoming separate business logic.
 
-## Dependency Graph
+## 12. MCP Gateway and capability grants
 
-Estados mínimos:
+```text
+Agent
+ ↓
+Maestri MCP Gateway
+ ↓
+Policy Engine
+ ↓
+Task capability grant
+ ↓
+approved external tool
+```
+
+Never expose the global tool catalog by default.
+
+Capabilities can include:
+- create/get/update job;
+- create/get task;
+- dispatch;
+- get evidence;
+- get usage/quota;
+- approve/revise plan;
+- retry;
+- escalate;
+- cancel.
+
+## 13. Master Planner
+
+Master Goal → semantic decomposition → dependency analysis → conflict analysis → coherent Work Packages.
+
+Do not map every plan line to one agent task. A provider task may contain many internal PlanSteps.
+
+## 14. Dependency Graph
+
+States:
 
 ```text
 BLOCKED
@@ -326,15 +501,43 @@ FAILED
 CANCELLED
 ```
 
-Somente READY pode entrar no scheduler.
+Only READY is schedulable.
 
-## Conflict Graph
+## 15. Conflict Graph
 
-Dependência lógica e conflito de arquivos são problemas diferentes. Tasks que podem tocar os mesmos módulos/arquivos devem ser serializadas ou particionadas mesmo quando não existe dependência funcional explícita.
+Track:
+- exact file overlap;
+- package/module overlap;
+- migration/schema overlap;
+- API contract overlap;
+- semantic ownership overlap.
 
-## Execution Router
+Aggressive parallel reads are allowed. Concurrent writes require isolated branches/workspaces and conflict approval.
 
-Rotas possíveis:
+## 16. Prompt Compiler
+
+Provider-neutral template:
+
+```text
+# OBJECTIVE
+# CONTEXT
+# SOURCE OF TRUTH
+# CURRENT STATE
+# SCOPE
+# REQUIREMENTS
+# TARGETS
+# CONSTRAINTS
+# DEPENDENCIES
+# VERIFICATION
+# ACCEPTANCE CRITERIA
+# DELIVERY
+```
+
+Then a Provider Transformer maps it to Claude/Codex/Jules without duplicating global policy.
+
+## 17. Execution Router
+
+Routes:
 
 ```text
 CODEX_LOCAL
@@ -346,57 +549,59 @@ CLAUDE_REVIEW
 HUMAN_APPROVAL
 ```
 
-O router considera fit da skill, risco, cloud compatibility, quota, prioridade, latência, conflitos e recursos.
+Inputs:
+- skill fit;
+- risk;
+- dependency readiness;
+- conflict state;
+- cloud compatibility;
+- provider health;
+- quota/usage;
+- resource class;
+- latency;
+- host pressure.
 
-## Codex CTO — modos
+## 18. Cloud-first compute
 
-### Local
-Para feedback imediato, integração com Windows/hardware, BrowserMesh, ferramentas locais e debugging dependente do host.
+If work is reproducible, cloud-capable and does not require local hardware/OS state, offload it.
 
-### Worktree
-Para isolamento paralelo local. Regra: um Work Package por workspace isolado.
+Codex Cloud priority workloads:
+- repository analysis;
+- implementation;
+- builds;
+- lint/typecheck;
+- unit/integration tests that are reproducible;
+- refactors;
+- migrations;
+- dependency work;
+- docs;
+- review;
+- CI diagnosis.
 
-### Cloud
-Prioridade para workloads reproduzíveis: repo analysis, coding, build, lint, typecheck, testes, refactors, migrations, dependency work, docs, review e CI diagnosis. O PC deve ser control plane; Cloud deve assumir o máximo de compute possível.
+Keep local:
+- Windows-specific integration;
+- hardware/device integration;
+- BrowserMesh/local desktop control;
+- interactive debugging that needs the host;
+- Maestri control plane;
+- Command Center.
 
-## Codex Cloud Environment Manager
+## 19. Codex Cloud Environment Manager
 
-O ambiente alvo deve ser mínimo e reproduzível:
+Maintain a minimal reproducible environment:
+- Node;
+- pnpm;
+- Python;
+- Git;
+- project dependencies;
+- build/test tools;
+- setup scripts;
+- environment references;
+- network policy.
 
-```text
-Node
-pnpm
-Python
-Git
-dependencies
-build tools
-test tools
-setup scripts
-environment variables
-network policy
-```
+Do not assume setup secrets survive into agent phase. Do not assume caches are durable without probing.
 
-Não instalar “o universo inteiro”. Reutilizar cache/estado quando suportado, mas nunca assumir persistência sem verificação.
-
-## Cloud-First Router
-
-Regra:
-
-```text
-reproduzível?
-  ↓ sim
-cloud-capable?
-  ↓ sim
-sem requisito de hardware/local?
-  ↓ sim
-OFFLOAD
-```
-
-Se não, Worktree/Local.
-
-## Network Policy
-
-Perfis:
+## 20. Network policy
 
 ```text
 OFF
@@ -407,85 +612,128 @@ SERVICE_ALLOWLIST
 FULL
 ```
 
-Default: OFF. FULL é excepcional.
+Default OFF. FULL requires explicit justification/policy.
 
-## Secret Policy
+## 21. Secret policy
 
-Agent != Secret Store. Secret Manager continua autoridade. Valores nunca entram em Git, logs, prompts persistentes ou evidence payloads. Somente referências e grants mínimos.
+Secret Manager is authority. Agents receive references or short-lived/minimum grants. Never store secret values in:
+- repository;
+- State Ledger;
+- evidence;
+- traces;
+- prompts intended for persistence;
+- docs.
 
-## Jules Fleet
+## 22. Jules Fleet
 
-Jules recebe Work Packages independentes e paralelizáveis. Uma task Jules pode conter vários PlanSteps. Não mapear etapa = task.
+Jules is the asynchronous fleet provider. Account/provider limits must be discovered and tracked, not assumed forever.
 
-Capacidade operacional deve ser governada por Quota Guard e Fleet Scheduler. Reservar parte da concorrência para urgência/recovery quando isso fizer sentido.
+Quota Guard maintains:
+- rolling usage;
+- current concurrency;
+- remaining allowance;
+- reservations;
+- projected pressure;
+- blocked tasks.
 
-## Jules Plan Validator
+Reserve capacity for urgent/recovery work when practical.
 
-Quando Jules gerar plano, Maestri compara:
+## 23. Jules Plan Validator
 
-```text
-scope
-requirements
-constraints
-dependencies
-target areas
-acceptance criteria
-risk
-```
+Compare Jules plan with:
+- scope;
+- requirements;
+- constraints;
+- dependencies;
+- target areas;
+- acceptance criteria;
+- risk.
 
-Saídas:
+Result:
+`PASS | REVISE | BLOCK`.
 
-```text
-PASS
-REVISE
-BLOCK
-```
-
-## Auto-approval por risco
-
-```text
-R0 docs/read/tests            → AUTO
-R1 isolated normal code       → AUTO
-R2 important module           → VALIDATOR
-R3 infra/security             → CLAUDE
-R4 prod/main/secrets/IAM      → HUMAN
-```
-
-## Jules Swarm
-
-Modo excepcional para um mesmo problema quando vale explorar várias abordagens. Deve consumir budget explícito e nunca ser default.
-
-## Codex Usage Governor
-
-Codex não recebe um limite de concorrência inventado. O governor observa uso disponível, classe de tarefa, local/cloud, prioridade e pressão de uso.
-
-Classes:
+## 24. Risk model
 
 ```text
-TINY
-LIGHT
-NORMAL
-HEAVY
-EXCLUSIVE
+R0 read/docs/tests        → AUTO
+R1 isolated normal code   → AUTO
+R2 important module       → VALIDATOR
+R3 infra/security         → CLAUDE
+R4 prod/main/secrets/IAM  → HUMAN
 ```
 
-## Resource Router
+## 25. Jules Swarm
 
-Heurística inicial:
+Use only for high-uncertainty problems where multiple independent approaches have expected value. It consumes explicit budget and never becomes default execution.
+
+## 26. Codex Usage Governor
+
+Do not invent a fixed concurrency limit. Track:
+- available usage signal;
+- task complexity;
+- current workload;
+- estimated cost class;
+- local/cloud;
+- priority;
+- recent throttling.
+
+Resource classes:
+`TINY | LIGHT | NORMAL | HEAVY | EXCLUSIVE`.
+
+## 27. Internal model/capability router
+
+Providers may expose multiple model/capability profiles. Route by capability and current documented availability, not hard-coded marketing names.
+
+Profiles:
+- explorer: read-heavy, cheap/fast;
+- builder: write/test;
+- reviewer: fresh context, read-only;
+- heavy engineer: deep reasoning;
+- verifier: deterministic-first.
+
+## 28. Loop Engine
+
+Canonical loop:
 
 ```text
-TINY       → Jules / Codex Local
-LIGHT      → Jules
-NORMAL     → Jules ou Codex Cloud
-HEAVY      → Codex Cloud
-EXCLUSIVE  → Codex + Claude supervision
+GOAL
+ ↓
+PLAN
+ ↓
+ACT
+ ↓
+OBSERVE
+ ↓
+VERIFY
+ ↓
+PASS? ── yes → acceptance/evidence gate
+  │
+  no
+  ↓
+CLASSIFY FAILURE
+ ↓
+RETRY / REPLAN / ESCALATE
+ ↓
+ACT
 ```
 
-Sempre subordinada a risco, quota, skill fit e compatibilidade.
+The loop belongs to Maestri, not to a prompt phrase like “keep trying”.
 
-## Failure Classifier
+## 29. Loop Detector
 
-Categorias mínimas:
+Detect repeated equivalent cycles using:
+- same failing command/test;
+- same error signature;
+- repeated near-identical diff;
+- no acceptance progress;
+- tool-call repetition;
+- retry count;
+- elapsed budget.
+
+On detection:
+`LOOP_DETECTED → FailureClassifier → strategy change / provider change / Claude diagnosis`.
+
+## 30. Failure Classifier
 
 ```text
 TRANSIENT
@@ -501,52 +749,44 @@ QUOTA
 CONFLICT
 ARCHITECTURE
 POLICY
+LOOP
 UNKNOWN
 ```
 
-Não existe fallback cego.
-
-## Escalation Engine
+## 31. Escalation Engine
 
 ```text
-TRANSIENT     → retry same provider
-BAD_PROMPT    → Prompt Compiler
-BAD_PLAN      → replan same session/provider
-TEST_FAILURE  → same agent
-CI_FAILURE    → CI remediation
-QUOTA         → queue or alternate provider
-COMPLEX_CODE  → Codex
-ARCHITECTURE  → Claude
-POLICY        → block
-UNKNOWN       → Claude diagnosis
+TRANSIENT    → retry same provider
+BAD_PROMPT   → Prompt Compiler
+BAD_PLAN     → replan
+TEST_FAILURE → same builder with evidence
+CI_FAILURE   → CI remediation
+DEPENDENCY   → WAITING_DEPENDENCY
+ENVIRONMENT  → environment repair
+AUTH         → external/auth gate
+QUOTA        → queue/alternate
+CONFLICT     → serialize/rebase/replan
+LOOP         → strategy change
+COMPLEX_CODE → Codex CTO
+ARCHITECTURE → Claude CEO
+POLICY       → block
+UNKNOWN      → Claude diagnosis
 ```
 
-## Cross-Agent Review
+## 32. Tool Budget
 
-Builder e reviewer podem ser providers diferentes. Exemplos:
+TaskContract can specify:
+- soft warning;
+- hard tool-call cap;
+- per-tool limits;
+- external-write prohibition;
+- time/execution budget.
 
-```text
-Jules → Codex Review
-Codex → Jules/CI Validation
-R3 → Builder → Independent Reviewer → Claude
-```
+Budget exhaustion creates an event and requires policy-based retry/escalation, not silent looping.
 
-## Branch Strategy
+## 33. Evidence model
 
-Cada WP deve usar branch/contexto isolado:
-
-```text
-maestri/jules/<task-id>
-maestri/codex/<task-id>
-```
-
-Nunca permitir fleet concorrente em main.
-
-## Evidence Validator
-
-“Agent says done” nunca equivale a COMPLETED.
-
-ExecutionResult/TaskResult deve incluir:
+TaskResult:
 
 ```text
 status
@@ -570,64 +810,116 @@ evidence
 follow_up
 ```
 
-COMPLETED exige acceptance criteria + evidence + checks + policy.
+Evidence items should capture command/check, exit code/status, timestamp, commit SHA/context and output digest where applicable.
 
-## Hook Engine
+## 34. Progress Evidence Guard
 
-Eventos mínimos:
+Claims such as “tests passed”, “build succeeded”, “migration succeeded”, “PR ready” or “deploy succeeded” must reference evidence. Unsupported claims do not advance AcceptanceManifest.
 
-```text
-before_task
-before_route
-after_route
-before_dispatch
-after_dispatch
-on_started
-on_plan
-before_plan_approval
-after_plan_approval
-on_progress
-on_tool_call
-on_waiting
-on_rate_limit
-before_commit
-after_commit
-before_pr
-after_pr
-on_ci_failure
-on_security_failure
-on_timeout
-on_agent_failure
-before_complete
-on_complete
-before_merge
-after_merge
-```
+## 35. Cross-agent review
 
-## Policy Engine
+Preferred:
+- Jules builder → Codex review;
+- Codex builder → Jules/CI validation;
+- R3 → builder → independent reviewer → Claude.
 
-Políticas críticas são determinísticas e externas ao prompt. Exemplos: main merge, produção, secrets, IAM, deploy e escrita externa.
+Reviewer must not inherit builder reasoning by default.
 
-## Memory e provenance
-
-Três domínios:
+## 36. GitHub execution model
 
 ```text
-PROJECT MEMORY
-AGENT MEMORY
-TASK MEMORY
+Work Package
+ ↓
+isolated branch/workspace
+ ↓
+commit
+ ↓
+PR
+ ↓
+Actions
+ ↓
+review
+ ↓
+evidence
 ```
 
-Toda memória relevante deve carregar source, timestamp, confidence, task, commit/PR e provider.
+Branch naming:
+- `maestri/codex/<task-id>`
+- `maestri/jules/<task-id>`
 
-## Postgres e GitHub
+No concurrent fleet writes directly to `main`.
+
+## 37. CI Fixer
+
+CI failure:
+1. ingest failing checks/log digest;
+2. classify;
+3. return to responsible builder or CI-fix skill;
+4. commit correction;
+5. rerun CI;
+6. escalate only after policy threshold.
+
+## 38. Compound Learning Engine
+
+Every completed/failed task may produce a LearningCandidate.
+
+Candidate types:
+- new/revised skill;
+- documentation fix;
+- architecture invariant;
+- missing test/guardrail;
+- router heuristic;
+- failure signature;
+- environment improvement.
+
+Promotion pipeline:
+
+```text
+Task outcome
+ ↓
+LearningCandidate
+ ↓
+validate evidence
+ ↓
+deduplicate
+ ↓
+risk review
+ ↓
+encode in correct layer
+ ↓
+test/CI
+ ↓
+version
+```
+
+Never blindly convert agent output into permanent memory.
+
+## 39. Memory and provenance
+
+Domains:
+- PROJECT MEMORY;
+- AGENT/PROVIDER MEMORY;
+- TASK MEMORY.
+
+Every durable memory record needs:
+- source;
+- timestamp;
+- confidence;
+- task;
+- commit/PR when applicable;
+- provider;
+- evidence;
+- supersedes/expiry when relevant.
+
+## 40. Operational truth
 
 ```text
 GitHub = code truth
 Postgres = operational truth
+Evidence Store = execution proof
 ```
 
-Tabelas alvo:
+Tables/collections target:
 
 ```text
 agents
@@ -638,47 +930,41 @@ agent_events
 task_dependencies
 task_conflicts
 task_attempts
+task_checkpoints
+acceptance_items
+context_packets
+context_digests
 agent_usage
 agent_session_usage
 approvals
 evidence
+learning_candidates
 incidents
 host_nodes
 host_metrics
 notifications
 ```
 
-## Scheduler e Queue
+## 41. Scheduler and queues
 
-Scheduler considera prioridade, dependências, conflitos, risco, provider, quota, resource class, idade e retry count.
+Priorities:
+`urgent | high | normal | low | maintenance`.
 
-Filas:
+Waiting states:
+`WAITING_DEPENDENCY | WAITING_RESOURCE | WAITING_QUOTA | WAITING_APPROVAL | WAITING_EXTERNAL`.
 
-```text
-urgent
-high
-normal
-low
-maintenance
-```
+Waiting work does not occupy an execution slot.
 
-Estados de espera:
+## 42. PC Resource Guard
 
-```text
-WAITING_DEPENDENCY
-WAITING_RESOURCE
-WAITING_QUOTA
-WAITING_APPROVAL
-```
+Observe CPU, RAM, swap, disk and network. Under host pressure:
+- stop dispatching nonessential local compute;
+- prefer Codex Cloud/Jules;
+- preserve control plane and interactive operations.
 
-## PC Resource Guard
+## 43. Observability
 
-Monitorar CPU, RAM, swap, disco e rede. Quando o host estiver pressionado, reduzir dispatch local e preferir Codex Cloud/Jules para workloads reproduzíveis.
-
-## Observabilidade
-
-Cada execução deve correlacionar:
-
+Correlate:
 ```text
 timestamp
 trace_id
@@ -688,6 +974,7 @@ agent_id
 provider
 execution_id
 context_packet_id
+checkpoint_id
 event
 duration
 usage
@@ -698,168 +985,327 @@ retry
 terminal_status
 ```
 
-## Command Center
+Trace export failure must never destroy local evidence.
 
-A UI deve expor, no mínimo:
+## 44. Command Center
 
-```text
-Claude CEO status
-Codex local/worktree/cloud
-Jules running/capacity/quota
-READY/RUNNING/BLOCKED/WAITING/FAILED/COMPLETED
-Dependency Graph
-Conflict Graph
-quota/usage pressure
-branch/PR/CI
-task evidence
-```
+Main status:
+- Maestri health;
+- Claude CEO;
+- Codex local/worktree/cloud;
+- Jules fleet;
+- READY/RUNNING/BLOCKED/WAITING/FAILED/COMPLETED;
+- dependency/conflict graph;
+- quota/usage;
+- host pressure;
+- branch/PR/CI;
+- AcceptanceManifest;
+- evidence;
+- loop/retry/escalation history;
+- checkpoint/recovery status.
 
-## Definition of Done universal
-
-Nenhum Work Package termina sem:
-
-```text
-requirements satisfied
-acceptance criteria satisfied
-tests executed
-lint/typecheck/build when applicable
-no unresolved critical findings
-commit exists
-PR when required
-CI successful when required
-evidence persisted
-```
-
-## Estrutura alvo do repositório
+## 45. Repository target
 
 ```text
 Lumenva/
 ├── AGENTS.md
 ├── docs/
-│   └── MAESTRI_AGENT_ARCHITECTURE.md
-├── .agents/
-│   └── skills/
+│   ├── MAESTRI_AGENT_ARCHITECTURE.md
+│   ├── architecture/
+│   ├── plans/
+│   ├── decisions/
+│   ├── quality/
+│   └── security/
+├── .agents/skills/
 ├── .claude/
 │   ├── agents/
 │   ├── skills/
 │   └── hooks/
-├── .codex/
-│   └── config.toml
+├── .codex/config.toml
 ├── .github/
 │   ├── workflows/
 │   └── agentic-workflows/
-└── packages/
-    └── maestri/
-        ├── core/
-        ├── contracts/
-        ├── planner/
-        ├── dependencies/
-        ├── conflicts/
-        ├── compiler/
-        ├── router/
-        ├── scheduler/
-        ├── queue/
-        ├── quota/
-        ├── resources/
-        ├── policies/
-        ├── hooks/
-        ├── evidence/
-        ├── failures/
-        ├── escalation/
-        ├── memory/
-        ├── telemetry/
-        └── adapters/
-            ├── claude/
-            ├── codex/
-            │   ├── local/
-            │   ├── worktree/
-            │   └── cloud/
-            ├── jules/
-            └── github/
+└── packages/maestri/
+    ├── core/
+    ├── contracts/
+    ├── spec/
+    ├── planner/
+    ├── dependencies/
+    ├── conflicts/
+    ├── context/
+    │   ├── budget/
+    │   ├── recovery/
+    │   ├── ledger/
+    │   └── digests/
+    ├── compiler/
+    ├── harness/
+    ├── loop/
+    ├── router/
+    ├── scheduler/
+    ├── queue/
+    ├── quota/
+    ├── resources/
+    ├── policies/
+    ├── hooks/
+    ├── evidence/
+    ├── failures/
+    ├── escalation/
+    ├── memory/
+    ├── learning/
+    ├── telemetry/
+    └── adapters/
+        ├── claude/
+        ├── codex/
+        │   ├── local/
+        │   ├── worktree/
+        │   └── cloud/
+        ├── jules/
+        └── github/
 ```
 
-## Fases de implementação
+## 46. External Gates — first operational block
+
+The existing detailed plan remains executable at:
+`docs/superpowers/plans/2026-09-22-maestri-v3-first-three-external-gates.md`.
+
+### Gate A — real Jules/Codex Actions
+- validate workflows on `vps`;
+- execute Jules read-only evidence run;
+- execute Codex only if required credential exists;
+- never create an API key automatically;
+- record evidence.
+
+### Gate B — remote Graphiti without Docker
+- detect existing endpoint first;
+- health/auth/schema probe;
+- package tests;
+- synthetic non-production shadow ingestion;
+- namespace isolation;
+- remain OFF on any failed gate.
+
+### Gate C — optional OTLP collector
+- detect approved collector;
+- synthetic span;
+- verify actual visibility/correlation;
+- prove local trace survives exporter failure;
+- keep exporter optional.
+
+These gates do not authorize main merge, production deploy or secret creation.
+
+## 47. Implementation program
+
+### Phase 0 — Reconcile and freeze
+- audit current `vps`;
+- map existing implementation to this blueprint;
+- mark DONE/PARTIAL/MISSING/BLOCKED;
+- do not rewrite working components without evidence.
+
+### Phase 1 — Canonical contracts
+- TaskContract;
+- ExecutionResult/TaskResult;
+- ResultDigest;
+- FailureDigest;
+- AcceptanceManifest;
+- ContextPacket;
+- budgets.
+
+### Phase 2 — State machine
+Implement canonical task/job transitions and invalid-transition tests.
+
+### Phase 3 — Durable State Ledger
+Checkpoint schema, persistence, versioning, recovery tests.
+
+### Phase 4 — Context Recovery Engine
+Rebuild task state from durable truth + Git + evidence after a simulated lost session.
+
+### Phase 5 — Context Budget Manager
+Token/file/byte/retrieval budgets and progressive expansion.
+
+### Phase 6 — Repository knowledge hierarchy
+Small root map, hierarchical instructions, architecture/plan/decision/quality/security indexes.
+
+### Phase 7 — Skills
+Implement shared skill catalog with validation and versioning.
+
+### Phase 8 — Claude CEO harness
+CEO role, specialist agents, hooks, Maestri MCP integration and checkpoint events.
+
+### Phase 9 — Prompt Compiler
+Provider-neutral compile + Claude/Codex/Jules transforms.
+
+### Phase 10 — Dependency Graph
+Persistence, readiness calculation and UI/event model.
+
+### Phase 11 — Conflict Graph
+File/module/semantic conflict detection and serialization.
+
+### Phase 12 — Policy Engine
+Risk R0–R4, main/prod/secrets/IAM rules and capability grants.
+
+### Phase 13 — Hook Engine
+Canonical events + provider event adapters.
+
+### Phase 14 — GitHub Adapter
+Branch/commit/PR/check/review/evidence primitives.
+
+### Phase 15 — Codex Adapter
+Local/worktree/cloud unified ExecutionPort.
+
+### Phase 16 — Codex Cloud Environment
+Minimal reproducible environment and network/secret policy validation.
+
+### Phase 17 — Cloud-first Router
+Offload reproducible compute and respect PC Resource Guard.
+
+### Phase 18 — Jules Adapter
+Sessions/tasks/results/plan interaction behind ExecutionPort.
+
+### Phase 19 — Jules provider validation
+Gemini/provider capability probing, health and plan semantics.
+
+### Phase 20 — Quota/Usage Governors
+Jules rolling/concurrency ledger; adaptive Codex usage governor.
+
+### Phase 21 — Fleet Scheduler
+Dependency/conflict/risk/quota/resource-aware scheduling.
+
+### Phase 22 — Plan Validator
+PASS/REVISE/BLOCK with deterministic checks where possible.
+
+### Phase 23 — Loop Engine
+Plan→act→observe→verify→classify→retry/replan/escalate.
+
+### Phase 24 — Loop Detector
+Repeated-error/no-progress detection and budget enforcement.
+
+### Phase 25 — Failure Classifier
+Canonical taxonomy and tests for representative failures.
+
+### Phase 26 — Escalation Engine
+Policy-driven retry, queue, provider change and CEO escalation.
+
+### Phase 27 — Evidence system
+Evidence schema, Progress Evidence Guard and AcceptanceManifest linkage.
+
+### Phase 28 — Fresh Context Reviewer
+Independent review packets with no builder-history contamination.
+
+### Phase 29 — Cross-Agent Review
+Jules↔Codex and critical Claude review workflows.
+
+### Phase 30 — CI integration
+CI fixer loop, check ingestion and evidence correlation.
+
+### Phase 31 — Compound Learning Engine
+LearningCandidate extraction, validation, dedupe and promotion.
+
+### Phase 32 — Memory/provenance
+Project/provider/task memory with evidence and supersession.
+
+### Phase 33 — Telemetry
+Local traces first; optional OTLP; complete correlation.
+
+### Phase 34 — Resource Guard
+PC pressure telemetry and automatic offload behavior.
+
+### Phase 35 — Command Center
+System/fleet/task/evidence/recovery/loop/quota views.
+
+### Phase 36 — E2E long-horizon recovery tests
+Prove task survives:
+- provider context compaction;
+- process restart;
+- session replacement;
+- provider failure;
+- quota wait;
+- CI failure;
+without losing objective, decisions, acceptance state or evidence.
+
+### Phase 37 — Chaos/failure tests
+Inject auth, network, quota, dependency, conflict, collector and provider failures.
+
+### Phase 38 — Security validation
+Secrets, capabilities, network, prompt injection boundaries, external writes and R4 gates.
+
+### Phase 39 — Production hardening
+Performance, migrations, retention, backup/recovery, operational docs and final release gate.
+
+## 48. Definition of Done
+
+A Work Package is complete only when:
+- requirements satisfied;
+- mandatory acceptance items PASS;
+- tests executed;
+- lint/typecheck/build where applicable;
+- no unresolved critical finding;
+- required runtime validation performed;
+- commit exists;
+- PR exists when required;
+- CI is successful when required;
+- evidence persisted;
+- State Ledger checkpointed;
+- policy gate passes.
+
+## 49. Long-horizon no-forgetting acceptance test
+
+The implementation is not accepted until this scenario passes:
+
+1. Create a multi-wave master goal.
+2. Claude CEO creates Master Plan.
+3. Maestri creates at least 8 Work Packages.
+4. Dependency/Conflict Graph identifies parallel and blocked work.
+5. Dispatch cloud-capable work to Codex Cloud/Jules.
+6. Force a context checkpoint.
+7. Simulate compaction/session loss.
+8. Start a fresh provider session.
+9. Context Recovery reconstructs objective, decisions, current diff, acceptance state, evidence and exact next action.
+10. Continue without user re-explaining the project.
+11. Force one test failure and one repeated-loop signature.
+12. FailureClassifier/LoopDetector change strategy correctly.
+13. Complete PR/CI/cross-review.
+14. Evidence Validator marks acceptance.
+15. Compound Learning Engine creates only validated LearningCandidates.
+16. Claude final review runs from durable state.
+17. Policy Gate returns READY FOR HUMAN MERGE.
+18. `main` remains untouched until human action.
+
+## 50. E2E target
 
 ```text
-0  Audit + freeze architecture
-1  Universal contracts
-2  State machine
-3  AGENTS.md hierarchy
-4  Skills
-5  Prompt Compiler
-6  Dependency Graph
-7  Conflict Graph
-8  Policy Engine
-9  Hook Engine
-10 GitHub Adapter
-11 Codex Adapter
-12 Codex Cloud Environment
-13 Cloud Execution Router
-14 Jules Adapter
-15 Jules/Gemini provider setup
-16 Jules Quota Guard
-17 Fleet Scheduler
-18 Plan Validator
-19 Failure Classifier
-20 Escalation Engine
-21 Evidence Validator
-22 Cross-Agent Review
-23 CI integration
-24 Memory/provenance
-25 Telemetry
-26 Resource Guard
-27 Cloud-first offloading
-28 Command Center
-29 Fleet UI
-30 Dependency Graph UI
-31 Quota/usage UI
-32 End-to-end tests
-33 Chaos/failure tests
-34 Security validation
-35 Production hardening
+Owner → Claude CEO → Master Goal
+  → Spec Engine
+  → Master Planner
+  → Work Packages
+  → Dependency + Conflict Graph
+  → ContextPackets
+  → Scheduler
+  → Codex Cloud / Codex Worktree / Jules Fleet
+  → GitHub branches
+  → Tests / PRs
+  → Cross-Agent Review
+  → GitHub Actions
+  → Evidence Validator
+  → unlock next wave
+  → checkpoint/recovery whenever needed
+  → Compound Learning
+  → Claude final review
+  → Policy Gate
+  → READY FOR HUMAN MERGE
 ```
 
-## E2E final de aceite
+## 51. Sources and design rationale
 
-```text
-Owner asks for Feature X
-  ↓
-Claude CEO creates Master Goal
-  ↓
-Maestri creates Work Packages
-  ↓
-Dependency + Conflict Graph
-  ↓
-Router sends independent WPs to Codex Cloud/Jules
-  ↓
-isolated branches/workspaces
-  ↓
-tests + PRs
-  ↓
-cross-agent review
-  ↓
-GitHub Actions
-  ↓
-Evidence Validator
-  ↓
-unlock dependent wave
-  ↓
-Claude final review
-  ↓
-Policy Gate
-  ↓
-READY FOR HUMAN MERGE
-```
+This blueprint follows the agent-first direction documented by OpenAI's harness engineering work: repository knowledge as system of record, progressive disclosure instead of giant instruction manuals, executable plans, agent-to-agent review, worktree isolation and feedback loops. It also follows Anthropic's context-engineering guidance: context is finite, long-horizon work needs compaction/structured state/multi-agent techniques, and context should be curated for high signal.
 
-O PC deve permanecer majoritariamente como control plane; compute reproduzível deve ser offloaded para Cloud sempre que permitido pelo contrato, pela policy e pela disponibilidade do provider.
+Implementation must prefer current official provider documentation over copied system prompts, community leaks or stale assumptions.
 
-## Integração com o plano dos três gates externos
+## 52. Supersession rule
 
-O plano `docs/superpowers/plans/2026-09-22-maestri-v3-first-three-external-gates.md` permanece válido e passa a ser tratado como o primeiro bloco de gates externos deste blueprint. Ordem:
+This file is now the **single canonical Maestri V3 architecture and implementation blueprint**.
 
-1. validar GitHub Actions reais para Jules/Codex;
-2. validar Graphiti remoto sem Docker;
-3. validar collector OTLP opcional;
-4. somente então continuar as fases cloud/fleet que dependem desses gates.
+Older Maestri V3 plan text is superseded by this file except:
+- the detailed three-external-gates execution document explicitly linked above;
+- audit/evidence documents;
+- source-specific operational instructions that do not conflict with this blueprint.
 
-Nenhum destes gates autoriza merge em `main`, deploy de produção ou criação automática de secrets.
+If another document conflicts, this blueprint wins unless a newer explicitly approved canonical document supersedes it.
