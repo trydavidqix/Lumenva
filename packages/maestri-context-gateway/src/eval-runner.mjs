@@ -33,7 +33,7 @@ function archiveFor(test) {
 
 function questionFor(test) {
   const noEvidence = test.no_evidence_question ? '\nIf evidence does not answer "' + test.no_evidence_question + '", answer exactly: Não há evidência suficiente.' : '';
-  return test.question + noEvidence + '\nDo not edit files. Return only the requested answer.';
+  return test.question + noEvidence + '\nUse the evidence above as authoritative. If it contains the requested values, return every requested value exactly; do not claim insufficient evidence.' + '\nDo not edit files. Return only the requested answer.';
 }
 
 export function buildCodexArgs({ model = DEFAULT_MODEL, effort = DEFAULT_EFFORT, workspace, prompt } = {}) {

@@ -79,7 +79,7 @@ supabase/.branches/
 .playwright-mcp/
 
 # Local Maestri Context Gateway validation state
-.mcg-validation/
+.mcg-validation*/
 
 # Sentry Config File
 .env.sentry-build-plugin
