@@ -1,12 +1,13 @@
 import { appendFile, mkdir, readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { recordHistory } from './history/store.mjs';
 
 const safe = value => typeof value === 'string' && value.length <= 200 ? value : null;
 const number = value => Number.isFinite(value) ? value : null;
 
 async function traceDir(root) { const dir = join(root, 'state', 'telemetry', 'traces'); await mkdir(dir, { recursive: true, mode: 0o700 }); return dir; }
-async function append(root, traceId, row) { await appendFile(join(await traceDir(root), `${traceId}.jsonl`), `${JSON.stringify(row)}\n`, { mode: 0o600 }); return row; }
+async function append(root, traceId, row) { await appendFile(join(await traceDir(root), `${traceId}.jsonl`), `${JSON.stringify(row)}\n`, { mode: 0o600 }); await recordHistory(root, 'traces', row); return row; }
 
 export async function createTrace(root, input = {}) {
   const timestamp = new Date().toISOString(); const trace_id = safe(input.trace_id) || `trace-${randomUUID()}`;

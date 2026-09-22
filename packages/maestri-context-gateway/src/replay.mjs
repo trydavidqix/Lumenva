@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { parseCodexJsonl } from './codex-usage.mjs';
 import { recordTelemetry } from './telemetry.mjs';
 import { runProcess } from './executor.mjs';
+import { recordHistory } from './history/store.mjs';
 
 export async function replayTask({ root, task_id, variant, binary, workspace = root, job_class = 'NORMAL', timeout_ms, signal } = {}) {
   if (!['baseline', 'mcg'].includes(variant)) throw new Error('variant must be baseline or mcg');
@@ -57,6 +58,7 @@ export async function replayTask({ root, task_id, variant, binary, workspace = r
     timestamp: new Date().toISOString()
   };
   await writeFile(join(dir, 'result.json'), `${JSON.stringify(record, null, 2)}\n`, { mode: 0o600 });
+  await recordHistory(root, 'replay', record);
   await recordTelemetry(root, {
     task_id,
     executor: 'codex',

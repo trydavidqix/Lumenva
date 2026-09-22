@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { recordHistory } from '../history/store.mjs';
 
 const cachePath = root => join(root, 'state', 'telemetry', 'context-cache.json');
 
@@ -27,7 +28,7 @@ export async function cacheContext(root, fragments = []) {
   await writeFile(cachePath(root), `${JSON.stringify(cache, null, 2)}\n`, { mode: 0o600 });
 
   const hitChars = hits.reduce((sum, fragment) => sum + fragment.content.length, 0);
-  return {
+  const result = {
     cache_hits: hits.length,
     cache_misses: misses.length,
     cache_hit_rate: fragments.length ? Number((hits.length / fragments.length * 100).toFixed(2)) : 0,
@@ -37,4 +38,6 @@ export async function cacheContext(root, fragments = []) {
     source: 'state/telemetry/context-cache.json',
     timestamp: new Date().toISOString()
   };
+  await recordHistory(root, 'cache_metrics', result);
+  return result;
 }

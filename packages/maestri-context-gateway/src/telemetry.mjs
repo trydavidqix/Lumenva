@@ -4,6 +4,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { randomUUID } from 'node:crypto';
 import { validateContract } from './contracts.mjs';
+import { recordHistory } from './history/store.mjs';
 
 const exec = promisify(execFile);
 const DAY = 86_400_000;
@@ -53,6 +54,8 @@ export async function recordTelemetry(root, event = {}) {
   const contract = validateContract('telemetry', row);
   if (!contract.valid) throw new Error(`telemetry contract invalid: ${contract.errors.join(', ')}`);
   await appendFile(join(root, 'state', 'telemetry', 'events.jsonl'), `${JSON.stringify(row)}\n`, { mode: 0o600 });
+  await recordHistory(root, 'telemetry', row);
+  if (row.input_tokens != null || row.output_tokens != null || row.total_tokens != null || row.estimated_tokens != null) await recordHistory(root, 'usage', row);
   return row;
 }
 
@@ -111,7 +114,7 @@ export async function evaluateAlerts(root, usage = {}) {
   for (const [scope, values] of Object.entries(groups)) for (const [key, value] of Object.entries(values || {})) { const config = budgets[`${scope}s`]?.[key]; check(scope, key, value?.tokens, config?.token_budget, { ...budgets.global, ...config }); }
   for (const alert of results) {
     const created = await appendOnce(join(root, 'state', 'alerts', 'alerts.jsonl'), alert, item => item.scope === alert.scope && item.key === alert.key && item.severity === alert.severity && item.active !== false);
-    if (created) await appendFile(join(root, 'state', 'alerts', 'ceo-inbox.jsonl'), `${JSON.stringify({ alert_id: alert.alert_id, severity: alert.severity, scope: alert.scope, message: alert.message, created_at: alert.created_at, timestamp: alert.timestamp, source: alert.source, measurement_type: alert.measurement_type, delivery_status: 'queued' })}\n`, { mode: 0o600 });
+    if (created) { await appendFile(join(root, 'state', 'alerts', 'ceo-inbox.jsonl'), `${JSON.stringify({ alert_id: alert.alert_id, severity: alert.severity, scope: alert.scope, message: alert.message, created_at: alert.created_at, timestamp: alert.timestamp, source: alert.source, measurement_type: alert.measurement_type, delivery_status: 'queued' })}\n`, { mode: 0o600 }); await recordHistory(root, 'alerts', alert); }
   }
   return results;
 }
@@ -131,7 +134,7 @@ export async function evaluateAnomalies(root, events = [], tasks = []) {
   for (const [tool, count] of Object.entries(Object.fromEntries([...new Set(recent.map(item => item.tool).filter(Boolean))].map(tool => [tool, recent.filter(item => item.tool === tool).length])))) if (rules.tool_loop?.enabled && count >= (rules.tool_loop.calls || 4)) add('TOOL_LOOP', 'tool', tool, count, 0, rules.tool_loop.calls, `TOOL_LOOP: ${tool} chamado ${count} vezes`);
   const compiles = recent.filter(item => item.operation === 'context.compile').length; if (rules.context_churn?.enabled && compiles >= (rules.context_churn.calls || 5)) add('CONTEXT_CHURN', 'global', 'context', compiles, 0, rules.context_churn.calls, `CONTEXT_CHURN: ${compiles} compilações recentes`);
   const stuck = tasks.filter(task => task.active && task.created_at && Date.now() - Date.parse(task.created_at) > (rules.agent_stuck?.age_minutes || 30) * 60_000); if (rules.agent_stuck?.enabled && stuck.length) add('AGENT_STUCK', 'agent', stuck[0].agent || 'Não identificado', stuck.length, 0, rules.agent_stuck.age_minutes, `AGENT_STUCK: ${stuck.length} task(s) ativa(s) acima do limite`);
-  for (const alert of candidates) { const inserted = await appendOnce(join(root, 'state', 'alerts', 'alerts.jsonl'), alert, item => item.type === alert.type && item.scope === alert.scope && item.entity === alert.entity && item.active !== false); if (inserted) await appendFile(join(root, 'state', 'alerts', 'ceo-inbox.jsonl'), `${JSON.stringify(alert)}\n`, { mode: 0o600 }); }
+  for (const alert of candidates) { const inserted = await appendOnce(join(root, 'state', 'alerts', 'alerts.jsonl'), alert, item => item.type === alert.type && item.scope === alert.scope && item.entity === alert.entity && item.active !== false); if (inserted) { await appendFile(join(root, 'state', 'alerts', 'ceo-inbox.jsonl'), `${JSON.stringify(alert)}\n`, { mode: 0o600 }); await recordHistory(root, 'alerts', alert); } }
   return candidates;
 }
 

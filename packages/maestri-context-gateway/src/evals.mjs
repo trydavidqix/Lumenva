@@ -1,5 +1,6 @@
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { recordHistory } from './history/store.mjs';
 
 const now = () => new Date().toISOString();
 const facts = text => String(text || '').split(/\r?\n/).map(line => line.trim()).filter(line => line.includes('=')).map(line => line.split('=').map(value => value.trim()));
@@ -40,7 +41,7 @@ export function trustScore({ baseline, mcg, context_recall, evidence_grounding, 
 
 export async function saveEvaluation(root, run) {
   const dir = join(root, 'state', 'evals', 'runs'); await mkdir(dir, { recursive: true, mode: 0o700 }); const id = run.run_id || `eval-${Date.now()}`; const record = { ...run, run_id: id, timestamp: run.timestamp || now() };
-  await writeFile(join(dir, `${id}.json`), `${JSON.stringify(record, null, 2)}\n`, { mode: 0o600 }); return record;
+  await writeFile(join(dir, `${id}.json`), `${JSON.stringify(record, null, 2)}\n`, { mode: 0o600 }); await recordHistory(root, 'evals', { ...record, source: record.source || 'state/evals/runs', measurement_type: record.aggregate?.measurement_type || record.baseline?.measurement_type || 'unavailable' }); return record;
 }
 
 export async function evaluationRuns(root) {

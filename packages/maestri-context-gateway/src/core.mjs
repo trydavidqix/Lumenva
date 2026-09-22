@@ -8,6 +8,7 @@ import { createTrace, startSpan, finishSpan } from './traces.mjs';
 import { getEventBus } from './events/bus.mjs';
 import { compileContext } from './context/compiler.mjs';
 import { cacheContext } from './context/cache.mjs';
+import { recordHistory } from './history/store.mjs';
 
 export const ROOT = process.env.MCG_ROOT || join(homedir(), '.lumenva', 'maestri-context-gateway');
 export const TASKS = join(ROOT, 'tasks');
@@ -116,6 +117,7 @@ export async function dispatch(input, root = ROOT) {
   await getEventBus(root).publish('context.compiled', { task_id: id, trace_id: trace.trace_id, context_version: compiledContext.context_version, full_context_chars: compiledContext.full_context_chars, delta_chars: compiledContext.delta_chars, cache_hits: compiledContext.cache_hits, cache_misses: compiledContext.cache_misses }, { source: 'context.compiler', trace_id: trace.trace_id, task_id: id });
   await finishSpan(root, trace, dispatchSpan.span_id, { status: 'completed', duration_ms: Date.now() - Date.parse(dispatchSpan.started_at), source: 'mcg.dispatch' });
   await getEventBus(root).publish('task.dispatched', { task_id: id, trace_id: trace.trace_id, status: state.internal_state }, { source: 'mcg.dispatch', trace_id: trace.trace_id, task_id: id });
+  await recordHistory(root, 'tasks', { ...state, status: state.internal_state, source: 'mcg.dispatch', measurement_type: 'exact', provenance: { trace_id: trace.trace_id } });
   return state;
 }
 
@@ -148,6 +150,7 @@ export async function ingest(event, root = ROOT) {
   if (event.evidence) await atomicJson(join(root, 'tasks', event.task_id, 'evidence', `${event.event_id}.json`), redact(event.evidence));
   await finishSpan(root, trace, ingestSpan.span_id, { status: externalState === 'BLOCKED_OWNER' ? 'blocked' : safeEvent.state === 'FAILED_FINAL' ? 'failed' : 'completed', duration_ms: 0, output_tokens: usage.output_tokens, source: event.source || 'mcg.ingest' });
   await getEventBus(root).publish('task.event', { task_id: event.task_id, trace_id: trace.trace_id, state: safeEvent.state, external_state: externalState }, { source: event.source || 'mcg.ingest', trace_id: trace.trace_id, task_id: event.task_id });
+  await recordHistory(root, 'tasks', { ...updated, status: updated.external_state || updated.internal_state, source: event.source || 'mcg.ingest', measurement_type: 'exact', provenance: { event_id: event.event_id, trace_id: trace.trace_id } });
   return { deduped: false, state: updated };
 }
 
