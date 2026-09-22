@@ -744,3 +744,38 @@ This plan is complete only when:
 - no critical PASS depends on mock/placeholder
 - main remains untouched unless explicitly approved later
 
+
+
+---
+
+## Implementation Progress — 2026-09-22
+
+Implemented on branch `TOKENS`:
+- canonical MasterPlan/TaskContract/ContextPacket/ExecutionResult/ResultDigest contracts
+- Model Registry with worker/professional/frontier tiers
+- Quota Router with GREEN/YELLOW/RED/RESERVE states
+- Resource Router V2 scoring capability/risk/complexity/quota/cost/reliability
+- bounded Escalation Engine
+- ResultDigest and handoff recursion/depth guard
+- progressive ContextPacket compiler with token budget and retrieval levels
+- Claude subscription adapter boundary
+- unified PAYG Gateway adapter boundary
+- MasterPlan DAG validation + ready-task resolver
+- Independent Review policy
+- Learning Router observations and validation state
+- department/agent workforce profiles
+- ExecutionPort registry
+- PAYG monthly budget policy
+- routing observability trace model
+- acceptance policy for R0-R4
+- workforce orchestrator skeleton wired to Task DAG -> Router -> Context -> Execution -> Review
+- unit coverage for routing, quotas, escalation, DAGs, independent review, and context budgets
+
+Still requires real external runtime integration/evidence before PASS:
+- authenticated Claude/Codex/Antigravity execution clients
+- real AI Gateway credentials/client
+- provider quota collectors backed by actual subscription/API telemetry
+- durable persistence for learning/routing observations
+- real browser/E2E verification
+- benchmark suite with real providers and >=30 validated observations where required
+- production/deployment integration (not authorized in this branch)
