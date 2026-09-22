@@ -9,6 +9,7 @@ import type { NextRequest } from "next/server";
 
 import { fail, ok } from "@/lib/api/wrappers";
 import { loadAuthUser } from "@/lib/auth/server";
+import { resolvePlatformAdmin } from "@/lib/auth/requirePlatformAdmin";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { extractChangelogSection } from "@/lib/system/changelog";
@@ -75,7 +76,11 @@ export async function GET(_req: NextRequest): Promise<Response> {
   const running =
     run?.status === "failed_rolled_back" && run.from_version ? run.from_version : current;
 
-  if (!user.is_platform_admin) {
+  // Resolve active, non-revoked platform admin logic strictly for owner visibility.
+  // If resolution returns anything other than "ok" (forbidden, mfa_required, internal_error),
+  // they are treated as non-owner without exposing errors or failing the GET request entirely.
+  const paCheck = await resolvePlatformAdmin();
+  if (!paCheck.ok) {
     return ok({ current_version: running, is_owner: false });
   }
 

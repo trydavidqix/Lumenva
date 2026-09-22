@@ -4,10 +4,15 @@ import { NextRequest } from "next/server";
 import { loadAuthUser } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
+import { resolvePlatformAdmin } from "@/lib/auth/requirePlatformAdmin";
+import { requirePlatformAdminApi } from "@/lib/auth/require-platform-admin-api";
+import { fail } from "@/lib/api/wrappers";
 
 vi.mock("@/lib/auth/server", () => ({ loadAuthUser: vi.fn() }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
 vi.mock("@/lib/audit", () => ({ audit: vi.fn(async () => undefined) }));
+vi.mock("@/lib/auth/requirePlatformAdmin", () => ({ resolvePlatformAdmin: vi.fn() }));
+vi.mock("@/lib/auth/require-platform-admin-api", () => ({ requirePlatformAdminApi: vi.fn() }));
 
 const OWNER = { id: "11111111-1111-4111-8111-111111111111", email: "dono@x.com", is_platform_admin: true };
 const MEMBRO = { ...OWNER, id: "22222222-2222-4222-8222-222222222222", is_platform_admin: false };
@@ -15,26 +20,10 @@ const MEMBRO = { ...OWNER, id: "22222222-2222-4222-8222-222222222222", is_platfo
 let versionRow: Record<string, unknown>;
 let runRow: Record<string, unknown> | null;
 let inserted: Record<string, unknown> | null;
-/**
- * Patch aplicado por um `.update(...)` em `system_update_runs` — usado para
- * provar que um run "dispatched" vencido (agente morto no meio) é fechado
- * como `failed` pelo PRÓPRIO POST, em vez de travar o botão pra sempre.
- */
 let runUpdatePatch: Record<string, unknown> | null;
-/**
- * Patch aplicado por um `.update(...)` em `system_version` — usado para provar
- * que o POST NÃO mantém um segundo estado de "alguém pediu" fora do run.
- */
 let versionUpdatePatch: Record<string, unknown> | null;
-/**
- * Erro que o INSERT em `system_update_runs` deve devolver neste caso — usado
- * para simular a corrida entre dois cliques quase simultâneos batendo no
- * índice único parcial `uniq_system_update_runs_dispatched` (migration 0090).
- */
 let insertError: { code: string; message: string } | null;
-/** Erro que a leitura (`maybeSingle`) de `system_version` deve devolver neste caso. */
 let versionSelectError: { message: string } | null;
-/** Erro que a leitura (`maybeSingle`) de `system_update_runs` deve devolver neste caso. */
 let runSelectError: { message: string } | null;
 
 beforeEach(() => {
@@ -57,17 +46,11 @@ beforeEach(() => {
     update_requested_at: null,
   };
 
+  vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: true, context: { user: OWNER as any, platformAdmin: { user_id: OWNER.id, scope: "*", mfa_required: true } } });
+  vi.mocked(requirePlatformAdminApi).mockResolvedValue({ ok: true, context: { user: OWNER as any, platformAdmin: { user_id: OWNER.id, scope: "*", mfa_required: true } } });
+
   vi.mocked(createAdminClient).mockReturnValue({
     from: (table: string) => {
-      // O double espelha o banco: `system_version` é sempre buscado por
-      // `.eq("id", 1)`; `system_update_runs` é buscado tanto por
-      // `.order().limit().maybeSingle()` (GET, pega o run mais recente,
-      // qualquer status) quanto por `.eq("status","dispatched").order()
-      // .limit().maybeSingle()` (POST, checa run em andamento). O `eq()`
-      // do double PRECISA encadear para `order()` — se ele só devolvesse
-      // `maybeSingle` direto, a chamada real do POST (`eq().order()...`)
-      // quebraria com TypeError, e o teste "melhoraria" o mock em vez do
-      // double refletir a query de verdade.
       const maybeSingle = async () => ({
         data: table === "system_version" ? versionRow : runRow,
         error: table === "system_version" ? versionSelectError : runSelectError,
@@ -89,10 +72,6 @@ beforeEach(() => {
             },
           }),
         }),
-        // Encadeável (`.update(patch).eq(...).eq(...)`, quantas vezes for) e
-        // "thenable" só no fim — reflete a query real de expirar um run
-        // ("...eq('id', x).eq('status','dispatched')") sem exigir um double
-        // por chamada.
         update: (patch: Record<string, unknown>) => {
           const chain: { eq: () => typeof chain; then: Promise<{ error: null }>["then"] } = {
             eq: () => chain,
@@ -118,15 +97,10 @@ function post() {
 
 describe("GET /api/v1/system/version", () => {
   it("exige sessão", async () => {
-    vi.mocked(loadAuthUser).mockResolvedValue(null as never);
-    const { GET } = await import("../version/route");
+    vi.mocked(loadAuthUser).mockResolvedValue(null);
+    const { GET } = await import("./route");
     const res = await GET(get());
     expect(res.status).toBe(401);
-    // `unauthenticated`, não `unauthorized`: o catálogo (lib/api/errors.ts)
-    // reserva `unauthorized` ao segredo interno das rotas host↔app. Um
-    // frontend que decide por `error.code` (ex.: redirecionar pro login só em
-    // `unauthenticated`) não reagiria a um código trocado — a asserção é o
-    // que teria pego essa troca antes da revisão.
     const body = await res.json();
     expect(body.error.code).toBe("unauthenticated");
   });
@@ -134,20 +108,21 @@ describe("GET /api/v1/system/version", () => {
   it("quando a leitura de system_version falha, devolve 500", async () => {
     vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
     versionSelectError = { message: "conexão caiu" };
-    const { GET } = await import("../version/route");
+    const { GET } = await import("./route");
     expect((await GET(get())).status).toBe(500);
   });
 
   it("quando a leitura do run mais recente falha, devolve 500", async () => {
     vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
     runSelectError = { message: "conexão caiu" };
-    const { GET } = await import("../version/route");
+    const { GET } = await import("./route");
     expect((await GET(get())).status).toBe(500);
   });
 
   it("entrega só a versão para quem não é dono do servidor", async () => {
     vi.mocked(loadAuthUser).mockResolvedValue(MEMBRO as never);
-    const { GET } = await import("../version/route");
+    vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: false, reason: "forbidden" });
+    const { GET } = await import("./route");
     const body = await (await GET(get())).json();
     expect(body.data.current_version).toBe("1.0.0");
     expect(body.data.is_owner).toBe(false);
@@ -157,7 +132,7 @@ describe("GET /api/v1/system/version", () => {
 
   it("entrega o estado completo e a seção do CHANGELOG para o dono", async () => {
     vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
-    const { GET } = await import("../version/route");
+    const { GET } = await import("./route");
     const body = await (await GET(get())).json();
     expect(body.data.update_available).toBe(true);
     expect(body.data.notes.body).toContain("botão");
@@ -168,10 +143,9 @@ describe("GET /api/v1/system/version", () => {
     versionRow.latest_version = "";
     versionRow.compare_failed = true;
     vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
-    const { GET } = await import("../version/route");
+    const { GET } = await import("./route");
     const body = await (await GET(get())).json();
     expect(body.data.compare_failed).toBe(true);
-    // E não pode virar "há atualização": não sabemos que há.
     expect(body.data.update_available).toBe(false);
   });
 
@@ -180,7 +154,7 @@ describe("GET /api/v1/system/version", () => {
     versionRow.off_release = true;
     versionRow.has_known_release = false;
     vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
-    const { GET } = await import("../version/route");
+    const { GET } = await import("./route");
     const body = await (await GET(get())).json();
     expect(body.data.has_known_release).toBe(false);
   });
@@ -188,7 +162,7 @@ describe("GET /api/v1/system/version", () => {
   it("has_known_release default true quando a coluna nunca foi tocada por um heartbeat", async () => {
     delete versionRow.has_known_release;
     vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
-    const { GET } = await import("../version/route");
+    const { GET } = await import("./route");
     const body = await (await GET(get())).json();
     expect(body.data.has_known_release).toBe(true);
   });
@@ -196,16 +170,12 @@ describe("GET /api/v1/system/version", () => {
   it("marca o agente como offline quando o heartbeat é velho", async () => {
     versionRow.agent_last_seen_at = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
     vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
-    const { GET } = await import("../version/route");
+    const { GET } = await import("./route");
     const body = await (await GET(get())).json();
     expect(body.data.agent_online).toBe(false);
   });
 
   it("entrega as versões do run e o log da tentativa (o diagnóstico da falha)", async () => {
-    // `current_version` é o `git describe` do HOST e, numa falha, já aponta
-    // para a versão que QUEBROU (o checkout acontece antes de o app subir).
-    // Quem sabe de onde saiu e para onde tentou ir é o run — e o log é o
-    // único diagnóstico que o dono tem sem abrir um terminal.
     versionRow.current_version = "1.1.0";
     runRow = {
       id: "55555555-5555-4555-8555-555555555555",
@@ -217,13 +187,11 @@ describe("GET /api/v1/system/version", () => {
       log_tail: "✖ o app não respondeu ok",
     };
     vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
-    const { GET } = await import("../version/route");
+    const { GET } = await import("./route");
     const body = await (await GET(get())).json();
     expect(body.data.run.from_version).toBe("1.0.0");
     expect(body.data.run.to_version).toBe("1.1.0");
     expect(body.data.run.log_tail).toContain("não respondeu ok");
-    // A versão exibida é a do APP que está no ar (a que voltou), não o
-    // checkout do host — que aponta para a que acabou de quebrar.
     expect(body.data.current_version).toBe("1.0.0");
     expect(body.data.update_available).toBe(true);
   });
@@ -240,11 +208,9 @@ describe("GET /api/v1/system/version", () => {
       log_tail: "",
     };
     vi.mocked(loadAuthUser).mockResolvedValue(MEMBRO as never);
-    const { GET } = await import("../version/route");
+    vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: false, reason: "forbidden" });
+    const { GET } = await import("./route");
     const body = await (await GET(get())).json();
-    // O rodapé da sidebar é o mesmo componente para todo mundo: se as duas
-    // respostas divergissem, dois usuários da mesma instalação leriam versões
-    // diferentes na mesma tela.
     expect(body.data.current_version).toBe("1.0.0");
   });
 
@@ -256,7 +222,7 @@ describe("GET /api/v1/system/version", () => {
       dispatched_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
     };
     vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
-    const { GET } = await import("../version/route");
+    const { GET } = await import("./route");
     const body = await (await GET(get())).json();
     expect(body.data.run.status).toBe("unknown");
   });
@@ -264,7 +230,7 @@ describe("GET /api/v1/system/version", () => {
 
 describe("POST /api/v1/system/update", () => {
   it("exige sessão", async () => {
-    vi.mocked(loadAuthUser).mockResolvedValue(null as never);
+    vi.mocked(requirePlatformAdminApi).mockResolvedValue({ ok: false, response: fail("unauthenticated", "Faça login", 401) as any });
     const { POST } = await import("../update/route");
     const res = await POST(post());
     expect(res.status).toBe(401);
@@ -273,17 +239,13 @@ describe("POST /api/v1/system/update", () => {
   });
 
   it("nega para quem não é dono do servidor", async () => {
-    vi.mocked(loadAuthUser).mockResolvedValue(MEMBRO as never);
+    vi.mocked(requirePlatformAdminApi).mockResolvedValue({ ok: false, response: fail("forbidden", "Proibido", 403) as any });
     const { POST } = await import("../update/route");
     expect((await POST(post())).status).toBe(403);
     expect(inserted).toBeNull();
   });
 
   it("quando a leitura de system_version falha, devolve 500 e não 409", async () => {
-    // Sem checar o erro do select, `current`/`latest` viram "" e o fluxo cai
-    // no 409 otimista de "você já está em dia" — a pior mensagem possível
-    // bem na hora de uma falha de infraestrutura real.
-    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
     versionSelectError = { message: "conexão caiu" };
     const { POST } = await import("../update/route");
     const res = await POST(post());
@@ -292,11 +254,6 @@ describe("POST /api/v1/system/update", () => {
   });
 
   it("cria o run como ÚNICA ordem — sem um segundo estado em system_version", async () => {
-    // O run insere e o flag `update_requested_at` marcava a mesma coisa em
-    // outra tabela, sem transação e sem checar erro: falhando o segundo write,
-    // a rota respondia 200, a tela mostrava a barra de passos e o agente nunca
-    // pegava o pedido. Quem pediu e quando vive no run e no audit log.
-    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
     const { POST } = await import("../update/route");
     expect((await POST(post())).status).toBe(200);
     expect(inserted).toMatchObject({
@@ -315,24 +272,17 @@ describe("POST /api/v1/system/update", () => {
       status: "dispatched",
       dispatched_at: new Date().toISOString(),
     };
-    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
     const { POST } = await import("../update/route");
     expect((await POST(post())).status).toBe(409);
-    // Run recente: não é expirado — nenhum UPDATE de expiração deve rolar.
     expect(runUpdatePatch).toBeNull();
   });
 
   it("expira um run 'dispatched' abandonado (agente morto há mais de 15min) e aceita o pedido novo", async () => {
-    // Sem isto, o botão travaria PRA SEMPRE: o índice único parcial (migration
-    // 0090) recusa qualquer novo run enquanto existir um "dispatched", e nada
-    // nunca expirava um sozinho — só o agente reportando (que é justamente
-    // quem morreu) fechava o run.
     runRow = {
       id: "55555555-5555-4555-8555-555555555555",
       status: "dispatched",
-      dispatched_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(), // 1h atrás > 15min (RUN_STALE_AFTER_MS)
+      dispatched_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
     };
-    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
     const { POST } = await import("../update/route");
     const res = await POST(post());
     expect(res.status).toBe(200);
@@ -342,19 +292,11 @@ describe("POST /api/v1/system/update", () => {
 
   it("recusa quando já está na última versão", async () => {
     versionRow.latest_version = "1.0.0";
-    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
     const { POST } = await import("../update/route");
     expect((await POST(post())).status).toBe(409);
   });
 
   it("converte a violação do índice único (corrida de dois cliques) em 409, não 500", async () => {
-    // O check "já existe run em andamento" é só otimização — não é exclusão
-    // mútua. Sob corrida, os dois requests passam por ele (runRow === null
-    // pros dois) e só o segundo INSERT bate no índice único parcial
-    // `uniq_system_update_runs_dispatched`. O Postgres devolve 23505; a rota
-    // precisa tratar isso como o MESMO estado de negócio do check acima, não
-    // deixar vazar como 500.
-    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
     insertError = { code: "23505", message: 'duplicate key value violates unique constraint "uniq_system_update_runs_dispatched"' };
     const { POST } = await import("../update/route");
     const res = await POST(post());
