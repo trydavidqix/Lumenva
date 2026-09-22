@@ -2,10 +2,12 @@ import { CloudProvider } from './cloud-job.js';
 import { ExecutionPort } from './execution-port.js';
 import { CodexAdapter, createCodexSdkRunner } from './codex-adapter.js';
 import { AntigravityAdapter } from './antigravity-adapter.js';
+import { ClaudeAdapter, createClaudeCliRunner } from './claude-adapter.js';
 import { QuotaRouter } from './quota-router.js';
 
 export interface ExecutionTarget {
   provider: CloudProvider | string;
+  reason?: string;
   region?: string;
   capacity?: string;
   adapter?: ExecutionPort;
@@ -19,9 +21,17 @@ export interface TaskRequirements {
 }
 
 export class ResourceRouter {
-  private codex = new CodexAdapter(createCodexSdkRunner());
-  private antigravity = new AntigravityAdapter();
-  private quotaRouter = new QuotaRouter();
+  private codex: ExecutionPort;
+  private claude: ExecutionPort;
+  private antigravity: ExecutionPort;
+  private quotaRouter: QuotaRouter;
+
+  constructor(input: { codex?: ExecutionPort; claude?: ExecutionPort; antigravity?: ExecutionPort; quotaRouter?: QuotaRouter } = {}) {
+    this.codex = input.codex ?? new CodexAdapter(createCodexSdkRunner());
+    this.claude = input.claude ?? new ClaudeAdapter(createClaudeCliRunner());
+    this.antigravity = input.antigravity ?? new AntigravityAdapter();
+    this.quotaRouter = input.quotaRouter ?? new QuotaRouter();
+  }
 
   async route(requirements: TaskRequirements): Promise<ExecutionTarget> {
     if (requirements.requires_gpu) {
@@ -38,16 +48,16 @@ export class ResourceRouter {
 
     let candidateAdapters: ExecutionPort[] = [];
     if (requirements.risk_level === 'high') {
-      candidateAdapters = [this.antigravity];
+      candidateAdapters = [this.antigravity, this.claude, this.codex];
     } else {
-      candidateAdapters = [this.codex, this.antigravity];
+      candidateAdapters = [this.codex, this.claude, this.antigravity];
     }
 
     try {
-      const selectedAdapter = await this.quotaRouter.selectProviderBasedOnQuota(candidateAdapters);
+      const selectedAdapter = await this.quotaRouter.selectProviderBasedOnQuota(candidateAdapters, requirements.capability);
       return { provider: selectedAdapter.name, adapter: selectedAdapter };
     } catch (error) {
-      return { provider: CloudProvider.OPENAI_CLOUD };
+      return { provider: CloudProvider.OPENAI_CLOUD, reason: 'no_healthy_provider_with_verified_quota' };
     }
   }
 }

@@ -211,6 +211,14 @@ F25 rollout e limpeza de compatibilidade
 - Provider quota remains `unavailable` when the authenticated CLIs expose no official local quota endpoint; no quota value is fabricated.
 - F12 remains partial until a documented provider quota collector or explicit quota service is connected.
 
+### F13 progress update — 2026-09-22
+
+- `QuotaRouter` now probes health, required capabilities, and verified positive quota before selecting a provider.
+- An unavailable quota is no longer interpreted as unlimited capacity.
+- `ResourceRouter` now includes Claude as a real candidate, supports injected adapters for deterministic tests, and returns an explicit fallback reason when no executable provider is proven.
+- The fallback target has no adapter attached; it is not reported as an executable provider.
+- Coverage: operating-core 20 passed, 2 Docker-dependent tests skipped; typechecks passed.
+
 ### Gates adicionais do plano completo
 
 O fechamento do Fabric exige evidência para:

@@ -38,6 +38,13 @@ Antigravity remains unavailable by design: the installed application has no runn
 
 Focused provider usage tests: 8/8 passed. Package and Core typechecks passed.
 
+## F13 Resource Router validation
+
+- `QuotaRouter` now requires healthy status, required capabilities, and a positive verified quota.
+- `ResourceRouter` considers Codex, Claude, and Antigravity according to risk, but never attaches a provider whose quota is unavailable.
+- When no provider is proven executable, the returned fallback contains `reason: no_healthy_provider_with_verified_quota` and no adapter.
+- Resource Router tests: 3/3 passed; full operating-core suite: 20 passed, 2 Docker-dependent tests skipped.
+
 ## Comandos e resultado
 
 ```text

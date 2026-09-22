@@ -56,6 +56,7 @@ export interface QuotaSnapshot {
   provider: string;
   tokens_used: number;
   cost_usd: number;
+  available?: boolean;
   remaining_budget?: number;
 }
 
@@ -112,5 +113,5 @@ export function cancelledResult(taskId: string, provider: string): ExecutionResu
 }
 
 export function unavailableQuota(provider: string): QuotaSnapshot {
-  return { provider, tokens_used: 0, cost_usd: 0, remaining_budget: 0 };
+  return { provider, tokens_used: 0, cost_usd: 0, available: false };
 }
