@@ -7,6 +7,11 @@
   },
   "scripts": {
     "cli": "node bin/mcg.mjs",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "test:unit": "node --test test/*.test.mjs",
+    "check:syntax": "node scripts/check-syntax.mjs",
+    "scan:sensitive": "node scripts/scan-sensitive.mjs",
+    "smoke:dashboard": "node --test test/dashboard.test.mjs",
+    "smoke:contracts": "node --test test/contracts.test.mjs"
   }
 }
