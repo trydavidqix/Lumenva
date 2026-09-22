@@ -78,6 +78,9 @@ supabase/.branches/
 .epic-executor/
 .playwright-mcp/
 
+# Local Maestri Context Gateway validation state
+.mcg-validation/
+
 # Sentry Config File
 .env.sentry-build-plugin
 inbox-with-real-msgs.png
