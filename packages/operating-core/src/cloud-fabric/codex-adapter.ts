@@ -28,7 +28,13 @@ export function createCodexSdkRunner(): CodexRunner {
   return {
     async run(contract) {
       const codex = new Codex();
-      const thread = codex.startThread({ workingDirectory: process.cwd() });
+      const thread = codex.startThread({
+        workingDirectory: process.cwd(),
+        sandboxMode: 'read-only',
+        approvalPolicy: 'never',
+        networkAccessEnabled: false,
+        webSearchMode: 'disabled',
+      });
       const turn = await thread.run(JSON.stringify({ contract, instruction: 'Execute only within the contract and return the required structured result.' }), { outputSchema: executionSchema });
       return { finalResponse: turn.finalResponse, usage: undefined };
     },
