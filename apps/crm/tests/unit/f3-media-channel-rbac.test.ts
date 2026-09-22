@@ -1,7 +1,6 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, type Mock } from "vitest";
 import { NextRequest } from "next/server";
 import { fail } from "@/lib/api/wrappers";
-import type { AuthUser, Role } from "@/lib/auth/types";
 
 import { POST as mediaPost } from "../../app/api/v1/conversations/[id]/media/route";
 import { POST as sessionPost, GET as sessionGet } from "../../app/api/v1/onboarding/whatsapp/session/route";
@@ -11,7 +10,7 @@ vi.mock("@/lib/auth/require-role", () => ({
   requireRole: vi.fn(),
 }));
 
-import { requireRole, type RoleCheck } from "@/lib/auth/require-role";
+import { requireRole } from "@/lib/auth/require-role";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getWahaClient } from "@/lib/waha/client";
@@ -38,49 +37,6 @@ vi.mock("@/lib/channels/reactivate", () => ({
   reactivateChannelSession: vi.fn(),
 }));
 
-type QueryMock = {
-  from: ReturnType<typeof vi.fn>;
-  select: ReturnType<typeof vi.fn>;
-  eq?: ReturnType<typeof vi.fn>;
-  maybeSingle?: ReturnType<typeof vi.fn>;
-  insert?: ReturnType<typeof vi.fn>;
-  single?: ReturnType<typeof vi.fn>;
-};
-
-type StorageMock = {
-  from: ReturnType<typeof vi.fn>;
-  upload: ReturnType<typeof vi.fn>;
-};
-
-type WahaMock = {
-  startSession: ReturnType<typeof vi.fn>;
-  getSessionQr: ReturnType<typeof vi.fn>;
-};
-
-const makeAuthUser = (id: string): AuthUser => ({
-  id,
-  email: `${id}@example.com`,
-  full_name: null,
-  avatar_url: null,
-  is_platform_admin: false,
-  organizations: [],
-});
-
-const allowRole = (role: Role): RoleCheck => ({
-  ok: true,
-  user: makeAuthUser("user-1"),
-  org: { orgId: "org-1", name: "Org", role },
-});
-
-const asSupabaseClient = (client: QueryMock): Awaited<ReturnType<typeof createClient>> =>
-  client as unknown as Awaited<ReturnType<typeof createClient>>;
-
-const asAdminClient = (storage: StorageMock): ReturnType<typeof createAdminClient> =>
-  ({ storage }) as unknown as ReturnType<typeof createAdminClient>;
-
-const asWahaClient = (client: WahaMock): ReturnType<typeof getWahaClient> =>
-  client as unknown as ReturnType<typeof getWahaClient>;
-
 describe("F3 Task 3 - Mutation Gates RBAC", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -90,7 +46,7 @@ describe("F3 Task 3 - Mutation Gates RBAC", () => {
 
   describe("media route (agent+)", () => {
     it("should deny viewers without invoking storage", async () => {
-      const mockRequireRole = vi.mocked(requireRole);
+      const mockRequireRole = requireRole as unknown as Mock;
       mockRequireRole.mockResolvedValueOnce({
         ok: false,
         response: fail("forbidden_role", "Permissão insuficiente. Requer role >= agent.", 403, { requestId: "req-1" })
@@ -101,12 +57,17 @@ describe("F3 Task 3 - Mutation Gates RBAC", () => {
       const res = await mediaPost(req, ctx);
 
       expect(res.status).toBe(403);
-      expect(vi.mocked(createAdminClient)).not.toHaveBeenCalled();
+      const adminClient = createAdminClient as unknown as Mock;
+      expect(adminClient).not.toHaveBeenCalled();
     });
 
     it("should allow agents to upload", async () => {
-      const mockRequireRole = vi.mocked(requireRole);
-      mockRequireRole.mockResolvedValueOnce(allowRole("agent"));
+      const mockRequireRole = requireRole as unknown as Mock;
+      mockRequireRole.mockResolvedValueOnce({
+        ok: true,
+        user: { id: "user-1", organizations: [] },
+        org: { orgId: "org-1", role: "agent" }
+      });
 
       const req = new NextRequest("http://localhost/api/v1/conversations/123/media", { method: "POST" });
       Object.defineProperty(req, 'headers', {
@@ -123,16 +84,14 @@ describe("F3 Task 3 - Mutation Gates RBAC", () => {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValueOnce({ data: { id: "123" }, error: null }),
-        insert: vi.fn().mockReturnThis(),
-        single: vi.fn(),
-      } satisfies QueryMock;
-      vi.mocked(createClient).mockResolvedValue(asSupabaseClient(mockSupabase));
+      };
+      (createClient as unknown as Mock).mockResolvedValue(mockSupabase);
 
       const mockAdminStorage = {
         from: vi.fn().mockReturnThis(),
-        upload: vi.fn().mockResolvedValueOnce({ error: null }),
-      } satisfies StorageMock;
-      vi.mocked(createAdminClient).mockReturnValue(asAdminClient(mockAdminStorage));
+        upload: vi.fn().mockResolvedValueOnce({ error: null })
+      };
+      (createAdminClient as unknown as Mock).mockReturnValue({ storage: mockAdminStorage });
 
       const ctx = { params: Promise.resolve({ id: "123" }) };
       const res = await mediaPost(req, ctx);
@@ -144,24 +103,27 @@ describe("F3 Task 3 - Mutation Gates RBAC", () => {
 
   describe("WhatsApp onboarding session route (admin+)", () => {
     it("should allow admin on POST", async () => {
-      const mockRequireRole = vi.mocked(requireRole);
-      mockRequireRole.mockResolvedValueOnce(allowRole("admin"));
+      const mockRequireRole = requireRole as unknown as Mock;
+      mockRequireRole.mockResolvedValueOnce({
+        ok: true,
+        user: { id: "user-1", organizations: [] },
+        org: { orgId: "org-1", role: "admin" }
+      });
 
       const mockWaha = {
-        startSession: vi.fn().mockResolvedValueOnce({ status: "STARTING" }),
-        getSessionQr: vi.fn(),
-      } satisfies WahaMock;
-      vi.mocked(getWahaClient).mockReturnValue(asWahaClient(mockWaha));
+        startSession: vi.fn().mockResolvedValueOnce({ status: "STARTING" })
+      };
+      (getWahaClient as unknown as Mock).mockReturnValue(mockWaha);
 
       const mockSupabase = {
         from: vi.fn().mockReturnThis(),
         insert: vi.fn().mockReturnThis(),
         select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValueOnce({ data: { id: "sess-1" }, error: null }),
-      } satisfies QueryMock;
-      vi.mocked(createClient).mockResolvedValue(asSupabaseClient(mockSupabase));
+        single: vi.fn().mockResolvedValueOnce({ data: { id: "sess-1" }, error: null })
+      };
+      (createClient as unknown as Mock).mockResolvedValue(mockSupabase);
 
-      vi.mocked(queryTolerantToMissingArchived).mockResolvedValueOnce({ error: null, schemaOutdated: false });
+      (queryTolerantToMissingArchived as unknown as Mock).mockResolvedValueOnce({ data: { id: "sess-1", archived_at: null }, error: null, schemaOutdated: false });
 
       const req = new NextRequest("http://localhost/api/v1/onboarding/whatsapp/session", { method: "POST" });
       const res = await sessionPost(req);
@@ -171,16 +133,18 @@ describe("F3 Task 3 - Mutation Gates RBAC", () => {
     });
 
     it("should allow viewer on GET and not expose credentials", async () => {
-      const mockRequireRole = vi.mocked(requireRole);
-      mockRequireRole.mockResolvedValueOnce(allowRole("viewer"));
+      const mockRequireRole = requireRole as unknown as Mock;
+      mockRequireRole.mockResolvedValueOnce({
+        ok: true,
+        user: { id: "user-1", organizations: [] },
+        org: { orgId: "org-1", role: "viewer" }
+      });
 
       const mockWaha = {
-        startSession: vi.fn(),
-        getSessionQr: vi.fn().mockResolvedValueOnce({ status: "WORKING" }), // Does not return credentials
-      } satisfies WahaMock;
-      vi.mocked(getWahaClient).mockReturnValue(asWahaClient(mockWaha));
+        getSessionQr: vi.fn().mockResolvedValueOnce({ status: "WORKING" }) // Does not return credentials
+      };
+      (getWahaClient as unknown as Mock).mockReturnValue(mockWaha);
 
-      const req = new NextRequest("http://localhost/api/v1/onboarding/whatsapp/session", { method: "GET" });
       const res = await sessionGet();
 
       expect(res.status).toBe(200);
@@ -192,8 +156,12 @@ describe("F3 Task 3 - Mutation Gates RBAC", () => {
 
   describe("WhatsApp onboarding qr route (viewer+)", () => {
     it("should allow viewer", async () => {
-      const mockRequireRole = vi.mocked(requireRole);
-      mockRequireRole.mockResolvedValueOnce(allowRole("viewer"));
+      const mockRequireRole = requireRole as unknown as Mock;
+      mockRequireRole.mockResolvedValueOnce({
+        ok: true,
+        user: { id: "user-1", organizations: [] },
+        org: { orgId: "org-1", role: "viewer" }
+      });
 
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
@@ -207,7 +175,7 @@ describe("F3 Task 3 - Mutation Gates RBAC", () => {
     });
 
     it("should deny unauthenticated or missing org by returning 404/401 from requireRole", async () => {
-      const mockRequireRole = vi.mocked(requireRole);
+      const mockRequireRole = requireRole as unknown as Mock;
       mockRequireRole.mockResolvedValueOnce({
         ok: false,
         response: fail("forbidden_tenant", "Sem organização ativa.", 403, {})
