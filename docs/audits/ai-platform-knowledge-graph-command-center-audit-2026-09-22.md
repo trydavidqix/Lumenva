@@ -62,6 +62,7 @@ As duas fases têm gate `GO` no AI Platform. Isso prova a implementação no sta
 - `apps/core`: adapter local chama o `compileContext` real do MCG; sucesso registra `context.requested/completed`, falha registra `context.failed` com `MCG_UNAVAILABLE`; 7/7 testes do pacote.
 - `apps/core`: fluxo Obsidian `PUBLISHED` → scanner → Graph projection → provenance/eventos; 8/8 testes do pacote.
 - `apps/core`: `CoreTelemetrySink` persiste eventos de task/context no ledger MCG com provenance e measurement type; dashboard consome esses eventos end-to-end; 10/10 testes do pacote e typecheck PASS.
+- `apps/core`: `ContextPacket` progressivo implementado em L0/L1/L2, com hard cap, ordenação determinística e hash de versão reproduzível; 12/12 testes do pacote e typecheck PASS.
 - Commits: `3c951634`, `124c8448`, `ccb4d3dd`, `91523605`.
 - Graph View conectado e Context Engine progressivo continuam pendentes.
 
