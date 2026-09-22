@@ -9,7 +9,7 @@
 # SEMPRE derrubado no EXIT (sucesso ou falha), nos dois engines.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 BASELINE="$ROOT/supabase/baseline.sql"
 
 # Direct invocation must fail before starting Postgres when the test runner is
@@ -142,9 +142,9 @@ begin
 end
 $$;
 
-# Match Supabase's default table ACL before applying the baseline. Without this,
-# privilege invariants can pass because fresh tables start more restricted than
-# the real Supabase project.
+-- Match Supabase's default table ACL before applying the baseline. Without this,
+-- privilege invariants can pass because fresh tables start more restricted than
+-- the real Supabase project.
 alter default privileges for role postgres in schema public grant all on tables to anon;
 alter default privileges for role postgres in schema public grant all on tables to authenticated;
 alter default privileges for role postgres in schema public grant all on tables to service_role;

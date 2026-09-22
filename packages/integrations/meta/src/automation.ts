@@ -1,7 +1,7 @@
 import { GRAPH } from "./oauth";
-import { INSTAGRAM_GRAPH } from "@/lib/instagram/oauth";
+import { INSTAGRAM_GRAPH } from "./oauth";
+import type { Account } from "./types";
 import { parseMetaError } from "./errors";
-import type { Account } from "@/lib/db/schema";
 type Input = { platform: "facebook" | "instagram"; commentId: string; text: string; account: Account };
 async function send(path: string, token: string, text: string) { const response = await fetch(path, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ message: text, access_token: token }) }); const body = await response.json().catch(() => ({})); if (!response.ok) throw parseMetaError(body); const id = (body as { id?: unknown })?.id; if (typeof id !== "string") throw parseMetaError(body); return { id }; }
 export function sendPublicReply(input: Input) { const base = input.platform === "instagram" ? INSTAGRAM_GRAPH : GRAPH; const path = input.platform === "instagram" ? `${base}/${encodeURIComponent(input.commentId)}/replies` : `${base}/${encodeURIComponent(input.commentId)}/comments`; return send(path, input.account.accessToken, input.text); }

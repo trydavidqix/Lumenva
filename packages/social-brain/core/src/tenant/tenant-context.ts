@@ -1,37 +1,40 @@
-import { AsyncLocalStorage } from 'node:async_hooks';
+import { AsyncLocalStorage } from 'node:async_hooks'
+
+export const TENANT_ROLES = ['viewer', 'agent', 'ai_operator', 'manager', 'admin'] as const
+export type TenantRole = (typeof TENANT_ROLES)[number]
+export type TenantAuthSource = 'firebase-session' | 'firebase-worker' | 'platform-admin'
 
 export interface TenantContextData {
-  organizationId: string;
-  userId?: string;
+  userId: string
+  organizationId: string
+  role: TenantRole
+  isPlatformAdmin: boolean
+  requestId: string
+  authSource: TenantAuthSource
 }
 
-const tenantStorage = new AsyncLocalStorage<TenantContextData>();
+const tenantStorage = new AsyncLocalStorage<TenantContextData>()
 
 export class TenantContext {
-  /**
-   * Executes a callback within the provided tenant context.
-   * This ensures `organizationId` is implicitly passed and isolated during the execution.
-   */
   static run<R>(data: TenantContextData, callback: () => R): R {
-    return tenantStorage.run(data, callback);
+    assertTenantContext(data)
+    return tenantStorage.run(data, callback)
   }
 
-  /**
-   * Retrieves the current tenant context data.
-   * Throws an error if called outside a tenant context.
-   */
   static current(): TenantContextData {
-    const data = tenantStorage.getStore();
-    if (!data) {
-      throw new Error('TenantContext: Executed outside of a tenant context. Wrap your execution with TenantContext.run().');
-    }
-    return data;
+    const data = tenantStorage.getStore()
+    if (!data) throw new Error('TenantContext: missing validated context')
+    return data
   }
 
-  /**
-   * Retrieves the current tenant context data, returning undefined if outside a context.
-   */
   static currentOptional(): TenantContextData | undefined {
-    return tenantStorage.getStore();
+    return tenantStorage.getStore()
   }
+}
+
+export function assertTenantContext(data: TenantContextData): void {
+  if (!data.userId.trim() || !data.organizationId.trim() || !data.requestId.trim()) {
+    throw new Error('TenantContext: invalid validated context')
+  }
+  if (!TENANT_ROLES.includes(data.role)) throw new Error('TenantContext: invalid role')
 }

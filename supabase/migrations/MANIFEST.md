@@ -239,4 +239,6 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 | `20260917101000` | `0195_studio_reviewer_authorizations` | Studio reviewer authorizations. |
 | `20260918150000` | `0196_customer360_pii` | Customer 360 PII isolation and compliance. |
 | `20260918160000` | `0197_customer360_merge` | Customer 360 merge queue and idempotency. |
+| `20260922120000` | `0200_f2_tenant_isolation` | F2 runtime roles, Firebase identity resolution, transaction-local tenant settings, platform-admin audit path, and RLS isolation probe. `platform_admin_runtime` has no direct audit-table grant; it uses the audited SECURITY DEFINER function only. |
 - 0194_command_center_overview_rls
+| 20260922130000 | 0201_f2_platform_admin_function_acl | Revoke default authenticated EXECUTE from the platform-admin audit SECURITY DEFINER function; preserve access only for platform_admin_runtime. |

@@ -1,5 +1,5 @@
 {
-  "name": "@lumenva/core",
+  "name": "@lumenva/provider-meta",
   "private": true,
   "type": "module",
   "exports": {
@@ -9,12 +9,11 @@
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
     "test": "vitest run",
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc --noEmit"
   },
   "dependencies": {
-    "@lumenva/provider-brightbean": "workspace:*",
-    "@lumenva/provider-meta": "workspace:*",
-    "zod": "4.4.3"
+    "@lumenva/core": "workspace:*",
+    "@lumenva/integration-meta": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
