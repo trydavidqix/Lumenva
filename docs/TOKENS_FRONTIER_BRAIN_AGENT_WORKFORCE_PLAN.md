@@ -1,7 +1,7 @@
 # Lumenva Frontier-Brain / Agent Workforce Plan
 
 ## Status
-PLANNED — dedicated branch: `TOKENS`
+ACTIVE IMPLEMENTATION — dedicated branch: `TOKENS`
 
 ## Purpose
 This plan defines the Lumenva AI-first workforce architecture for using premium frontier models for planning and critical review, while routing execution to the cheapest capable model that satisfies risk, quality, latency, quota, and cost constraints.
@@ -814,3 +814,30 @@ Further completed:
 - expanded tests for idempotency, approvals, worktree isolation and runtime gates
 
 Important deployment note: `postgres-schema.sql` is an implementation artifact only; it has NOT been applied to production. Applying migrations, connecting authenticated provider runtimes, supplying gateway credentials, collecting real provider quotas, and running real provider/E2E benchmarks remain external execution gates.
+
+
+### Plan validation pass
+
+A direct plan-to-code validation found additional repository-only work and it was implemented:
+- canonical EvidenceBundle
+- EscalationRecord
+- provenance-aware, budget-bounded Memory Retriever
+- dynamic Capability Registry
+- runtime validation helpers for MasterPlan, TaskContract, ContextPacket and ExecutionResult
+- explicit autonomous-mode policy by R0-R4
+- Command Center workforce dashboard snapshot contract
+- tests for contract validation, memory retrieval and autonomous risk policy
+
+Validation result: the earlier claim that only external work remained was too strict. Repository-only gaps still existed and are now reduced further.
+
+Still not legitimately claimable as complete without external evidence:
+- real authenticated provider execution
+- real provider quota collectors
+- real gateway client/credentials
+- applying the Postgres schema through the project's migration system
+- real browser/E2E runs
+- provider-backed benchmark corpus and sufficient validated observations
+- UI wiring of dashboard/Agent Office to live persisted telemetry
+- production rollout, which remains outside this branch's authorization
+
+The Definition of Done therefore remains OPEN. No mock, placeholder, or unexecuted integration is marked PASS.
