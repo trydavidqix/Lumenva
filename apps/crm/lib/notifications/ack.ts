@@ -2,6 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 const ACK = /(?:^|\\s)CONFIRMAR\\s+([A-Z0-9]{6})(?:\\s|$)/i;
 
+export function parseNotificationAckToken(body: string): string | null {
+  return ACK.exec(body.trim())?.[1]?.toUpperCase() ?? null;
+}
+
 export interface NotificationAckResult {
   acknowledged: boolean;
   notificationId: string | null;
