@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "main": "src/index.ts",
+  "exports": {
+    "./webhook": "./src/webhook.ts"
+  },
   "dependencies": {},
   "devDependencies": {
     "typescript": "^5.0.0"

@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { verifySignature, verifyChallenge } from "../verify";
-import { normalizeMetaPayload } from "../types";
+import { verifySignature, verifyChallenge, normalizeMetaPayload } from "../webhook";
 import { createHmac } from "node:crypto";
 
 
