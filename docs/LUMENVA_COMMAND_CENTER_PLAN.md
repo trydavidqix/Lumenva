@@ -1362,7 +1362,7 @@ Somente depois calcular como validated:
 - Efficiency
 - Regression baseline
 
-Estado real observado (2026-09-23): o runtime global contém 2 registros pareados históricos, ambos sem categoria; o agregador agora os rejeita como inelegíveis, portanto há 0 pares elegíveis. O dataset `validation.jsonl` contém os 30 casos previstos (5 por cada uma das 6 categorias), mas ainda não foram executados como avaliações reais. Executar o dataset exigirá chamadas reais do Codex e poderá consumir quota; não sintetizar esses dados nem marcar Trust/Regression como validated antes dos resultados reais.
+Estado real observado (2026-09-23, auditoria somente de leitura): o runtime contém 16 registros A/B, mas 0 satisfazem o filtro atual. 14 não são execuções reais; 13 têm medição `unavailable`; 4 não têm categoria canônica. Os dois pares com `real_executor=true` também carecem de snapshot/model/tools/policy necessários à comparação. O dataset `validation.jsonl` contém 30 casos previstos (5 por cada uma das 6 categorias), ainda não executados como avaliações reais. Executá-lo exigirá chamadas reais do Codex e poderá consumir quota; não reclassificar logs incompletos nem marcar Trust/Regression como validated antes de evidência completa.
 
 ### M0.12 Dashboard e história
 
@@ -1393,7 +1393,7 @@ Nenhuma view final aceita:
 - placeholder
 - future/prepared como PASS
 
-Verificação local do dashboard real (2026-09-23, somente GET via PowerShell; sem navegador): dashboard respondeu em loopback; `/api/health` confirmou wire `ONLINE` e workspace online. `/api/tasks` mostrou 15 registros; `/api/stats`, 7 concluídas e 6 ativas. Métricas MCG estão `unavailable`, Trust `UNVALIDATED` e dataset real tem 0 pares elegíveis. Descoberta observada: 3 agents, 3 runtimes, 1 tool; plugins e MCPs sem eventos reais, portanto vazios/`unavailable`. O dashboard está servindo dados atuais corretamente, mas ainda não demonstra economia de tokens nem avaliação positiva; não preencher essas lacunas com mocks.
+Verificação local do dashboard real (2026-09-23, somente GET via PowerShell; sem navegador): dashboard respondeu em loopback; `/api/health` confirmou wire `ONLINE` e workspace online. `/api/tasks` mostrou 15 registros; `/api/stats`, 7 concluídas e 6 ativas. Métricas MCG estão `unavailable`, Trust `UNVALIDATED` e dataset real tem 0 pares elegíveis entre 16 registros A/B armazenados. Descoberta observada: 3 agents, 3 runtimes, 1 tool; plugins e MCPs sem eventos reais, portanto vazios/`unavailable`. O dashboard está servindo dados atuais corretamente, mas ainda não demonstra economia de tokens nem avaliação positiva; não preencher essas lacunas com mocks.
 
 ### M0.13 Gate de conclusão
 

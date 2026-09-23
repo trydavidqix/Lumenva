@@ -32,7 +32,7 @@ These failures are recorded as a downstream CI blocker. Core source, tests, pack
 
 Dashboard tests cover the read-only local endpoints, keyboard-accessible navigation, the M0.12 views, honest unavailable states, graph source drill-down and loopback binding. These are automated tests, not a claim of a production deployment or remote workspace connectivity.
 
-Read-only live dashboard check against the user's current MCG runtime (PowerShell HTTP GET; browser not used): loopback dashboard started on a temporary port and was stopped after inspection. `/api/health` reported wire `ONLINE` and workspace online. `/api/tasks` returned 15 stored tasks; stats summarized 7 completed and 6 active. Token metrics were `unavailable`, Trust was `UNVALIDATED`, and there were 0 eligible paired evaluations. Observed resources: 3 agents, 3 runtimes, 1 tool; plugins and MCPs had no observed records and remained unavailable. No runtime records were modified.
+Read-only live dashboard check against the user's current MCG runtime (PowerShell HTTP GET; browser not used): loopback dashboard started on a temporary port and was stopped after inspection. `/api/health` reported wire `ONLINE` and workspace online. `/api/tasks` returned 15 stored tasks; stats summarized 7 completed and 6 active. Token metrics were `unavailable`, Trust was `UNVALIDATED`, and there were 0 eligible paired evaluations among 16 stored A/B records. Observed resources: 3 agents, 3 runtimes, 1 tool; plugins and MCPs had no observed records and remained unavailable. No runtime records were modified.
 
 ## Pending evidence
 
@@ -48,7 +48,7 @@ The MCG-specific remote gate is green. The PR remains draft/open because the man
 
 - Scheduler concurrency regression: RED before implementation (`maxActive` was 1 with a limit of 2); GREEN after the fix (`maxActive` reached 2 for independent ready nodes). The scheduler change is included in the latest remote MCG PASS above.
 - Full MCG unit suite after scheduler change: 34/34 PASS; syntax/import smoke: 30 modules PASS; sensitive scan: 80 files PASS; `git diff --check` PASS.
-- Read-only runtime aggregate before the category gate: 2 historical pairs, both uncategorized. After the gate was tightened, eligible aggregate is 0. The checked-in validation dataset contains 30 cases balanced at 5 per category, but no provider evaluations were launched and no runtime records were changed.
+- Read-only runtime audit: 16 A/B records; 14 non-real executor pairs, 13 with unavailable measurement, 4 without canonical category; 0 pass the current eligibility filter. The two `real_executor=true` pairs lack model/snapshot/tools/policy comparability fields. The checked-in validation dataset contains 30 cases balanced at 5 per category, but no provider evaluations were launched and no runtime records were changed.
 - Evaluator regression: an uncategorized A/B record previously inflated paired counts; test failed at 3 instead of 2, then passed after the aggregator began rejecting missing/noncanonical categories.
 - Latest completed Actions before persistent-circuit integration, commit `3c71f29e`: MCG run `35803769908` PASS; vertical `35803770109` PASS; invariants `35803769795` PASS; core `35803769679` FAIL; general verify `35803769795` FAIL at `lumenva-core` typecheck.
 - Persistent circuit integration test: three executor failures persist `CIRCUIT_OPEN`; a new scheduler instance does not dispatch to that provider. Full local suite after integration: 34/34 PASS, syntax/import 30 modules PASS, sensitive scan 80 files PASS.
