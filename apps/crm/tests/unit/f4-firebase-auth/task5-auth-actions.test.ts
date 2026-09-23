@@ -32,10 +32,15 @@ vi.mock("@/lib/audit", () => ({
   isServiceRoleConfigured: vi.fn(() => true),
 }));
 
-vi.mock("@/lib/supabase/server", () => {
+vi.mock("@/lib/supabase/admin", () => {
   return {
-    createClient: vi.fn(() => ({
-      rpc: vi.fn().mockResolvedValue({ data: "manager", error: null }),
+    createAdminClient: vi.fn(() => ({
+      from: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
+      not: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: { role: "manager" }, error: null }),
     })),
   };
 });

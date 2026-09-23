@@ -70,6 +70,11 @@ export function useRealtimeChannel(opts: UseRealtimeChannelOpts): {
       return () => clearTimeout(t);
     }
 
+    // Safety check for jsdom/tests where EventSource might not exist
+    if (typeof EventSource === "undefined") {
+      return;
+    }
+
     let cancelado = false;
     let es: EventSource | null = null;
     let reconnectTimeoutId: NodeJS.Timeout | null = null;
@@ -95,16 +100,16 @@ export function useRealtimeChannel(opts: UseRealtimeChannelOpts): {
           let relevant = false;
 
           if (pgTable || pgEvent || pgFilter || pgSchema) {
-             const expectedTable = pgTable;
-             if (data.entity_kind === expectedTable || data.table === expectedTable) {
-                relevant = true;
-             }
+            const expectedTable = pgTable;
+            if (data.entity_kind === expectedTable || data.table === expectedTable) {
+              relevant = true;
+            }
           }
 
           if (bcEvent) {
-             if (data.event === bcEvent || data.event_type === bcEvent || bcEvent === "*") {
-                relevant = true;
-             }
+            if (data.event === bcEvent || data.event_type === bcEvent || bcEvent === "*") {
+              relevant = true;
+            }
           }
 
           if (!pgTable && !pgEvent && !pgFilter && !pgSchema && !bcEvent) relevant = true;
@@ -123,10 +128,10 @@ export function useRealtimeChannel(opts: UseRealtimeChannelOpts): {
         setStatus("channel_error");
         console.error(`[realtime] canal degradado`, { channelName: name, status: "channel_error" });
         if (es) {
-           es.close();
+          es.close();
         }
         reconnectTimeoutId = setTimeout(() => {
-           connect();
+          connect();
         }, 2000);
       });
     }

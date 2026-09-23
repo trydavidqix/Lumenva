@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 
-// adjust path logic based on running context
-const read = (pathStr: string) => readFileSync(resolve(__dirname, "../../../..", pathStr), "utf8");
+const read = (path: string) => readFileSync(path, "utf8");
 
 describe("Merge Queue realtime contract", () => {
   it("subscritos postgres_changes em merge_queue e invalida apenas a query da fila", () => {
