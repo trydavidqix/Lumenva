@@ -182,15 +182,15 @@ describe("F3 RBAC route matrix", () => {
         `),
       );
 
-    expect(roleVector(GOV_VIEWER)).toBe("true,false,false,false");
-    expect(roleVector(GOV_AGENT_A)).toBe("true,true,false,false");
-    expect(roleVector(GOV_MANAGER)).toBe("true,true,true,false");
-    expect(roleVector(GOV_ADMIN)).toBe("true,true,true,true");
+    expect(roleVector(GOV_VIEWER)).toBe("t,f,f,f");
+    expect(roleVector(GOV_AGENT_A)).toBe("t,t,f,f");
+    expect(roleVector(GOV_MANAGER)).toBe("t,t,t,f");
+    expect(roleVector(GOV_ADMIN)).toBe("t,t,t,t");
     expect(
       gov!.lastLine(
         gov!.sql(`
           select set_config('request.jwt.claims', '{"sub":"${OTHER_USER}"}', false);
-          select coalesce(public.fn_user_role_in_org('${OTHER_ORG}'), 0)::text;
+          select coalesce(public.fn_user_role_in_org('${OTHER_ORG}'), '0');
         `),
       ),
     ).toBe("4");
@@ -206,7 +206,7 @@ describe("F3 RBAC route matrix", () => {
         gov!.lastLine(
           gov!.sql(`
             select set_config('request.jwt.claims', '{"sub":"${GOV_AGENT_A}"}', false);
-            select coalesce(public.fn_user_role_in_org('${GOV_ORG}'), 0)::text;
+            select coalesce(public.fn_user_role_in_org('${GOV_ORG}'), '0');
           `),
         ),
       ).toBe("0");
@@ -221,7 +221,7 @@ describe("F3 RBAC route matrix", () => {
       gov!.lastLine(
         gov!.sql(`
           select set_config('request.jwt.claims', '{"sub":"${GOV_AGENT_A}"}', false);
-          select coalesce(public.fn_user_role_in_org('${OTHER_ORG}'), 0)::text;
+          select coalesce(public.fn_user_role_in_org('${OTHER_ORG}'), '0');
         `),
       ),
     ).toBe("0");
