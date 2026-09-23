@@ -17,6 +17,9 @@ import { resolveActiveLeadForContact, type LeadCandidate } from "@/lib/leads/act
 import { buildLeadActivityRow } from "@/lib/leads/activity-emitter";
 import type { McpContext, McpToolDefinition } from "../types";
 
+import { getGcsBucket } from "@lumenva/db/gcp/cloud-storage";
+import { createGcsObjectStore } from "@lumenva/db/storage/gcs";
+
 let client: Composio | null = null;
 
 /** Mesmo padrão de singleton do composio-tools.ts do agent-engine — client
@@ -107,11 +110,12 @@ export const crmUploadLeadAttachment: McpToolDefinition<typeof inputShape> = {
     const msg = mensagens?.[0];
     if (!msg?.media_storage_path) throw new Error("no_media_message");
 
-    const { data: signed, error: errSign } = await ctx.supabase.storage
-      .from("whatsapp-media")
-      .createSignedUrl(msg.media_storage_path as string, 600);
-    if (errSign || !signed?.signedUrl) {
-      throw new Error(`erro ao gerar link do anexo: ${errSign?.message ?? "sem signedUrl"}`);
+    const store = createGcsObjectStore(getGcsBucket());
+    let signedUrl = "";
+    try {
+      signedUrl = await store.createReadUrl({ provider: "gcs", bucket: "whatsapp-media", key: msg.media_storage_path as string }, 600);
+    } catch (errSign) {
+      throw new Error(`erro ao gerar link do anexo: ${errSign instanceof Error ? errSign.message : "sem signedUrl"}`);
     }
 
     const composio = getClient(apiKey);
@@ -147,7 +151,7 @@ export const crmUploadLeadAttachment: McpToolDefinition<typeof inputShape> = {
       {
         userId,
         arguments: {
-          source_url: signed.signedUrl,
+          source_url: signedUrl,
           name: fileName,
           mime_type: mime,
           parent_folder_id: folderId,

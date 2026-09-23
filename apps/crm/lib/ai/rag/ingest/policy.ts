@@ -10,10 +10,11 @@
  * consume asynchronously.
  */
 
-import { createAdminClient } from "@/lib/supabase/admin";
 import { chunkText } from "@/lib/ai/rag/chunker";
 import { extractPdfText, PdfExtractError } from "@/lib/ai/rag/extractors/pdf";
 import { extractMarkdownText } from "@/lib/ai/rag/extractors/markdown";
+import { getGcsBucket } from "@lumenva/db/gcp/cloud-storage";
+import { createGcsObjectStore } from "@lumenva/db/storage/gcs";
 
 export { PdfExtractError };
 
@@ -85,7 +86,7 @@ export interface IngestPolicyResult {
 }
 
 /**
- * Downloads a policy file from Supabase Storage, extracts text, and chunks it.
+ * Downloads a policy file from GCS ObjectStore, extracts text, and chunks it.
  * Returns the chunk count — actual embedding is handled by the rag-indexer
  * worker that listens to knowledge_source.updated events.
  *
@@ -93,12 +94,17 @@ export interface IngestPolicyResult {
  */
 export async function ingestPolicyFile(args: IngestPolicyArgs): Promise<IngestPolicyResult> {
   const { organizationId, knowledgeSourceId, blobPath, ext } = args;
-  const admin = createAdminClient();
 
-  // Download blob from private ai-policy bucket
-  const { data: blob, error: downloadErr } = await admin.storage
-    .from("ai-policy")
-    .download(blobPath);
+  const store = createGcsObjectStore(getGcsBucket());
+
+  let blob: Uint8Array | null = null;
+  let downloadErr: Error | null = null;
+
+  try {
+    blob = await store.get({ provider: "gcs", bucket: "ai-policy", key: blobPath });
+  } catch (err) {
+    downloadErr = err as Error;
+  }
 
   if (downloadErr || !blob) {
     throw new Error(
@@ -106,7 +112,7 @@ export async function ingestPolicyFile(args: IngestPolicyArgs): Promise<IngestPo
     );
   }
 
-  const buffer = Buffer.from(await blob.arrayBuffer());
+  const buffer = Buffer.from(blob);
 
   // Extract text
   let text: string;

@@ -19,6 +19,9 @@ import { ingestPolicyFile, PdfExtractError } from "@/lib/ai/rag/ingest/policy";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+import { getGcsBucket } from "@lumenva/db/gcp/cloud-storage";
+import { createGcsObjectStore } from "@lumenva/db/storage/gcs";
+
 export const MAX_POLICY_FILE_BYTES = 20 * 1024 * 1024; // 20MB
 
 const ALLOWED_MIME_TYPES = new Set([
@@ -120,9 +123,14 @@ export async function publishKnowledgePolicy(
   const blobId = randomUUID();
   const blobPath = `${organizationId}/${blobId}.${ext}`;
 
-  const { error: uploadErr } = await admin.storage
-    .from("ai-policy")
-    .upload(blobPath, file.bytes, { contentType: file.mimeType, upsert: false });
+  const store = createGcsObjectStore(getGcsBucket());
+
+  let uploadErr: Error | null = null;
+  try {
+    await store.put({ provider: "gcs", bucket: "ai-policy", key: blobPath }, new Uint8Array(file.bytes), file.mimeType);
+  } catch (err) {
+    uploadErr = err as Error;
+  }
 
   if (uploadErr) {
     logger.error("ai-policy-publish: storage upload failed", {
@@ -148,7 +156,7 @@ export async function publishKnowledgePolicy(
     });
     chunkCount = result.chunkCount;
   } catch (err) {
-    await admin.storage.from("ai-policy").remove([blobPath]);
+    await store.delete({ provider: "gcs", bucket: "ai-policy", key: blobPath }).catch(() => {});
 
     if (err instanceof PdfExtractError) {
       throw new PublishKnowledgePolicyError(
@@ -190,7 +198,7 @@ export async function publishKnowledgePolicy(
     .single();
 
   if (ksErr || !ks) {
-    await admin.storage.from("ai-policy").remove([blobPath]);
+    await store.delete({ provider: "gcs", bucket: "ai-policy", key: blobPath }).catch(() => {});
     logger.error("ai-policy-publish: insert knowledge source failed", {
       organizationId,
       blobPath,
