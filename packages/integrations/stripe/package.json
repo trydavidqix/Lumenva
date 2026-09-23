@@ -1,0 +1,16 @@
+{
+  "name": "@lumenva/stripe",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.ts",
+  "dependencies": {
+    "stripe": "^14.18.0",
+    "zod": "^3.22.4",
+    "@lumenva/core": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^1.3.1",
+    "typescript": "^5.3.3",
+    "@types/node": "^20.11.20"
+  }
+}
