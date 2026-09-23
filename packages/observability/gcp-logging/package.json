@@ -1,0 +1,16 @@
+{
+  "name": "@lumenva/gcp-logging",
+  "version": "1.0.0",
+  "description": "GCP Cloud Logging structured logger for Lumenva DeskcommCRM",
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test:unit": "npx vitest run"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vitest": "^5.0.1",
+    "@types/node": "^20.0.0"
+  }
+}
