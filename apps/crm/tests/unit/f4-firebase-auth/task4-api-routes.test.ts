@@ -16,7 +16,7 @@ vi.mock("@/lib/firebase/server", () => ({
 
 // Mock loadAuthUser
 vi.mock("@/lib/auth/server", async (importOriginal) => {
-  const actual: any = await importOriginal();
+  const actual = await importOriginal<typeof import("@/lib/auth/server")>();
   return {
     ...actual,
     loadAuthUser: vi.fn(),
@@ -59,9 +59,11 @@ describe("Task 4: API Routes Firebase Auth Migration", () => {
 
   describe("GET /api/v1/auth/realtime-token", () => {
     it("should return 501 blocker since Firebase cannot issue Supabase tokens", async () => {
-      vi.mocked(getServerSession).mockResolvedValue({ uid: "user-1", email: "test@test.com" } as any);
+      vi.mocked(getServerSession).mockResolvedValue(
+        { uid: "user-1", email: "test@test.com" } as unknown as Awaited<ReturnType<typeof getServerSession>>,
+      );
       const req = new NextRequest("http://localhost/api/v1/auth/realtime-token");
-      const res = await getRealtimeToken(req as any);
+      const res = await getRealtimeToken(req);
 
       expect(res.status).toBe(501);
       const data = await res.json();
@@ -80,7 +82,9 @@ describe("Task 4: API Routes Firebase Auth Migration", () => {
     });
 
     it("should return 200 with summary data if authenticated", async () => {
-      vi.mocked(loadAuthUser).mockResolvedValue({ id: "user-1", email: "test@example.com", is_platform_admin: false, organizations: [] } as any);
+      vi.mocked(loadAuthUser).mockResolvedValue(
+        { id: "user-1", email: "test@example.com", is_platform_admin: false, organizations: [] } as unknown as Awaited<ReturnType<typeof loadAuthUser>>,
+      );
       const req = new NextRequest("http://localhost/api/v1/contacts/123/crm-summary");
       const res = await getCrmSummary(req, { params: Promise.resolve({ id: "123" }) });
       expect(res.status).toBe(200);
@@ -110,7 +114,7 @@ describe("Task 4: API Routes Firebase Auth Migration", () => {
       vi.mocked(requireRole).mockResolvedValue({
         ok: false,
         response: Response.json({ error: { code: "unauthenticated" } }, { status: 401 })
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof requireRole>>);
 
       const req = new NextRequest("http://localhost/api/v1/privacy/anonymize", {
         method: "POST",
