@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 
 // Define a test to verify that the files are importing getGcsBucket and createGcsObjectStore from @lumenva/db
 import { readFileSync } from "fs";
@@ -18,7 +18,7 @@ describe("Auxiliary storage migration", () => {
 
   it("should have migrated all files to use GCS ObjectStore", () => {
     for (const file of filesToMigrate) {
-      const content = readFileSync(join(process.cwd(), file), "utf-8");
+      const content = readFileSync(join(process.cwd(), "apps", "crm", file), "utf-8");
 
       // Should not contain .storage.from( or .from("bucket").upload( etc
       // This is a naive check to ensure migration
