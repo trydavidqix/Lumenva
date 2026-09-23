@@ -23,6 +23,7 @@ import {
 } from "@/lib/leads/next-action";
 import type { LeadCandidate } from "@/lib/leads/active-lead";
 import { createClient } from "@/lib/supabase/server";
+import { loadAuthUser } from "@/lib/auth/server";
 import type { BoardData, Pipeline, Stage } from "@/lib/kanban/types";
 import type { Lead } from "@/lib/types/leads";
 
@@ -292,11 +293,8 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
   const { id: pipelineId } = await ctx.params;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-    error: authErr,
-  } = await supabase.auth.getUser();
-  if (authErr || !user) {
+  const user = await loadAuthUser();
+  if (!user) {
     return fail("unauthenticated", "Auth required.", 401, { requestId });
   }
 

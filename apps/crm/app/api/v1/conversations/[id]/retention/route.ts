@@ -26,11 +26,8 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
   const { id } = await ctx.params;
   const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: authErr,
-  } = await supabase.auth.getUser();
-  if (authErr || !user) {
+  const user = await loadAuthUser();
+  if (!user) {
     return fail("unauthenticated", "Auth required.", 401, { requestId });
   }
 
