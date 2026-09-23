@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Keep only the compatibility fields required by ensureTenantForUser.
+    // We mock the Supabase User object enough to satisfy ensureTenantForUser
     const stubUser = { id: user.id, email: user.email, app_metadata: {}, user_metadata: {} };
     await ensureTenantForUser(stubUser);
   } catch (e) {
