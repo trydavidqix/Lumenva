@@ -37,8 +37,11 @@ export async function updateProfile(input: ProfileInput): Promise<UpdateProfileR
       displayName: parsed.data.full_name ?? undefined,
       photoURL: parsed.data.avatar_url ?? undefined,
     });
-  } catch (error: any) {
-    return { ok: false, error: error.message || "update_failed" };
+  } catch (error: unknown) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "update_failed",
+    };
   }
 
   const activeOrg = await resolveActiveOrg(authUser);

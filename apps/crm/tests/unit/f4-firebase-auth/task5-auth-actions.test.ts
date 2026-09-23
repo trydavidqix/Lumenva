@@ -12,8 +12,8 @@ vi.mock("next/navigation", () => ({
 const mockGetServerSession = vi.fn();
 const mockRevokeRefreshTokens = vi.fn();
 vi.mock("@/lib/firebase/server", () => ({
-  getServerSession: (...args: any[]) => mockGetServerSession(...args),
-  revokeRefreshTokens: (...args: any[]) => mockRevokeRefreshTokens(...args),
+  getServerSession: (...args: unknown[]) => mockGetServerSession(...args),
+  revokeRefreshTokens: (...args: unknown[]) => mockRevokeRefreshTokens(...args),
   FIREBASE_SESSION_COOKIE: "fb-session-auth"
 }));
 
@@ -21,13 +21,13 @@ const mockAuthUser = { id: "test-user-id" };
 const mockLoadAuthUser = vi.fn();
 const mockResolveActiveOrg = vi.fn();
 vi.mock("@/lib/auth/server", () => ({
-  loadAuthUser: (...args: any[]) => mockLoadAuthUser(...args),
-  resolveActiveOrg: (...args: any[]) => mockResolveActiveOrg(...args),
+  loadAuthUser: (...args: unknown[]) => mockLoadAuthUser(...args),
+  resolveActiveOrg: (...args: unknown[]) => mockResolveActiveOrg(...args),
 }));
 
 const mockAudit = vi.fn();
 vi.mock("@/lib/audit", () => ({
-  audit: (...args: any[]) => mockAudit(...args),
+  audit: (...args: unknown[]) => mockAudit(...args),
   hashEmail: vi.fn((e) => e),
   isServiceRoleConfigured: vi.fn(() => true),
 }));
@@ -52,12 +52,12 @@ import * as nextNav from "next/navigation";
 describe("Task 5 Auth Actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (nextHeaders.cookies as any).mockResolvedValue({
+    vi.mocked(nextHeaders.cookies).mockResolvedValue({
       delete: vi.fn(),
-    });
-    (nextHeaders.headers as any).mockResolvedValue({
+    } as unknown as Awaited<ReturnType<typeof nextHeaders.cookies>>);
+    vi.mocked(nextHeaders.headers).mockResolvedValue({
       get: vi.fn(),
-    });
+    } as unknown as Awaited<ReturnType<typeof nextHeaders.headers>>);
   });
 
   describe("signOut", () => {
@@ -65,9 +65,9 @@ describe("Task 5 Auth Actions", () => {
       mockLoadAuthUser.mockResolvedValueOnce(mockAuthUser);
 
       const mockDelete = vi.fn();
-      (nextHeaders.cookies as any).mockResolvedValueOnce({
+      vi.mocked(nextHeaders.cookies).mockResolvedValueOnce({
         delete: mockDelete,
-      });
+      } as unknown as Awaited<ReturnType<typeof nextHeaders.cookies>>);
 
       await signOut();
 
@@ -87,9 +87,9 @@ describe("Task 5 Auth Actions", () => {
       mockLoadAuthUser.mockResolvedValueOnce(mockAuthUser);
 
       const mockDelete = vi.fn();
-      (nextHeaders.cookies as any).mockResolvedValueOnce({
+      vi.mocked(nextHeaders.cookies).mockResolvedValueOnce({
         delete: mockDelete,
-      });
+      } as unknown as Awaited<ReturnType<typeof nextHeaders.cookies>>);
 
       await signOutEverywhere();
 

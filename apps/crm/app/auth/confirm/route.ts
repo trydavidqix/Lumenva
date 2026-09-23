@@ -29,8 +29,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // We mock the Supabase User object enough to satisfy ensureTenantForUser
-    const stubUser = { id: user.id, email: user.email, app_metadata: {}, user_metadata: {} } as any;
+      // Keep the compatibility shape accepted by ensureTenantForUser without
+      // reintroducing the removed Supabase user type.
+      const stubUser = { id: user.id, email: user.email, user_metadata: {} };
     await ensureTenantForUser(stubUser);
   } catch (e) {
     await audit({

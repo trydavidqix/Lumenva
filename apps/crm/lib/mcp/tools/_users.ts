@@ -10,7 +10,7 @@
 import { initFirebaseAuth } from "@lumenva/db/gcp/firebase-auth";
 
 export async function resolveUserNames(
-  _unused: any, // SupabaseClient argument preserved for compatibility but ignored
+  _unused: unknown, // SupabaseClient argument preserved for compatibility but ignored
   userIds: Array<string | null | undefined>,
 ): Promise<Map<string, string | null>> {
   const unique = [...new Set(userIds.filter((id): id is string => Boolean(id)))];
