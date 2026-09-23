@@ -1,0 +1,20 @@
+{
+  "name": "@lumenva/observability-sentry",
+  "version": "1.0.0",
+  "description": "Sentry observability adapter for F7",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vitest": "^2.1.1",
+    "@types/node": "^22.5.5",
+    "@sentry/types": "^8.31.0"
+  },
+  "dependencies": {
+    "@sentry/node": "^8.31.0",
+    "@sentry/core": "^8.31.0"
+  }
+}
