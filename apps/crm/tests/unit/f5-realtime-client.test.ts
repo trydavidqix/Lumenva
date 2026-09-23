@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
 import { useRealtimeChannel } from "@/hooks/realtime/useRealtimeChannel";
 import * as AuthProvider from "@/hooks/auth/AuthProvider";
 
@@ -8,27 +8,27 @@ vi.mock("@/hooks/auth/AuthProvider", () => ({
 }));
 
 class MockEventSource {
-  static instances: any[] = [];
+  static instances: MockEventSource[] = [];
   url: string;
   withCredentials: boolean;
-  listeners: Record<string, Function[]> = {};
+  listeners: Record<string, ((event: unknown) => void)[]> = {};
 
-  constructor(url: string, opts: any) {
+  constructor(url: string, opts: { withCredentials?: boolean }) {
     this.url = url;
-    this.withCredentials = opts?.withCredentials;
+    this.withCredentials = !!opts?.withCredentials;
     MockEventSource.instances.push(this);
   }
 
-  addEventListener(type: string, listener: Function) {
+  addEventListener(type: string, listener: (event: unknown) => void) {
     if (!this.listeners[type]) this.listeners[type] = [];
     this.listeners[type].push(listener);
   }
 
-  removeEventListener(type: string, listener: Function) {}
+  removeEventListener(_type: string, _listener: (event: unknown) => void) {}
 
   close() {}
 
-  emit(type: string, event: any) {
+  emit(type: string, event: unknown) {
     if (this.listeners[type]) {
       this.listeners[type].forEach(l => l(event));
     }
@@ -40,7 +40,8 @@ describe("F5 Task 5 - useRealtimeChannel SSE Migration", () => {
     MockEventSource.instances = [];
     vi.stubGlobal("EventSource", MockEventSource);
 
-    vi.spyOn(AuthProvider, "useActiveOrg").mockReturnValue({ orgId: "o-1", name: "Org", role: "viewer" } as any);
+    // use ReturnType to infer the proper type dynamically to avoid exporting ActiveOrg directly if not defined
+    vi.spyOn(AuthProvider, "useActiveOrg").mockReturnValue({ orgId: "o-1", name: "Org", role: "viewer" } as unknown as ReturnType<typeof AuthProvider.useActiveOrg>);
   });
 
   afterEach(() => {
@@ -48,13 +49,13 @@ describe("F5 Task 5 - useRealtimeChannel SSE Migration", () => {
     vi.clearAllMocks();
   });
 
-  it("should connect using SSE to /api/v1/realtime/events when enabled", async () => {
+  it("should connect using SSE to /api/v1/realtime/events when enabled", () => {
     const onChange = vi.fn();
 
     renderHook(() => useRealtimeChannel({ name: "test", onChange }));
 
     expect(MockEventSource.instances).toHaveLength(1);
-    const url = new URL(MockEventSource.instances[0].url, "http://localhost");
+    const url = new URL(MockEventSource.instances[0]!.url, "http://localhost");
     expect(url.pathname).toBe("/api/v1/realtime/events");
     expect(url.searchParams.get("organization_id")).toBe("o-1");
   });
@@ -67,14 +68,14 @@ describe("F5 Task 5 - useRealtimeChannel SSE Migration", () => {
 
   it("should map table/filter correctly and trigger onChange when message matches", () => {
     const onChange = vi.fn();
-    const { result } = renderHook(() => useRealtimeChannel({
+    renderHook(() => useRealtimeChannel({
        name: "test",
        postgresChanges: { event: "*", table: "my_table" },
        onChange
     }));
 
     expect(MockEventSource.instances).toHaveLength(1);
-    const instance = MockEventSource.instances[0];
+    const instance = MockEventSource.instances[0]!;
 
     const mockRow = { entity_kind: "my_table", payload: { id: "123" } };
     instance.emit("message", { data: JSON.stringify(mockRow) });
