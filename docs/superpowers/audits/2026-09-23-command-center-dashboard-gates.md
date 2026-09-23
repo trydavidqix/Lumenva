@@ -38,7 +38,7 @@ Dashboard tests cover the read-only local endpoints, keyboard-accessible navigat
 
 - Draft PR: https://github.com/trydavidqix/Lumenva/pull/26, targeting `lumenva-command-center`; no merge performed.
 - Initial integration: MCG `35802405655` PASS; vertical `35802405657` PASS; invariants `35802405587` PASS; core `35802405583` FAIL; verify `35802405587` FAIL.
-- Latest completed remote commit `ea3d122a`: MCG `35804650002` PASS; vertical `35804650020` PASS; core `35804650003` FAIL; general CI `35804650006` FAIL in verify typecheck (invariants job passed).
+- Latest completed remote code commit `7f2d23c9`: MCG `35805179393` PASS; vertical `35805179433` PASS; core `35805179418` FAIL; general CI `35805179410` FAIL in verify typecheck (invariants job passed).
 
 The MCG-specific remote gate is green. The PR remains draft/open because the mandatory core and general verify checks are red due to errors outside the MCG allowlist. No merge or main-branch change was made. The separate M0.13 completion gate remains open.
 
@@ -51,5 +51,5 @@ The MCG-specific remote gate is green. The PR remains draft/open because the man
 - Latest completed Actions before persistent-circuit integration, commit `3c71f29e`: MCG run `35803769908` PASS; vertical `35803770109` PASS; invariants `35803769795` PASS; core `35803769679` FAIL; general verify `35803769795` FAIL at `lumenva-core` typecheck.
 - Persistent circuit integration test: three executor failures persist `CIRCUIT_OPEN`; a new scheduler instance does not dispatch to that provider. Full local suite after integration: 34/34 PASS, syntax/import 30 modules PASS, sensitive scan 80 files PASS.
 - Evaluation persistence regression: fabricated `measurement_type` is rejected by the eval contract; partial exact/unavailable paired usage stays `unavailable` instead of being mislabeled `exact`. Targeted eval tests and full suite pass locally; remote CI for this additional change is pending.
-- Remote validation for evaluation persistence commit `ea3d122a`: MCG gates PASS, including unit, syntax, sensitive scan, dashboard and contract smoke. The pre-existing core/verify typecheck failures remain unchanged.
-- Contract wiring regressions: task state, inbound/published event, trace/span, telemetry, registry, alert, evaluation and artifact/evidence paths are now checked against their corresponding runtime schemas. RED→GREEN tests cover malformed task events, traces and alerts. Full MCG suite 34/34, syntax 30 modules, sensitive scan 80 files, dashboard 12/12, contracts 1/1, and `git diff --check` all PASS locally. These local changes are not yet in remote CI.
+- Remote validation for evaluation and contract enforcement code in `7f2d23c9`: MCG gates PASS, including unit, syntax, sensitive scan, dashboard and contract smoke. Vertical gates and invariants also pass; pre-existing core/verify typecheck failures remain unchanged.
+- Contract wiring regressions: task state, inbound/published event, trace/span, telemetry, registry, alert, evaluation and artifact/evidence paths are now checked against their corresponding runtime schemas. RED→GREEN tests cover malformed task events, traces and alerts. Full MCG suite 34/34, syntax 30 modules, sensitive scan 80 files, dashboard 12/12, contracts 1/1, and `git diff --check` all PASS locally; MCG-specific and vertical remote gates PASS on `7f2d23c9`.
