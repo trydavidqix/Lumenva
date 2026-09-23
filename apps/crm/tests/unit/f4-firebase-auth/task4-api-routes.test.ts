@@ -6,9 +6,9 @@ import { GET as getContactsList } from "@/app/api/v1/contacts/route";
 import { GET as getConversationsCounts } from "@/app/api/v1/conversations/counts/route";
 import { POST as anonymizePrivacy } from "@/app/api/v1/privacy/anonymize/route";
 import { loadAuthUser } from "@/lib/auth/server";
-import { requireRole } from "@/lib/auth/require-role";
+import { requireRole, type RoleCheck } from "@/lib/auth/require-role";
 import { getServerSession } from "@/lib/firebase/server";
-import type { AuthUser, RoleCheck } from "@/lib/auth/types";
+import type { AuthUser } from "@/lib/auth/types";
 
 // Mock getServerSession
 vi.mock("@/lib/firebase/server", () => ({
@@ -98,8 +98,7 @@ describe("Task 4: API Routes Firebase Auth Migration", () => {
   describe("GET /api/v1/conversations/counts", () => {
     it("should return 401 if loadAuthUser returns null", async () => {
       vi.mocked(loadAuthUser).mockResolvedValue(null);
-      const req = new NextRequest("http://localhost/api/v1/conversations/counts");
-      const res = await getConversationsCounts(req);
+      const res = await getConversationsCounts();
       expect(res.status).toBe(401);
     });
   });
@@ -115,8 +114,7 @@ describe("Task 4: API Routes Firebase Auth Migration", () => {
         method: "POST",
         body: JSON.stringify({ contact_id: "123" })
       });
-      // Cast the second argument context as unknown to bypass RouteCtx typings
-      const res = await anonymizePrivacy(req, { params: Promise.resolve({ id: "123" }) } as unknown as { params: Promise<Record<string, string>> });
+      const res = await anonymizePrivacy(req);
       expect(res.status).toBe(401);
     });
   });
