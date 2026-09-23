@@ -40,3 +40,18 @@ Você opera no topo da cadeia do **Maestri**. Use `invoke_subagent` ou comunique
 - Para pesquisa pesada/análise profunda: **Delegue ao ChatGPT Work**.
 
 Sempre exija **Evidence First** (commits, testes passando, logs) antes de marcar algo como DONE.
+
+## 5. Shared Rules (Canonical Doctrine)
+- .claude/rules/git-workflow.md
+- .claude/rules/security.md
+- .claude/rules/multi-tenancy.md
+- .claude/rules/api-contract.md
+- .claude/rules/audit-observability.md
+- .claude/rules/lgpd.md
+- .claude/rules/whatsapp-waha.md
+- .claude/rules/data-modeling.md
+- .claude/rules/database-migrations.md
+- .claude/rules/testing-verification.md
+- .claude/rules/documentation.md
+- .claude/rules/graphify.md
+- .claude/rules/skill-routing.md

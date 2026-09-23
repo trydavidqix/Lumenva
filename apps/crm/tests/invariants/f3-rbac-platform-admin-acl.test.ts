@@ -1,4 +1,4 @@
-import { test, expect, describe, beforeAll, afterAll } from 'vitest';
+import { test, expect, describe, afterAll } from 'vitest';
 import { Pool } from 'pg';
 
 const port = process.env.TEST_DB_PORT || '54329';
@@ -14,7 +14,6 @@ describe('F3 RBAC - platform_admins ACL', () => {
   });
 
   test('platform_admins should only be modifiable by postgres (DBA)', async () => {
-    // Only superusers/postgres should have insert/update/delete on platform_admins
     const r = await pool.query(`
       SELECT grantee, privilege_type
       FROM information_schema.role_table_grants
@@ -23,7 +22,6 @@ describe('F3 RBAC - platform_admins ACL', () => {
         AND grantee != 'postgres' AND grantee != 'supabase_admin';
     `);
 
-    console.log("platform_admins mutators:", r.rows);
     expect(r.rows.length, 'No one except DBA should be able to mutate platform_admins').toBe(0);
   });
 });
