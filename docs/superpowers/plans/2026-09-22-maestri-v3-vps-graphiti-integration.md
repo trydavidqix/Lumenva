@@ -172,10 +172,10 @@ installed to compensate for the unusable wrapper.
 **Files:**
 - Inspect: `apps/core/src/http-api.ts`
 - Inspect: `apps/core/src/core-runtime.ts`
-- Inspect (produto MCG separado): `../maestri-context-gateway/src/dashboard.mjs`
+- Inspect (produto MCG separado, versão fixada pela dependência Git do Core): `@lumenva/maestri-context-gateway/dashboard`
 - Modify: only the smallest status/read-only endpoint needed
 - Test: `apps/core/src/http-api.test.ts`
-- Test (produto MCG separado): `../maestri-context-gateway/test/dashboard.test.mjs`
+- Test (repo MCG separado): `C:\Users\David\Desktop\Projetos\maestri-context-gateway\test\dashboard.test.mjs`
 
 **Interfaces:**
 - Consumes: Graphiti runtime status, health result, trace/evidence store, and existing read-only graph endpoint.
@@ -196,7 +196,7 @@ Existing work: Core `GET /graph`, dashboard `/api/graph`, Graph View and read-on
   ```powershell
   pnpm --filter @lumenva/core test
   pnpm --filter @lumenva/core typecheck
-  npm --prefix ../maestri-context-gateway test
+  npm --prefix "$env:USERPROFILE\Desktop\Projetos\maestri-context-gateway" test
   ```
 
 - [ ] **Step 4: Commit**

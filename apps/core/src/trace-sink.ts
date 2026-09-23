@@ -15,8 +15,7 @@ export class CoreTraceSink {
   private otlpFailures = 0;
 
   constructor(private readonly mcgRoot: string, private readonly options: { otlpExporter?: Pick<OtlpHttpExporter, "exportSpan"> } = {}) {
-    const moduleUrl = new URL("../../../packages/maestri-context-gateway/src/traces.mjs", import.meta.url).href;
-    this.modulePromise = import(moduleUrl) as unknown as Promise<MgcTracesModule>;
+    this.modulePromise = import("@lumenva/maestri-context-gateway/traces") as Promise<MgcTracesModule>;
   }
 
   attach(bus: { subscribe(listener: (event: CoreEvent) => Promise<void>): () => void }): () => void {

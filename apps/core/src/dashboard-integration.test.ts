@@ -8,8 +8,7 @@ import { CoreTelemetrySink } from "./telemetry-sink.js";
 import { McpGateway } from "./mcp-gateway.js";
 import { SqliteStore } from "./sqlite-store.js";
 
-// @ts-expect-error MCG is a JavaScript package consumed at the runtime boundary.
-import { dashboardStats } from "../../../packages/maestri-context-gateway/src/dashboard.mjs";
+import { dashboardStats } from "@lumenva/maestri-context-gateway/dashboard";
 
 describe("Core to dashboard telemetry", () => {
   it("makes Core context events visible to the existing MCG dashboard", async () => {

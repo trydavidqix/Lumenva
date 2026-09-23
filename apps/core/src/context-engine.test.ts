@@ -6,7 +6,7 @@ const task: TaskContract = {
   taskId: "task-context-1",
   goal: "Implement the dashboard context flow",
   scope: "apps/core",
-  allowedPaths: ["apps/core/src", "packages/maestri-context-gateway/src"],
+  allowedPaths: ["apps/core/src", "@lumenva/maestri-context-gateway"],
   constraints: ["never inject secrets", "preserve provenance"],
   capabilities: ["read_file", "search_code"],
   risk: "low",
@@ -19,7 +19,7 @@ const task: TaskContract = {
 };
 
 const candidates: ContextCandidate[] = [
-  { path: "packages/maestri-context-gateway/src/dashboard.mjs", symbols: ["dashboardStats"], content: "dashboard content".repeat(40), score: 0.8 },
+  { path: "@lumenva/maestri-context-gateway/dashboard", symbols: ["dashboardStats"], content: "dashboard content".repeat(40), score: 0.8 },
   { path: "apps/core/src/core-runtime.ts", symbols: ["CoreRuntime", "requestContext"], content: "runtime content".repeat(40), score: 0.9 },
 ];
 
@@ -60,7 +60,7 @@ describe("progressive Context Engine", () => {
 
     expect(levelOne.relevantFiles.map((file) => file.path)).toEqual([
       "apps/core/src/core-runtime.ts",
-      "packages/maestri-context-gateway/src/dashboard.mjs",
+      "@lumenva/maestri-context-gateway/dashboard",
     ]);
     expect(levelOne.relevantFiles.every((file) => file.excerpt === undefined)).toBe(true);
     expect(levelTwo.relevantFiles.some((file) => file.excerpt)).toBe(true);

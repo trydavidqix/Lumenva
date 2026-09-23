@@ -47,8 +47,7 @@ type MgcCompilerModule = {
 };
 
 export async function createLocalMgcAdapter(): Promise<MgcAdapter> {
-  const moduleUrl = new URL("../../../packages/maestri-context-gateway/src/context/compiler.mjs", import.meta.url).href;
-  const compiler = await import(moduleUrl) as unknown as MgcCompilerModule;
+  const compiler = await import("@lumenva/maestri-context-gateway/context/compiler") as unknown as MgcCompilerModule;
   return {
     async compile(request) {
       const fragments = [
