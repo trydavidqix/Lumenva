@@ -91,7 +91,6 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
-    "drizzle-orm": "^0.45.2",
     "fflate": "^0.8.3",
     "firebase": "^12.19.0",
     "gpt-tokenizer": "^3.4.0",
@@ -120,6 +119,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
+    "@lumenva/db": "workspace:*",
     "@next/eslint-plugin-next": "16.3.0",
     "@playwright/test": "catalog:",
     "@tailwindcss/postcss": "^4.3.3",
@@ -136,6 +136,7 @@
     "@types/ws": "^8.18.1",
     "@vercel/config": "^0.5.6",
     "@vitest/coverage-v8": "^4.1.10",
+    "drizzle-orm": "^0.45.2",
     "eslint": "catalog:",
     "eslint-config-next": "catalog:",
     "eslint-plugin-react-hooks": "7.1.1",
