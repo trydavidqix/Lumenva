@@ -11,8 +11,9 @@ import { requireRole } from "@/lib/auth/require-role";
 import { logger } from "@/lib/logger";
 import { extFromMime, MAX_OUTBOUND_MEDIA_BYTES } from "@/lib/messaging/media/types";
 import { validateOutboundMedia } from "@/lib/messaging/media/upload-validation";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { createGcsObjectStore } from "@lumenva/db/storage/gcs";
+import { getGcsBucket } from "@lumenva/db/gcp/cloud-storage";
 
 export const dynamic = "force-dynamic";
 
@@ -62,12 +63,17 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<Response> {
 
   const storagePath = `${activeOrg.orgId}/${conversationId}/out-${randomUUID()}.${extFromMime(mime)}`;
   const buffer = Buffer.from(await file.arrayBuffer());
-  const admin = createAdminClient();
-  const { error: upErr } = await admin.storage
-    .from("whatsapp-media")
-    .upload(storagePath, buffer, { contentType: mime, upsert: false });
-  if (upErr) {
-    logger.error("conversations.media: upload failed", { error: upErr.message });
+
+  try {
+    const bucket = getGcsBucket();
+    const store = createGcsObjectStore(bucket);
+    await store.put(
+      { provider: 'gcs', bucket: 'whatsapp-media', key: storagePath },
+      new Uint8Array(buffer),
+      mime
+    );
+  } catch (upErr) {
+    logger.error("conversations.media: upload failed", { error: upErr instanceof Error ? upErr.message : String(upErr) });
     return fail("internal_error", "Erro ao subir o arquivo.", 500, { requestId });
   }
 

@@ -23,6 +23,18 @@ const updatesContacts: { patch: Record<string, unknown>; filtros: Record<string,
 const upsertsFila: Record<string, unknown>[] = [];
 const uploads: string[] = [];
 
+const { mockGcsPut } = vi.hoisted(() => ({
+  mockGcsPut: vi.fn(),
+}));
+
+vi.mock("@lumenva/db/storage/gcs", () => ({
+  createGcsObjectStore: vi.fn(() => ({ put: mockGcsPut })),
+}));
+
+vi.mock("@lumenva/db/gcp/cloud-storage", () => ({
+  getGcsBucket: vi.fn(() => ({ file: vi.fn() })),
+}));
+
 vi.mock("@/lib/env", () => ({
   env: { INTERNAL_CRON_SECRET: "segredo-de-teste", INTERNAL_SECRET: "segredo-de-teste" },
 }));
@@ -108,6 +120,9 @@ beforeEach(() => {
   updatesContacts.length = 0;
   upsertsFila.length = 0;
   uploads.length = 0;
+  mockGcsPut.mockReset().mockImplementation(async (locator: { key: string }) => {
+    uploads.push(locator.key);
+  });
   linhasAfetadas = [{ id: CONTATO }];
   vi.stubGlobal(
     "fetch",

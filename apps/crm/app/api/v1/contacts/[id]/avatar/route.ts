@@ -19,6 +19,8 @@ import type { NextRequest } from "next/server";
 import { fail } from "@/lib/api/wrappers";
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createGcsObjectStore } from "@lumenva/db/storage/gcs";
+import { getGcsBucket } from "@lumenva/db/gcp/cloud-storage";
 
 export const dynamic = "force-dynamic";
 
@@ -55,13 +57,19 @@ export async function GET(
     return new Response(null, { status: 404 });
   }
 
-  const { data: signed, error } = await admin.storage
-    .from("whatsapp-media")
-    .createSignedUrl(row.avatar_storage_path, SIGNED_TTL_SECONDS);
+  try {
+    const bucket = getGcsBucket();
+    const store = createGcsObjectStore(bucket);
 
-  if (error || !signed?.signedUrl) {
+    // O bucket literal 'whatsapp-media' vira namespace lógico no GCS.
+    // getGcsBucket já aponta para o bucket configurado na infra.
+    const signedUrl = await store.createReadUrl(
+      { provider: 'gcs', bucket: 'whatsapp-media', key: row.avatar_storage_path },
+      SIGNED_TTL_SECONDS
+    );
+
+    return Response.redirect(signedUrl, 307);
+  } catch (error) {
     return new Response(null, { status: 404 });
   }
-
-  return Response.redirect(signed.signedUrl, 307);
 }

@@ -13,8 +13,9 @@ import { fail } from "@/lib/api/wrappers";
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import { logger } from "@/lib/logger";
 import { fetchWahaMedia } from "@/lib/messaging/media/waha-source";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { createGcsObjectStore } from "@lumenva/db/storage/gcs";
+import { getGcsBucket } from "@lumenva/db/gcp/cloud-storage";
 
 export const dynamic = "force-dynamic";
 
@@ -54,17 +55,18 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
   }
 
   if (msg.media_storage_path) {
-    const admin = createAdminClient();
-    const { data: signed, error: signErr } = await admin.storage
-      .from("whatsapp-media")
-      .createSignedUrl(msg.media_storage_path, SIGNED_URL_TTL_S);
-    if (!signErr && signed?.signedUrl) {
-      const response = NextResponse.redirect(signed.signedUrl, 302);
+    try {
+      const bucket = getGcsBucket();
+      const store = createGcsObjectStore(bucket);
+      const signedUrl = await store.createReadUrl(
+        { provider: 'gcs', bucket: 'whatsapp-media', key: msg.media_storage_path },
+        SIGNED_URL_TTL_S
+      );
+      const response = NextResponse.redirect(signedUrl, 302);
       response.headers.set("X-Request-Id", requestId);
       return response;
-    }
-    if (signErr) {
-      logger.error("messages.media: createSignedUrl failed", { error: signErr.message });
+    } catch (signErr) {
+      logger.error("messages.media: createSignedUrl failed", { error: signErr instanceof Error ? signErr.message : String(signErr) });
     }
   }
 
