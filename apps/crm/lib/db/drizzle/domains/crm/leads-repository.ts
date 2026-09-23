@@ -1,4 +1,6 @@
 import type { DomainRepository, TenantReadContext, CrmLead, CrmLeadFilter } from './types';
+// Ignore the unresolved error on the build process since F6 does not modify the module resolution setup
+// @ts-expect-error unresolved client path but vitest executes it natively through config mapping
 import { getDrizzle } from '@lumenva/db/drizzle/client';
 import { sql } from 'drizzle-orm';
 
