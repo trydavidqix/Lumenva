@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const downloadMock = vi.fn();
+const gcsGetMock = vi.fn();
 const updateEqMock = vi.fn();
 const messageRow = {
   id: "msg1",
@@ -20,8 +20,15 @@ vi.mock("@/lib/supabase/admin", () => ({
         return { eq: () => ({ eq: async () => ({ error: null }) }) };
       },
     }),
-    storage: { from: () => ({ download: downloadMock }) },
   }),
+}));
+
+vi.mock("@lumenva/db/storage/gcs", () => ({
+  createGcsObjectStore: () => ({ get: gcsGetMock }),
+}));
+
+vi.mock("@lumenva/db/gcp/cloud-storage", () => ({
+  getGcsBucket: () => ({ file: vi.fn() }),
 }));
 
 vi.mock("@/lib/messaging/media/derive", () => ({
@@ -60,7 +67,7 @@ function eventRow(attempts = 0) {
 
 describe("deriveMessageMedia", () => {
   beforeEach(() => {
-    downloadMock.mockReset().mockResolvedValue({ data: new Blob([new Uint8Array([1, 2, 3])]), error: null });
+    gcsGetMock.mockReset().mockResolvedValue(new Uint8Array([1, 2, 3]));
     updateEqMock.mockReset();
     messageRow.media_derived_status = null;
     messageRow.type = "audio";
@@ -70,6 +77,11 @@ describe("deriveMessageMedia", () => {
   it("baixa a mídia, deriva e grava ready", async () => {
     const r = await deriveMessageMedia(eventRow());
     expect(r.status).toBe("ok");
+    expect(gcsGetMock).toHaveBeenCalledWith({
+      provider: "gcs",
+      bucket: "whatsapp-media",
+      key: "org1/conv1/msg1.ogg",
+    });
     expect(updateEqMock).toHaveBeenCalledWith(
       expect.objectContaining({ media_derived_text: "transcrição do áudio real", media_derived_status: "ready" }),
     );
@@ -80,13 +92,14 @@ describe("deriveMessageMedia", () => {
     const r = await deriveMessageMedia(eventRow());
     expect(r.status).toBe("skipped");
     expect(deriveMediaText).not.toHaveBeenCalled();
+    expect(gcsGetMock).not.toHaveBeenCalled();
   });
 
   it("tipo sem derivado (sticker) → skipped sem baixar", async () => {
     messageRow.type = "sticker";
     const r = await deriveMessageMedia(eventRow());
     expect(r.status).toBe("skipped");
-    expect(downloadMock).not.toHaveBeenCalled();
+    expect(gcsGetMock).not.toHaveBeenCalled();
   });
 
   it("erro na derivação marca failed no último attempt", async () => {

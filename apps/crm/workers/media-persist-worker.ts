@@ -16,6 +16,8 @@ import { storagePathFor } from "@/lib/messaging/media/types";
 import { fetchWahaMedia } from "@/lib/messaging/media/waha-source";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createGcsObjectStore } from "@lumenva/db/storage/gcs";
+import { getGcsBucket } from "@lumenva/db/gcp/cloud-storage";
 
 export const MEDIA_PERSIST_CONSUMER_KEY = "media_persist_v1";
 // `row.attempts` chega ao handler como a contagem ANTES do incremento do
@@ -76,18 +78,23 @@ export async function persistMessageMedia(row: EventRow): Promise<HandlerResult>
   }
 
   const path = storagePathFor(msg.organization_id, msg.conversation_id, msg.id, media.mime);
-  const { error: uploadErr } = await admin.storage
-    .from("whatsapp-media")
-    .upload(path, media.buffer, { contentType: media.mime, upsert: true });
-  if (uploadErr) {
+  try {
+    const store = createGcsObjectStore(getGcsBucket());
+    await store.put(
+      { provider: "gcs", bucket: "whatsapp-media", key: path },
+      media.buffer,
+      media.mime,
+    );
+  } catch (uploadErr) {
+    const detail = uploadErr instanceof Error ? uploadErr.message : String(uploadErr);
     if (isLastAttempt) {
       logger.error("[media-persist] upload failed permanently", {
         message_id: msg.id,
-        detail: uploadErr.message,
+        detail,
       });
       await markStatus("failed");
     }
-    return { consumer_key, status: "error", detail: uploadErr.message };
+    return { consumer_key, status: "error", detail };
   }
 
   await markStatus("stored", {

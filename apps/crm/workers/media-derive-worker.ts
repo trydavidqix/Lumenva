@@ -20,6 +20,8 @@ import { deriveVideoText } from "@/lib/messaging/media/video-derive";
 import { apiTranscriptionProvider } from "@/lib/messaging/media/transcription";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createGcsObjectStore } from "@lumenva/db/storage/gcs";
+import { getGcsBucket } from "@lumenva/db/gcp/cloud-storage";
 
 export const MEDIA_DERIVE_CONSUMER_KEY = "media_derive_v1";
 const DRAIN_MAX_ATTEMPTS = EVENT_LOG_MAX_ATTEMPTS;
@@ -84,9 +86,13 @@ export async function deriveMessageMedia(row: EventRow): Promise<HandlerResult> 
   };
 
   try {
-    const dl = await admin.storage.from("whatsapp-media").download(msg.media_storage_path);
-    if (dl.error || !dl.data) throw new Error(`storage_download_failed: ${dl.error?.message ?? "no_data"}`);
-    const buffer = Buffer.from(await dl.data.arrayBuffer());
+    const store = createGcsObjectStore(getGcsBucket());
+    const bytes = await store.get({
+      provider: "gcs",
+      bucket: "whatsapp-media",
+      key: msg.media_storage_path,
+    });
+    const buffer = Buffer.from(bytes);
 
     // Credencial BYOK da org p/ visão (imagem).
     const llmCfg: LlmEdgeConfig = {

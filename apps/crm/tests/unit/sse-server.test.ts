@@ -118,5 +118,9 @@ describe("SSE Realtime server boundary", () => {
 
     const body = await res.text();
     expect(body).toBe("data: test\n\n");
+    expect(vi.mocked(createSSEStream).mock.calls[0]?.[3]).toEqual({
+      userId: "u-1",
+      role: "viewer",
+    });
   });
 });
