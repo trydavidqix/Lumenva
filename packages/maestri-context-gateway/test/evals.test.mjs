@@ -19,6 +19,16 @@ assert.equal(trustScore({ baseline: { task_success: 100, total_tokens: 100, real
 
 const root = await mkdtemp(join(tmpdir(), 'mcg-evals-'));
 try {
+  await assert.rejects(
+    saveEvaluation(root, { run_id: 'invalid-eval', source: 'test', measurement_type: 'fabricated' }),
+    /eval contract invalid/
+  );
+  const partialUsage = await saveEvaluation(root, {
+    run_id: 'partial-usage',
+    baseline: { measurement_type: 'exact' },
+    mcg: { measurement_type: 'unavailable' }
+  });
+  assert.equal(partialUsage.measurement_type, 'unavailable');
   for (let i = 0; i < 2; i++) {
     await saveEvaluation(root, {
       run_id: `pair-${i}`,
