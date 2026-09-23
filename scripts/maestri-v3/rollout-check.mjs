@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { evaluateRollout } from '../src/rollout-gate.mjs';
+import { evaluateRollout } from './rollout-gate.mjs';
 
 function git(args) {
   return execFileSync('git', args, { encoding: 'utf8' }).trim();

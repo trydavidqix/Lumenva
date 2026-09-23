@@ -145,7 +145,7 @@ Inventário verificado no worktree/host:
 | Gemini CLI | DISPONÍVEL | instalado nesta execução, `0.60.0` |
 | MCP TypeScript SDK moderno | DISPONÍVEL | `apps/social-brain-mcp`, `@modelcontextprotocol/server 2.0.0` |
 | MCP SDK legado | EXISTENTE | CRM usa `@modelcontextprotocol/sdk 1.30.0`; migrar por adapter, não apagar agora |
-| MCG | DISPONÍVEL | `packages/maestri-context-gateway` com registry, router, history, telemetry e validation |
+| MCG | DISPONÍVEL | Produto separado: [trydavidqix/maestri-context-gateway](https://github.com/trydavidqix/maestri-context-gateway); Lumenva mantém apenas integrações Maestri V3 |
 | Electron | AUSENTE | adicionar como dependência do M2 |
 | xterm.js/node-pty | AUSENTE | adicionar como dependência do M5 |
 | Core/ExecutionPort canônico | AUSENTE | primeiro código novo do M1 |
@@ -1348,6 +1348,8 @@ Não apagar a branch de backup até o fechamento completo da remediação.
 
 Criar branch temporária de repair partindo de ed148778a4591a8aaf0e1b1efd5c90007f00cfd6.
 
+**Atualização 2026-09-23:** a extração do Maestri Context Gateway foi concluída para o repositório canônico `trydavidqix/maestri-context-gateway`. Esta allowlist permanece como registro histórico da reconstrução; não copiar novamente o pacote nem seus planos antigos para branches do Lumenva. Integrações específicas do Maestri V3 permanecem aqui, fora do produto MCG.
+
 Transportar somente:
 - docs/LUMENVA_COMMAND_CENTER_PLAN.md
 - docs/superpowers/plans/2026-09-22-lumenva-context-gateway.md
@@ -1377,6 +1379,10 @@ A reescrita de lumenva-command-center está autorizada somente depois desses gat
 A main não deve ser alterada.
 
 ### M0.3 Integração correta com monorepo e CI
+
+**Atualização 2026-09-23:** MCG foi extraído para repositório próprio, com CI e testes standalone. Não recriar package scripts, lockfile ou CI do produto MCG no monorepo Lumenva. Os gates deste monorepo cobrem apenas os adapters/integrações que pertencem ao Lumenva.
+
+Os itens abaixo são o plano histórico anterior à extração e não devem ser executados como tarefas pendentes:
 
 Corrigir package scripts do MCG para participar dos gates do monorepo.
 
@@ -1828,7 +1834,7 @@ ACTIVE — M0 VALIDATED / F0-F24 IMPLEMENTED OR VALIDATED / F25 LOCAL ROLLOUT GU
 
 M0, a dashboard, M1 Core e os contratos Fabric F0–F24 foram validados no worktree isolado. O Fabric possui `TaskContract.context_packet`, `ContextPacket` canônico, `ExecutionPort`, `ExecutionResult`, `ResultDigest`, `HandoffRequest`, adapters Codex/Claude truthful, router com probing e `MaestriDelegator`; `CoreRuntime.delegateTask()` persiste a execução no feed da dashboard. O Core já tem `KnowledgeContextRetriever` para notas Obsidian `PUBLISHED` e fatos Graphiti, e o MCG já tem telemetria, traces, exporter OTLP opcional e dashboard read-only. O gap atual é configuração de collector/provider Graphiti, quota oficial dos providers, configuração de Actions/MCP em ambiente real e cleanup/rollout F25. A pesquisa de providers e MCP foi incorporada nesta fonte de verdade em 2026-09-22.
 
-Evidência F0/F1 + M1: `docs/audits/maestri-v3-f0-f1-evidence-2026-09-22.md`. O health probe, a prova read-only real do Codex, a persistência de `ExecutionResult`/evidence, os endpoints `/executions` e `/executions/:id`, a view `Executions`, o benchmark v2 com trust `VALIDATED` e o fluxo Core→Maestri→provider já passaram. O guard local de rollout está em `packages/maestri-context-gateway/src/rollout-gate.mjs` e bloqueia `main`, produção, alvo diferente de `vps` e worktree sujo. Faltam configuração externa e rollout controlado; matriz: `docs/audits/maestri-v3-rollout-matrix-2026-09-22.md`.
+Evidência F0/F1 + M1: `docs/audits/maestri-v3-f0-f1-evidence-2026-09-22.md`. O health probe, a prova read-only real do Codex, a persistência de `ExecutionResult`/evidence, os endpoints `/executions` e `/executions/:id`, a view `Executions`, o benchmark v2 com trust `VALIDATED` e o fluxo Core→Maestri→provider já passaram no Lumenva. O produto MCG separado fica em `https://github.com/trydavidqix/maestri-context-gateway`. O guard local de rollout está em `scripts/maestri-v3/rollout-gate.mjs` e bloqueia `main`, produção, alvo diferente de `vps` e worktree sujo. Faltam configuração externa e rollout controlado; matriz: `docs/audits/maestri-v3-rollout-matrix-2026-09-22.md`.
 
 O port standalone avançou: `packages/knowledge` já valida/exporta notas Obsidian `PUBLISHED` com scanner e provenance; `packages/knowledge-graph` já define namespace determinístico, projection worker, degradação segura, adapter HTTP Graphiti/Neo4j e `GraphView` read-only determinístico; `apps/core` já tem SQLite persistente, migração inicial, tarefas idempotentes, replay, EventBus, health, shutdown, recovery para `RECOVERING`, API loopback em `127.0.0.1`, integração com o `compileContext` real do MCG, telemetria persistida pelo contrato MCG, dashboard consumindo essa telemetria, fluxo completo Knowledge → Graph com eventos `context.requested/completed/failed`, `knowledge.published` e `graph.projected`, `ContextPacket` progressivo determinístico em L0/L1/L2 com instruções priorizadas, hard cap e provenance de versão, `resolveProgressiveContext` com gates explícitos de request-more-context, `KnowledgeContextRetriever` lendo notas Obsidian `PUBLISHED` limpas e fatos Graphiti, `CoreRuntime.requestProgressiveContext` atravessando o packet real até o MCG, `CoreRuntime.delegateTask` atravessando o broker até a persistência de `ExecutionResult`, Budget Engine multidimensional para tokens, contexto, tools, tempo, custo e quota, passagem do packet para fragments MCG no request real, enforcement de budget antes da execução, Instruction Resolver hierárquico com adaptação por runtime, Tool Registry lazy por capability/domínio com cap, catálogo determinístico e integração no packet, MCP Gateway stateless com cache TTL de `tools/list`/`resources/list`, ordenação determinística, health probing, propagação `traceparent`, handles explícitos com expiração, resolução direta dentro do request do Core, telemetria `mcp.catalog` visível em `by_mcp` na dashboard, spans persistidos pelo trace store MCG, exporter OTLP opcional, endpoint Core `GET /graph` com validação e resposta sem mutação e dashboard Graph read-only com `/api/graph`, aba de navegação e drill-down de entidades/fontes. Próximo entregável: configuração externa e rollout F25.
 

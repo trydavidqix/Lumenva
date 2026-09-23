@@ -172,10 +172,10 @@ installed to compensate for the unusable wrapper.
 **Files:**
 - Inspect: `apps/core/src/http-api.ts`
 - Inspect: `apps/core/src/core-runtime.ts`
-- Inspect: `packages/maestri-context-gateway/src/dashboard.mjs`
+- Inspect (produto MCG separado): `../maestri-context-gateway/src/dashboard.mjs`
 - Modify: only the smallest status/read-only endpoint needed
 - Test: `apps/core/src/http-api.test.ts`
-- Test: `packages/maestri-context-gateway/test/dashboard.test.mjs`
+- Test (produto MCG separado): `../maestri-context-gateway/test/dashboard.test.mjs`
 
 **Interfaces:**
 - Consumes: Graphiti runtime status, health result, trace/evidence store, and existing read-only graph endpoint.
@@ -196,16 +196,18 @@ Existing work: Core `GET /graph`, dashboard `/api/graph`, Graph View and read-on
   ```powershell
   pnpm --filter @lumenva/core test
   pnpm --filter @lumenva/core typecheck
-  pnpm --filter @lumenva/maestri-context-gateway test
+  npm --prefix ../maestri-context-gateway test
   ```
 
 - [ ] **Step 4: Commit**
 
   ```powershell
   git diff --check
-  git add apps/core packages/maestri-context-gateway
+  git add apps/core
   git commit -m "feat(dashboard): expose masked Graphiti runtime status"
   ```
+
+  If the MCG dashboard itself changes, test and commit that repository separately; do not stage it from the Lumenva checkout.
 
 ## Final acceptance gate
 

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { evaluateRollout } from '../src/rollout-gate.mjs';
+import { evaluateRollout } from './rollout-gate.mjs';
 
 assert.deepEqual(evaluateRollout({ branch: 'vps', target: 'vps', production: false, dirty: false }), {
   status: 'READY_FOR_VPS',
