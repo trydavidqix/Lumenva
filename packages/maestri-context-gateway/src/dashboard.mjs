@@ -11,6 +11,7 @@ import { getEventBus } from './events/bus.mjs';
 import { efficiencyScore, regressionWatch } from './scores.mjs';
 import { getHistoryStore, HISTORY_TYPES } from './history/store.mjs';
 import { MEMORY_LAYERS, MEMORY_NAMESPACES, memoryEvents, retrievalHistory } from './context/memory.mjs';
+import { refreshRegistries } from './registry.mjs';
 
 const HOST = '127.0.0.1';
 const PORT = 7435;
@@ -344,20 +345,28 @@ async function validationView(root) {
   };
 }
 
-export async function dashboardViews(root = ROOT, { graphView } = {}) {
-  const [stats, history, traces, cache, memory, validation] = await Promise.all([
-    dashboardStats(root), historyView(root), listTraces(root), cacheView(root), memoryView(root), validationView(root)
+export async function dashboardViews(root = ROOT, { graphView, registryOptions = {} } = {}) {
+  const [stats, history, traces, cache, memory, validation, registries] = await Promise.all([
+    dashboardStats(root), historyView(root), listTraces(root), cacheView(root), memoryView(root), validationView(root), refreshRegistries(root, registryOptions)
   ]);
   const unavailable = (source) => ({ status: 'UNAVAILABLE', observations: null, measurement_type: 'unavailable', source, timestamp: new Date().toISOString() });
+  const registryView = (rows, source) => {
+    const observed = rows.filter(row => row.health === 'OBSERVED');
+    const measurements = observed.map(row => row.measurement_type);
+    const measurement_type = !observed.length || measurements.includes('unavailable')
+      ? 'unavailable'
+      : measurements.includes('estimated') ? 'estimated' : 'exact';
+    return { status: observed.length ? 'OBSERVED' : 'UNAVAILABLE', count: observed.length || null, registered_count: rows.length || null, items: rows, measurement_type, source, timestamp: new Date().toISOString() };
+  };
   return {
     Overview: { status: 'OBSERVED', tasks_processed: stats.tasks_processed, tasks_active: stats.tasks_active, metrics: stats.metrics, measurement_type: stats.telemetry.measurement_type, source: stats.telemetry.source, timestamp: new Date().toISOString() },
     History: history,
     Traces: traces.length ? { status: 'OBSERVED', count: traces.length, traces, measurement_type: 'exact', source: 'state/telemetry/traces/*.jsonl', timestamp: new Date().toISOString() } : unavailable('state/telemetry/traces/*.jsonl'),
     Tasks: { status: stats.tasks.length ? 'OBSERVED' : 'UNAVAILABLE', count: stats.tasks.length || null, tasks: stats.tasks.length ? stats.tasks : null, measurement_type: stats.tasks.length ? 'estimated' : 'unavailable', source: 'tasks/*/state.json + evidence', timestamp: new Date().toISOString() },
-    Agents: { status: stats.agents.length ? 'OBSERVED' : 'UNAVAILABLE', count: stats.agents.length || null, items: stats.agents.length ? stats.agents : null, measurement_type: stats.agents[0]?.measurement_type || 'unavailable', source: 'local-process + telemetry', timestamp: new Date().toISOString() },
-    Tools: { status: stats.by_tool.length ? 'OBSERVED' : 'UNAVAILABLE', count: stats.by_tool.length || null, items: stats.by_tool.length ? stats.by_tool : null, measurement_type: stats.by_tool[0]?.measurement_type || 'unavailable', source: 'state/telemetry/events.jsonl', timestamp: new Date().toISOString() },
-    Plugins: { status: stats.by_plugin.length ? 'OBSERVED' : 'UNAVAILABLE', count: stats.by_plugin.length || null, items: stats.by_plugin.length ? stats.by_plugin : null, measurement_type: stats.by_plugin[0]?.measurement_type || 'unavailable', source: 'explicit task metadata + telemetry', timestamp: new Date().toISOString() },
-    MCPs: { status: stats.by_mcp.length ? 'OBSERVED' : 'UNAVAILABLE', count: stats.by_mcp.length || null, items: stats.by_mcp.length ? stats.by_mcp : null, measurement_type: stats.by_mcp[0]?.measurement_type || 'unavailable', source: 'state/telemetry/events.jsonl', timestamp: new Date().toISOString() },
+    Agents: registryView(registries.agents, 'state/registry/agents.json + telemetry/process discovery'),
+    Tools: registryView(registries.tools, 'state/registry/tools.json + telemetry discovery'),
+    Plugins: registryView(registries.plugins, 'state/registry/plugins.json + telemetry discovery'),
+    MCPs: registryView(registries.mcps, 'state/registry/mcps.json + telemetry discovery'),
     Graph: graphView ? { ...await graphView(), measurement_type: 'exact', source: 'Core GET /graph; read-only', timestamp: new Date().toISOString() } : unavailable('Core GET /graph; graph provider not configured'),
     Cache: cache,
     Memory: memory,
@@ -422,8 +431,17 @@ const dashboardHtml = html
 
 function sendJson(res, body) { res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(body)); }
 
-export function createDashboardServer({ root = ROOT, port = PORT, wireProbe, graphView } = {}) {
+export function createDashboardServer({ root = ROOT, port = PORT, wireProbe, graphView, registryOptions = {} } = {}) {
   const clients = new Set(); let previous = '';
+  const registryResponse = async (type, key, source) => {
+    const rows = (await refreshRegistries(root, registryOptions))[type];
+    const observed = rows.filter(row => row.health === 'OBSERVED');
+    const measurements = observed.map(row => row.measurement_type);
+    const measurement_type = !observed.length || measurements.includes('unavailable')
+      ? 'unavailable'
+      : measurements.includes('estimated') ? 'estimated' : 'exact';
+    return { [key]: rows, source, measurement_type, timestamp: new Date().toISOString() };
+  };
   const snapshot = async () => ({ stats: await dashboardStats(root), health: await health(root, wireProbe) });
   const publish = async () => { const data = await snapshot(); const encoded = JSON.stringify(data); if (encoded === previous) return; previous = encoded; for (const client of clients) client.write(`event: update\ndata: ${encoded}\n\n`); };
   const unsubscribe = getEventBus(root).subscribe(() => { publish().catch(() => {}); });
@@ -435,7 +453,7 @@ export function createDashboardServer({ root = ROOT, port = PORT, wireProbe, gra
       if (req.url === '/') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); return res.end(dashboardHtml); }
       if (req.url === '/api/events') { res.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', Connection: 'keep-alive', 'Cache-Control': 'no-cache' }); clients.add(res); await publish(); req.on('close', () => clients.delete(res)); return; }
       if (req.url === '/api/stats') return sendJson(res, await dashboardStats(root));
-      if (req.url === '/api/views') return sendJson(res, { views: await dashboardViews(root, { graphView }), source: 'dashboard view registry', measurement_type: 'exact', timestamp: new Date().toISOString() });
+      if (req.url === '/api/views') return sendJson(res, { views: await dashboardViews(root, { graphView, registryOptions }), source: 'dashboard view registry', measurement_type: 'exact', timestamp: new Date().toISOString() });
       if (req.url === '/api/graph') return graphView ? sendJson(res, await graphView()) : sendJson(res, { error: 'GRAPH_UNAVAILABLE', readOnly: true, measurement_type: 'unavailable', source: 'Core GET /graph' });
       if (req.url === '/api/history') return sendJson(res, await historyView(root));
       if (req.url === '/api/cache') return sendJson(res, await cacheView(root));
@@ -450,12 +468,18 @@ export function createDashboardServer({ root = ROOT, port = PORT, wireProbe, gra
         if (!/^trace-[A-Za-z0-9-]+$/.test(traceId)) return sendJson(res, { error: 'invalid trace_id', measurement_type: 'unavailable', source: 'dashboard', timestamp: new Date().toISOString() });
         return sendJson(res, await loadTrace(root, traceId));
       }
-      const resources = await discoverResources(root);
-      if (req.url === '/api/agents') return sendJson(res, { agents: resources.agents, source: 'local-process + telemetry', measurement_type: resources.agents.length ? 'exact' : 'unavailable', timestamp: new Date().toISOString() });
-      if (req.url === '/api/tools') return sendJson(res, { tools: resources.tools, source: 'state/telemetry/events.jsonl', measurement_type: resources.tools[0]?.measurement_type || 'unavailable', timestamp: new Date().toISOString() });
-      if (req.url === '/api/plugins') return sendJson(res, { plugins: resources.plugins, skills: resources.skills, source: 'explicit task metadata + telemetry', measurement_type: resources.plugins[0]?.measurement_type || 'unavailable', timestamp: new Date().toISOString() });
-      if (req.url === '/api/mcps') return sendJson(res, { mcps: resources.mcps, source: 'state/telemetry/events.jsonl', measurement_type: resources.mcps[0]?.measurement_type || 'unavailable', timestamp: new Date().toISOString() });
-      if (req.url === '/api/runtimes') return sendJson(res, { runtimes: resources.runtimes, ides: resources.ides, source: 'local-process + telemetry', measurement_type: resources.runtimes[0]?.measurement_type || resources.ides[0]?.measurement_type || 'unavailable', timestamp: new Date().toISOString() });
+      if (req.url === '/api/agents') return sendJson(res, await registryResponse('agents', 'agents', 'state/registry/agents.json + telemetry/process discovery'));
+      if (req.url === '/api/tools') return sendJson(res, await registryResponse('tools', 'tools', 'state/registry/tools.json + telemetry discovery'));
+      if (req.url === '/api/plugins') {
+        const [registry, resources] = await Promise.all([registryResponse('plugins', 'plugins', 'state/registry/plugins.json + telemetry discovery'), discoverResources(root)]);
+        return sendJson(res, { ...registry, skills: resources.skills });
+      }
+      if (req.url === '/api/mcps') return sendJson(res, await registryResponse('mcps', 'mcps', 'state/registry/mcps.json + telemetry discovery'));
+      if (req.url === '/api/runtimes') {
+        const [registry, resources] = await Promise.all([registryResponse('runtimes', 'runtimes', 'state/registry/runtimes.json + telemetry/process discovery'), discoverResources(root)]);
+        return sendJson(res, { ...registry, ides: resources.ides });
+      }
+      if (req.url === '/api/models') return sendJson(res, await registryResponse('models', 'models', 'state/registry/models.json + telemetry discovery'));
       if (req.url === '/api/alerts') return sendJson(res, { alerts: await alertHistory(root), source: 'state/alerts/alerts.jsonl', measurement_type: 'estimated', timestamp: new Date().toISOString() });
       if (req.url === '/api/alerts/ceo') return sendJson(res, { alerts: await ceoInbox(root), source: 'state/alerts/ceo-inbox.jsonl', measurement_type: 'estimated', timestamp: new Date().toISOString() });
       res.writeHead(404); res.end('Not Found');

@@ -65,6 +65,39 @@ test('dashboard exposes real telemetry resources from its configured root', asyn
   }
 });
 
+test('dashboard materializes canonical registries and keeps unobserved entries unavailable', async t => {
+  const fs = await import('node:fs/promises');
+  const path = await import('node:path');
+  const os = await import('node:os');
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'mcg-dashboard-registries-'));
+  const server = await createDashboardServer({ root, port: 0, registryOptions: { include_processes: false } });
+  t.after(async () => { await new Promise(resolve => server.close(resolve)); await fs.rm(root, { recursive: true, force: true }); });
+
+  for (const [endpoint, key, expectedName] of [
+    ['/api/agents', 'agents', 'Claude CEO'],
+    ['/api/tools', 'tools', 'MCG Context Compiler'],
+    ['/api/plugins', 'plugins', 'Caveman'],
+    ['/api/mcps', 'mcps', 'Maestri Wire'],
+    ['/api/runtimes', 'runtimes', 'Antigravity CLI'],
+    ['/api/models', 'models', 'Runtime-reported model']
+  ]) {
+    const response = await get(server.address().port, endpoint);
+    const rows = JSON.parse(response.body)[key];
+    const entry = rows.find(row => row.name === expectedName);
+    assert.ok(entry, `${expectedName} must be served from the canonical registry`);
+    assert.equal(entry.health, 'UNAVAILABLE');
+    assert.equal(entry.last_seen, null);
+    assert.equal(entry.measurement_type, 'unavailable');
+    assert.ok(await fs.access(path.join(root, 'state', 'registry', `${key}.json`)).then(() => true));
+  }
+
+  const views = JSON.parse((await get(server.address().port, '/api/views')).body).views;
+  assert.equal(views.Agents.status, 'UNAVAILABLE');
+  assert.equal(views.Agents.count, null);
+  assert.ok(views.Agents.registered_count > 0);
+  assert.equal(views.Agents.items.find(row => row.name === 'Claude CEO').health, 'UNAVAILABLE');
+});
+
 test('dashboard hides paths and unavailable placeholders', async t => {
   const server = await createDashboardServer({ root: process.cwd(), port: 0 });
   t.after(() => server.close());
