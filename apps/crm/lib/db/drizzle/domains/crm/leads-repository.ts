@@ -1,5 +1,5 @@
 import type { DomainRepository, TenantReadContext, CrmLead, CrmLeadFilter } from './types';
-import { getDrizzle } from '@lumenva/db/client/server';
+import { getDrizzle } from '@lumenva/db/drizzle/client';
 import { sql } from 'drizzle-orm';
 
 export class CrmLeadsDrizzleRepository implements DomainRepository<CrmLead, CrmLeadFilter, unknown, unknown> {
