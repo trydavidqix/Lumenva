@@ -185,6 +185,20 @@ F24 benchmarks baseline vs Fabric
 F25 rollout e limpeza de compatibilidade
 ```
 
+### Estado dos milestones — 2026-09-22
+
+- [x] F0–F9: contratos, ContextPacket/budget e ExecutionPort Codex implementados/validados conforme os audits e testes do worktree.
+- [~] F10: ClaudeAdapter está implementado e entrou como candidato do ResourceRouter em F13; a rota/provider real ainda depende de quota verificável e policy wiring.
+- [~] F11: AntigravityAdapter falha honestamente como indisponível; falta um CLI/SDK executável para provar execução real neste Windows.
+- [~] F12: usage exato Codex/Claude é capturado e persistido; quota oficial continua `unavailable` sem fonte documentada.
+- [x] F13–F18: router/probing, HandoffRequest, ResultDigest, delegação pelo Maestri e integração de Memory/code retrieval têm implementação/testes documentados.
+- [~] F19: propagação local W3C/MCP e exporter OTLP opcional implementados; falta conectar e validar um collector externo.
+- [x] F20–F23: views de execução/token/contexto, deduplicação e testes de integração correspondentes têm evidência local.
+- [x] F24: suíte homogênea v2 de 30 pares está `VALIDATED` (score 81.28); o aggregate anterior continua registrado como `DEGRADED` e não deve ser apagado nem usado como resultado mais recente.
+- [ ] F25: rollout/compatibilidade aguardam configuração externa (provider Graphiti/collector, Actions/MCP no ambiente-alvo) e validação final.
+
+`[~]` significa parcial ou bloqueado por capability/configuração ausente, não concluído. F25 não autoriza deploy nem merge para `main`.
+
 ### F10 progress update — 2026-09-22
 
 - `ClaudeAdapter` implements the canonical `ExecutionPort` contract.
@@ -193,7 +207,7 @@ F25 rollout e limpeza de compatibilidade
 - Structured JSON output is validated before becoming an `ExecutionResult`; malformed provider output becomes an explicit failure.
 - Health, capabilities, usage, quota, resume, and cancel remain truthful when the CLI is unavailable; no simulated success is returned.
 - Unit coverage: 2/2 Claude adapter tests passed; operating-core suite: 13 passed, 2 Docker-dependent tests skipped.
-- The adapter is exported publicly but is not yet selected by `ResourceRouter`; provider routing waits for real Claude usage/quota collection and explicit policy wiring.
+- At the time of this F10 update the adapter was not selected by `ResourceRouter`; the later F13 update added Claude as a candidate. Actual provider selection remains gated by verified quota and explicit policy wiring.
 
 ### F11 progress update — 2026-09-22
 
@@ -1822,18 +1836,71 @@ Só termina quando:
 - NOT_STARTED final = 0;
 - BLOCKED restante é exclusivamente externo e documentado.
 
-## Status atual
+## Estado reconciliado — 2026-09-23
 
-ACTIVE — M0 VALIDATED / F0-F24 IMPLEMENTED OR VALIDATED / F25 LOCAL ROLLOUT GUARD GREEN, EXTERNAL PROVIDER CONFIGURATION NEXT
+Este é o estado de execução vigente desta fonte de verdade. Distingue implementação local, integração comprovada e ações externas; snapshots anteriores abaixo continuam como histórico, não como status atual. “Concluído” exige evidência no código/testes/CI ou confirmação externa reproduzível. Sessões de agentes concluídas, isoladamente, não provam aceitação nem integração.
 
-M0, a dashboard, M1 Core e os contratos Fabric F0–F24 foram validados no worktree isolado. O Fabric possui `TaskContract.context_packet`, `ContextPacket` canônico, `ExecutionPort`, `ExecutionResult`, `ResultDigest`, `HandoffRequest`, adapters Codex/Claude truthful, router com probing e `MaestriDelegator`; `CoreRuntime.delegateTask()` persiste a execução no feed da dashboard. O Core já tem `KnowledgeContextRetriever` para notas Obsidian `PUBLISHED` e fatos Graphiti, e o MCG já tem telemetria, traces, exporter OTLP opcional e dashboard read-only. O gap atual é configuração de collector/provider Graphiti, quota oficial dos providers, configuração de Actions/MCP em ambiente real e cleanup/rollout F25. A pesquisa de providers e MCP foi incorporada nesta fonte de verdade em 2026-09-22.
+**Resumo:** M0 e M1 têm evidência local documentada; o MCG foi extraído para o repositório público `trydavidqix/maestri-context-gateway` e o PR inicial de descoberta/probing foi integrado com CI verde. Isso **não** significa que o roadmap inteiro esteja pronto: F25, gates externos, os pacotes Jules sem mapeamento de evidência, o Repository Governor e M2–M9 continuam abertos. A branch `vps` permanece separada; não houve merge para `main`.
 
-Evidência F0/F1 + M1: `docs/audits/maestri-v3-f0-f1-evidence-2026-09-22.md`. O health probe, a prova read-only real do Codex, a persistência de `ExecutionResult`/evidence, os endpoints `/executions` e `/executions/:id`, a view `Executions`, o benchmark v2 com trust `VALIDATED` e o fluxo Core→Maestri→provider já passaram. O guard local de rollout está em `packages/maestri-context-gateway/src/rollout-gate.mjs` e bloqueia `main`, produção, alvo diferente de `vps` e worktree sujo. Faltam configuração externa e rollout controlado; matriz: `docs/audits/maestri-v3-rollout-matrix-2026-09-22.md`.
+### Estado por plano e frente
+
+| Frente | Estado comprovado | O que falta para fechar |
+|---|---|---|
+| M0 — saneamento/MCG | Validado no worktree conforme `docs/audits/maestri-v3-f0-f1-evidence-2026-09-22.md`; benchmark homogêneo v2: 30 pares, Trust `VALIDATED`, score 81.28. O aggregate anterior `DEGRADED` permanece como histórico. | Nenhuma pendência local de M0 foi demonstrada nesta reconciliação. Reabrir apenas se o gate integrado/regressão encontrar evidência contrária; não repetir a remediação. |
+| M1 — Core + contratos | Implementação e fluxo Core→Maestri→provider, persistência de execução/evidência e dashboard de execuções constam na evidência local. | Manter como validado no escopo já comprovado; não confundir isso com os milestones de produto M2–M9 nem com rollout externo. |
+| Fabric F0–F24 | Implementados/validados localmente segundo o snapshot/evidências do plano; F19 tem propagação/exporter local opcional, mas não collector externo. | Manter registro honesto por capability: quotas/uso, taxa/latência sem telemetria real ficam `UNAVAILABLE`; não promovê-las a métricas medidas. |
+| Fabric F25 — rollout/compatibilidade | Guard local existe e bloqueia `main`, produção, alvo errado e worktree sujo; matriz em `docs/audits/maestri-v3-rollout-matrix-2026-09-22.md`. | Fechar apenas após configuração/validação externa autorizada, checagem das Actions/MCPs no host-alvo, critérios de compatibilidade e evidência de rollout controlado. Não fazer deploy nem merge automaticamente. |
+| MCG standalone público | `main` público em `trydavidqix/maestri-context-gateway`; PR #1 de descoberta/probing integrado; CI “MCG gates” verde no SHA `4c49411685619a6e1a9bfb1445779466716b02f7`. `docs/STATUS.md`: unit 36/36, dashboard smoke 14/14, contract smoke PASS, syntax/import 30 módulos PASS e scan sensível/path PASS. | (1) testar discovery/probe em mais perfis Windows e clientes oficiais atuais; (2) enriquecer telemetria de erros MCP e capabilities de protocolo quando observáveis; (3) manter uso/taxas/latência indisponíveis até existir telemetria observada. O `docs/IMPLEMENTATION_PLAN.md` do repo extraído é baseline histórico, não tracker atual; usar `docs/STATUS.md`. |
+| M2–M9 — produto Lumenva | Não há evidência suficiente neste plano para marcar o roadmap completo como concluído. O Core e partes de Graph/Context estão implementados, mas isso não prova cada aceite de produto. | Auditar e fechar individualmente: M2 Desktop/Electron; M3 bridge de estado; M4 Canvas/Agent Nodes/Pixel Floor; M5 terminal PTY; M6 runtimes reais; M7 scheduler/DAG/worktrees/Memory OS integrados; M8 Lumenva Link; M9 remoção da dependência Maestri. Reutilizar código existente e preencher aceite/evidência por milestone antes de marcar status. |
+| Cinco pacotes Jules (arquitetura §54) | Existem registros de sessões Jules Maestri V3 concluídas, mas as sessões disponíveis não estão mapeadas de forma confiável para os pacotes 1–5 nem têm, aqui, PR/commit/teste/evidência de aceite por pacote. Sessões CRM são outro escopo e não contam. | Conciliar cada pacote 1–5 com session ID, branch/PR, paths alterados, commit e testes; aceitar trabalho existente, abrir apenas lacunas reais e verificar dependências/ownership antes de novo dispatch. Package 5 só após integração dos packages 1–4. Não iniciar sessão duplicada para preencher apenas falta de rastreabilidade. |
+| Repository Governor | Auditoria e spec em `docs/superpowers/specs/2026-09-22-repository-governor-design.md`; nenhuma implementação encontrada. Ruleset de `main` observado sem checks obrigatórios; GitHub MCP segue read-only. | Revisar/aprovar a spec por escrito; detalhar tarefas; implementar manifesto/check determinístico; integrar e testar no CI; calibrar baseline; depois apresentar como ação separada o enforcement de checks/rulesets. Ação administrativa continua placeholder até autorização própria. |
+| Perfis Claude global/projeto | Estilo/skills globais e regras existentes foram auditados em conversas anteriores; esta arquitetura proíbe mudar configurações globais sem escopo explícito. | Conectar futuramente `SessionStart` somente ao Master Plan + State Ledger + AcceptanceManifest canônicos, após esses contratos existirem; provar resume/compact e separar estado global de preferências do projeto. Não criar `ACTIVE_PIPELINE.md` paralelo nem mexer agora em config global. |
+| Bootstrap Windows / provider tools | Instalações/skills/workflows foram documentados; Claude reportou MCPs conectados. O Codex ainda requer chamada MCP somente leitura após reinício do host; isso não está provado como concluído. | Fazer o smoke Codex GitHub MCP/Jules MCP read-only em sessão reiniciada; verificar status e registrar evidência. A listagem de sessões não autoriza novo dispatch. Não instalar Docker nem duplicar ferramentas/configs. |
+| Checkout local do MCG | O destino `C:\Users\David\.lumenva\maestri-context-gateway` não é checkout Git funcional nesta sessão; o repo remoto público foi verificado. | Se o fluxo de trabalho local depender desse caminho, restaurar/clonar/sincronizar nele de forma não destrutiva e validar branch/remote/cleanliness. Isso não altera o estado do repo público nem deve sobrescrever conteúdo local existente. |
+
+### Ordem restante, sem duplicar trabalho
+
+1. **Reconciliação de evidências:** mapear Jules 1–5 e revisar M2–M9 contra o código/aceites reais; registrar `PASS`, `PARTIAL`, `BLOCKED` ou `NOT_STARTED` por critério, sem inferir conclusão por mensagem ou sessão encerrada.
+2. **Fechar validações locais pendentes:** smoke read-only Codex MCP; testes adicionais MCG em perfis/clientes Windows; completar telemetria MCP observável sem fabricar usage/rate/latency.
+3. **Fechar implementação interna restante:** apenas gaps comprovados dos pacotes 1–5 e milestones M2–M9, em ordem de dependências e ownership da arquitetura §54; sem agents/subagents duplicados.
+4. **Governança:** revisar spec do Repository Governor; implementar e testar CI localmente; deixar required checks/rulesets como ação externa separada.
+5. **Gates externos e rollout:** Graphiti/Google e collector OTLP somente com endpoint/credencial aprovado e sem Docker; Actions/provedores reais; validação final de F25. Deploy/merge não fazem parte do fechamento automático.
+
+**Bloqueio de porcentagem:** não existe denominador/evidência consolidada para declarar um percentual global honesto. Não somar F0–F25, M0–M9, cinco pacotes Jules e Governor como se fossem tarefas de mesmo peso. A porcentagem só poderá ser calculada após registrar os aceites e pesos/denominadores no State Ledger/AcceptanceManifest.
+
+**Fontes de evidência desta reconciliação:** `docs/audits/maestri-v3-f0-f1-evidence-2026-09-22.md`, `docs/audits/maestri-v3-rollout-matrix-2026-09-22.md`, `docs/MAESTRI_AGENT_ARCHITECTURE.md` §54, a spec do Repository Governor e o status/CI atuais do repositório público MCG. Se snapshot histórico adiante conflitar com esta seção, esta seção prevalece até nova auditoria com evidência.
+
+M0, a dashboard, M1 Core e os contratos Fabric F0–F24 foram validados no worktree isolado conforme as evidências referenciadas. O Fabric possui `TaskContract.context_packet`, `ContextPacket` canônico, `ExecutionPort`, `ExecutionResult`, `ResultDigest`, `HandoffRequest`, adapters Codex/Claude truthful, router com probing e `MaestriDelegator`; `CoreRuntime.delegateTask()` persiste a execução no feed da dashboard. O Core já tem `KnowledgeContextRetriever` para notas Obsidian `PUBLISHED` e fatos Graphiti, e o MCG tem telemetria, traces, exporter OTLP opcional e dashboard read-only. Esses fatos não fecham a configuração externa nem os milestones M2–M9.
+
+Evidência F0/F1 + M1: `docs/audits/maestri-v3-f0-f1-evidence-2026-09-22.md`. O health probe, a prova read-only real do Codex, a persistência de `ExecutionResult`/evidence, os endpoints `/executions` e `/executions/:id`, a view `Executions`, o benchmark v2 com trust `VALIDATED` e o fluxo Core→Maestri→provider já passaram. O guard local de rollout está em `packages/maestri-context-gateway/src/rollout-gate.mjs`; rollout externo segue sujeito à matriz e aos gates acima.
 
 O port standalone avançou: `packages/knowledge` já valida/exporta notas Obsidian `PUBLISHED` com scanner e provenance; `packages/knowledge-graph` já define namespace determinístico, projection worker, degradação segura, adapter HTTP Graphiti/Neo4j e `GraphView` read-only determinístico; `apps/core` já tem SQLite persistente, migração inicial, tarefas idempotentes, replay, EventBus, health, shutdown, recovery para `RECOVERING`, API loopback em `127.0.0.1`, integração com o `compileContext` real do MCG, telemetria persistida pelo contrato MCG, dashboard consumindo essa telemetria, fluxo completo Knowledge → Graph com eventos `context.requested/completed/failed`, `knowledge.published` e `graph.projected`, `ContextPacket` progressivo determinístico em L0/L1/L2 com instruções priorizadas, hard cap e provenance de versão, `resolveProgressiveContext` com gates explícitos de request-more-context, `KnowledgeContextRetriever` lendo notas Obsidian `PUBLISHED` limpas e fatos Graphiti, `CoreRuntime.requestProgressiveContext` atravessando o packet real até o MCG, `CoreRuntime.delegateTask` atravessando o broker até a persistência de `ExecutionResult`, Budget Engine multidimensional para tokens, contexto, tools, tempo, custo e quota, passagem do packet para fragments MCG no request real, enforcement de budget antes da execução, Instruction Resolver hierárquico com adaptação por runtime, Tool Registry lazy por capability/domínio com cap, catálogo determinístico e integração no packet, MCP Gateway stateless com cache TTL de `tools/list`/`resources/list`, ordenação determinística, health probing, propagação `traceparent`, handles explícitos com expiração, resolução direta dentro do request do Core, telemetria `mcp.catalog` visível em `by_mcp` na dashboard, spans persistidos pelo trace store MCG, exporter OTLP opcional, endpoint Core `GET /graph` com validação e resposta sem mutação e dashboard Graph read-only com `/api/graph`, aba de navegação e drill-down de entidades/fontes. Próximo entregável: configuração externa e rollout F25.
 
 Este documento é a fonte de verdade única da branch Lumenva Command Center.
 Não criar um segundo plano concorrente para o mesmo escopo; atualizar este arquivo.
+
+### Repository Governor — governança transversal do monorepo
+
+Adicionado ao plano atual em 2026-09-22 como iniciativa de CI transversal; não cria outro runtime nem substitui as fases do Command Center. A especificação de desenho está em `docs/superpowers/specs/2026-09-22-repository-governor-design.md` e aguarda revisão escrita antes do plano detalhado.
+
+**Auditoria concluída:** CI de PR já roda typecheck, lint, harness, testes unitários/shell/DB; política de migration existente cobre CRM; Dependency Cruiser e Governor não encontrados. A API do GitHub mostrou `main` com proteção estrita e force-push bloqueado, mas sem checks obrigatórios; nenhum ruleset existe. MCP GitHub permanece read-only.
+
+**Pipeline / progresso do Governor:**
+
+| Etapa | Estado | Progresso |
+|---|---|---:|
+| G0 — verificar agentes e artefatos sobrepostos | concluído; nenhum trabalho ativo correspondente encontrado | 100% |
+| G1 — auditar CI, migrations, arquitetura e proteção GitHub | concluído | 100% |
+| G2 — validar desenho, escopo, segurança e critérios de aceite | especificação criada; revisão do Owner pendente | 90% |
+| G3 — aprovar especificação escrita | pendente | 0% |
+| G4 — produzir plano detalhado task-by-task | aguardando G3 | 0% |
+| G5 — implementar manifesto e checks determinísticos | não iniciado | 0% |
+| G6 — integrar Governor ao CI existente e testar casos positivos/negativos | não iniciado | 0% |
+| G7 — calibrar baseline de arquitetura/migrations sem mascarar dívida nova | não iniciado | 0% |
+| G8 — identificar checks reais e torná-los obrigatórios em `main` | rollout administrativo separado; não autorizado/executado nesta etapa | 0% |
+| G9 — validar PR de prova, evidências e documentação final | não iniciado | 0% |
+
+**Progresso exclusivo do Repository Governor (não representa o progresso geral dos planos de hoje):** desenho/auditoria 100%; implementação local 0%; enforcement GitHub 0%. Pipeline G0–G9: **29%** (pesos iguais por etapa: G0/G1 = 100%, G2 = 90%, G3–G9 = 0%). O restante depende da revisão escrita e, para G8, da aprovação do rollout externo.
 
 
 ## Execution Handoff — implementação integral
@@ -1913,7 +1980,7 @@ Passaram na auditoria local:
 - Skills locais e hooks existentes foram inventariados; Claude possui `caveman` e `i-have-adhd`; Codex possui plugins/hooks locais; Gemini encontrou skills globais, mas recusou skills do projeto por trust pendente.
 - GitHub Actions existentes: `ci.yml`, `f2-f3-vertical.yml`, `implementacao-tokens-ci.yml`, `mcg.yml`; workflows desativados permanecem `.disabled`.
 
-Gaps confirmados, sem instalação automática ainda:
+Gaps confirmados no instante da auditoria inicial (snapshot histórico, antes das instalações):
 
 - `docs/MAESTRI_AGENT_ARCHITECTURE.md` não existe no checkout nem nos diretórios Lumenva auditados; registrar como documento ausente, sem inventar conteúdo.
 - Jules não possui CLI oficial instalada/publicada; o artefato oficial disponível é `@google/jules-sdk` e a Action `google-labs-code/jules-invoke@v1`.
@@ -1926,14 +1993,29 @@ Gaps confirmados, sem instalação automática ainda:
 
 ### Implementação V3 após a auditoria
 
-1. Criar o documento ausente `docs/MAESTRI_AGENT_ARCHITECTURE.md` somente após consolidar a arquitetura aprovada nesta branch.
-2. Instalar apenas os SDKs confirmados ausentes no workspace: `@openai/codex-sdk` e `@google/jules-sdk`.
-3. Instalar `gh-aw` como extensão oficial e executar `gh aw doctor`; inicializar Agentic Workflows somente depois de revisar permissões, engines, tools e locks.
-4. Adicionar workflows versionados para Codex Action/Jules Action apenas com secrets nomeados e permissões mínimas; não executar em `main` durante esta tarefa.
-5. Corrigir/configurar MCP por host usando capability probing, escopo read-only inicial e autenticação oficial; não duplicar servidores existentes.
-6. Validar SDKs, Actions, MCPs, plugins, skills, hooks e workflows com evidência reproduzível na branch `vps`.
+- [x] Criar o documento canônico `docs/MAESTRI_AGENT_ARCHITECTURE.md` depois de consolidar a arquitetura aprovada nesta branch.
+- [x] Adicionar os SDKs confirmados ausentes às dependências do workspace e validar imports sem chamada externa.
+- [x] Instalar/reutilizar `gh-aw` oficial e executar `gh aw doctor`; nenhum Agentic Workflow novo foi inicializado.
+- [x] Adicionar workflows manuais Codex/Jules com guard de branch `vps`, secrets nomeados e permissões mínimas; não executar em `main`.
+- [x] Configurar o GitHub MCP em read-only e autenticação local sem persistir token; remover entradas duplicadas GitHub MCP do `.codex/config.toml` e `.gemini/settings.json` do worktree `vps`.
+- [ ] Fechar validação por host: Claude reportou GitHub/Jules MCP `Connected`; Codex tem os dois registros globais habilitados, mas falta executar uma chamada read-only após reiniciar o host.
 
-Status deste bootstrap: `docs/MAESTRI_AGENT_ARCHITECTURE.md` é o contrato canônico; `@openai/codex-sdk@0.155.1`, `@google/jules-sdk@0.2.0`, a extensão oficial `gh-aw v0.88.8`, o binário oficial GitHub MCP Server `v1.12.2` e `actionlint v1.7.12` foram instalados após confirmação de ausência. Smoke tests, `gh aw doctor`, actionlint e health do GitHub MCP no Claude passaram; o host Codex ainda reporta auth `Unsupported`. Workflows Codex/Jules manuais e protegidos por `vps` foram publicados em `e7f39825`, mas o GitHub só registra `workflow_dispatch` quando o arquivo está na branch padrão; a API confirmou os arquivos em `vps` e o dispatch Jules retornou `404`. A sessão Jules SDK `15571346256263829722` validou o provider diretamente contra `vps` em modo read-only, sem commit/PR, confirmando Knowledge Graph 8/8, Core 44/44, MCG 37/37 e `READY_FOR_VPS`; isso não substitui o Action. Não houve merge para `main`; `JULES_API_KEY` está configurada no GitHub Actions, enquanto `OPENAI_API_KEY` continua ausente. Graphiti local agora falha fechado em `OFF` por padrão e o Core mantém `/graph` read-only vazio sem endpoint remoto. Gemini MCP foi configurado no projeto e o trust local foi autorizado, mas a conta não tem licença aceita pelo Gemini CLI; não foi instalado Antigravity.
+Status do bootstrap documentado antes da normalização global: `docs/MAESTRI_AGENT_ARCHITECTURE.md` é o contrato canônico; SDKs locais, `gh-aw v0.88.8`, GitHub MCP Server `v1.12.2` e `actionlint v1.7.12` já constavam como instalados/testados. Os workflows Codex/Jules manuais e protegidos por `vps` permanecem nos arquivos do repositório e não são instalações globais. Os detalhes históricos da sessão Jules, do dispatch `404`, de `OPENAI_API_KEY` e do Graphiti permanecem como evidência do ciclo anterior; não inferir que esses gates externos foram resolvidos nesta atualização.
+
+### Normalização global do setup Windows — 2026-09-22
+
+Aplicada depois do snapshot acima, sem instalar Docker e sem colocar binários, skills ou configurações MCP do novo pack em diretórios de projeto:
+
+- `@google/jules@0.1.42` foi instalado globalmente; `jules login` autenticou e `jules remote list --repo` listou repositórios conectados.
+- SDKs globais: `@openai/codex-sdk@0.156.0` e `@google/jules-sdk@0.2.0`. Isto não substitui nem altera as dependências locais versionadas do workspace.
+- GitHub MCP Server oficial `v1.12.2` instalado em `%LOCALAPPDATA%\Programs\github-mcp-server`; binário conferido por SHA-256 contra o checksum da release. Wrappers globais em `%USERPROFILE%\.lumenva\bin` obtêm credenciais via `gh auth token`/Google Secret Manager em runtime, sem gravar valores nos arquivos de configuração.
+- GitHub MCP e Jules MCP registrados no escopo global do Claude e do Codex. O health check do Claude reportou ambos `Connected`; o registro global do Codex está habilitado, mas a invocação de tools ainda precisa ser validada numa sessão Codex reiniciada. O MCP GitHub é `read-only` e `lockdown-mode`.
+- As duas Jules Skills (`automate-github-issues`, `local-action-verification`) e a skill `agentic-workflows` estão em diretórios globais de Claude/Codex. A skill `local-action-verification` é marcada como alto risco pelo instalador e pressupõe `act`/Docker: não executar enquanto a proibição de Docker estiver vigente. A skill de automação de issues pode criar/mesclar PRs; exige pedido explícito antes de uso.
+- `gh` e `gh-aw v0.88.8` já estavam globais e foram reutilizados, sem reinstalação. Secret Manager já estava autenticado; nenhum valor secreto foi exibido.
+- Removidas apenas as entradas `github` dos MCPs de projeto em `.codex/config.toml` e `.gemini/settings.json` na branch `vps`; demais configurações/servidores desses arquivos foram preservados.
+- GitHub Actions, Claude Code Action, Codex Action e Jules Action são referências de workflow por repositório; não são pacotes que possam ser instalados globalmente. Os workflows já existentes na branch `vps` permanecem versionados ali. O plugin remoto GitHub não foi instalado separadamente porque duplicaria a integração MCP local já configurada.
+
+Pendência de validação global: após reiniciar o Codex, testar uma chamada MCP read-only do GitHub e uma listagem read-only de sessões Jules. Não iniciar sessão Jules, aprovar plano, criar issue/PR ou disparar workflow para esse smoke test.
 
 Plano operacional detalhado: `docs/superpowers/plans/2026-09-22-maestri-v3-bootstrap.md`. Os três primeiros gates externos restantes estão decompostos em `docs/superpowers/plans/2026-09-22-maestri-v3-first-three-external-gates.md`: Actions reais Jules/Codex, Graphiti remoto sem Docker e collector OTLP opcional. A documentação da VPS foi reconciliada em `docs/superpowers/plans/2026-09-22-maestri-v3-vps-graphiti-integration.md`, agora limitada às lacunas V3: cobertura do adapter HTTP, round-trip sintético atual por rede privada e status operacional mascarado. O stack/Graph View já existentes não serão refeitos; a flag CRM (`off|shadow|canary|on`) é distinta do modo do adapter V3 (`off|shadow|on`) e não será alterada.
 
