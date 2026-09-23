@@ -32,6 +32,8 @@ These failures are recorded as a downstream CI blocker. Core source, tests, pack
 
 Dashboard tests cover the read-only local endpoints, keyboard-accessible navigation, the M0.12 views, honest unavailable states, graph source drill-down and loopback binding. These are automated tests, not a claim of a production deployment or remote workspace connectivity.
 
+Read-only live dashboard check against the user's current MCG runtime (PowerShell HTTP GET; browser not used): loopback dashboard started on a temporary port and was stopped after inspection. `/api/health` reported wire `ONLINE` and workspace online. `/api/tasks` returned 15 stored tasks; stats summarized 7 completed and 6 active. Token metrics were `unavailable`, Trust was `UNVALIDATED`, and there were 0 eligible paired evaluations. Observed resources: 3 agents, 3 runtimes, 1 tool; plugins and MCPs had no observed records and remained unavailable. No runtime records were modified.
+
 ## Pending evidence
 
 ## Remote GitHub evidence

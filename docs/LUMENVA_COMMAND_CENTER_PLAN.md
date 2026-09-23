@@ -1393,6 +1393,8 @@ Nenhuma view final aceita:
 - placeholder
 - future/prepared como PASS
 
+Verificação local do dashboard real (2026-09-23, somente GET via PowerShell; sem navegador): dashboard respondeu em loopback; `/api/health` confirmou wire `ONLINE` e workspace online. `/api/tasks` mostrou 15 registros; `/api/stats`, 7 concluídas e 6 ativas. Métricas MCG estão `unavailable`, Trust `UNVALIDATED` e dataset real tem 0 pares elegíveis. Descoberta observada: 3 agents, 3 runtimes, 1 tool; plugins e MCPs sem eventos reais, portanto vazios/`unavailable`. O dashboard está servindo dados atuais corretamente, mas ainda não demonstra economia de tokens nem avaliação positiva; não preencher essas lacunas com mocks.
+
 ### M0.13 Gate de conclusão
 
 M0 fecha somente quando:
