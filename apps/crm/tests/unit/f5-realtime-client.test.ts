@@ -40,7 +40,6 @@ describe("F5 Task 5 - useRealtimeChannel SSE Migration", () => {
     MockEventSource.instances = [];
     vi.stubGlobal("EventSource", MockEventSource);
 
-    // use ReturnType to infer the proper type dynamically to avoid exporting ActiveOrg directly if not defined
     vi.spyOn(AuthProvider, "useActiveOrg").mockReturnValue({ orgId: "o-1", name: "Org", role: "viewer" } as unknown as ReturnType<typeof AuthProvider.useActiveOrg>);
   });
 
@@ -55,7 +54,9 @@ describe("F5 Task 5 - useRealtimeChannel SSE Migration", () => {
     renderHook(() => useRealtimeChannel({ name: "test", onChange }));
 
     expect(MockEventSource.instances).toHaveLength(1);
-    const url = new URL(MockEventSource.instances[0]!.url, "http://localhost");
+    const instance = MockEventSource.instances[0];
+    if (!instance) throw new Error("instance not found");
+    const url = new URL(instance.url, "http://localhost");
     expect(url.pathname).toBe("/api/v1/realtime/events");
     expect(url.searchParams.get("organization_id")).toBe("o-1");
   });
@@ -75,7 +76,8 @@ describe("F5 Task 5 - useRealtimeChannel SSE Migration", () => {
     }));
 
     expect(MockEventSource.instances).toHaveLength(1);
-    const instance = MockEventSource.instances[0]!;
+    const instance = MockEventSource.instances[0];
+    if (!instance) throw new Error("instance not found");
 
     const mockRow = { entity_kind: "my_table", payload: { id: "123" } };
     instance.emit("message", { data: JSON.stringify(mockRow) });
