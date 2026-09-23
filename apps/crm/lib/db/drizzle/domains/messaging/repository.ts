@@ -1,14 +1,56 @@
-// @ts-nocheck
 import { and, eq, desc, asc, lte, gte } from 'drizzle-orm';
-import type { Conversation, Message } from '../../../types/messaging';
+import type { Conversation, Message } from '../../../../types/messaging';
 import type { TenantReadContext, ConversationFilter, MessageFilter, MessagingRepository } from './types';
-import { MessagingNormalizer } from './normalizer';
+import { MessagingNormalizer, type ConversationDbRow, type MessageDbRow } from './normalizer';
+
+type DrizzleColumn = Parameters<typeof eq>[0];
+type DrizzleRow = Readonly<Record<string, unknown>>;
+
+interface ConversationTable {
+  id: DrizzleColumn;
+  organization_id: DrizzleColumn;
+  status: DrizzleColumn;
+  channel: DrizzleColumn;
+  last_message_at: DrizzleColumn;
+}
+
+interface MessageTable {
+  id: DrizzleColumn;
+  organization_id: DrizzleColumn;
+  conversation_id: DrizzleColumn;
+  sent_at: DrizzleColumn;
+}
+
+interface MessagingSchema {
+  conversations: ConversationTable;
+  messages: MessageTable;
+}
+
+interface MessagingQueryResult extends Promise<readonly DrizzleRow[]> {
+  offset(value: number): Promise<readonly DrizzleRow[]>;
+}
+
+interface MessagingQuery {
+  from(table: ConversationTable | MessageTable): MessagingQuery;
+  where(condition: unknown): MessagingQuery;
+  orderBy(...clauses: unknown[]): MessagingQuery;
+  limit(value: number): MessagingQueryResult;
+}
+
+interface MessagingTransaction {
+  execute(query: string): Promise<unknown>;
+}
+
+interface MessagingDatabase {
+  transaction(callback: (tx: MessagingTransaction) => Promise<unknown>): Promise<unknown>;
+  select(): MessagingQuery;
+}
 
 export class DrizzleMessagingRepository implements MessagingRepository {
-  private db: any;
-  private schema: any;
+  private db: MessagingDatabase;
+  private schema: MessagingSchema;
 
-  constructor(dbClient: any, schemaMap: any) {
+  constructor(dbClient: MessagingDatabase, schemaMap: MessagingSchema) {
     this.db = dbClient;
     this.schema = schemaMap;
   }
@@ -16,10 +58,12 @@ export class DrizzleMessagingRepository implements MessagingRepository {
   private async executeWithContext<T>(ctx: TenantReadContext, queryFn: () => Promise<T>): Promise<T> {
     if (!ctx.organizationId) throw new Error('Missing organizationId in context');
 
-    return await this.db.transaction(async (tx: any) => {
+    const result = await this.db.transaction(async (tx) => {
       await tx.execute(`SET LOCAL app.organization_id = '${ctx.organizationId}'`);
       return await queryFn();
     });
+
+    return result as T;
   }
 
   async findConversationById(ctx: TenantReadContext, id: string): Promise<Conversation | null> {
@@ -34,7 +78,7 @@ export class DrizzleMessagingRepository implements MessagingRepository {
         .limit(1);
 
       if (result.length === 0) return null;
-      return MessagingNormalizer.conversation(result[0]) as Conversation;
+      return MessagingNormalizer.conversation(result[0] as ConversationDbRow | undefined) as Conversation;
     });
   }
 
@@ -58,7 +102,7 @@ export class DrizzleMessagingRepository implements MessagingRepository {
         .limit(filter.limit || 50)
         .offset(filter.offset || 0);
 
-      return results.map((row: any) => MessagingNormalizer.conversation(row) as Conversation);
+      return results.map((row) => MessagingNormalizer.conversation(row as ConversationDbRow) as Conversation);
     });
   }
 
@@ -74,14 +118,14 @@ export class DrizzleMessagingRepository implements MessagingRepository {
         .limit(1);
 
       if (result.length === 0) return null;
-      return MessagingNormalizer.message(result[0]) as Message;
+      return MessagingNormalizer.message(result[0] as MessageDbRow | undefined) as Message;
     });
   }
 
   async listMessages(ctx: TenantReadContext, filter: MessageFilter): Promise<readonly Message[]> {
     return this.executeWithContext(ctx, async () => {
       const { messages } = this.schema;
-      const conditions: any[] = [
+      const conditions = [
         eq(messages.organization_id, ctx.organizationId),
         eq(messages.conversation_id, filter.conversationId)
       ];
@@ -104,7 +148,7 @@ export class DrizzleMessagingRepository implements MessagingRepository {
         .orderBy(orderByClause)
         .limit(filter.limit || 50);
 
-      return results.map((row: any) => MessagingNormalizer.message(row) as Message);
+      return results.map((row) => MessagingNormalizer.message(row as MessageDbRow) as Message);
     });
   }
 }

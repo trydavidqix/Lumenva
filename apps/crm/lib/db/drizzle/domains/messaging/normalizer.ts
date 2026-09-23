@@ -1,9 +1,65 @@
-// @ts-nocheck
-import type { Conversation, Message } from '../../../types/messaging';
+import type { Conversation, Message } from '../../../../types/messaging';
+
+type DbDate = Date | string | null | undefined;
+type DbNumber = number | string | null | undefined;
+
+export interface ConversationDbRow {
+  id?: string;
+  organization_id?: string;
+  contact_id?: string;
+  channel_session_id?: string;
+  channel?: string;
+  status?: string;
+  status_changed_at?: DbDate;
+  assigned_to_user_id?: string | null;
+  assignee_kind?: string | null;
+  assigned_at?: DbDate;
+  last_inbound_at?: DbDate;
+  last_outbound_at?: DbDate;
+  last_message_at?: DbDate;
+  last_message_preview?: string | null;
+  unread_count_for_assignee?: DbNumber;
+  is_group?: boolean | null;
+  group_chat_id?: string | null;
+  tags?: readonly string[] | null;
+  metadata?: Record<string, unknown> | null;
+  snooze_until?: DbDate;
+  bot_silenced_until?: DbDate;
+  last_handoff_at?: DbDate;
+  created_at?: DbDate;
+  updated_at?: DbDate;
+}
+
+export interface MessageDbRow {
+  id?: string;
+  organization_id?: string;
+  conversation_id?: string;
+  channel_session_id?: string;
+  contact_id?: string;
+  external_id?: string | null;
+  type?: string;
+  direction?: Message['direction'];
+  status?: string;
+  ack?: DbNumber;
+  error_code?: string | null;
+  error_message?: string | null;
+  body?: string | null;
+  media_url?: string | null;
+  media_mime?: string | null;
+  media_size_bytes?: DbNumber;
+  media_storage_path?: string | null;
+  sent_via?: Message['sent_via'];
+  sent_by_user_id?: string | null;
+  sent_at?: DbDate;
+  delivered_at?: DbDate;
+  read_at?: DbDate;
+  metadata?: Record<string, unknown> | null;
+  created_at?: DbDate;
+}
 
 export const MessagingNormalizer = {
-  conversation(row: any): Partial<Conversation> {
-    if (!row) return row;
+  conversation(row: ConversationDbRow | null | undefined): Partial<Conversation> {
+    if (!row) return row as unknown as Partial<Conversation>;
 
     // Sort arrays (e.g. tags) for stable comparison
     const tags = row.tags ? [...row.tags] : [];
@@ -37,8 +93,8 @@ export const MessagingNormalizer = {
     } as unknown as Partial<Conversation>;
   },
 
-  message(row: any): Partial<Message> {
-    if (!row) return row;
+  message(row: MessageDbRow | null | undefined): Partial<Message> {
+    if (!row) return row as unknown as Partial<Message>;
     return {
       id: row.id,
       organization_id: row.organization_id,

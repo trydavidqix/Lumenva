@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MessagingNormalizer } from '../../lib/db/drizzle/domains/messaging/normalizer';
 import { DrizzleMessagingRepository } from '../../lib/db/drizzle/domains/messaging/repository';
@@ -7,8 +6,10 @@ import { DrizzleMessagingRepository } from '../../lib/db/drizzle/domains/messagi
 const mockTx = {
   execute: vi.fn().mockResolvedValue(true)
 };
+type MockTransactionCallback = (tx: typeof mockTx) => Promise<unknown>;
+
 const mockDb = {
-  transaction: vi.fn(async (cb) => cb(mockTx)),
+  transaction: vi.fn((cb: MockTransactionCallback): Promise<unknown> => cb(mockTx)),
   select: vi.fn().mockReturnThis(),
   from: vi.fn().mockReturnThis(),
   where: vi.fn().mockReturnThis(),
@@ -115,7 +116,10 @@ describe('DrizzleMessagingRepository', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.DATABASE_URL = 'postgres://fake:fake@fake:5432/fake';
-    repository = new DrizzleMessagingRepository(mockDb, mockSchema);
+    repository = new DrizzleMessagingRepository(
+      mockDb as unknown as ConstructorParameters<typeof DrizzleMessagingRepository>[0],
+      mockSchema as unknown as ConstructorParameters<typeof DrizzleMessagingRepository>[1]
+    );
   });
 
   afterEach(() => {
@@ -178,7 +182,7 @@ describe('DrizzleMessagingRepository', () => {
     const results = await repository.listMessages(ctx, { conversationId: 'conv-1', direction: 'forward', cursor: cursorStr });
 
     expect(mockDb.transaction).toHaveBeenCalled();
-    // expect(mockDb.where).toHaveBeenCalled(); // we mocked drizzle where so it is fine
+    expect(mockDb.where).toHaveBeenCalled();
     expect(results).toHaveLength(1);
     expect(results[0]?.id).toBe('msg-2');
   });

@@ -1,5 +1,4 @@
-// @ts-nocheck
-import type { Conversation, Message } from '../../../types/messaging';
+import type { Conversation, Message } from '../../../../types/messaging';
 
 export interface TenantReadContext {
   userId: string;
