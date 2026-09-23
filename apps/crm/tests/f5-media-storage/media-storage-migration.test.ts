@@ -9,6 +9,7 @@ import { sendMessageHandler } from '../../app/api/v1/messages/_handler';
 import type { SendMessageInput } from '@/lib/schemas';
 import type { HandlerCtx } from '@/lib/api/handlers/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { NextRequest } from 'next/server';
 
 // We mock requireRole, createAdminClient, createClient, etc.
 vi.mock('@/lib/auth/require-role', () => ({
@@ -115,7 +116,7 @@ describe('Media Storage Migration TDD', () => {
 
   it('avatarGet should return signed URL from GCS object store instead of Supabase', async () => {
     const req = new Request('https://test.com/api/v1/contacts/1/avatar');
-    const res = await avatarGet(req as unknown as Request, { params: Promise.resolve({ id: 'contact-1' }) });
+    const res = await avatarGet(req as unknown as NextRequest, { params: Promise.resolve({ id: 'contact-1' }) });
     expect(res.status).toBe(307);
     expect(res.headers.get('location')).toBe('https://new-gcs-url/');
     expect(mockGcsCreateReadUrl).toHaveBeenCalled();
@@ -136,7 +137,7 @@ describe('Media Storage Migration TDD', () => {
       get: vi.fn().mockReturnValue(new File(['test'], 'test.jpg', { type: 'image/jpeg' }))
     });
 
-    const res = await mediaPost(req as unknown as Request, { params: Promise.resolve({ id: 'conv-1' }) });
+    const res = await mediaPost(req as unknown as NextRequest, { params: Promise.resolve({ id: 'conv-1' }) });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.data.storage_path).toContain('conv-1/out-');
@@ -157,7 +158,7 @@ describe('Media Storage Migration TDD', () => {
       }
     });
 
-    const res = await cronPost(req as unknown as Request);
+    const res = await cronPost(req as unknown as NextRequest);
     expect(res.status).toBe(200);
     expect(mockGcsPut).toHaveBeenCalled();
   });
@@ -165,16 +166,17 @@ describe('Media Storage Migration TDD', () => {
   it('messageMediaGet should return signed URL from GCS object store instead of Supabase', async () => {
     // Override supabase mock just for this to ensure msg.media_storage_path is returned
     const origCreateClient = vi.mocked(createClient);
-    origCreateClient.mockImplementationOnce(async () => ({
+    const clientMock = {
       from: vi.fn(() => ({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'msg-1', media_storage_path: 'org-123/msgs/media.jpg' } })
       }))
-    }) as unknown as typeof origCreateClient);
+    };
+    origCreateClient.mockImplementationOnce(async () => clientMock as unknown as SupabaseClient);
 
     const req = new Request('https://test.com/api/v1/messages/msg-1/media');
-    const res = await messageMediaGet(req as unknown as Request, { params: Promise.resolve({ id: 'msg-1' }) });
+    const res = await messageMediaGet(req as unknown as NextRequest, { params: Promise.resolve({ id: 'msg-1' }) });
     expect(res.status).toBe(302);
     expect(res.headers.get('location')).toBe('https://new-gcs-url/');
     expect(mockGcsCreateReadUrl).toHaveBeenCalled();
@@ -215,7 +217,7 @@ describe('Message Handler TDD', () => {
       }),
       rpc: vi.fn().mockResolvedValue({ error: null })
     };
-    origCreateClient.mockImplementationOnce(async () => mockSupabase as unknown as typeof mockSupabase);
+    origCreateClient.mockImplementationOnce(async () => mockSupabase as unknown as SupabaseClient);
 
     const input = {
       conversation_id: 'conv-1',
@@ -223,13 +225,13 @@ describe('Message Handler TDD', () => {
       media_storage_path: 'org-123/conv-1/media.jpg'
     } as unknown as SendMessageInput;
     const ctx = {
-      actor: { type: 'user', id: 'user-1' },
+      actor: { type: 'user', id: 'user-1', role: 'agent' },
       organization_id: 'org-123',
       requestId: 'req-1'
     } as unknown as HandlerCtx;
 
     try {
-      await sendMessageHandler(mockSupabase as unknown as SupabaseClient, input, ctx);
+      await sendMessageHandler(mockSupabase as unknown as SupabaseClient, ctx, input);
     } catch {
       // ignore
     }
