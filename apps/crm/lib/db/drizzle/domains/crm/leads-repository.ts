@@ -1,16 +1,15 @@
-import type { DomainRepository, TenantReadContext, CrmLead, CrmLeadFilter } from './types';
-import { getDrizzle } from '../../../../../../packages/social-brain/db/src/drizzle/client';
+import { DomainRepository, TenantReadContext, CrmLead, CrmLeadFilter } from './types';
+import { getDrizzle } from '@lumenva/db/drizzle/client';
 import { sql } from 'drizzle-orm';
 
 export class CrmLeadsDrizzleRepository implements DomainRepository<CrmLead, CrmLeadFilter, unknown, unknown> {
   async findById(ctx: TenantReadContext, id: string): Promise<CrmLead | null> {
     const db = getDrizzle();
 
-    return await db.transaction(async (tx: unknown) => {
-      const transaction = tx as { execute: (query: unknown) => Promise<{ rows: unknown[] }> };
-      await transaction.execute(sql`SET LOCAL app.organization_id = ${ctx.organizationId}`);
+    return await db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL app.organization_id = ${ctx.organizationId}`);
 
-      const res = await transaction.execute(sql`
+      const res = await tx.execute(sql`
         SELECT * FROM crm_leads
         WHERE id = ${id}
           AND organization_id = ${ctx.organizationId}
@@ -25,9 +24,8 @@ export class CrmLeadsDrizzleRepository implements DomainRepository<CrmLead, CrmL
   async list(ctx: TenantReadContext, filter: CrmLeadFilter): Promise<readonly CrmLead[]> {
     const db = getDrizzle();
 
-    return await db.transaction(async (tx: unknown) => {
-      const transaction = tx as { execute: (query: unknown) => Promise<{ rows: unknown[] }> };
-      await transaction.execute(sql`SET LOCAL app.organization_id = ${ctx.organizationId}`);
+    return await db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL app.organization_id = ${ctx.organizationId}`);
 
       const queryParts: string[] = [`SELECT * FROM crm_leads WHERE organization_id = ${ctx.organizationId}`];
 
@@ -43,21 +41,21 @@ export class CrmLeadsDrizzleRepository implements DomainRepository<CrmLead, CrmL
       }
 
       const finalQuery = sql.raw(queryParts.join(''));
-      const res = await transaction.execute(finalQuery);
+      const res = await tx.execute(finalQuery);
 
       return res.rows as unknown as CrmLead[];
     });
   }
 
-  async insert(_ctx: TenantReadContext, _input: unknown): Promise<CrmLead> {
+  async insert(ctx: TenantReadContext, input: unknown): Promise<CrmLead> {
     throw new Error('Not implemented for shadow reads');
   }
 
-  async update(_ctx: TenantReadContext, _id: string, _patch: unknown): Promise<CrmLead> {
+  async update(ctx: TenantReadContext, id: string, patch: unknown): Promise<CrmLead> {
     throw new Error('Not implemented for shadow reads');
   }
 
-  async delete(_ctx: TenantReadContext, _id: string): Promise<void> {
+  async delete(ctx: TenantReadContext, id: string): Promise<void> {
     throw new Error('Not implemented for shadow reads');
   }
 }
