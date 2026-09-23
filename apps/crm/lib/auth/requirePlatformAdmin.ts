@@ -4,12 +4,10 @@
  * Flow:
  *  1. Validate JWT via getUser() (NEVER getSession on backend per CLAUDE.md).
  *  2. Confirm row in platform_admins (active = no revoked_at).
- *  3. Enforce MFA AAL2 if `mfa_required` (default true for platform admins).
  *
  * Redirects (for layout):
  *  - no user        → /login?next=/admin
  *  - no row         → /admin/forbidden
- *  - aal1 + required → /login/mfa?next=/admin
  */
 import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
@@ -19,7 +17,6 @@ import { logger } from "@/lib/logger";
 export interface PlatformAdminInfo {
   user_id: string;
   scope: string;
-  mfa_required: boolean;
 }
 
 export interface PlatformAdminContext {
@@ -29,7 +26,7 @@ export interface PlatformAdminContext {
 
 type ResolveResult =
   | { ok: true; context: PlatformAdminContext }
-  | { ok: false; reason: "unauthenticated" | "forbidden" | "mfa_required" | "internal_error" };
+  | { ok: false; reason: "unauthenticated" | "forbidden" | "internal_error" };
 
 export async function resolvePlatformAdmin(): Promise<ResolveResult> {
   const supabase = await createClient();
@@ -41,11 +38,26 @@ export async function resolvePlatformAdmin(): Promise<ResolveResult> {
     return { ok: false, reason: "unauthenticated" };
   }
 
+  // Use the internal user_id mapping via resolve_firebase_identity
+  const { data: mappedUserId, error: mapError } = await supabase.rpc("resolve_firebase_identity", {
+    p_firebase_uid: user.id,
+  });
+
+  if (mapError) {
+    logger.error("[auth] resolve_firebase_identity failed", { error: mapError.message });
+    return { ok: false, reason: "internal_error" };
+  }
+
+  const internalUserId = mappedUserId;
+  if (!internalUserId) {
+    return { ok: false, reason: "forbidden" }; // Unmapped Firebase UID
+  }
+
   // platform_admins RLS: only platform admins read; non-admins get null → forbid.
   const { data: paRow, error } = await supabase
     .from("platform_admins")
-    .select("user_id, scope, mfa_required, revoked_at")
-    .eq("user_id", user.id)
+    .select("user_id, scope, revoked_at")
+    .eq("user_id", internalUserId)
     .is("revoked_at", null)
     .maybeSingle();
 
@@ -58,25 +70,13 @@ export async function resolvePlatformAdmin(): Promise<ResolveResult> {
     return { ok: false, reason: "forbidden" };
   }
 
-  if (paRow.mfa_required) {
-    const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (aalError) {
-      logger.error("[auth] mfa aal query failed", { error: aalError.message });
-      return { ok: false, reason: "internal_error" };
-    }
-    if (aalData?.currentLevel !== "aal2") {
-      return { ok: false, reason: "mfa_required" };
-    }
-  }
-
   return {
     ok: true,
     context: {
-      user,
+      user: { ...user, id: internalUserId },
       platformAdmin: {
         user_id: paRow.user_id,
         scope: paRow.scope,
-        mfa_required: paRow.mfa_required,
       },
     }
   };
@@ -91,8 +91,6 @@ export async function requirePlatformAdmin(): Promise<PlatformAdminContext> {
         redirect("/login?next=/admin");
       case "forbidden":
         redirect("/admin/forbidden");
-      case "mfa_required":
-        redirect("/login/mfa?next=/admin");
       case "internal_error":
         throw new Error("Erro interno ao validar permissões de administrador.");
     }
