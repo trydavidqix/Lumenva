@@ -90,7 +90,7 @@ describe("MetaAdapter", () => {
         expect.objectContaining({ organizationId: "org-1" })
       );
 
-      const logArgs = vi.mocked(deps.logger.error).mock.calls[0][1];
+      const logArgs = vi.mocked(deps.logger.error).mock.calls[0]?.[1];
       expect(JSON.stringify(logArgs)).not.toContain("551199999999"); // PII redacted
     });
 
