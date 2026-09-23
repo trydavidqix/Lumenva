@@ -28,13 +28,17 @@ const SESSION = '44444444-4444-4444-8444-444444444444';
 const USER = '55555555-5555-4555-8555-555555555555';
 const WAHA_BASE = 'http://localhost:3030';
 
-// A URL assinada do Storage é montada com o admin client; ele valida env no
-// import, e o desfecho de mídia precisa controlar sucesso E falha da assinatura.
-const signedUrl = vi.fn<() => Promise<{ data: { signedUrl: string } | null; error: { message: string } | null }>>(
-  async () => ({ data: { signedUrl: 'https://signed.example/a.jpg' }, error: null }),
-);
+// O handler usa a fronteira GCS diretamente; o teste mantém a falha de
+// assinatura isolada do ambiente e do SDK real.
+const gcsCreateReadUrl = vi.hoisted(() => vi.fn(async () => 'https://signed.example/a.jpg'));
 vi.mock('@/lib/supabase/admin', () => ({
-  createAdminClient: () => ({ storage: { from: () => ({ createSignedUrl: signedUrl }) } }),
+  createAdminClient: vi.fn(),
+}));
+vi.mock('@lumenva/db/storage/gcs', () => ({
+  createGcsObjectStore: vi.fn(() => ({ createReadUrl: gcsCreateReadUrl })),
+}));
+vi.mock('@lumenva/db/gcp/cloud-storage', () => ({
+  getGcsBucket: vi.fn(() => ({})),
 }));
 // Audit é fire-and-forget e escreve em outra tabela; fora do escopo dos desfechos.
 vi.mock('@/lib/audit', () => ({ audit: vi.fn(async () => {}) }));
@@ -198,7 +202,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   fakeMetaEnv.META_PHONE_NUMBER_ID = '';
   fakeMetaEnv.META_SYSTEM_USER_TOKEN = '';
-  signedUrl.mockResolvedValue({ data: { signedUrl: 'https://signed.example/a.jpg' }, error: null });
+  gcsCreateReadUrl.mockResolvedValue('https://signed.example/a.jpg');
 });
 
 describe('sendMessageHandler — os 6 desfechos do envio', () => {
@@ -375,7 +379,7 @@ describe('sendMessageHandler — os 6 desfechos do envio', () => {
 
   it('6b. assinatura do Storage falha: failed/storage_sign_failed, não waha_error', async () => {
     wahaConfigured(true);
-    signedUrl.mockResolvedValue({ data: null, error: { message: 'no_object' } });
+    gcsCreateReadUrl.mockRejectedValueOnce(new Error('no_object'));
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
 
