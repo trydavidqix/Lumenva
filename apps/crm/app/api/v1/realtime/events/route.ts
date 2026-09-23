@@ -41,5 +41,8 @@ export async function GET(req: NextRequest) {
   }
 
   // This abstracts the polling loop + readable stream management
-  return createSSEStream(roleCheck.org.orgId, cursor, req.signal);
+  return createSSEStream(roleCheck.org.orgId, cursor, req.signal, {
+    userId: roleCheck.user.id,
+    role: roleCheck.org.role,
+  });
 }

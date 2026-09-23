@@ -38,6 +38,8 @@ import {
   sendExportEmail,
 } from "@/lib/lgpd/email-delivery";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createGcsObjectStore } from "@lumenva/db/storage/gcs";
+import { getGcsBucket } from "@lumenva/db/gcp/cloud-storage";
 
 const MAX_ATTEMPTS = 3;
 const BUCKET = "lgpd-exports";
@@ -160,37 +162,18 @@ export async function processLgpdExport(event: EventRow): Promise<HandlerResult>
     const pdfPath = `${orgId}/${requestId}/report.pdf`;
 
     const jsonBytes = Buffer.from(JSON.stringify(data, null, 2), "utf-8");
+    const store = createGcsObjectStore(getGcsBucket());
 
-    const { error: jsonUploadErr } = await admin.storage
-      .from(BUCKET)
-      .upload(jsonPath, jsonBytes, {
-        contentType: "application/json",
-        upsert: true,
-      });
-    if (jsonUploadErr) {
-      throw new Error(`json_upload_failed: ${jsonUploadErr.message}`);
-    }
-
-    const { error: pdfUploadErr } = await admin.storage
-      .from(BUCKET)
-      .upload(pdfPath, signResult.signed, {
-        contentType: "application/pdf",
-        upsert: true,
-      });
-    if (pdfUploadErr) {
-      throw new Error(`pdf_upload_failed: ${pdfUploadErr.message}`);
-    }
+    await store.put({ provider: "gcs", bucket: BUCKET, key: jsonPath }, jsonBytes, "application/json");
+    await store.put({ provider: "gcs", bucket: BUCKET, key: pdfPath }, signResult.signed, "application/pdf");
 
     // 7. Signed URL.
     const expiresInSec = expiresHours() * 60 * 60;
     const expiresAt = new Date(Date.now() + expiresInSec * 1000);
-
-    const { data: signed, error: signedErr } = await admin.storage
-      .from(BUCKET)
-      .createSignedUrl(pdfPath, expiresInSec);
-    if (signedErr || !signed) {
-      throw new Error(`signed_url_failed: ${signedErr?.message ?? "no_url"}`);
-    }
+    const signedUrl = await store.createReadUrl(
+      { provider: "gcs", bucket: BUCKET, key: pdfPath },
+      expiresInSec,
+    );
 
     // 8. Resolve delivery email.
     const deliveryFromPayload = (req.request_payload as Record<string, unknown>)?.delivery as
@@ -246,7 +229,7 @@ export async function processLgpdExport(event: EventRow): Promise<HandlerResult>
       const sent = await sendExportEmail({
         to: deliveryEmail,
         requestId,
-        signedUrl: signed.signedUrl,
+        signedUrl,
         expiresAt,
       });
       messageId = sent.messageId;

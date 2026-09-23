@@ -1,4 +1,5 @@
 import { pollEvents } from "./event-bus";
+import type { RealtimePollAccess } from "./event-bus";
 import { logger } from "@/lib/logger";
 
 const POLL_INTERVAL_MS = 2000;
@@ -12,7 +13,8 @@ function formatSSE(event: string, data: unknown): string {
 export function createSSEStream(
   organizationId: string,
   initialCursor: Date,
-  requestSignal: AbortSignal
+  requestSignal: AbortSignal,
+  access: RealtimePollAccess,
 ): Response {
   let cursor = initialCursor;
   let isClosed = false;
@@ -41,7 +43,7 @@ export function createSSEStream(
 
       try {
         while (!isClosed) {
-          const events = await pollEvents(organizationId, cursor, 50);
+          const events = await pollEvents(organizationId, cursor, 50, access);
 
           if (events.length > 0) {
             for (const ev of events) {
