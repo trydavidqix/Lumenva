@@ -84,3 +84,18 @@
 - [x] Rodar smoke tests dos SDKs, CLIs e adapters.
 - [x] Rodar gates de docs, lockfile, secret scan e `git diff --check`.
 - [x] Registrar branch, commits, evidências e pendências; não fazer merge em `main`.
+
+### Task 8: Normalização global pós-bootstrap
+
+**Files:** `%USERPROFILE%\.claude.json`, `%USERPROFILE%\.codex\config.toml`, `%USERPROFILE%\.claude\skills\`, `%USERPROFILE%\.agents\skills\`, `%USERPROFILE%\.lumenva\bin\`; configurações MCP globais de Claude/Codex; `.codex/config.toml` e `.gemini/settings.json` no worktree `vps`.
+
+- [x] Reutilizar `gh` e `gh-aw v0.88.8` globais; confirmar Codex CLI, Claude Code, Jules CLI e Google Cloud SDK presentes antes de instalar.
+- [x] Instalar globalmente `@google/jules@0.1.42`, autenticar por `jules login` e validar leitura dos repositórios conectados via `jules remote list --repo`.
+- [x] Instalar globalmente `@openai/codex-sdk@0.156.0` e `@google/jules-sdk@0.2.0`, sem mudar `package.json`/lockfile do projeto.
+- [x] Instalar GitHub MCP Server oficial `v1.12.2` globalmente, validar checksum SHA-256 oficial e configurar toolsets read-only/lockdown.
+- [x] Registrar GitHub MCP e Jules MCP no escopo global do Claude e do Codex; manter as credenciais fora dos arquivos usando GitHub CLI e Google Secret Manager em runtime.
+- [x] Instalar globalmente as duas Jules Skills e a skill `agentic-workflows`; não instalar `act` nem Docker.
+- [x] Remover somente os registros GitHub MCP dos arquivos de projeto `.codex/config.toml` e `.gemini/settings.json` no worktree `vps`, preservando os outros servidores e configurações.
+- [x] Não copiar GitHub Actions, Claude Code Action, Codex Action ou Jules Action para um diretório global: são usados por workflows de repositórios. Preservar os workflows versionados já existentes em `vps`.
+- [ ] Depois de reiniciar o Codex, validar uma chamada GitHub MCP somente leitura e uma consulta de sessões Jules sem criar sessão nem alterar estado externo.
+- [ ] Rever os avisos do instalador das skills antes de qualquer uso: `local-action-verification` pressupõe Docker/`act` e é alto risco; `automate-github-issues` pode despachar agentes e mesclar PRs.

@@ -576,6 +576,16 @@ Create a Lumenva/Maestri Claude integration layer containing:
 - Maestri MCP access;
 - session/checkpoint integration.
 
+The user's local Claude presentation preferences are a thin workstation overlay, not a second CEO role or a second source of Maestri policy:
+- user-level `~/.claude/CLAUDE.md` holds stable personal communication preferences;
+- user-level `~/.claude/output-styles/` changes response voice/format only and keeps Claude's coding instructions;
+- personal skills in `~/.claude/skills/` remain task capabilities, not always-loaded policy. `humanizar` is used when human-facing PT-BR prose needs it; `girias` is explicitly invoked for a stronger regional profile;
+- project `CLAUDE.md`, existing CEO role, and project rules remain the source for Lumenva identity and governance. Do not copy them into global instructions;
+- progress messages are rendered from the Master Plan, State Ledger and AcceptanceManifest. Do not create a parallel `ACTIVE_PIPELINE.md` as an independent state source;
+- a Claude `SessionStart` adapter may add only a small digest from that canonical state. It must not inject conversation history, whole prompts, secrets or large diffs. The adapter belongs to the canonical Hook Engine and maps to its events.
+
+This overlay controls communication, not security or permissions. Existing provider/project permission settings remain separate and must not be changed as a side effect of voice configuration.
+
 Specialist roles:
 - architecture reviewer;
 - security reviewer;
@@ -1424,6 +1434,51 @@ Secrets, capabilities, network, prompt injection boundaries, external writes and
 ### Phase 41 — Production hardening
 Performance, migrations, retention, backup/recovery, operational docs and final release gate.
 
+### Phase 42 — Windows profile/path integrity and Claude user-layer setup
+
+Status snapshot — 2026-09-22: Claude's personal communication layer is installed locally and verified; provider path normalization remains diagnostic/plan-only and gated before rollout.
+
+- Audit the real Windows identity roots (`%USERPROFILE%`, `%APPDATA%`, `%LOCALAPPDATA%`) and all provider-specific homes before changing any path.
+- Keep ChatGPT/Codex Windows home at `%USERPROFILE%\.codex`; do not relocate app package state under `AppData\Local\Packages`, and do not assume the desktop app honors a custom `CODEX_HOME`.
+- Keep OpenAI personal skills at `%USERPROFILE%\.agents\skills`; preserve bundled/system skills under `.codex\skills` and repository skills under `<repo>\.agents\skills`.
+- Keep Claude Code data under `%USERPROFILE%\.claude`; keep Gemini CLI, Antigravity IDE and Antigravity CLI roots distinct according to each product's current official documentation. Shared repository skills may use `<repo>\.agents\skills` where supported.
+- Inventory MCP, plugin, hook, auth, cache and state paths without printing secrets. Treat caches, app-local state and auth databases as managed data, not migration sources.
+- When multiple provider executable paths exist, compare canonical version, hash and ownership/update mechanism before calling them duplicates or changing the runner. A kit's internal folder tree is not an installation manifest.
+- Reconcile each discovered path against the installed product/version and official docs; mark unsupported or legacy locations without deleting or moving them.
+- Diagnose the exact ChatGPT/Codex error from its text and available logs before proposing any repair. Check path casing, stale project/worktree roots, state backup consistency, Windows-vs-WSL boundary and app-version regressions.
+- If a migration is later approved, first produce a dry-run manifest (source, destination, owner, hash, duplicate decision, rollback action); back up; copy/verify; change one provider at a time; smoke-test; retain rollback. Never delete the source during the first pass.
+- This is a documentation/diagnostic gate; it does not authorize path edits, credential migration, app reset, reinstall or cache cleanup.
+
+#### Claude personal profile — completed on this workstation
+
+- [x] Audited `%USERPROFILE%\.claude` and the existing Lumenva Claude files before changes. No active global `CLAUDE.md`, personal rules, output style or hooks existed; `humanizar` and `girias` were not installed in the active personal skills directory.
+- [x] Added concise global communication preferences in `%USERPROFILE%\.claude\CLAUDE.md` and a `David PT-BR Carioca` output style in `%USERPROFILE%\.claude\output-styles\david-ptbr-carioca.md`.
+- [x] Set that style as the user default in `%USERPROFILE%\.claude\settings.json`; preserved existing `bypassPermissions`, permission-prompt behavior, Caveman/ADHD plugins, marketplace entries and other settings. The prior settings snapshot is in `%USERPROFILE%\.claude\backups\settings.before-global-voice-20260922.json`.
+- [x] Installed upstream `humanizar` and `girias` to `%USERPROFILE%\.claude\skills\`; verified installed file hashes against the checked-out upstream skill trees.
+- [x] Runtime confirmation received: Claude showed `David PT-BR Carioca` as active and `/reload-skills` completed. This confirms global style/skill discovery, not the not-yet-built Lumenva pipeline hook.
+- [x] Audited existing Lumenva role files (`CLAUDE.md`, `.claude/rules/`, `.claude/agents/`, CEO agent memory); preserved their CEO/Chief Orchestrator role. The global setup changed no project runtime/role files; this plan records the integration boundary.
+
+#### Remaining integration — reuse canonical state, no parallel pipeline
+
+- [ ] Connect the Claude `SessionStart` adapter to the Maestri Master Plan + State Ledger + AcceptanceManifest after those runtime contracts are available. Keep the hook fast and emit only current task, measured progress, blocker/wait reason and next action.
+- [ ] Validate that resuming/compacting a session rebuilds the digest from durable state, and that other projects receive no Lumenva-specific state.
+- [ ] Keep workflow/progress evidence enforced by the existing Progress Evidence Guard; the voice style may format evidence but may never invent or advance progress.
+- [ ] Do not create `docs/ops/ACTIVE_PIPELINE.md` as a second authority. If a Markdown export is later needed, generate it from the State Ledger and mark it as a view/cache.
+
+Acceptance:
+- user-level voice/style settings load on a fresh Claude Code session and do not replace the project CEO role;
+- user-level skills are available only at their intended scope and are not duplicated into the repository;
+- progress/status output is derived from canonical durable state, with no invented percentages and no transcript dump;
+- SessionStart digest is small, project-scoped, secret-safe and read-only;
+- every active profile/config path is mapped to its owning provider and scope (global, project, app package, cache/auth);
+- no global path override silently points the Windows app at another profile;
+- duplicate skills/plugins are identified by manifest/name/hash and are not copied blindly;
+- multiple executable roots have a recorded owner, update path and consumer; no executable is removed merely because hashes match;
+- the exact app error has a reproduced cause or remains explicitly `UNDIAGNOSED`—no speculative repair;
+- dry-run + backup + verification + rollback are documented before any approved migration;
+- provider smoke tests pass from the intended Windows profile, with WSL treated as a separate environment;
+- `main`, credentials, auth stores and unrelated provider caches remain untouched.
+
 ## 49. Definition of Done
 
 A Work Package is complete only when:
@@ -1492,6 +1547,8 @@ Owner → Claude CEO → Master Goal
 This blueprint follows the agent-first direction documented by OpenAI's harness engineering work: repository knowledge as system of record, progressive disclosure instead of giant instruction manuals, executable plans, agent-to-agent review, worktree isolation and feedback loops. It also follows Anthropic's context-engineering guidance: context is finite, long-horizon work needs compaction/structured state/multi-agent techniques, and context should be curated for high signal.
 
 Implementation must prefer current official provider documentation over copied system prompts, community leaks or stale assumptions.
+
+Windows-specific path evidence and the non-destructive normalization plan are recorded in `docs/audits/windows-ai-profile-path-normalization-2026-09-22.md`.
 
 ## 53. Supersession rule
 
@@ -3619,3 +3676,55 @@ The 14-task program is implementation-ready only when:
 - each task has measurable acceptance;
 - J15 can review the entire program without builder history;
 - no branch is merged/deleted merely by producing this plan.
+## 54. Unified execution plan — five Jules work packages
+
+This is the single execution breakdown for the pending Maestri V3 work discussed on 2026-09-23. It does not create a second roadmap. The phases below retain the M0–M42 identifiers and acceptance gates already defined above. Jules sessions are execution workers, not additional sources of truth; completed work is reconciled here and in the existing evidence artifacts.
+
+### Shared session contract
+
+- Repository: `trydavidqix/Lumenva`; starting branch: `vps`. No task may target or merge into `main`.
+- Preserve all current host/global and repository/project provider settings. In particular, do not edit global Claude/Codex/Gemini settings, `.codex/config.toml`, `.gemini/settings.json`, `.claude/settings.json`, credentials, MCP registrations, hooks, permission modes or bypass/lockdown settings as part of these work packages.
+- No Docker installation/use, secret creation or extraction, production deployment, GitHub ruleset/branch-protection writes, or merge. Record owner-only actions as explicit placeholders for the final gate.
+- Before changing files, inspect the assigned scope and existing branches/PRs/sessions. Do not duplicate the five active F3 RBAC Jules tasks, the completed read-only Maestri V3 audit, or any existing implementation. Keep the F3 work on its existing branch and ownership map.
+- Each session starts from zero: its prompt must contain the repository, branch, role, exact scope, safety constraints, acceptance criteria and complete command sequence. In the Jules VM, inspect first, install dependencies successfully (`pnpm install --frozen-lockfile`) and only then run tests/build/lint/typecheck. If installation fails, diagnose and repair only the disposable VM environment before running checks; never change the committed lockfile merely to bypass setup.
+- Follow test-first where appropriate; repeat fix-and-test until acceptance passes or an exact external/architectural blocker is documented. Do not widen owned paths. No agent-to-agent direct messages; all handoffs/results return through the Maestri owner/orchestrator.
+- Jules can create a working branch/PR against `vps` for review. PR creation is allowed; merge is not. Every claimed PASS needs command, exit status and concise evidence. Keep raw logs and secrets out of prompts, PRs and reports.
+
+### Work package 1 — Canonical contracts, durable state and recovery
+
+**Phases:** M0–M4. **Role:** State & Context Engineer. **Scope:** reconcile current implementation first; then only confirmed gaps in the existing canonical contracts, task state machine, State Ledger and recovery implementation under `packages/operating-core/src/session/`, `packages/operating-core/src/backup/`, and their focused tests. Do not create a second Context Engine or state store; reuse the existing `apps/core` and MCG bridges through their current contracts. Do not edit roadmap/config files.
+
+**Done when:** existing behavior is mapped; canonical transitions reject invalid state changes; checkpoints survive restart/replay; recovery tests reconstruct objective, decisions, acceptance state and next action from durable evidence; package tests and typecheck pass.
+
+### Work package 2 — Context, knowledge and Skills
+
+**Phases:** M5–M7. **Role:** Context & Knowledge Engineer. **Scope:** confirmed gaps in context budgets/progressive retrieval, repository knowledge hierarchy and shared skill catalog under `packages/operating-core/src/context/`, `packages/operating-core/src/knowledge/`, and `packages/operating-core/src/memory/`, with only directly related tests. Preserve the existing `packages/operating-core` `ContextPacket` as canonical and the current `apps/core` adapter; no parallel packet/compiler, no global or project provider configuration edits.
+
+**Done when:** hard limits are deterministic; context expansion is demand-driven; instructions/knowledge/skills are scoped and provenance-aware; tests prove caps, ordering, exclusion and reproducibility; package tests and typecheck pass.
+
+### Work package 3 — Agent Factory and provider harness
+
+**Phases:** M8–M21. **Role:** Agent & Provider Fabric Engineer. **Scope:** confirmed gaps in definitions/validation/catalog, Claude/Codex/Jules adapters, execution results and provider capability/health behavior under `packages/operating-core/src/workforce/` and `packages/operating-core/src/cloud-fabric/`, with tests in those same package areas. Use the existing Jules connection; do not reinstall the host CLI/SDK/MCP/skills or create duplicate tools. A provider that cannot be exercised must report unavailable honestly, with an offline/mock test.
+
+**Done when:** provider-neutral contracts remain stable; capability probing is real; unsupported actions fail closed; handoffs pass through Maestri and bounded ContextPackets; execution results/evidence are normalized; focused tests and typecheck pass.
+
+### Work package 4 — Routing, budgets, scheduling and bounded loops
+
+**Phases:** M22–M28. **Role:** Scheduler & Loop Engineer. **Scope:** confirmed gaps in usage/quota accounting, fleet scheduling, plan validation, retry/loop detection, failure classification and escalation under `packages/operating-core/src/router/`, `packages/operating-core/src/autonomy/`, and their focused tests. Respect work-package dependencies and conflict ownership; never dispatch duplicate work or spend/consume credentials to test a provider.
+
+**Done when:** routing decisions are reproducible from capability/risk/context/quota/cost/latency inputs; retries are bounded and budgeted; repeated failures change strategy or escalate; tests cover no-progress, provider unavailability, quota exhaustion and conflicting paths; package tests and typecheck pass.
+
+### Work package 5 — Evidence, observability, integration verification and rollout readiness
+
+**Phases:** M29–M42 plus the existing external gates. **Role:** Independent Evidence & QA Engineer. **Scope:** first reuse the completed Maestri V3 read-only audit and existing tests/evidence; then fill only verified gaps in evidence validation, fresh-context review, CI evidence ingestion, telemetry and E2E recovery tests. Prefer read-only verification. Do not edit provider settings, Windows profile paths, secrets, CI permissions, GitHub protections, or files owned by packages 1–4. Record profile/path issues in the existing audit evidence only; do not execute a migration. Owner-dependent items remain placeholders at the end.
+
+**Done when:** each acceptance claim links to reproducible evidence; telemetry remains secret-safe and local fallback works; long-running recovery/E2E and negative gates pass; external gates are clearly `READY`, `BLOCKED` or `OWNER ACTION REQUIRED`; no merge/deploy occurs.
+
+### Dependency and dispatch order
+
+1. Package 1 establishes the verified baseline and durable contracts. Packages 2–4 may inspect in parallel, but implementation must stop if it requires an unmet contract from package 1 or another active owner.
+2. Package 2 consumes package 1 contracts. Package 3 consumes packages 1–2 contracts. Package 4 consumes packages 1–3 contracts. Shared paths are serialized; do not ask two Jules sessions to edit one path concurrently.
+3. Package 5 verifies only the integrated candidate after packages 1–4 return. The existing Maestri audit is evidence to reuse, not a reason to spawn another audit session.
+4. Human-dependent gates are last: Google/Graphiti or OTLP credentials/endpoints, any secrets/permissions, GitHub required checks/rulesets, exact app-error reproduction requiring the user's device, and final merge/deploy. Until then, use mocks/offline tests and explicit placeholders.
+
+**Progress accounting:** do not claim a single percentage for M0–M42 until the canonical State Ledger/AcceptanceManifest records denominator and evidence. Report each package as `completed/total`, with blocked owner gates shown separately rather than counted as silently done.
