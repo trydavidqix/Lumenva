@@ -49,7 +49,7 @@ export async function recordTelemetry(root, event = {}) {
     skill: string(event.skill) || string(event.skill_name), mcp: string(event.mcp) || string(event.mcp_name), model: string(event.model), operation: string(event.operation) || 'unknown',
     input_chars: number(event.input_chars), output_chars: number(event.output_chars), input_tokens: number(event.input_tokens), cached_input_tokens: number(event.cached_input_tokens),
     output_tokens: number(event.output_tokens), reasoning_tokens: number(event.reasoning_tokens), total_tokens: number(event.total_tokens),
-    estimated_tokens: measurement_type === 'estimated' ? estimatedTokens(event) : number(event.estimated_tokens), latency_ms: number(event.latency_ms), measurement_type, source: string(event.source) || 'mcg'
+    estimated_tokens: measurement_type === 'estimated' ? estimatedTokens(event) : number(event.estimated_tokens), latency_ms: number(event.latency_ms), outcome: ['success', 'failure'].includes(event.outcome) ? event.outcome : null, measurement_type, source: string(event.source) || 'mcg'
   };
   const contract = validateContract('telemetry', row);
   if (!contract.valid) throw new Error(`telemetry contract invalid: ${contract.errors.join(', ')}`);

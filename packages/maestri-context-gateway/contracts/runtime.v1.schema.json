@@ -34,6 +34,10 @@
         "type": "string"
       }
     },
+    "success_rate": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+    "failure_rate": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+    "latency": { "type": ["number", "null"], "minimum": 0 },
+    "usage": { "type": ["object", "null"] },
     "health": {
       "type": [
         "string",

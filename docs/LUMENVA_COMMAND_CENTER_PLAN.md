@@ -1285,7 +1285,7 @@ Progresso verificável (2026-09-23): os 12 tipos de contrato têm validação em
 
 Integração verificável (2026-09-23): a dashboard agora chama `refreshRegistries` ao abrir `/api/views` e ao consultar `/api/agents`, `/api/tools`, `/api/plugins`, `/api/mcps`, `/api/runtimes` e `/api/models`; grava os seis catálogos em `state/registry/` e serve as mesmas entradas nas views Agents, Tools, Plugins e MCPs. Descoberta usa telemetria e processos locais disponíveis. Catálogos sem evidência permanecem listados como `UNAVAILABLE`, com `last_seen: null`, `measurement_type: unavailable` e contagem de observados nula; não são apresentados como agentes/plugins/MCPs saudáveis. Teste de integração cobre os seis arquivos, endpoints e view sem observações; teste existente cobre a descoberta a partir de telemetria. MCG local: 36/36 unit, dashboard 14/14, contracts 1/1, syntax 30 módulos e scan sensível 80 arquivos PASS.
 
-M0.8 permanece PARCIAL: ainda faltam validar descoberta contra catálogos/configurações reais de todos os providers, capability/health probing de tools e MCPs e agregação sustentada de `success_rate`, `failure_rate` e `latency`. Valores sem evidência ficam nulos/unavailable; os testes isolados não provam conectividade real nem concluem o gate.
+M0.8 permanece PARCIAL: o registry agora agrega `success_rate`, `failure_rate` e latência média somente a partir de eventos de telemetria com outcome/latência observados; resultados sem amostra ficam nulos. O ingest marca sucesso/falha conforme o estado terminal, e os contratos permitem esses campos. Ainda faltam validar descoberta contra catálogos/configurações reais de todos os providers e capability/health probing de tools e MCPs. Testes isolados não provam conectividade real nem concluem o gate.
 
 ### M0.9 Scheduler, Router e Reliability
 
@@ -1403,7 +1403,7 @@ Auditoria das 13 views no runtime real (2026-09-23): Overview, Traces, Tasks, Ag
 
 Atualização após Validation Lab: GET local de `/api/views` respondeu HTTP 200 com 13 views; confirma `Validation=VALIDATED`, `paired_runs=30/30`, seis categorias com cinco pares cada, tokens `exact` e economia qualificada de 10,2%; Overview reporta medição `exact`. Plugins, MCPs, Graph, Cache e Memory continuam indisponíveis porque não há fontes/eventos reais para essas views.
 
-Validação remota do commit `52f8cdde` (PR #26): `core`, `mcg`, `vertical` e `invariants` PASS; o `harness:check` também passou após incluir links às regras compartilhadas em `CLAUDE.md` e o contrato portátil em `AGENTS.md`, ambos na raiz. O `verify` falhou depois, na suíte geral do CRM: 659 arquivos/4.945 testes passaram, 4 arquivos falharam (2 erros ENOENT e 2 assertions), em `e2e-workflow-honra-o-env.test.ts`, `evidencia-citada.test.ts`, `manifest-x-migrations.test.ts` e `next-config-output.test.ts`. São falhas fora do MCG; nenhum código funcional do CRM foi alterado. O PR #26 permanece aberto e sem merge.
+Validação remota do commit `33cca25c` (PR #26): `core`, `mcg`, `vertical` e `invariants` PASS; o `harness:check` também passou após incluir links às regras compartilhadas em `CLAUDE.md` e o contrato portátil em `AGENTS.md`, ambos na raiz. O `verify` falhou depois, na suíte geral do CRM: 659 arquivos/4.945 testes passaram, 4 arquivos falharam (2 erros ENOENT e 2 assertions), em `e2e-workflow-honra-o-env.test.ts`, `evidencia-citada.test.ts`, `manifest-x-migrations.test.ts` e `next-config-output.test.ts`. São falhas fora do MCG; nenhum código funcional do CRM foi alterado. O PR #26 permanece aberto e sem merge.
 
 ### M0.13 Gate de conclusão
 
@@ -1584,9 +1584,9 @@ Só termina quando:
 
 ## Status atual
 
-ACTIVE — M0 REMEDIATION INCOMPLETE / MCG DASHBOARD + VALIDATION PASS LOCALLY / REMOTE MCG+CORE+VERTICAL+INVARIANTS PASS AT 52f8cdde / VERIFY FAILS ON 4 EXISTING CRM UNIT-TEST FAILURES / M0.8 PARTIAL / M0.13 OPEN / M1 BLOCKED ON M0 CLOSE
+ACTIVE — M0 REMEDIATION INCOMPLETE / MCG DASHBOARD + VALIDATION PASS LOCALLY / REMOTE MCG+CORE+VERTICAL+INVARIANTS PASS AT 33cca25c / VERIFY FAILS ON 4 EXISTING CRM UNIT-TEST FAILURES / M0.8 PARTIAL (TELEMETRY METRICS IMPLEMENTED; PROVIDER DISCOVERY + CAPABILITY PROBES OPEN) / M0.13 OPEN / M1 BLOCKED ON M0 CLOSE
 
-Estado desta execução (2026-09-23): MCG unit 36/36, dashboard 14/14, contracts 1/1, syntax 30 módulos e scan 80 arquivos PASS localmente. Validation Lab: 30 pares reais Codex CLI, `gpt-6-luna`/`medium`, medição exata, categorias 5×6, Trust `VALIDATED`, economia qualificada 10,2%, sem queda de sucesso (100% em ambas as lanes). Core typecheck/testes 9/9, Social Brain Web test 49/49 e typecheck global 19 projetos haviam passado localmente. Na PR #26, MCG, Core, Vertical, Invariants e harness PASS em `52f8cdde`; o `verify` ainda falha em quatro testes gerais do CRM (dois ENOENT e duas assertions, listadas acima). A falha de CI do CRM não foi corrigida nem contornada. M0.8 e M0.13 seguem abertos; não iniciar M1 antes de fechar os gates exigidos e as pendências M0. Sem merge, main ou deploy.
+Estado desta execução (2026-09-23): MCG unit 36/36, dashboard 14/14, contracts 1/1, syntax 30 módulos e scan 80 arquivos PASS localmente. Validation Lab: 30 pares reais Codex CLI, `gpt-6-luna`/`medium`, medição exata, categorias 5×6, Trust `VALIDATED`, economia qualificada 10,2%, sem queda de sucesso (100% em ambas as lanes). Core typecheck/testes 9/9, Social Brain Web test 49/49 e typecheck global 19 projetos haviam passado localmente. Na PR #26, MCG, Core, Vertical, Invariants e harness PASS em `33cca25c`; o `verify` ainda falha em quatro testes gerais do CRM (dois ENOENT e duas assertions, listadas acima). A falha de CI do CRM não foi corrigida nem contornada. M0.8 e M0.13 seguem abertos; não iniciar M1 antes de fechar os gates exigidos e as pendências M0. Sem merge, main ou deploy.
 
 Este documento é a fonte de verdade única da branch Lumenva Command Center.
 Não criar um segundo plano concorrente para o mesmo escopo; atualizar este arquivo.

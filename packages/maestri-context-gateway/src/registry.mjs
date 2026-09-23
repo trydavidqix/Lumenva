@@ -20,9 +20,17 @@ function observed(events){
     if(row.measurement_type==='exact')current.measurement_type='exact'; else if(current.measurement_type!=='exact'&&row.measurement_type==='estimated')current.measurement_type='estimated';
     const tokens=Number.isFinite(row.total_tokens)?row.total_tokens:Number.isFinite(row.estimated_tokens)?row.estimated_tokens:null;
     current.usage ||= {calls:0,tokens:0,token_rows:0};current.usage.calls+=1;if(tokens!=null){current.usage.tokens+=tokens;current.usage.token_rows+=1;}
+    current.outcomes ||= {success:0,failure:0};if(row.outcome==='success'||row.outcome==='failure')current.outcomes[row.outcome]+=1;
+    current.latencies ||= [];if(Number.isFinite(row.latency_ms))current.latencies.push(row.latency_ms);
     current.health='OBSERVED';groups[type].set(key,current);
   };
   for(const event of events){add('agents',event.agent,event);add('tools',event.tool,event);add('plugins',event.plugin,event);add('mcps',event.mcp,event);add('runtimes',event.runtime,event);add('models',event.model,event);}
+  for(const group of Object.values(groups))for(const row of group.values()){
+    const outcomes=row.outcomes;const total=outcomes.success+outcomes.failure;
+    row.success_rate=total?Number((outcomes.success/total*100).toFixed(2)):null;row.failure_rate=total?Number((outcomes.failure/total*100).toFixed(2)):null;
+    row.latency=row.latencies.length?Math.round(row.latencies.reduce((sum,value)=>sum+value,0)/row.latencies.length):null;
+    delete row.outcomes;delete row.latencies;
+  }
   return groups;
 }
 function specialize(type,row){
@@ -37,7 +45,7 @@ function merge(staticRows,observedRows,type){
   const byId=new Map(staticRows.map(item=>[item.id,specialize(type,item)]));
   for(const row of observedRows.values()){
     const match=[...byId.values()].find(item=>item.name===row.name||item.runtime===row.name||item.tool_name===row.name||item.plugin_id===row.name||item.mcp_name===row.name);
-    if(match)byId.set(match.id,specialize(type,{...match,health:row.health,last_seen:row.last_seen,usage:row.usage,measurement_type:row.measurement_type,observed_source:row.source}));
+    if(match)byId.set(match.id,specialize(type,{...match,health:row.health,last_seen:row.last_seen,success_rate:row.success_rate,failure_rate:row.failure_rate,latency:row.latency,usage:row.usage,measurement_type:row.measurement_type,observed_source:row.source}));
     else byId.set(row.id,specialize(type,row));
   }
   return [...byId.values()].sort((a,b)=>String(a.name).localeCompare(String(b.name)));

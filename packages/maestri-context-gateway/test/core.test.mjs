@@ -16,9 +16,14 @@ try {
   assert.equal(telemetry.at(-1).total_tokens, 130);
   assert.equal(telemetry.at(-1).measurement_type, 'exact');
   assert.equal(telemetry.at(-1).plugin, 'caveman');
+  assert.equal(telemetry.at(-1).outcome, 'success');
   assert.match(task.trace_id, /^trace-/);
   const busEvents = (await readFile(join(root, 'state', 'events', 'events.jsonl'), 'utf8')).trim().split('\n').map(JSON.parse);
   assert.deepEqual(busEvents.map(event => event.type), ['context.compiled', 'task.dispatched', 'task.event']);
   assert.equal(busEvents.at(-1).trace_id, task.trace_id);
+  const failedTask = await dispatch({ task_id: 'failed-metadata', executor: 'codex', agent: 'Codex CTO', runtime: 'Codex CLI' }, root);
+  await ingest({ task_id: failedTask.task_id, event_id: 'failed', sequence: 1, state: 'FAILED_FINAL' }, root);
+  const failedTelemetry = (await telemetryEvents(root)).find(event => event.task_id === failedTask.task_id && event.operation === 'ingest');
+  assert.equal(failedTelemetry.outcome, 'failure');
 } finally { await rm(root, { recursive: true, force: true }); }
 console.log('core tests: 1 passed');

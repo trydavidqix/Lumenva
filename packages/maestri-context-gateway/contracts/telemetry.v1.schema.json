@@ -85,6 +85,20 @@
       ],
       "minimum": 0
     },
+    "latency_ms": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "outcome": {
+      "enum": [
+        "success",
+        "failure",
+        null
+      ]
+    },
     "timestamp": {
       "type": "string",
       "format": "date-time"
