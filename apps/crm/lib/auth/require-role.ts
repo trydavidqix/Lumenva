@@ -9,7 +9,8 @@
  * Fluxo:
  *  1. `loadAuthUser()` — valida o JWT via Firebase session.
  *  2. `resolveActiveOrg()` — org ativa de fonte confiável.
- *  3. `rpc fn_user_role_in_org(org)` — role efetivo direto do banco.
+ *  3. Lookup server-side de `user_organizations` filtrado por `user_id` + org.
+ *     O user_id vem do mapping Firebase verificado; request/body nunca decide.
  *  4. Rank insuficiente → audit `authz.denied` (fire-and-forget) + 403.
  */
 import type { NextResponse } from "next/server";
@@ -25,7 +26,7 @@ import {
   type AuthUser,
   type HumanRole,
 } from "@/lib/auth/types";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type RoleCheck =
   | { ok: true; user: AuthUser; org: ActiveOrg }
@@ -42,7 +43,7 @@ interface RequireRoleOpts {
    * Override da org onde o role é resolvido (default: org ativa do cookie).
    * Use quando a autorização é sobre a org do RECURSO (ex.: LGPD anonymize —
    * admin na org do CONTATO), resolvida de fonte confiável (query RLS-scoped),
-   * NUNCA do body. O role vem de `fn_user_role_in_org(p_org)` nessa org.
+   * NUNCA do body. O role vem do membership ativo nessa org.
    */
   organizationId?: string;
 }
@@ -91,10 +92,19 @@ export async function requireRole(min: HumanRole, opts: RequireRoleOpts = {}): P
     return { ok: true, user, org };
   }
 
-  const supabase = await createClient();
-  const { data: effectiveRole, error } = await supabase.rpc("fn_user_role_in_org", {
-    p_org: org.orgId,
-  });
+  // Firebase is the auth authority. The legacy RLS function reads auth.uid(),
+  // which is a Supabase principal and cannot represent the Firebase session
+  // cookie. Keep this service-role lookup narrow and require both trusted
+  // identity and trusted organization predicates.
+  const { data: membership, error } = await createAdminClient()
+    .from("user_organizations")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("organization_id", org.orgId)
+    .is("revoked_at", null)
+    .not("accepted_at", "is", null)
+    .maybeSingle();
+  const effectiveRole = membership?.role ?? null;
   if (error) {
     return {
       ok: false,

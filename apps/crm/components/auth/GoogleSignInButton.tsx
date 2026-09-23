@@ -4,6 +4,7 @@ import { useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { signInWithGoogle } from "@/lib/firebase/client";
+import { safeInternalRedirect } from "@/lib/auth/safe-redirect";
 
 export function GoogleSignInButton({ next }: { next?: string }) {
   const router = useRouter();
@@ -15,7 +16,7 @@ export function GoogleSignInButton({ next }: { next?: string }) {
     startTransition(async () => {
       const res = await signInWithGoogle();
       if (res.ok) {
-        router.replace(next || "/app/inbox");
+        router.replace(safeInternalRedirect(next));
         return;
       }
       if (res.error === "popup_closed") {

@@ -13,6 +13,10 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/api/v1/system/agent")).toBe(true);
   });
 
+  it("libera a criação da sessão Firebase antes de existir cookie", () => {
+    expect(isPublicPath("/api/auth/session")).toBe(true);
+  });
+
   it("libera apenas o webhook Stripe exato para validação por assinatura", () => {
     expect(isPublicPath("/api/v1/stripe/webhook")).toBe(true);
     expect(isPublicPath("/api/v1/stripe/webhook/extra")).toBe(false);

@@ -23,7 +23,9 @@ export async function GET(request: NextRequest) {
     // Redirect to a client page if an oobCode is present, else login
     const oobCode = url.searchParams.get("oobCode");
     if (oobCode) {
-      return NextResponse.redirect(new URL(`/login?oobCode=${oobCode}`, url.origin));
+      const loginUrl = new URL("/login", url.origin);
+      loginUrl.searchParams.set("oobCode", oobCode);
+      return NextResponse.redirect(loginUrl);
     }
     return NextResponse.redirect(new URL("/login", url.origin));
   }

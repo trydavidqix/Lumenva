@@ -3,7 +3,7 @@
  *
  * Prova: 401 sem sessão; 403 forbidden_tenant sem org; 403 forbidden_role
  * padronizado com audit `authz.denied` (sem PII); grant no role mínimo;
- * fail-closed quando fn_user_role_in_org devolve null (membership revogado);
+ * fail-closed quando o membership ativo devolve null (membership revogado);
  * bypass de platform admin só com opt-in.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,7 +12,7 @@ import { requireRole } from "@/lib/auth/require-role";
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import { resolvePlatformAdmin } from "@/lib/auth/requirePlatformAdmin";
 import { audit } from "@/lib/audit";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { AuthUser, HumanRole, Role } from "@/lib/auth/types";
 
 vi.mock("@/lib/auth/server", () => ({
@@ -20,7 +20,7 @@ vi.mock("@/lib/auth/server", () => ({
   resolveActiveOrg: vi.fn(),
 }));
 vi.mock("@/lib/auth/requirePlatformAdmin", () => ({ resolvePlatformAdmin: vi.fn() }));
-vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
 vi.mock("@/lib/audit", () => ({ audit: vi.fn(async () => undefined) }));
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
@@ -39,7 +39,7 @@ function authUserFixture(role: Role | null, platformAdmin = false): AuthUser {
   };
 }
 
-/** Configura sessão + role efetivo devolvido pelo banco (fn_user_role_in_org). */
+/** Configura sessão + role efetivo devolvido pelo lookup Firebase-side. */
 function session(
   role: Role | null,
   opts: { dbRole?: string | null; dbError?: { message: string }; platformAdmin?: boolean } = {},
@@ -52,12 +52,17 @@ function session(
   vi.mocked(resolveActiveOrg).mockResolvedValue(
     role ? { orgId: ORG_ID, name: "Org", role } : null,
   );
-  vi.mocked(createClient).mockResolvedValue({
-    rpc: vi.fn(async (fn: string) =>
-      fn === "fn_user_role_in_org"
-        ? { data: dbRole, error: opts.dbError ?? null }
-        : { data: null, error: null },
-    ),
+  const builder: Record<string, unknown> = {};
+  builder.select = vi.fn(() => builder);
+  builder.eq = vi.fn(() => builder);
+  builder.is = vi.fn(() => builder);
+  builder.not = vi.fn(() => builder);
+  builder.maybeSingle = vi.fn(async () => ({
+    data: dbRole ? { role: dbRole } : null,
+    error: opts.dbError ?? null,
+  }));
+  vi.mocked(createAdminClient).mockReturnValue({
+    from: vi.fn(() => builder),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any);
 }
@@ -118,7 +123,7 @@ describe("requireRole — helper único (spec 13 §4)", () => {
     expect(audit).not.toHaveBeenCalled();
   });
 
-  it("fail-closed: fn_user_role_in_org null (membership revogado) → 403", async () => {
+  it("fail-closed: membership nulo (membership revogado) → 403", async () => {
     session("admin", { dbRole: null });
     const res = await requireRole("viewer");
     expect(res.ok).toBe(false);
@@ -168,12 +173,23 @@ describe("requireRole — helper único (spec 13 §4)", () => {
         name: "Org A",
         role: roleInActive,
       });
-      vi.mocked(createClient).mockResolvedValue({
-        rpc: vi.fn(async (fn: string, args: { p_org: string }) =>
-          fn === "fn_user_role_in_org"
-            ? { data: args.p_org === ORG_ID ? roleInActive : roleInOther, error: null }
-            : { data: null, error: null },
-        ),
+      let queriedOrg: string | undefined;
+      const builder: Record<string, unknown> = {};
+      builder.select = vi.fn(() => builder);
+      builder.eq = vi.fn((column: string, value: string) => {
+        if (column === "organization_id") queriedOrg = value;
+        return builder;
+      });
+      builder.is = vi.fn(() => builder);
+      builder.not = vi.fn(() => builder);
+      builder.maybeSingle = vi.fn(async () => ({
+        data: (queriedOrg === ORG_ID ? roleInActive : roleInOther)
+          ? { role: queriedOrg === ORG_ID ? roleInActive : roleInOther }
+          : null,
+        error: null,
+      }));
+      vi.mocked(createAdminClient).mockReturnValue({
+        from: vi.fn(() => builder),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
     }

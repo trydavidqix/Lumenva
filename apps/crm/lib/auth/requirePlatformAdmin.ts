@@ -2,19 +2,19 @@
  * Server guards for Super-Admin Platform sub-product (both layout and API).
  *
  * Flow:
- *  1. Validate JWT via getUser() (NEVER getSession on backend per CLAUDE.md).
- *  2. Confirm row in platform_admins (active = no revoked_at).
- *  3. Enforce MFA AAL2 if `mfa_required` (default true for platform admins).
+ *  1. Validate the Firebase session cookie (revocation checked server-side).
+ *  2. Resolve Firebase UID -> canonical internal user ID.
+ *  3. Confirm row in platform_admins (active = no revoked_at).
  *
  * Redirects (for layout):
  *  - no user        → /login?next=/admin
  *  - no row         → /admin/forbidden
- *  - aal1 + required → /login/mfa?next=/admin
+ *  - F4 does not enforce MFA.
  */
 import { redirect } from "next/navigation";
-import type { User } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
+import { resolveFirebaseIdentity } from "./firebase-identity";
 
 export interface PlatformAdminInfo {
   user_id: string;
@@ -23,7 +23,12 @@ export interface PlatformAdminInfo {
 }
 
 export interface PlatformAdminContext {
-  user: User;
+  user: {
+    id: string;
+    email: string | null;
+    app_metadata: Record<string, unknown>;
+    user_metadata: Record<string, unknown>;
+  };
   platformAdmin: PlatformAdminInfo;
 }
 
@@ -32,35 +37,15 @@ type ResolveResult =
   | { ok: false; reason: "unauthenticated" | "forbidden" | "mfa_required" | "internal_error" };
 
 export async function resolvePlatformAdmin(): Promise<ResolveResult> {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  const identity = await resolveFirebaseIdentity();
+  if (!identity) {
     return { ok: false, reason: "unauthenticated" };
   }
 
-  // Use the internal user_id mapping via resolve_firebase_identity
-  const { data: mappedUserId, error: mapError } = await supabase.rpc("resolve_firebase_identity", {
-    p_firebase_uid: user.id,
-  });
-
-  if (mapError) {
-    logger.error("[auth] resolve_firebase_identity failed", { error: mapError.message });
-    return { ok: false, reason: "internal_error" };
-  }
-
-  const internalUserId = mappedUserId;
-  if (!internalUserId) {
-    return { ok: false, reason: "forbidden" }; // Unmapped Firebase UID
-  }
-
-  // platform_admins RLS: only platform admins read; non-admins get null → forbid.
-  const { data: paRow, error } = await supabase
+  const { data: paRow, error } = await createAdminClient()
     .from("platform_admins")
     .select("user_id, scope, mfa_required, revoked_at")
-    .eq("user_id", internalUserId)
+    .eq("user_id", identity.userId)
     .is("revoked_at", null)
     .maybeSingle();
 
@@ -76,7 +61,12 @@ export async function resolvePlatformAdmin(): Promise<ResolveResult> {
   return {
     ok: true,
     context: {
-      user: { ...user, id: internalUserId },
+      user: {
+        id: identity.userId,
+        email: identity.email,
+        app_metadata: identity.appMetadata,
+        user_metadata: identity.userMetadata,
+      },
       platformAdmin: {
         user_id: paRow.user_id,
         scope: paRow.scope,

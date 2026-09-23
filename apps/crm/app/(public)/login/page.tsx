@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { LoginForm } from "@/components/auth/LoginForm";
 import { branding } from "@/lib/branding";
+import { safeInternalRedirect } from "@/lib/auth/safe-redirect";
 
 export const metadata = { title: "Entrar" };
 
@@ -43,7 +44,7 @@ export default async function LoginPage({
           Tente entrar novamente em instantes.
         </div>
       )}
-      <LoginForm next={next} />
+      <LoginForm next={safeInternalRedirect(next)} />
       <div className="space-y-2 text-center text-sm">
         <p>
           <Link

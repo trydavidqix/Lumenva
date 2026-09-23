@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signInWithEmail } from "@/lib/firebase/client";
+import { safeInternalRedirect } from "@/lib/auth/safe-redirect";
 
 export function LoginForm({ next }: { next?: string }) {
   const router = useRouter();
@@ -30,7 +31,7 @@ export function LoginForm({ next }: { next?: string }) {
     startTransition(async () => {
       const res = await signInWithEmail(values.email, values.password);
       if (res.ok) {
-        router.replace(next || "/app/inbox");
+        router.replace(safeInternalRedirect(next));
         return;
       }
 
