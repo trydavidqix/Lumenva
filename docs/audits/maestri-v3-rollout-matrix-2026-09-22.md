@@ -68,7 +68,7 @@ CRM/server wire-contract tests are not evidence for the Maestri V3 adapter.
 The package exposes:
 
 ```powershell
-pnpm --dir packages/maestri-context-gateway run check:rollout
+node scripts/maestri-v3/rollout-check.mjs
 ```
 
 The guard returns `READY_FOR_VPS` only when the current branch is `vps`, the target is `vps`, production mode is disabled, and the worktree is clean. Any other state returns `BLOCKED` with deterministic blockers.

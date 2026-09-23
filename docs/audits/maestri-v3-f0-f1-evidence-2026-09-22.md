@@ -106,7 +106,7 @@ Provider wiring increment: `TaskContract.context_packet` is now the canonical ha
 
 Core execution increment: `CoreRuntime.delegateTask()` now validates task identity, invokes Maestri, persists the selected provider result, and makes that record available to the existing `/executions` feed consumed by the dashboard. Core validation passed 43/43 tests and typecheck.
 
-F25 rollout increment: the read-only `maestri-v3-rollout-check` guard permits only a clean `vps` branch targeting `vps` with production disabled. It deterministically blocks production, other targets, other branches, and dirty worktrees. Docker was not installed, no deployment or merge was executed, and external Graphiti, quota, OTLP collector, Actions, and MCP configuration remain explicitly pending. Full matrix: `docs/audits/maestri-v3-rollout-matrix-2026-09-22.md`.
+F25 rollout increment: the read-only `maestri-v3-rollout-check` guard at `scripts/maestri-v3/rollout-check.mjs` permits only a clean `vps` branch targeting `vps` with production disabled. It deterministically blocks production, other targets, other branches, and dirty worktrees. Docker was not installed, no deployment or merge was executed, and external Graphiti, quota, OTLP collector, Actions, and MCP configuration remain explicitly pending. Full matrix: `docs/audits/maestri-v3-rollout-matrix-2026-09-22.md`.
 
 The homogeneous v2 dataset was completed with 30 unique pairs, using offset execution so no earlier case was repeated: baseline `1171978` versus Fabric `842666` total tokens (`28.10%` reduction), and baseline `2128743` versus Fabric `1593713` context tokens (`25.13%` reduction). Quality stayed at 100% for success, recall, and grounding with 0% hallucination. Trust is `VALIDATED` with score `81.28`.
 
