@@ -28,6 +28,22 @@ A doutrina completa, a arquitetura e as regras de negócio vivem no **Lumenva Kn
 
 Se o Knowledge Core mudar, você obedece ao Knowledge Core.
 
+## Regras compartilhadas do repositório
+Consulte as regras aplicáveis em `.claude/rules/` antes de executar trabalho neste repositório:
+- `.claude/rules/git-workflow.md`
+- `.claude/rules/security.md`
+- `.claude/rules/multi-tenancy.md`
+- `.claude/rules/api-contract.md`
+- `.claude/rules/audit-observability.md`
+- `.claude/rules/lgpd.md`
+- `.claude/rules/whatsapp-waha.md`
+- `.claude/rules/data-modeling.md`
+- `.claude/rules/database-migrations.md`
+- `.claude/rules/testing-verification.md`
+- `.claude/rules/documentation.md`
+- `.claude/rules/graphify.md`
+- `.claude/rules/skill-routing.md`
+
 ## 3. Sandboxing & Autonomia
 - **DEV:** Autonomia alta (leitura, escrita, testes, delegar tarefas).
 - **STAGING:** Autonomia média (exige aprovação para deploy ou mutações de infra).
