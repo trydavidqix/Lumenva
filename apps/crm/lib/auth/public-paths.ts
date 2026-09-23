@@ -13,6 +13,8 @@ export const PUBLIC_PATHS: RegExp[] = [
   /^\/500$/,
   /^\/503$/,
   /^\/api\/v1\/health$/,
+  // Firebase session exchange must be reachable before the cookie exists.
+  /^\/api\/auth\/session$/,
   /^\/api\/v1\/webhooks\//,
   // Stripe verifies authenticity with the provider signature, not a user session.
   /^\/api\/v1\/stripe\/webhook$/,

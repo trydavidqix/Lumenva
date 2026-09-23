@@ -9,7 +9,8 @@ import { loginSchema, type LoginInput } from "@/lib/auth/schemas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { signInWithPassword } from "@/app/actions/auth/signInWithPassword";
+import { signInWithEmail } from "@/lib/firebase/client";
+import { safeInternalRedirect } from "@/lib/auth/safe-redirect";
 
 export function LoginForm({ next }: { next?: string }) {
   const router = useRouter();
@@ -28,27 +29,16 @@ export function LoginForm({ next }: { next?: string }) {
   const onSubmit = (values: LoginInput) => {
     setServerError(null);
     startTransition(async () => {
-      // Server Action redirects on success — no return value reaches here.
-      // On failure, an error discriminator is returned and rendered inline.
-      const res = await signInWithPassword(values, next);
-      if (!res) {
-        // Should be unreachable (redirect throws), but guard anyway.
-        router.replace(next || "/app/inbox");
+      const res = await signInWithEmail(values.email, values.password);
+      if (res.ok) {
+        router.replace(safeInternalRedirect(next));
         return;
       }
-      if (res.error === "mfa_required") {
-        const params = new URLSearchParams();
-        if (next) params.set("next", next);
-        if (res.challengeId) params.set("factor", res.challengeId);
-        router.replace(`/login/mfa${params.toString() ? `?${params}` : ""}`);
-        return;
-      }
+
       if (res.error === "invalid_credentials") {
         setServerError("Email ou senha incorretos.");
       } else if (res.error === "rate_limited") {
         setServerError("Muitas tentativas. Aguarde alguns minutos.");
-      } else if (res.error === "validation_error") {
-        setServerError("Dados inválidos. Confira os campos.");
       } else {
         setServerError("Erro inesperado. Tente novamente.");
       }

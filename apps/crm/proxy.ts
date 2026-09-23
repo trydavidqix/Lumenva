@@ -1,5 +1,3 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { cookieSecure } from "@/lib/supabase/cookie-secure";
 import { NextResponse, type NextRequest } from "next/server";
 import { env } from "@/lib/env";
 import { isPublicPath } from "@/lib/auth/public-paths";
@@ -8,7 +6,10 @@ import {
   IMPERSONATE_COOKIE_NAME_EDGE,
 } from "@/lib/impersonate/cookie-edge";
 
-const COOKIE_NAME = "sb-deskcomm-auth";
+// Firebase Session Boundary (Middleware runs in Edge, no admin SDK allowed here).
+// We rely on the presence of the cookie as a fast pass in Edge, and authoritative
+// verification happens in server components / API handlers downstream.
+const FIREBASE_SESSION_COOKIE = "fb-session-auth";
 
 export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request: { headers: request.headers } });
@@ -33,37 +34,10 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  const supabase = createServerClient(
-    env.NEXT_PUBLIC_SUPABASE_URL,
-    env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            request.cookies.set(name, value);
-            response.cookies.set(name, value, options);
-          });
-        },
-      },
-      cookieOptions: {
-        name: COOKIE_NAME,
-        sameSite: "strict",
-        httpOnly: true,
-        secure: cookieSecure(),
-        path: "/",
-      },
-    },
-  );
+  // Fast check: presence of cookie.
+  const hasSession = request.cookies.has(FIREBASE_SESSION_COOKIE);
 
-  // Validate JWT server-side (NEVER use getSession on backend per CLAUDE.md).
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!hasSession) {
     // API routes must respond with JSON envelope (contract: {error:{code,message}})
     // — never redirect HTML to JSON consumers. UI routes redirect to /login as before.
     if (pathname.startsWith("/api/")) {
@@ -109,15 +83,13 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // /admin/* additionally requires platform_admin (early gate — authoritative
-  // check is server-side in `requirePlatformAdmin`). Skip the RPC for
-  // `/admin/forbidden` (rendered to non-admins, would otherwise loop).
-  if (isAdminSurface && pathname.startsWith("/admin") && pathname !== "/admin/forbidden") {
-    const { data: isAdmin, error } = await supabase.rpc("fn_is_platform_admin");
-    if (error || !isAdmin) {
-      return NextResponse.redirect(new URL("/admin/forbidden", request.url));
-    }
-  }
+  // /admin/* additionally requires platform_admin. In edge we bypass this check
+  // and defer authoritative check to downstream server-side `requirePlatformAdmin`
+  // since edge cannot run Firebase auth nor DB RPC.
+  // Exception: if the route is /admin/forbidden, it's public. Wait, it's covered by isPublicPath.
+
+  // Previous DB RPC `fn_is_platform_admin` is removed. Authoritative check MUST happen downstream.
+  // The host-based branch below stays a NOOP today.
 
   return response;
 }

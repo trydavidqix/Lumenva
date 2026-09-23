@@ -9,8 +9,9 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { logger } from "@/lib/logger";
-import { createClient } from "@/lib/supabase/server";
-import type { AuthUser, Role, UserOrgMembership, ActiveOrg } from "./types";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveFirebaseIdentity } from "./firebase-identity";
+import { isHumanRole, type AuthUser, type Role, type UserOrgMembership, type ActiveOrg } from "./types";
 
 const ACTIVE_ORG_COOKIE = "active_org";
 
@@ -24,36 +25,29 @@ interface RawMembershipRow {
  * Loads the AuthUser for the current request. Returns null if unauthenticated.
  * Use only in Server Components / Route Handlers / Server Actions.
  *
- * Uses the user-scoped server client (cookie session). RLS policies allow:
- * - user_organizations: user_id = auth.uid() (user_orgs_select)
- * - organizations: id IN fn_user_org_ids()  (orgs_select)
- * - platform_admins: only platform admins read (so non-admins get null — correct)
+ * Uses the verified Firebase session cookie, then resolves the canonical
+ * Firebase UID -> internal user ID mapping. The admin client is limited to
+ * this server-side identity/permission lookup and always filters by that
+ * resolved internal user ID; it is not a business-data client.
  */
 export async function loadAuthUser(): Promise<AuthUser | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  const identity = await resolveFirebaseIdentity();
+  if (!identity) return null;
 
-  // Platform admin? (active = no revoked_at). RLS returns null for non-admins.
-  //
-  // ⚠️ O erro é capturado de propósito: aqui `data: null` é AMBÍGUO — significa tanto
-  // "não é platform admin" (RLS filtrou, estado normal) quanto "a query falhou".
-  // Sem separar os dois, um banco instável rebaixa silenciosamente um super-admin.
-  const { data: paRow, error: paErro } = await supabase
+  const admin = createAdminClient();
+  const { data: paRow, error: paErro } = await admin
     .from("platform_admins")
     .select("user_id, revoked_at")
-    .eq("user_id", user.id)
+    .eq("user_id", identity.userId)
     .is("revoked_at", null)
     .maybeSingle();
 
-  // Org memberships (only active = not revoked, accepted)
-  const { data: rawMemberships, error: membErro } = await supabase
+  const { data: rawMemberships, error: membErro } = await admin
     .from("user_organizations")
     .select("organization_id, role, organizations(display_name)")
-    .eq("user_id", user.id)
-    .is("revoked_at", null);
+    .eq("user_id", identity.userId)
+    .is("revoked_at", null)
+    .not("accepted_at", "is", null);
 
   /**
    * FALHA ALTO, não baixo.
@@ -76,7 +70,7 @@ export async function loadAuthUser(): Promise<AuthUser | null> {
   if (paErro || membErro) {
     const detalhe = (paErro ?? membErro)!;
     logger.error("[auth] não foi possível resolver permissões do usuário", {
-      user_id: user.id,
+      user_id: identity.userId,
       onde: paErro ? "platform_admins" : "user_organizations",
       code: detalhe.code,
       message: detalhe.message,
@@ -88,7 +82,7 @@ export async function loadAuthUser(): Promise<AuthUser | null> {
   }
 
   const rows = (rawMemberships ?? []) as RawMembershipRow[];
-  const memberships: UserOrgMembership[] = rows.map((row) => {
+  const memberships: UserOrgMembership[] = rows.filter((row) => isHumanRole(row.role)).map((row) => {
     const orgs = row.organizations;
     const name = Array.isArray(orgs) ? (orgs[0]?.display_name ?? "—") : (orgs?.display_name ?? "—");
     return {
@@ -98,14 +92,11 @@ export async function loadAuthUser(): Promise<AuthUser | null> {
     };
   });
 
-  const fullName = (user.user_metadata?.full_name as string | undefined) ?? null;
-  const avatarUrl = (user.user_metadata?.avatar_url as string | undefined) ?? null;
-
   return {
-    id: user.id,
-    email: user.email ?? "",
-    full_name: fullName,
-    avatar_url: avatarUrl,
+    id: identity.userId,
+    email: identity.email,
+    full_name: identity.fullName,
+    avatar_url: identity.avatarUrl,
     is_platform_admin: !!paRow,
     organizations: memberships,
   };
@@ -144,17 +135,17 @@ export async function requireAuth(): Promise<AuthUser> {
 /**
  * Returns true if the current session has at least one verified TOTP factor.
  * Use only in Server Components / Server Actions (cookie session).
+ * Deprecated in F4: always returns false to disable MFA enforcement.
  */
 export async function isMfaEnrolled(): Promise<boolean> {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.mfa.listFactors();
-  return !!data?.totp?.some((f) => f.status === "verified");
+  return false;
 }
 
 /**
  * MFA enforcement policy: platform admins and tenant `admin` role MUST enroll.
  * `manager`/`agent`/`viewer` are optional in MVP.
+ * Deprecated in F4: always returns false to disable MFA enforcement.
  */
 export function requiresMfa(role: Role | undefined, isPlatformAdmin: boolean): boolean {
-  return isPlatformAdmin || role === "admin";
+  return false;
 }

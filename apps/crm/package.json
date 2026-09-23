@@ -91,6 +91,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "fflate": "^0.8.3",
+    "firebase": "^12.19.0",
     "gpt-tokenizer": "^3.4.0",
     "import-in-the-middle": "^3.3.3",
     "inngest": "^4.15.0",
@@ -116,6 +117,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@lumenva/db": "workspace:*",
     "@axe-core/playwright": "^4.12.1",
     "@next/eslint-plugin-next": "16.3.0",
     "@playwright/test": "catalog:",

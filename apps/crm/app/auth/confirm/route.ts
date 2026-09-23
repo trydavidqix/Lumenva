@@ -1,70 +1,55 @@
 import { NextResponse, type NextRequest } from "next/server";
-import type { EmailOtpType } from "@supabase/supabase-js";
-
-import { createClient } from "@/lib/supabase/server";
+import { loadAuthUser } from "@/lib/auth/server";
 import { ensureTenantForUser } from "@/lib/auth/provision";
 import { audit } from "@/lib/audit";
 
 /**
- * GET /auth/confirm — troca o token do e-mail (token_hash) por uma sessão.
+ * GET /auth/confirm — For Firebase, this route might receive an oobCode,
+ * but F4 delegates all link processing to the client. This file remains
+ * for compatibility or to handle post-signup provisioning if called manually.
  *
- * É o destino único dos links de e-mail do GoTrue (templates customizados em
- * supabase/templates/): confirmação de signup E redefinição de senha.
- *
- * - type=signup  → provisiona o tenant (org + membership admin) e entra no
- *                  onboarding. Provisionamento é idempotente (link clicado 2x).
- * - type=recovery → sessão de recovery estabelecida; segue para /login/reset
- *                  onde o usuário define a senha nova.
- *
- * Fluxo canônico do @supabase/ssr: verifyOtp grava os cookies de sessão via
- * cookies() do next/headers; o Next anexa os Set-Cookie ao redirect retornado.
+ * If a valid user session exists, it ensures tenant provisioning.
  */
 export async function GET(request: NextRequest) {
   const url = request.nextUrl;
-  const tokenHash = url.searchParams.get("token_hash");
-  const type = url.searchParams.get("type") as EmailOtpType | null;
   const requestId = request.headers.get("x-request-id");
 
-  const redirectTo = (path: string) => NextResponse.redirect(new URL(path, url.origin));
+  // Note: Firebase auth handles confirm links directly in the browser.
+  // For tenant provisioning post-signup, we can check if the user is already authenticated.
+  const user = await loadAuthUser();
 
-  if (!tokenHash || !type) {
-    return redirectTo("/login?error=link_invalido");
-  }
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
-
-  if (error || !data.user) {
-    await audit({
-      action: "auth.email_link_rejected",
-      metadata: { type, reason: error?.message ?? "no_user" },
-      requestId,
-    });
-    return redirectTo("/login?error=link_invalido");
-  }
-
-  if (type === "recovery") {
-    return redirectTo("/login/reset");
+  if (!user) {
+    // If not authenticated, the client will need to handle the oobCode
+    // Redirect to a client page if an oobCode is present, else login
+    const oobCode = url.searchParams.get("oobCode");
+    if (oobCode) {
+      const loginUrl = new URL("/login", url.origin);
+      loginUrl.searchParams.set("oobCode", oobCode);
+      return NextResponse.redirect(loginUrl);
+    }
+    return NextResponse.redirect(new URL("/login", url.origin));
   }
 
   try {
-    await ensureTenantForUser(data.user);
+    // Keep only the compatibility fields required by ensureTenantForUser.
+    const stubUser = { id: user.id, email: user.email, app_metadata: {}, user_metadata: {} };
+    await ensureTenantForUser(stubUser);
   } catch (e) {
     await audit({
       action: "auth.signup_provision_failed",
-      actorUserId: data.user.id,
+      actorUserId: user.id,
       metadata: { reason: e instanceof Error ? e.message : String(e) },
       requestId,
     });
-    return redirectTo("/login?error=provisionamento");
+    return NextResponse.redirect(new URL("/login?error=provisionamento", url.origin));
   }
 
   void audit({
     action: "auth.signup_confirmed",
-    actorUserId: data.user.id,
+    actorUserId: user.id,
     metadata: {},
     requestId,
   });
 
-  return redirectTo("/onboarding/welcome");
+  return NextResponse.redirect(new URL("/onboarding/welcome", url.origin));
 }

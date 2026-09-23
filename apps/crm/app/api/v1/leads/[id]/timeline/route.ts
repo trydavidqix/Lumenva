@@ -36,6 +36,7 @@ import { type NextRequest } from "next/server";
 
 import { ok, fail } from "@/lib/api/wrappers";
 import { createClient } from "@/lib/supabase/server";
+import { loadAuthUser } from "@/lib/auth/server";
 import {
   TIMELINE_COLS,
   comNomeDoAtor,
@@ -56,11 +57,8 @@ export async function GET(req: NextRequest, ctx: RouteCtx): Promise<Response> {
   const { id: leadId } = await ctx.params;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-    error: authErr,
-  } = await supabase.auth.getUser();
-  if (authErr || !user) {
+  const user = await loadAuthUser();
+  if (!user) {
     return fail("unauthenticated", "Auth required.", 401, { requestId });
   }
 

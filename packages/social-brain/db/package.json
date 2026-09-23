@@ -24,7 +24,8 @@
     "./tenant/identity": "./src/tenant/identity-repository.ts",
     "./analytics": "./src/analytics/repository.ts",
     "./analytics/queries": "./src/analytics/queries.ts",
-    "./audit": "./src/audit/repository.ts"
+    "./audit": "./src/audit/repository.ts",
+    "./gcp/firebase-auth": "./src/gcp/firebase-auth.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

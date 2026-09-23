@@ -7,13 +7,10 @@
  * "matriz advisória").
  *
  * Fluxo:
- *  1. `loadAuthUser()` — valida o JWT via `supabase.auth.getUser()` (nunca
- *     `getSession()`); 401 se não autenticado.
- *  2. `resolveActiveOrg()` — org ativa de fonte confiável (cookie validado
- *     contra memberships), NUNCA do body; 403 `forbidden_tenant` se ausente.
- *  3. `rpc fn_user_role_in_org(org)` — role efetivo direto do banco, a MESMA
- *     função SECURITY DEFINER que as policies RLS usam (fonte única de
- *     verdade); falha fechada se membership foi revogado.
+ *  1. `loadAuthUser()` — valida o JWT via Firebase session.
+ *  2. `resolveActiveOrg()` — org ativa de fonte confiável.
+ *  3. Lookup server-side de `user_organizations` filtrado por `user_id` + org.
+ *     O user_id vem do mapping Firebase verificado; request/body nunca decide.
  *  4. Rank insuficiente → audit `authz.denied` (fire-and-forget) + 403.
  */
 import type { NextResponse } from "next/server";
@@ -29,7 +26,7 @@ import {
   type AuthUser,
   type HumanRole,
 } from "@/lib/auth/types";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type RoleCheck =
   | { ok: true; user: AuthUser; org: ActiveOrg }
@@ -46,15 +43,11 @@ interface RequireRoleOpts {
    * Override da org onde o role é resolvido (default: org ativa do cookie).
    * Use quando a autorização é sobre a org do RECURSO (ex.: LGPD anonymize —
    * admin na org do CONTATO), resolvida de fonte confiável (query RLS-scoped),
-   * NUNCA do body. O role vem de `fn_user_role_in_org(p_org)` nessa org.
+   * NUNCA do body. O role vem do membership ativo nessa org.
    */
   organizationId?: string;
 }
 
-/**
- * Gate de rota: `const authz = await requireRole("manager", { requestId });`
- * `if (!authz.ok) return authz.response;`
- */
 export async function requireRole(min: HumanRole, opts: RequireRoleOpts = {}): Promise<RoleCheck> {
   const { requestId, resource, allowPlatformAdmin = false, organizationId } = opts;
 
@@ -69,8 +62,6 @@ export async function requireRole(min: HumanRole, opts: RequireRoleOpts = {}): P
     };
   }
 
-  // Platform bypass must use the canonical platform_admins row and its MFA
-  // policy, never the in-memory compatibility flag from AuthUser.
   const platformAdminAllowed = allowPlatformAdmin
     ? (await resolvePlatformAdmin()).ok
     : false;
@@ -101,11 +92,19 @@ export async function requireRole(min: HumanRole, opts: RequireRoleOpts = {}): P
     return { ok: true, user, org };
   }
 
-  // Role efetivo do banco (não do snapshot do cookie/membership em memória).
-  const supabase = await createClient();
-  const { data: effectiveRole, error } = await supabase.rpc("fn_user_role_in_org", {
-    p_org: org.orgId,
-  });
+  // Firebase is the auth authority. The legacy RLS function reads auth.uid(),
+  // which is a Supabase principal and cannot represent the Firebase session
+  // cookie. Keep this service-role lookup narrow and require both trusted
+  // identity and trusted organization predicates.
+  const { data: membership, error } = await createAdminClient()
+    .from("user_organizations")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("organization_id", org.orgId)
+    .is("revoked_at", null)
+    .not("accepted_at", "is", null)
+    .maybeSingle();
+  const effectiveRole = membership?.role ?? null;
   if (error) {
     return {
       ok: false,
@@ -116,7 +115,6 @@ export async function requireRole(min: HumanRole, opts: RequireRoleOpts = {}): P
   const effectiveHumanRole = isHumanRole(effectiveRole) ? effectiveRole : null;
   const rank = effectiveHumanRole ? ROLE_RANK[effectiveHumanRole] : 0;
   if (!effectiveHumanRole || rank < ROLE_RANK[min]) {
-    // Fire-and-forget: falha de audit alerta, não bloqueia o 403.
     void audit({
       action: "authz.denied",
       actorUserId: user.id,
