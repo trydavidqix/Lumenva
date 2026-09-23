@@ -15,8 +15,7 @@ describe("WahaTransportAdapter (TDD Fakes)", () => {
     adapter = new WahaTransportAdapter();
 
     // Explicitly update the instance variables to bypass env check and prevent side-effects globally
-    (adapter as any).baseUrl = "http://fake-waha";
-    (adapter as any).apiKey = "fake-api-key";
+    Object.assign(adapter, { baseUrl: "http://fake-waha", apiKey: "fake-api-key" });
   });
 
   afterEach(() => {
@@ -29,7 +28,7 @@ describe("WahaTransportAdapter (TDD Fakes)", () => {
       ok: true,
       json: async () => ({ id: "waha-msg-id-123" })
     });
-    global.fetch = fetchMock as any;
+    global.fetch = fetchMock as unknown as typeof fetch;
 
     const ctx: ExternalOperationContext = { organizationId: "org-1", requestId: "req-1" };
     const command: ChannelTransportCommand = {
@@ -44,11 +43,11 @@ describe("WahaTransportAdapter (TDD Fakes)", () => {
     expect(fetchMock).toHaveBeenCalled();
     const fetchCall = fetchMock.mock.calls[0];
     if (!fetchCall) throw new Error("fetchCall is undefined");
-    const url = fetchCall[0];
-    const options = fetchCall[1];
+    const url = fetchCall[0] as string;
+    const options = fetchCall[1] as RequestInit;
 
-    expect(options.headers["X-Api-Key"]).toBe("fake-api-key");
-    expect(options.headers["Authorization"]).toBeUndefined();
+    expect((options.headers as Record<string, string>)["X-Api-Key"]).toBe("fake-api-key");
+    expect((options.headers as Record<string, string>)["Authorization"]).toBeUndefined();
 
     expect(url).not.toContain("fake-api-key");
 
@@ -57,7 +56,7 @@ describe("WahaTransportAdapter (TDD Fakes)", () => {
 
   it("should handle 23505 deduplication appropriately", async () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error("duplicate key value violates unique constraint 23505"));
-    global.fetch = fetchMock as any;
+    global.fetch = fetchMock as unknown as typeof fetch;
 
     const ctx: ExternalOperationContext = { organizationId: "org-1", requestId: "req-1", idempotencyKey: "idem-key-123" };
     const command: ChannelTransportCommand = {
@@ -94,7 +93,7 @@ describe("WahaTransportAdapter (TDD Fakes)", () => {
       ok: true,
       json: async () => ({ id: "waha-media-id-123" })
     });
-    global.fetch = fetchMock as any;
+    global.fetch = fetchMock as unknown as typeof fetch;
 
     const ctx: ExternalOperationContext = { organizationId: "org-1", requestId: "req-1" };
     const command: ChannelTransportCommand = {
@@ -112,9 +111,9 @@ describe("WahaTransportAdapter (TDD Fakes)", () => {
     expect(fetchMock).toHaveBeenCalled();
     const fetchCall = fetchMock.mock.calls[0];
     if (!fetchCall) throw new Error("fetchCall is undefined");
-    const options = fetchCall[1];
+    const options = fetchCall[1] as RequestInit;
 
-    expect(options.body).toContain("https://signed-url.com/file?token=123");
+    expect(options.body as string).toContain("https://signed-url.com/file?token=123");
     expect(result.externalId).toBe("waha-media-id-123");
   });
 
@@ -125,7 +124,7 @@ describe("WahaTransportAdapter (TDD Fakes)", () => {
       if (url.includes("/start")) return { ok: true, json: async () => ({ status: "SCAN_QR_CODE", qr: "qr-data" }) };
       return { ok: true, json: async () => ({}) };
     });
-    global.fetch = fetchMock as any;
+    global.fetch = fetchMock as unknown as typeof fetch;
 
     const ctx: ExternalOperationContext = { organizationId: "org-1", requestId: "req-1" };
 
