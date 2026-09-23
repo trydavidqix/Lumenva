@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 const signInWithEmailAndPasswordMock = vi.fn();
 const signInWithPopupMock = vi.fn();
 const getIdTokenMock = vi.fn();
+const fetchMock = vi.fn<typeof fetch>();
 
 vi.mock("firebase/app", () => ({
   initializeApp: vi.fn(),
@@ -23,10 +24,8 @@ vi.mock("firebase/auth", () => ({
 import { signInWithEmail, signInWithGoogle } from "../../../lib/firebase/client";
 
 describe("Firebase Client Auth Wrapper", () => {
-  let fetchMock: ReturnType<typeof vi.fn>;
-
   beforeEach(() => {
-    fetchMock = vi.fn();
+    fetchMock.mockReset();
     global.fetch = fetchMock;
     signInWithEmailAndPasswordMock.mockReset();
     signInWithPopupMock.mockReset();
