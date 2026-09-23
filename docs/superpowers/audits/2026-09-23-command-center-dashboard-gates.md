@@ -37,16 +37,13 @@ Dashboard tests cover the read-only local endpoints, keyboard-accessible navigat
 ## Remote GitHub evidence
 
 - Draft PR: https://github.com/trydavidqix/Lumenva/pull/26, targeting `lumenva-command-center`; no merge performed.
-- MCG workflow run `35802405655`: PASS.
-- F2/F3 vertical run `35802405657`: PASS.
-- Repository CI invariants run `35802405587`: PASS.
-- Core workflow run `35802405583`: FAIL at `lumenva-core` typecheck.
-- Repository CI verify run `35802405587`: FAIL at the same `lumenva-core` typecheck while running the monorepo-wide typecheck.
+- Initial integration: MCG `35802405655` PASS; vertical `35802405657` PASS; invariants `35802405587` PASS; core `35802405583` FAIL; verify `35802405587` FAIL.
+- Latest scheduler-code commit `fdd2dafe`: MCG `35803286772` PASS; vertical `35803286785` PASS; invariants `35803286827` PASS; core `35803286768` FAIL; verify `35803286827` FAIL.
 
 The MCG-specific remote gate is green. The PR remains draft/open because the mandatory core and general verify checks are red due to errors outside the MCG allowlist. No merge or main-branch change was made. The separate M0.13 completion gate remains open.
 
 ## Follow-up verification
 
-- Scheduler concurrency regression: RED before implementation (`maxActive` was 1 with a limit of 2); GREEN after the fix (`maxActive` reached 2 for independent ready nodes).
-- Full MCG unit suite after scheduler change: 34/34 PASS; syntax/import smoke: 30 modules PASS; `git diff --check` PASS.
+- Scheduler concurrency regression: RED before implementation (`maxActive` was 1 with a limit of 2); GREEN after the fix (`maxActive` reached 2 for independent ready nodes). The scheduler change is included in the latest remote MCG PASS above.
+- Full MCG unit suite after scheduler change: 34/34 PASS; syntax/import smoke: 30 modules PASS; sensitive scan: 80 files PASS; `git diff --check` PASS.
 - Read-only runtime aggregate: 2 valid paired evaluations; both lack a category. M0.11 still requires 30 real, categorized pairs. No runtime records were changed and no provider evaluations were launched.
