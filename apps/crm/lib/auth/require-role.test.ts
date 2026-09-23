@@ -12,7 +12,7 @@ import { requireRole } from "@/lib/auth/require-role";
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import { audit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
-import type { AuthUser, Role } from "@/lib/auth/types";
+import type { AuthUser, HumanRole, Role } from "@/lib/auth/types";
 
 vi.mock("@/lib/auth/server", () => ({
   loadAuthUser: vi.fn(),
@@ -120,6 +120,26 @@ describe("requireRole — helper único (spec 13 §4)", () => {
     if (res.ok) throw new Error("unreachable");
     expect(res.response.status).toBe(403);
     expect(audit).toHaveBeenCalledTimes(1);
+  });
+
+  it("fail-closed: banco nunca promove papel interno ai_operator a role humana", async () => {
+    session("admin", { dbRole: "ai_operator" });
+    const res = await requireRole("viewer");
+    expect(res.ok).toBe(false);
+    if (res.ok) throw new Error("unreachable");
+    expect(res.response.status).toBe(403);
+    const body = await res.response.json();
+    expect(body.error.code).toBe("forbidden_role");
+  });
+
+  it("fail-closed: threshold interno ai_operator nunca vira requisito de rota humana", async () => {
+    session("admin");
+    const res = await requireRole("ai_operator" as unknown as HumanRole);
+    expect(res.ok).toBe(false);
+    if (res.ok) throw new Error("unreachable");
+    expect(res.response.status).toBe(403);
+    const body = await res.response.json();
+    expect(body.error.code).toBe("forbidden_role");
   });
 
   // Override de org (ex.: LGPD anonymize — role resolvido na org do CONTATO,
