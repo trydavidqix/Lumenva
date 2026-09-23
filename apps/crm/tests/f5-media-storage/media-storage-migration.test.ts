@@ -4,14 +4,13 @@ import { GET as avatarGet } from '../../app/api/v1/contacts/[id]/avatar/route';
 import { POST as cronPost } from '../../app/api/v1/cron/contact-avatars/route';
 import { GET as messageMediaGet } from '../../app/api/v1/messages/[id]/media/route';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient } from '@/lib/supabase/server';
 import { sendMessageHandler } from '../../app/api/v1/messages/_handler';
 import type { SendMessageInput } from '@/lib/schemas';
 import type { HandlerCtx } from '@/lib/api/handlers/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { NextRequest } from 'next/server';
 
-// We mock requireRole, createAdminClient, createClient, etc.
+// We mock requireRole, createAdminClient, and the GCS/channel seams.
 vi.mock('@/lib/auth/require-role', () => ({
   requireRole: vi.fn().mockResolvedValue({ ok: true, org: { orgId: 'org-123' } })
 }));
@@ -87,20 +86,18 @@ vi.mock('@/lib/supabase/admin', () => ({
   }))
 }));
 
-vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn(async () => ({
-    from: vi.fn(() => ({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'conv-123' } })
-    }))
-  }))
-}));
-
-
 vi.mock('@/lib/channels', () => ({
   DEFAULT_CHANNEL_PROVIDER: 'brightbean',
   getAdapter: vi.fn(() => ({
+    resolveRecipient: vi.fn().mockReturnValue('+5511999999999'),
+    isConfigured: vi.fn().mockReturnValue(true),
+    codes: {
+      notConfigured: 'brightbean_not_configured',
+      sendFailed: 'brightbean_error',
+      unknownError: 'brightbean_unknown'
+    },
+    send: vi.fn().mockResolvedValue({ externalId: 'external-1' }),
+    echoExternalIds: vi.fn().mockReturnValue(['external-1']),
     fetchProfilePictureUrl: vi.fn().mockResolvedValue('https://fake.url/pic.jpg')
   }))
 }));
@@ -108,6 +105,19 @@ vi.mock('@/lib/channels', () => ({
 vi.mock('@/lib/auth/cron-secret', () => ({
   cronSecretMatches: vi.fn().mockReturnValue(true)
 }));
+
+function mockAdminLookup(data: Record<string, unknown>) {
+  vi.mocked(createAdminClient).mockImplementationOnce(
+    () =>
+      ({
+        from: vi.fn(() => ({
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data, error: null })
+        }))
+      }) as unknown as SupabaseClient
+  );
+}
 
 describe('Media Storage Migration TDD', () => {
   beforeEach(() => {
@@ -123,6 +133,7 @@ describe('Media Storage Migration TDD', () => {
   });
 
   it('mediaPost should upload to GCS object store instead of Supabase', async () => {
+    mockAdminLookup({ id: 'conv-1' });
     const bodyStr = "mock-file-content";
     const req = new Request('https://test.com/api/v1/conversations/conv-1/media', {
       method: 'POST',
@@ -164,16 +175,9 @@ describe('Media Storage Migration TDD', () => {
   });
 
   it('messageMediaGet should return signed URL from GCS object store instead of Supabase', async () => {
-    // Override supabase mock just for this to ensure msg.media_storage_path is returned
-    const origCreateClient = vi.mocked(createClient);
-    const clientMock = {
-      from: vi.fn(() => ({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'msg-1', media_storage_path: 'org-123/msgs/media.jpg' } })
-      }))
-    };
-    origCreateClient.mockImplementationOnce(async () => clientMock as unknown as SupabaseClient);
+    // A rota agora usa createAdminClient depois da autenticação; configure esse
+    // mock, não o cliente RLS legado que a rota não chama mais.
+    mockAdminLookup({ id: 'msg-1', media_storage_path: 'org-123/msgs/media.jpg' });
 
     const req = new Request('https://test.com/api/v1/messages/msg-1/media');
     const res = await messageMediaGet(req as unknown as NextRequest, { params: Promise.resolve({ id: 'msg-1' }) });
@@ -185,7 +189,6 @@ describe('Media Storage Migration TDD', () => {
 
 describe('Message Handler TDD', () => {
   it('sendMessageHandler should return signed URL from GCS object store instead of Supabase before sending to adapter', async () => {
-    const origCreateClient = vi.mocked(createClient);
     const mockSupabase = {
       from: vi.fn((table) => {
         const builder = {
@@ -217,8 +220,6 @@ describe('Message Handler TDD', () => {
       }),
       rpc: vi.fn().mockResolvedValue({ error: null })
     };
-    origCreateClient.mockImplementationOnce(async () => mockSupabase as unknown as SupabaseClient);
-
     const input = {
       conversation_id: 'conv-1',
       type: 'image',
