@@ -25,9 +25,12 @@ export interface PlatformAdminInfo {
 export interface PlatformAdminContext {
   user: {
     id: string;
-    email: string | null;
+    email?: string | null;
     app_metadata: Record<string, unknown>;
     user_metadata: Record<string, unknown>;
+    /** Compatibility fields retained for existing platform-admin consumers/tests. */
+    aud?: string;
+    created_at?: string;
   };
   platformAdmin: PlatformAdminInfo;
 }
