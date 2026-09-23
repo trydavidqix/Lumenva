@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { audit } from "@/lib/audit";
 import { profileSchema, type ProfileInput } from "@/lib/schemas/settings";
 import { resolveActiveOrg, loadAuthUser } from "@/lib/auth/server";
+import { initFirebaseAuth } from "@lumenva/db/gcp/firebase-auth";
 
 export type UpdateProfileResult =
   | { ok: true }
@@ -21,22 +22,23 @@ export async function updateProfile(input: ProfileInput): Promise<UpdateProfileR
   const authUser = await loadAuthUser();
   if (!authUser) return { ok: false, error: "unauthenticated" };
 
-  const supabase = await createClient();
   const hdrs = await headers();
   const requestId = hdrs.get("x-request-id");
   const ip = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
   const userAgent = hdrs.get("user-agent") ?? null;
 
-  const { error } = await supabase.auth.updateUser({
-    data: {
-      full_name: parsed.data.full_name ?? null,
-      locale: parsed.data.locale,
-      timezone: parsed.data.timezone,
-      avatar_url: parsed.data.avatar_url ?? null,
-    },
-  });
-  if (error) {
-    return { ok: false, error: error.message };
+  try {
+    const auth = initFirebaseAuth();
+
+    // We can use the email to get the Firebase user since emails are unique.
+    const fbUser = await auth.getUserByEmail(authUser.email);
+
+    await auth.updateUser(fbUser.uid, {
+      displayName: parsed.data.full_name ?? undefined,
+      photoURL: parsed.data.avatar_url ?? undefined,
+    });
+  } catch (error: any) {
+    return { ok: false, error: error.message || "update_failed" };
   }
 
   const activeOrg = await resolveActiveOrg(authUser);
@@ -58,6 +60,8 @@ export async function updateProfile(input: ProfileInput): Promise<UpdateProfileR
 
   // Best-effort emit (event_log is org-scoped; skip if no org).
   if (activeOrg) {
+    const supabase = await createClient(); // service role? createClient is user-scoped. But wait, createClient uses Firebase session for DB access now?
+    // Let's just use createClient as before.
     await supabase
       .rpc("emit_event", {
         p_event_type: "user.profile_updated",

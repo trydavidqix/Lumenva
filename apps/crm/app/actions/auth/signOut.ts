@@ -1,20 +1,17 @@
 "use server";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { audit } from "@/lib/audit";
+import { loadAuthUser } from "@/lib/auth/server";
+import { FIREBASE_SESSION_COOKIE } from "@/lib/firebase/server";
 
 export async function signOut(): Promise<void> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  // Get current user details for audit logs
+  const user = await loadAuthUser();
   const hdrs = await headers();
-  await supabase.auth.signOut();
 
-  // Clear active_org cookie too.
   const store = await cookies();
+  store.delete(FIREBASE_SESSION_COOKIE);
   store.delete("active_org");
 
   if (user) {
