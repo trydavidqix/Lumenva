@@ -75,8 +75,8 @@ describe('CrmLeadNormalizer', () => {
     const normalizedList = normalizer.normalizeList(list);
 
     expect(normalizedList.length).toBe(2);
-    expect(normalizedList[0]?.id).toBe('lead-a');
-    expect(normalizedList[1]?.id).toBe('lead-b');
+    expect(normalizedList[0].id).toBe('lead-a');
+    expect(normalizedList[1].id).toBe('lead-b');
   });
 });
 
