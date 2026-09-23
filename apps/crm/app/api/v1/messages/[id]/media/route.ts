@@ -13,7 +13,7 @@ import { fail } from "@/lib/api/wrappers";
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import { logger } from "@/lib/logger";
 import { fetchWahaMedia } from "@/lib/messaging/media/waha-source";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createGcsObjectStore } from "@lumenva/db/storage/gcs";
 import { getGcsBucket } from "@lumenva/db/gcp/cloud-storage";
 
@@ -28,7 +28,6 @@ interface RouteCtx {
 export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
   const requestId = randomUUID();
   const { id: messageId } = await ctx.params;
-  const supabase = await createClient();
 
   const authUser = await loadAuthUser();
   if (!authUser) {
@@ -38,10 +37,10 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
   if (!activeOrg) {
     return fail("no_active_org", "No active organization.", 403, { requestId });
   }
+  const admin = createAdminClient();
 
-  // Client de sessão: RLS garante que a mensagem pertence a uma org do usuário.
-  // Filtro explícito de organization_id por doutrina (defense-in-depth).
-  const { data: msg, error } = await supabase
+  // Admin client bypassa RLS; filtro explícito de organization_id é obrigatório.
+  const { data: msg, error } = await admin
     .from("messages")
     .select("id, media_url, media_mime, media_storage_path")
     .eq("id", messageId)
