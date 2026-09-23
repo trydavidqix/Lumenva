@@ -6,7 +6,7 @@ export class CrmLeadsDrizzleRepository implements DomainRepository<CrmLead, CrmL
   async findById(ctx: TenantReadContext, id: string): Promise<CrmLead | null> {
     const db = getDrizzle();
 
-    return await db.transaction(async (tx: any) => {
+    return await db.transaction(async (tx) => {
       await tx.execute(sql`SET LOCAL app.organization_id = ${ctx.organizationId}`);
 
       const res = await tx.execute(sql`
@@ -24,7 +24,7 @@ export class CrmLeadsDrizzleRepository implements DomainRepository<CrmLead, CrmL
   async list(ctx: TenantReadContext, filter: CrmLeadFilter): Promise<readonly CrmLead[]> {
     const db = getDrizzle();
 
-    return await db.transaction(async (tx: any) => {
+    return await db.transaction(async (tx) => {
       await tx.execute(sql`SET LOCAL app.organization_id = ${ctx.organizationId}`);
 
       const queryParts: string[] = [`SELECT * FROM crm_leads WHERE organization_id = ${ctx.organizationId}`];
