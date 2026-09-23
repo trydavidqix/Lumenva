@@ -24,6 +24,8 @@ import { isMediaPathOwnedBy } from "@/lib/messaging/media/upload-validation";
 import type { ListMessagesQuery, SendMessageInput } from "@/lib/schemas";
 import { sendTemplateForSession } from "@/lib/channels/meta/send-template-for-session";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createGcsObjectStore } from "@lumenva/db/storage/gcs";
+import { getGcsBucket } from "@lumenva/db/gcp/cloud-storage";
 import type { Message } from "@/lib/types/messaging";
 
 type SB = SupabaseClient;
@@ -421,12 +423,16 @@ export async function sendMessageHandler(
         });
       } else if (input.media_storage_path) {
         // Storage-first: signed URL curta só pro canal baixar (nunca base64).
-        const admin = createAdminClient();
-        const { data: signed, error: signErr } = await admin.storage
-          .from("whatsapp-media")
-          .createSignedUrl(input.media_storage_path, 600);
-        if (signErr || !signed?.signedUrl) {
-          throw new Error(`storage_sign_failed: ${signErr?.message ?? "no_url"}`);
+        let signedUrl: string;
+        try {
+          const bucket = getGcsBucket();
+          const store = createGcsObjectStore(bucket);
+          signedUrl = await store.createReadUrl(
+            { provider: 'gcs', bucket: 'whatsapp-media', key: input.media_storage_path },
+            600
+          );
+        } catch (signErr) {
+          throw new Error(`storage_sign_failed: ${signErr instanceof Error ? signErr.message : String(signErr)}`);
         }
         const filename = input.media_storage_path.split("/").pop() ?? undefined;
         ({ externalId } = await adapter.send({
@@ -434,7 +440,7 @@ export async function sendMessageHandler(
           to: chatId,
           kind: input.type,
           media: {
-            url: signed.signedUrl,
+            url: signedUrl,
             mime: input.media_mime ?? "application/octet-stream",
             filename,
             caption: input.body ?? null,

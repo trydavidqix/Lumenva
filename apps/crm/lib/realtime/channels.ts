@@ -3,12 +3,11 @@
  * Centralizes channel-name strings so every consumer stays in sync.
  */
 
-import { createClient } from "@/lib/supabase/browser";
+// Supabase client is deprecated for Realtime. This module used to provide channel instances,
+// but with SSE we just pass channel names to the hook directly.
+// We preserve the file/export to avoid breaking existing unused references or types if any,
+// though `alertsPlatform` usage should be migrated or rely on the hook taking strings directly.
 
-/**
- * Platform-wide alerts broadcast channel.
- * Subscribed by useAlertsRealtime to receive cross-tenant alert broadcasts.
- */
 export function alertsPlatform() {
-  return createClient().channel("alerts-platform");
+  return "alerts-platform";
 }

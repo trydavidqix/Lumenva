@@ -33,3 +33,5 @@ Você nunca aprova seu próprio código criticamente. O fluxo é:
 
 ## 4. MCP e Hooks
 Toda ação crítica (como ler segredos, deletar bancos de dados ou alterar produção) passará pelos **Hooks (Automation Police)**. O MCP da Lumenva decidirá ALLOW/DENY com base nas suas permissões (geralmente restritas a DEV). Não force operações bloqueadas.
+
+- References: CLAUDE.md and .claude/rules/

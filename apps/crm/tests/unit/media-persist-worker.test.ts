@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const uploadMock = vi.fn();
+const gcsPutMock = vi.fn();
 const updateEqMock = vi.fn();
 const rpcMock = vi.fn();
 const messageRow = {
@@ -26,9 +26,16 @@ vi.mock("@/lib/supabase/admin", () => ({
         return { eq: () => ({ eq: async () => ({ error: null }) }) };
       },
     }),
-    storage: { from: () => ({ upload: uploadMock }) },
     rpc: rpcMock,
   }),
+}));
+
+vi.mock("@lumenva/db/storage/gcs", () => ({
+  createGcsObjectStore: () => ({ put: gcsPutMock }),
+}));
+
+vi.mock("@lumenva/db/gcp/cloud-storage", () => ({
+  getGcsBucket: () => ({ file: vi.fn() }),
 }));
 
 vi.mock("@/lib/messaging/media/waha-source", () => ({
@@ -54,7 +61,7 @@ function eventRow(attempts = 0) {
 
 describe("persistMessageMedia", () => {
   beforeEach(() => {
-    uploadMock.mockReset().mockResolvedValue({ error: null });
+    gcsPutMock.mockReset().mockResolvedValue(undefined);
     updateEqMock.mockReset();
     rpcMock.mockReset().mockResolvedValue({ error: null });
     messageRow.media_storage_path = null;
@@ -67,10 +74,10 @@ describe("persistMessageMedia", () => {
   it("baixa, sobe pro bucket e atualiza a mensagem", async () => {
     const result = await persistMessageMedia(eventRow());
     expect(result.status).toBe("ok");
-    expect(uploadMock).toHaveBeenCalledWith(
-      "org1/conv1/msg1.jpg",
+    expect(gcsPutMock).toHaveBeenCalledWith(
+      { provider: "gcs", bucket: "whatsapp-media", key: "org1/conv1/msg1.jpg" },
       expect.any(Buffer),
-      expect.objectContaining({ contentType: "image/jpeg", upsert: true }),
+      "image/jpeg",
     );
     expect(updateEqMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -89,7 +96,7 @@ describe("persistMessageMedia", () => {
     messageRow.media_storage_path = "org1/conv1/msg1.jpg";
     const result = await persistMessageMedia(eventRow());
     expect(result.status).toBe("skipped");
-    expect(uploadMock).not.toHaveBeenCalled();
+    expect(gcsPutMock).not.toHaveBeenCalled();
   });
 
   it("retorna error em falha de download com poucas tentativas, sem marcar failed", async () => {
@@ -109,7 +116,7 @@ describe("persistMessageMedia", () => {
   });
 
   it("marca failed quando o upload falha na última tentativa", async () => {
-    uploadMock.mockResolvedValue({ error: { message: "bucket unreachable" } });
+    gcsPutMock.mockRejectedValue(new Error("bucket unreachable"));
     const result = await persistMessageMedia(eventRow(4));
     expect(result.status).toBe("error");
     expect(updateEqMock).toHaveBeenCalledWith(

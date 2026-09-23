@@ -9,6 +9,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { LeadContextMessage } from "@/lib/agent-engine/edge/crm/get-lead-context";
 import { modelCapabilities } from "@/lib/agent-engine/edge/llm/capabilities";
 
+import { getGcsBucket } from "@lumenva/db/gcp/cloud-storage";
+import { createGcsObjectStore } from "@lumenva/db/storage/gcs";
 
 /**
  * AI SDK v7: imagem E pdf vão como `file` part com `mediaType` (o antigo
@@ -50,6 +52,7 @@ export async function buildNativeMediaParts(args: BuildNativeMediaPartsArgs): Pr
   // exceção aqui NUNCA pode abortar o turno inteiro, então falha vira "pula o item"
   // (try interno) ou, no limite, "devolve o que já juntou" (try externo).
   try {
+    const store = createGcsObjectStore(getGcsBucket());
     for (const m of candidates) {
       try {
         const mime = (m.media_mime ?? "").split(";")[0]!.trim().toLowerCase();
@@ -57,11 +60,11 @@ export async function buildNativeMediaParts(args: BuildNativeMediaPartsArgs): Pr
         const isPdf = m.type === "document" && mime === "application/pdf" && caps.pdf;
         if (!isImage && !isPdf) continue;
 
-        const dl = await args.admin.storage.from("whatsapp-media").download(m.media_storage_path!);
-        if (dl.error || !dl.data) continue;
+        const data = await store.get({ provider: "gcs", bucket: "whatsapp-media", key: m.media_storage_path! });
+
         // Buffer do Node (não Uint8Array cru) — mesmo shape que o derive worker usa
         // com sucesso; alguns adapters do AI SDK tratam Buffer e Uint8Array diferente.
-        const bytes = Buffer.from(await dl.data.arrayBuffer());
+        const bytes = Buffer.from(data);
         // file part com mediaType p/ imagem e pdf; bytes inline (sem URL p/ o provider baixar).
         parts.push({ type: "file", data: bytes, mediaType: isImage ? mime : "application/pdf" });
       } catch {

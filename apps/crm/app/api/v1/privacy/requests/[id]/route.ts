@@ -13,6 +13,8 @@ import type { NextRequest } from "next/server";
 import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createGcsObjectStore } from "@lumenva/db/storage/gcs";
+import { getGcsBucket } from "@lumenva/db/gcp/cloud-storage";
 
 export const dynamic = "force-dynamic";
 
@@ -77,14 +79,17 @@ export async function GET(
     const pdfPath = typeof result.pdf_path === "string" ? result.pdf_path : null;
 
     if (pdfPath) {
-      const { data: signedData, error: signErr } = await admin.storage
-        .from("lgpd-exports")
-        .createSignedUrl(pdfPath, 72 * 60 * 60); // 72h in seconds
-
-      if (signErr) {
-        console.error("[lgpd-request-detail] signed URL error", signErr.message);
-      } else {
-        signed_pdf_url = signedData?.signedUrl ?? null;
+      try {
+        const store = createGcsObjectStore(getGcsBucket());
+        signed_pdf_url = await store.createReadUrl(
+          { provider: "gcs", bucket: "lgpd-exports", key: pdfPath },
+          72 * 60 * 60,
+        );
+      } catch (error) {
+        console.error(
+          "[lgpd-request-detail] signed URL error",
+          error instanceof Error ? error.message : String(error),
+        );
       }
     }
   }

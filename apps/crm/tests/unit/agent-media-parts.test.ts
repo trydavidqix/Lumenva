@@ -1,4 +1,16 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const { mockGcsGet } = vi.hoisted(() => ({
+  mockGcsGet: vi.fn(),
+}));
+
+vi.mock("@lumenva/db/storage/gcs", () => ({
+  createGcsObjectStore: vi.fn(() => ({ get: mockGcsGet })),
+}));
+
+vi.mock("@lumenva/db/gcp/cloud-storage", () => ({
+  getGcsBucket: vi.fn(() => ({ file: vi.fn() })),
+}));
 
 import { buildNativeMediaParts } from "@/lib/agent-engine/agent/media-parts";
 
@@ -21,6 +33,10 @@ function signer(ok = true) {
 const imgMsg = { direction: "inbound" as const, body: "[image]", sent_at: "t", type: "image", media_storage_path: "org/conv/m.jpg", media_mime: "image/jpeg" };
 const pdfMsg = { direction: "inbound" as const, body: "[document]", sent_at: "t", type: "document", media_storage_path: "org/conv/m.pdf", media_mime: "application/pdf" };
 const textMsg = { direction: "inbound" as const, body: "oi", sent_at: "t" };
+
+beforeEach(() => {
+  mockGcsGet.mockReset().mockImplementation(async ({ key }: { key: string }) => new TextEncoder().encode(key));
+});
 
 describe("buildNativeMediaParts", () => {
   it("flag off → []", async () => {
@@ -56,6 +72,7 @@ describe("buildNativeMediaParts", () => {
     expect(parts).toEqual([]);
   });
   it("falha de download → [] sem lançar (derivado cobre)", async () => {
+    mockGcsGet.mockRejectedValueOnce(new Error("x"));
     await expect(
       buildNativeMediaParts({ messages: [imgMsg], provider: "anthropic", model: "claude", multimodalInput: true, admin: signer(false) as never }),
     ).resolves.toEqual([]);

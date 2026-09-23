@@ -14,7 +14,8 @@ import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import { logger } from "@/lib/logger";
 import { fetchWahaMedia } from "@/lib/messaging/media/waha-source";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { createGcsObjectStore } from "@lumenva/db/storage/gcs";
+import { getGcsBucket } from "@lumenva/db/gcp/cloud-storage";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,6 @@ interface RouteCtx {
 export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
   const requestId = randomUUID();
   const { id: messageId } = await ctx.params;
-  const supabase = await createClient();
 
   const authUser = await loadAuthUser();
   if (!authUser) {
@@ -37,10 +37,10 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
   if (!activeOrg) {
     return fail("no_active_org", "No active organization.", 403, { requestId });
   }
+  const admin = createAdminClient();
 
-  // Client de sessão: RLS garante que a mensagem pertence a uma org do usuário.
-  // Filtro explícito de organization_id por doutrina (defense-in-depth).
-  const { data: msg, error } = await supabase
+  // Admin client bypassa RLS; filtro explícito de organization_id é obrigatório.
+  const { data: msg, error } = await admin
     .from("messages")
     .select("id, media_url, media_mime, media_storage_path")
     .eq("id", messageId)
@@ -54,17 +54,18 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
   }
 
   if (msg.media_storage_path) {
-    const admin = createAdminClient();
-    const { data: signed, error: signErr } = await admin.storage
-      .from("whatsapp-media")
-      .createSignedUrl(msg.media_storage_path, SIGNED_URL_TTL_S);
-    if (!signErr && signed?.signedUrl) {
-      const response = NextResponse.redirect(signed.signedUrl, 302);
+    try {
+      const bucket = getGcsBucket();
+      const store = createGcsObjectStore(bucket);
+      const signedUrl = await store.createReadUrl(
+        { provider: 'gcs', bucket: 'whatsapp-media', key: msg.media_storage_path },
+        SIGNED_URL_TTL_S
+      );
+      const response = NextResponse.redirect(signedUrl, 302);
       response.headers.set("X-Request-Id", requestId);
       return response;
-    }
-    if (signErr) {
-      logger.error("messages.media: createSignedUrl failed", { error: signErr.message });
+    } catch (signErr) {
+      logger.error("messages.media: createSignedUrl failed", { error: signErr instanceof Error ? signErr.message : String(signErr) });
     }
   }
 
