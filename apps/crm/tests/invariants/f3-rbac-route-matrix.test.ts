@@ -193,7 +193,7 @@ describe("F3 RBAC route matrix", () => {
           select coalesce(public.fn_user_role_in_org('${OTHER_ORG}'), '0');
         `),
       ),
-    ).toBe("4");
+    ).toBe("admin");
   });
 
   dbIt("fails closed for revoked membership and an absent organization", () => {
