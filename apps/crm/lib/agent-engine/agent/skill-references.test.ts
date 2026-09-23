@@ -1,4 +1,16 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { mockGcsGet } = vi.hoisted(() => ({
+  mockGcsGet: vi.fn(),
+}));
+
+vi.mock('@lumenva/db/storage/gcs', () => ({
+  createGcsObjectStore: vi.fn(() => ({ get: mockGcsGet })),
+}));
+
+vi.mock('@lumenva/db/gcp/cloud-storage', () => ({
+  getGcsBucket: vi.fn(() => ({ file: vi.fn() })),
+}));
 import { readSkillReference, skillHasReferences } from './skill-references';
 import type { LoadedSkill } from './skills';
 
@@ -13,6 +25,10 @@ function skill(overrides: Partial<LoadedSkill> = {}): LoadedSkill {
     ...overrides,
   };
 }
+
+beforeEach(() => {
+  mockGcsGet.mockReset().mockResolvedValue(new TextEncoder().encode('conteúdo da reference'));
+});
 
 describe('skillHasReferences', () => {
   it('true quando o manifesto tem ao menos uma entrada kind:reference', () => {
@@ -75,8 +91,11 @@ describe('readSkillReference', () => {
       { admin },
       { organizationId: 'org1', matchedSkills: [skill()], skillName: 'frete-atrasado', refPath: 'refs/politica.md' },
     );
-    expect(from).toHaveBeenCalledWith('skill-assets');
-    expect(download).toHaveBeenCalledWith('org1/frete-atrasado/ver-1/refs/politica.md');
+    expect(mockGcsGet).toHaveBeenCalledWith({
+      provider: 'gcs',
+      bucket: 'skill-assets',
+      key: 'org1/frete-atrasado/ver-1/refs/politica.md',
+    });
     expect(res).toEqual({
       ok: true,
       skill_name: 'frete-atrasado',
@@ -86,6 +105,7 @@ describe('readSkillReference', () => {
   });
 
   it('reference_download_failed quando o storage devolve erro (arquivo órfão/indisponível)', async () => {
+    mockGcsGet.mockRejectedValueOnce(new Error('not found'));
     const download = vi.fn().mockResolvedValue({ data: null, error: { message: 'not found' } });
     const from = vi.fn().mockReturnValue({ download });
     const admin = { storage: { from } } as never;

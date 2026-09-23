@@ -25,6 +25,18 @@ const inserts: {
 const updates: { tabela: string; patch: Record<string, unknown> }[] = [];
 const removes: { bucket: string; caminhos: string[] }[] = [];
 
+const { gcsDeleteMock } = vi.hoisted(() => ({
+  gcsDeleteMock: vi.fn(),
+}));
+
+vi.mock("@lumenva/db/storage/gcs", () => ({
+  createGcsObjectStore: vi.fn(() => ({ delete: gcsDeleteMock })),
+}));
+
+vi.mock("@lumenva/db/gcp/cloud-storage", () => ({
+  getGcsBucket: vi.fn(() => ({ file: vi.fn() })),
+}));
+
 let contatoRow: { avatar_storage_path: string | null } | null = null;
 let filaPendente: Record<string, unknown>[] = [];
 let erroDoRemove: { message: string } | null = null;
@@ -112,6 +124,11 @@ beforeEach(() => {
   filaPendente = [];
   erroDoRemove = null;
   erroDoInsert = null;
+  gcsDeleteMock.mockReset().mockImplementation(async (locator: { bucket: string; key: string }) => {
+    ops.push(`storage.remove:${locator.bucket}`);
+    removes.push({ bucket: locator.bucket, caminhos: [locator.key] });
+    if (erroDoRemove) throw new Error(erroDoRemove.message);
+  });
   contatoRow = { avatar_storage_path: CAMINHO };
   rpcMock.mockReset().mockResolvedValue({
     data: { already_anonymized: false, counts: { contacts: 1 }, media_paths: [] },

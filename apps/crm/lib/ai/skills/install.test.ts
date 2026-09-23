@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type pg from 'pg';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -6,6 +6,19 @@ import { importSkillPackage, installPlatformSkill } from './install';
 import type { ParsedSkillPackage } from './package';
 
 const ORG = '11111111-0000-4000-8000-000000000001';
+
+const { putMock, deleteMock } = vi.hoisted(() => ({
+  putMock: vi.fn(),
+  deleteMock: vi.fn(),
+}));
+
+vi.mock('@lumenva/db/storage/gcs', () => ({
+  createGcsObjectStore: vi.fn(() => ({ put: putMock, delete: deleteMock })),
+}));
+
+vi.mock('@lumenva/db/gcp/cloud-storage', () => ({
+  getGcsBucket: vi.fn(() => ({ file: vi.fn() })),
+}));
 
 /** Mesmo padrão de mock do pool usado em org-memory.test.ts: fila de respostas em ordem de chamada. */
 function poolSeq(responses: Array<{ rows?: unknown[]; rowCount?: number }>): pg.Pool {
@@ -15,16 +28,17 @@ function poolSeq(responses: Array<{ rows?: unknown[]; rowCount?: number }>): pg.
 }
 
 function stubAdmin(opts?: { failPath?: string }) {
-  const uploaded: string[] = [];
-  const upload = vi.fn(async (path: string) => {
-    if (opts?.failPath === path) return { data: null, error: { message: 'boom' } };
-    uploaded.push(path);
-    return { data: { path }, error: null };
+  putMock.mockImplementation(async (locator: { key: string }) => {
+    if (opts?.failPath === locator.key) throw new Error('boom');
   });
-  const remove = vi.fn(async (paths: string[]) => ({ data: paths.map((p) => ({ name: p })), error: null }));
-  const admin = { storage: { from: () => ({ upload, remove }) } } as unknown as SupabaseClient;
-  return { admin, upload, remove };
+  deleteMock.mockResolvedValue(undefined);
+  const admin = {} as SupabaseClient;
+  return { admin, upload: putMock, remove: deleteMock };
 }
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 function makePkg(overrides: Partial<ParsedSkillPackage> = {}): ParsedSkillPackage {
   return {
@@ -60,9 +74,9 @@ describe('importSkillPackage', () => {
 
     expect(out).toEqual({ versionId: 'ver-1', name: 'frete-gratis' });
     expect(upload).toHaveBeenCalledWith(
-      `${ORG}/frete-gratis/ver-1/references/tabela.md`,
-      expect.anything(),
-      { upsert: false },
+      { provider: 'gcs', bucket: 'skill-assets', key: `${ORG}/frete-gratis/ver-1/references/tabela.md` },
+      expect.any(Uint8Array),
+      'application/octet-stream',
     );
     const insertValues = (pool.query as ReturnType<typeof vi.fn>).mock.calls[0]![1] as unknown[];
     expect(insertValues).toContain(JSON.stringify(pkg.files.map((f) => f.entry)));
@@ -103,7 +117,11 @@ describe('importSkillPackage', () => {
       importSkillPackage({ db: pool, admin }, { organizationId: ORG, pkg, createdBy: null }),
     ).rejects.toThrow();
 
-    expect(remove).toHaveBeenCalledWith([`${ORG}/${pkg.name}/ver-3/a.md`]);
+    expect(remove).toHaveBeenCalledWith({
+      provider: 'gcs',
+      bucket: 'skill-assets',
+      key: `${ORG}/${pkg.name}/ver-3/a.md`,
+    });
     expect((pool.query as ReturnType<typeof vi.fn>).mock.calls.length).toBe(1); // setSkillPointer nunca chamado
   });
 });

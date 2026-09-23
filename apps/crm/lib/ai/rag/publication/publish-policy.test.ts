@@ -9,11 +9,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * must hold identically after the extraction.
  */
 
-const uploadMock = vi.fn();
-const removeMock = vi.fn();
+const { putMock, deleteMock } = vi.hoisted(() => ({
+  putMock: vi.fn(),
+  deleteMock: vi.fn(),
+}));
 const rpcMock = vi.fn();
 const insertMock = vi.fn();
 const ingestPolicyFileMock = vi.fn();
+
+vi.mock("@lumenva/db/storage/gcs", () => ({
+  createGcsObjectStore: vi.fn(() => ({ put: putMock, delete: deleteMock })),
+}));
+
+vi.mock("@lumenva/db/gcp/cloud-storage", () => ({
+  getGcsBucket: vi.fn(() => ({ file: vi.fn() })),
+}));
 
 let agentTable: Array<{ id: string; organization_id: string }>;
 let agentErr: { message: string } | null;
@@ -80,12 +90,6 @@ vi.mock("@/lib/supabase/admin", () => ({
       }
       throw new Error(`unexpected table ${table}`);
     },
-    storage: {
-      from: () => ({
-        upload: uploadMock,
-        remove: removeMock,
-      }),
-    },
     rpc: rpcMock,
   }),
 }));
@@ -123,8 +127,8 @@ beforeEach(() => {
   agentTable = [{ id: AGENT_ID, organization_id: ORG_ID }];
   agentErr = null;
   insertResult = { data: { id: SOURCE_ID }, error: null };
-  uploadMock.mockResolvedValue({ error: null });
-  removeMock.mockResolvedValue({ error: null });
+  putMock.mockResolvedValue(undefined);
+  deleteMock.mockResolvedValue(undefined);
   rpcMock.mockResolvedValue({ error: null });
   ingestPolicyFileMock.mockResolvedValue({ chunkCount: 3 });
 });
@@ -136,10 +140,10 @@ describe("publishKnowledgePolicy", () => {
     expect(result.sourceId).toBe(SOURCE_ID);
     expect(result.blobPath).toMatch(new RegExp(`^${ORG_ID}/[0-9a-f-]+\\.md$`));
 
-    expect(uploadMock).toHaveBeenCalledWith(
-      result.blobPath,
-      expect.any(Buffer),
-      expect.objectContaining({ contentType: "text/markdown", upsert: false }),
+    expect(putMock).toHaveBeenCalledWith(
+      { provider: "gcs", bucket: "ai-policy", key: result.blobPath },
+      expect.any(Uint8Array),
+      "text/markdown",
     );
 
     expect(insertMock).toHaveBeenCalledWith(
@@ -176,7 +180,7 @@ describe("publishKnowledgePolicy", () => {
       }),
     );
 
-    expect(removeMock).not.toHaveBeenCalled();
+    expect(deleteMock).not.toHaveBeenCalled();
   });
 
   it("rejeita arquivo acima de 20MB sem tocar storage/DB", async () => {
@@ -188,7 +192,7 @@ describe("publishKnowledgePolicy", () => {
       ),
     ).rejects.toMatchObject({ code: "payload_too_large", status: 413 });
 
-    expect(uploadMock).not.toHaveBeenCalled();
+    expect(putMock).not.toHaveBeenCalled();
     expect(insertMock).not.toHaveBeenCalled();
   });
 
@@ -201,7 +205,7 @@ describe("publishKnowledgePolicy", () => {
       ),
     ).rejects.toMatchObject({ code: "unsupported_media_type", status: 415 });
 
-    expect(uploadMock).not.toHaveBeenCalled();
+    expect(putMock).not.toHaveBeenCalled();
   });
 
   it("aceita PDF por extensão mesmo com MIME genérico octet-stream via nome", async () => {
@@ -214,7 +218,7 @@ describe("publishKnowledgePolicy", () => {
   });
 
   it("upload no storage falha → internal_error, sem insert/emit e sem tentar limpar (nada foi de fato enviado)", async () => {
-    uploadMock.mockResolvedValue({ error: { message: "bucket unreachable" } });
+    putMock.mockRejectedValue(new Error("bucket unreachable"));
 
     await expect(publishKnowledgePolicy(baseInput())).rejects.toMatchObject({
       code: "internal_error",
@@ -223,7 +227,7 @@ describe("publishKnowledgePolicy", () => {
 
     expect(insertMock).not.toHaveBeenCalled();
     expect(rpcMock).not.toHaveBeenCalled();
-    expect(removeMock).not.toHaveBeenCalled();
+    expect(deleteMock).not.toHaveBeenCalled();
   });
 
   it("agent não existe em lugar nenhum → not_found, sem upload", async () => {
@@ -234,7 +238,7 @@ describe("publishKnowledgePolicy", () => {
       status: 404,
     });
 
-    expect(uploadMock).not.toHaveBeenCalled();
+    expect(putMock).not.toHaveBeenCalled();
   });
 
   it("agent existe mas pertence a OUTRA organização → not_found, sem upload (prova que o filtro organization_id é levado a sério)", async () => {
@@ -248,7 +252,7 @@ describe("publishKnowledgePolicy", () => {
       status: 404,
     });
 
-    expect(uploadMock).not.toHaveBeenCalled();
+    expect(putMock).not.toHaveBeenCalled();
   });
 
   it("erro na consulta de agent → internal_error", async () => {
@@ -259,7 +263,7 @@ describe("publishKnowledgePolicy", () => {
       code: "internal_error",
       status: 500,
     });
-    expect(uploadMock).not.toHaveBeenCalled();
+    expect(putMock).not.toHaveBeenCalled();
   });
 
   it("extração falha com PdfExtractError → unprocessable_entity e limpa o blob", async () => {
@@ -270,7 +274,7 @@ describe("publishKnowledgePolicy", () => {
       status: 422,
     });
 
-    expect(removeMock).toHaveBeenCalledTimes(1);
+    expect(deleteMock).toHaveBeenCalledTimes(1);
     expect(insertMock).not.toHaveBeenCalled();
   });
 
@@ -282,7 +286,7 @@ describe("publishKnowledgePolicy", () => {
       status: 500,
     });
 
-    expect(removeMock).toHaveBeenCalledTimes(1);
+    expect(deleteMock).toHaveBeenCalledTimes(1);
     expect(insertMock).not.toHaveBeenCalled();
   });
 
@@ -294,7 +298,7 @@ describe("publishKnowledgePolicy", () => {
       status: 500,
     });
 
-    expect(removeMock).toHaveBeenCalledTimes(1);
+    expect(deleteMock).toHaveBeenCalledTimes(1);
     expect(rpcMock).not.toHaveBeenCalled();
   });
 
@@ -303,7 +307,7 @@ describe("publishKnowledgePolicy", () => {
 
     const result = await publishKnowledgePolicy(baseInput());
     expect(result.sourceId).toBe(SOURCE_ID);
-    expect(removeMock).not.toHaveBeenCalled();
+    expect(deleteMock).not.toHaveBeenCalled();
   });
 
   it("erros lançados são instâncias de PublishKnowledgePolicyError", async () => {
