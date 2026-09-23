@@ -1,12 +1,3 @@
 {
-  "mcpServers": {
-    "github": {
-      "command": "github-mcp-server",
-      "args": [
-        "stdio",
-        "--read-only",
-        "--lockdown-mode"
-      ]
-    }
-  }
+  "mcpServers": {}
 }
