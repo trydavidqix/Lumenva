@@ -28,6 +28,8 @@ import { DEFAULT_CHANNEL_PROVIDER, getAdapter, type ChannelProvider } from "@/li
 import { cronSecretMatches } from "@/lib/auth/cron-secret";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createGcsObjectStore } from "@lumenva/db/storage/gcs";
+import { getGcsBucket } from "@lumenva/db/gcp/cloud-storage";
 
 export const dynamic = "force-dynamic";
 
@@ -176,14 +178,19 @@ async function handle(req: NextRequest): Promise<Response> {
         continue;
       }
 
-      // Caminho estável por contato: `upsert` sobrescreve a foto antiga em vez
+      // Caminho estável por contato: sobrescreve a foto antiga em vez
       // de acumular um arquivo órfão por refresh (7 dias × N contatos viraria
       // lixo pago no bucket).
       const path = `${c.organization_id}/avatars/${c.id}.jpg`;
-      const { error: upErr } = await admin.storage
-        .from("whatsapp-media")
-        .upload(path, buf, { contentType: "image/jpeg", upsert: true });
-      if (upErr) {
+      try {
+        const bucket = getGcsBucket();
+        const store = createGcsObjectStore(bucket);
+        await store.put(
+          { provider: 'gcs', bucket: 'whatsapp-media', key: path },
+          new Uint8Array(buf),
+          "image/jpeg"
+        );
+      } catch (upErr) {
         await carimbar(null);
         falhas++;
         continue;
