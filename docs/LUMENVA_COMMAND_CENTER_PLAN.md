@@ -1399,7 +1399,7 @@ Auditoria das 13 views no runtime real (2026-09-23): Overview, Traces, Tasks, Ag
 
 Atualização após Validation Lab: GET local de `/api/views` respondeu HTTP 200 com 13 views; confirma `Validation=VALIDATED`, `paired_runs=30/30`, seis categorias com cinco pares cada, tokens `exact` e economia qualificada de 10,2%; Overview reporta medição `exact`. Plugins, MCPs, Graph, Cache e Memory continuam indisponíveis porque não há fontes/eventos reais para essas views.
 
-Validação remota anterior à correção do Core (`dbb102c6`): MCG `35806666214`, vertical `35806666216` e invariants `35806666208` PASS; core/verify falharam nos erros que foram corrigidos localmente acima. Nova rodada remota fica pendente para o commit que inclui a correção. PR segue sem merge.
+Validação remota atual (`ff2454f7`, PR #26): `core` PASS (`35808642638`), `mcg` PASS (`35808642712`), `vertical` PASS (`35808642639`) e `invariants` PASS (`35808642650`). `verify` FAIL (`35808642650`, job `107014957792`): o typecheck de `apps/social-brain-web` não resolve `@lumenva/integration-meta` nas linhas 2–3 de `app/api/webhooks/meta/route.ts`. O pacote existe em `packages/integrations/meta`; falta declará-lo como dependência workspace de `apps/social-brain-web`. O histórico contém a correção anterior `9879271c`, mas ela não pertence à base/ancestralidade desta branch e o manifesto atual segue sem a entrada. Esse ajuste está fora do escopo autorizado para esta execução (Core/MCG; sem CRM), portanto não foi reaplicado. PR #26 permanece OPEN/DRAFT, `mergeStateStatus=UNSTABLE`, sem merge.
 
 ### M0.13 Gate de conclusão
 
@@ -1580,9 +1580,9 @@ Só termina quando:
 
 ## Status atual
 
-ACTIVE — M0 REMEDIATION INCOMPLETE / LOCAL CORE + VALIDATION PASS / REMOTE CI PENDING / M0.13 OPEN / M1 BLOCKED ON M0 CLOSE
+ACTIVE — M0 REMEDIATION INCOMPLETE / LOCAL CORE + VALIDATION PASS / MCG+CORE+VERTICAL+INVARIANTS REMOTE PASS / VERIFY BLOCKED BY PRE-EXISTING SOCIAL-BRAIN-WEB DEPENDENCY / M0.13 OPEN / M1 BLOCKED ON M0 CLOSE
 
-Estado desta execução: Core typecheck e 9/9 testes locais PASS; MCG unit 35/35, dashboard 13/13, syntax 30 módulos, scan 80 arquivos e contracts 1/1 PASS. Validation Lab: 30 pares reais Codex CLI, `gpt-6-luna`/`medium`, medição exata, categorias 5×6, Trust `VALIDATED`, economia qualificada 10,2%, sem queda de sucesso (100% em ambas as lanes). O plano e evidências já registram os resultados; M0.11 está validado para este dataset. M0.3/M0.13 aguardam Actions verdes para o commit que corrige Core e adiciona retomada/progresso do runner. Não iniciar M1 antes do fechamento dos gates obrigatórios.
+Estado desta execução: Core typecheck e 9/9 testes locais PASS; MCG unit 35/35, dashboard 13/13, syntax 30 módulos, scan 80 arquivos e contracts 1/1 PASS. Validation Lab: 30 pares reais Codex CLI, `gpt-6-luna`/`medium`, medição exata, categorias 5×6, Trust `VALIDATED`, economia qualificada 10,2%, sem queda de sucesso (100% em ambas as lanes). MCG, Core, Vertical e Invariants remotos PASS em `ff2454f7`. O `verify` geral continua FAIL exclusivamente pela dependência workspace ausente de `@lumenva/integration-meta` em `apps/social-brain-web`; a correção histórica existe em `9879271c`, mas não foi reaplicada por estar fora do escopo autorizado. M0.3/M0.13 permanecem abertos; não iniciar M1 antes do fechamento dos gates obrigatórios.
 
 Este documento é a fonte de verdade única da branch Lumenva Command Center.
 Não criar um segundo plano concorrente para o mesmo escopo; atualizar este arquivo.
