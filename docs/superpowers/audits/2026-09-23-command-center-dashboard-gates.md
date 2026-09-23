@@ -46,4 +46,6 @@ The MCG-specific remote gate is green. The PR remains draft/open because the man
 
 - Scheduler concurrency regression: RED before implementation (`maxActive` was 1 with a limit of 2); GREEN after the fix (`maxActive` reached 2 for independent ready nodes). The scheduler change is included in the latest remote MCG PASS above.
 - Full MCG unit suite after scheduler change: 34/34 PASS; syntax/import smoke: 30 modules PASS; sensitive scan: 80 files PASS; `git diff --check` PASS.
-- Read-only runtime aggregate: 2 valid paired evaluations; both lack a category. M0.11 still requires 30 real, categorized pairs. No runtime records were changed and no provider evaluations were launched.
+- Read-only runtime aggregate before the category gate: 2 historical pairs, both uncategorized. After the gate was tightened, eligible aggregate is 0. The checked-in validation dataset contains 30 cases balanced at 5 per category, but no provider evaluations were launched and no runtime records were changed.
+- Evaluator regression: an uncategorized A/B record previously inflated paired counts; test failed at 3 instead of 2, then passed after the aggregator began rejecting missing/noncanonical categories.
+- Latest completed Actions for pre-evaluator-filter commit `ad4cb221`: MCG run `35803522817` PASS; vertical `35803522783` PASS; invariants `35803522776` PASS; core `35803522782` FAIL; general verify `35803522776` FAIL at `lumenva-core` typecheck.

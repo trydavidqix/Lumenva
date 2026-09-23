@@ -1360,7 +1360,7 @@ Somente depois calcular como validated:
 - Efficiency
 - Regression baseline
 
-Estado real observado (2026-09-23): o agregador do runtime global encontrou 2 pares válidos, ambos sem categoria definida (`undefined`); o requisito permanece em 30 pares reais distribuídos nas 6 categorias. São necessários pelo menos 28 pares adicionais categorizados. Não sintetizar esses dados nem marcar Trust/Regression como validated antes disso.
+Estado real observado (2026-09-23): o runtime global contém 2 registros pareados históricos, ambos sem categoria; o agregador agora os rejeita como inelegíveis, portanto há 0 pares elegíveis. O dataset `validation.jsonl` contém os 30 casos previstos (5 por cada uma das 6 categorias), mas ainda não foram executados como avaliações reais. Executar o dataset exigirá chamadas reais do Codex e poderá consumir quota; não sintetizar esses dados nem marcar Trust/Regression como validated antes dos resultados reais.
 
 ### M0.12 Dashboard e história
 
@@ -1572,7 +1572,7 @@ Só termina quando:
 
 ACTIVE — M0 REMEDIATION INCOMPLETE / M0.3 BLOCKED BY EXISTING CORE GATES / M0.13 OPEN / M1 BLOCKED ON M0 CLOSE
 
-O dashboard possui evidência local e remota MCG: unit 34/34, sintaxe 30 módulos, scan, dashboard 12/12, contracts 1/1 e Actions MCG PASS no PR draft #26. O scheduler também tem teste local de concorrência real dentro do limite configurado. O runtime contém somente 2 pares válidos e sem categoria; M0.11 requer 30 categorizados. Os checks `core` e `verify` da integração falham em erros existentes de typecheck em `packages/lumenva-core`, fora da allowlist MCG; `invariants` e `vertical` passaram. Não alterar esse pacote nem enfraquecer seus gates dentro da remediação MCG. M0.3 e M0.11 permanecem abertos; M0.13 continua aberto até todos os gates serem comprovados. Não iniciar M1 antes de fechar M0.
+O dashboard possui evidência local e remota MCG: unit 34/34, sintaxe 30 módulos, scan, dashboard 12/12, contracts 1/1 e Actions MCG PASS no PR draft #26. O scheduler tem teste local de concorrência dentro do limite configurado. O runtime tem 0 pares elegíveis; há dataset estático com 30 casos equilibrados, ainda sem execução real. Os checks `core` e `verify` da integração falham em erros de typecheck em `packages/lumenva-core`, fora da allowlist MCG; `invariants` e `vertical` passaram. Não alterar esse pacote nem enfraquecer seus gates dentro da remediação MCG. M0.3 e M0.11 permanecem abertos; M0.13 continua aberto até todos os gates serem comprovados. Não iniciar M1 antes de fechar M0.
 
 Este documento é a fonte de verdade única da branch Lumenva Command Center.
 Não criar um segundo plano concorrente para o mesmo escopo; atualizar este arquivo.

@@ -23,12 +23,20 @@ try {
     await saveEvaluation(root, {
       run_id: `pair-${i}`,
       kind: 'A/B',
+      category: 'context-recall',
       baseline: { task_success: true, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, total_tokens: 100, real_executor: true, measurement_type: 'exact', model: null, effort: 'same', workspace: root },
       mcg: { task_success: true, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, total_tokens: 70, real_executor: true, measurement_type: 'exact', model: null, effort: 'same', workspace: root }
     });
   }
+  await saveEvaluation(root, {
+    run_id: 'pair-uncategorized',
+    kind: 'A/B',
+    baseline: { task_success: true, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, total_tokens: 100, real_executor: true, measurement_type: 'exact', model: null, effort: 'same', workspace: root },
+    mcg: { task_success: true, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, total_tokens: 70, real_executor: true, measurement_type: 'exact', model: null, effort: 'same', workspace: root }
+  });
   const aggregate = await aggregatePairedEvaluations(root);
   assert.equal(aggregate.dataset_size, 2);
+  assert.deepEqual(aggregate.valid_run_ids, ['pair-0', 'pair-1']);
   assert.equal(aggregate.baseline.total_tokens, 200);
   assert.equal(aggregate.mcg.total_tokens, 140);
   assert.equal(aggregate.mcg.task_success, 100);
