@@ -64,11 +64,12 @@ export class PersistentScheduler{
     if(typeof execute!=='function')throw new Error('execute callback required');
     const state=await this.cleanupExpired(await this.state());
     for(const task of Object.values(state.tasks))this.refreshReadyInState(state,task);
-    let active=Object.keys(state.leases).length;const outcomes=[];
-    outer: for(const task of Object.values(state.tasks)){
-      if(active>=this.concurrency_limit)break;if(terminal.has(task.status)||task.cancel_requested)continue;
-      for(const node of task.nodes.filter(n=>n.status==='READY')){
-        if(active>=this.concurrency_limit)break outer;
+    let active=Object.keys(state.leases).length;const outcomes=[],workers=[];
+    for(const task of Object.values(state.tasks)){
+      if(active>=this.concurrency_limit)break;
+      if(terminal.has(task.status)||task.cancel_requested)continue;
+      for(const node of task.nodes.filter(item=>item.status==='READY')){
+        if(active>=this.concurrency_limit)break;
         const route=selectRoute(node,registry);
         if(!route.selected){node.status='WAITING_RESOURCE';node.last_error='no healthy capability route';outcomes.push({task_id:task.task_id,node_id:node.node_id,status:node.status});continue;}
         if(route.owner_approval_required&&!node.approved){
@@ -79,23 +80,29 @@ export class PersistentScheduler{
         const resource=node.resource_lock||route.selected.id;const lease=this.acquire(state,task,node,worker_id,resource);
         if(!lease){node.status='WAITING_RESOURCE';continue;}
         active+=1;node.status='RUNNING';task.status='RUNNING';node.attempts=(node.attempts||0)+1;node.route={selected:route.selected.id,risk:route.risk,reasoning:route.reasoning};
-        let worktree=null;
-        try{
-          if(node.requires_worktree){if(!worktreeManager)throw new Error('worktree manager required');worktree=await worktreeManager.allocate({repo:node.repo||task.repo,base_commit:node.base_commit||task.base_commit||'HEAD',task_id:`${task.task_id}-${node.node_id}`,agent:route.selected.id});}
-          const result=await execute({task,node,route,lease,worktree});
-          const verification=typeof verify==='function'?await verify({task,node,route,result,worktree}):{pass:result?.success===true,evidence:result?.evidence||null};
-          node.result=result??null;node.verification=verification;node.completed_at=now();
-          if(verification?.pass===true){node.status='DONE';node.last_error=null;outcomes.push({task_id:task.task_id,node_id:node.node_id,status:'DONE'});}
-          else throw new Error(verification?.reason||'verification failed');
-        }catch(error){
-          const reason=String(error?.message||error);node.last_error=reason;const retry=retryPlan(node.attempts+1,{reason,allow_fallback:node.allow_fallback});
-          const history={task_id:task.task_id,node_id:node.node_id,attempt:node.attempts,reason,strategy:retry.strategy,timestamp:now()};node.retry_history.push(history);state.retry_history.push(history);
-          if(node.attempts>=this.max_attempts||retry.strategy==='BLOCKED'){await this.deadLetter(state,task,node,reason);outcomes.push({task_id:task.task_id,node_id:node.node_id,status:'FAILED_FINAL',reason});}
-          else{node.status='READY';outcomes.push({task_id:task.task_id,node_id:node.node_id,status:'RETRYING',strategy:retry.strategy});}
-        }finally{this.release(state,lease);active-=1;}
-        this.refreshReadyInState(state,task);task.updated_at=now();await recordHistory(this.root,'tasks',{task_id:task.task_id,status:task.status,node_id:node.node_id,node_status:node.status,source:'scheduler.run',measurement_type:'exact',provenance:{lease_id:lease.lease_id,route:node.route}});
+        workers.push((async()=>{
+          let worktree=null;
+          try{
+            if(node.requires_worktree){if(!worktreeManager)throw new Error('worktree manager required');worktree=await worktreeManager.allocate({repo:node.repo||task.repo,base_commit:node.base_commit||task.base_commit||'HEAD',task_id:`${task.task_id}-${node.node_id}`,agent:route.selected.id});}
+            const result=await execute({task,node,route,lease,worktree});
+            const verification=typeof verify==='function'?await verify({task,node,route,result,worktree}):{pass:result?.success===true,evidence:result?.evidence||null};
+            node.result=result??null;node.verification=verification;node.completed_at=now();
+            if(verification?.pass===true){node.status='DONE';node.last_error=null;outcomes.push({task_id:task.task_id,node_id:node.node_id,status:'DONE'});}
+            else throw new Error(verification?.reason||'verification failed');
+          }catch(error){
+            const reason=String(error?.message||error);node.last_error=reason;const retry=retryPlan(node.attempts+1,{reason,allow_fallback:node.allow_fallback});
+            const history={task_id:task.task_id,node_id:node.node_id,attempt:node.attempts,reason,strategy:retry.strategy,timestamp:now()};node.retry_history.push(history);state.retry_history.push(history);
+            if(node.attempts>=this.max_attempts||retry.strategy==='BLOCKED'){await this.deadLetter(state,task,node,reason);outcomes.push({task_id:task.task_id,node_id:node.node_id,status:'FAILED_FINAL',reason});}
+            else{node.status='READY';outcomes.push({task_id:task.task_id,node_id:node.node_id,status:'RETRYING',strategy:retry.strategy});}
+          }finally{
+            this.release(state,lease);active-=1;this.refreshReadyInState(state,task);task.updated_at=now();
+            await recordHistory(this.root,'tasks',{task_id:task.task_id,status:task.status,node_id:node.node_id,node_status:node.status,source:'scheduler.run',measurement_type:'exact',provenance:{lease_id:lease.lease_id,route:node.route}});
+          }
+        })());
       }
     }
+    await this.save(state);
+    await Promise.all(workers);
     await this.save(state);return {outcomes,state};
   }
 }

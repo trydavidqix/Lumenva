@@ -1118,7 +1118,7 @@ Antes de mover lumenva-command-center para a história limpa:
 A reescrita de lumenva-command-center está autorizada somente depois desses gates.
 A main não deve ser alterada.
 
-Estado da comparação (2026-09-23): reconstrução local baseada em `ed148778a4591a8aaf0e1b1efd5c90007f00cfd6`; o delta desde o merge-base de `origin/main` contém apenas plan/docs/superpowers/MCG e o lockfile necessário. Nenhum arquivo MCG foi removido em relação ao backup. O remoto `lumenva-command-center` avançou com runtime/workflows laterais; a branch de reconstrução não será publicada diretamente porque isso apagaria esses arquivos no diff. Nenhum push, PR, rewrite ou alteração em `main` foi feito.
+Estado da comparação (2026-09-23): reconstrução local baseada em `ed148778a4591a8aaf0e1b1efd5c90007f00cfd6`; o delta desde o merge-base de `origin/main` contém apenas plan/docs/superpowers/MCG e o lockfile necessário. Nenhum arquivo MCG foi removido em relação ao backup. O remoto `lumenva-command-center` avançou com runtime/workflows laterais; a branch de reconstrução não foi publicada, pois isso apagaria arquivos no diff. A integração MCG foi feita em branch separada baseada no remoto atual (`codex/mcg-ci-integration`), preservando os laterais; PR draft #26 aponta somente para `lumenva-command-center`. Nenhuma reescrita ou alteração em `main` foi feita; sem merge.
 
 ### M0.3 Integração correta com monorepo e CI
 
@@ -1309,6 +1309,8 @@ Adicionar:
 
 Circuit Breaker deve persistir estado entre reinícios.
 
+Progresso verificável (2026-09-23): `PersistentScheduler.runOnce` agora executa nodes READY independentes em paralelo até `concurrency_limit`, preservando route/resource leases e aguardando a verificação de cada resultado. Teste de regressão reproduziu `maxActive=1` antes da correção e confirmou `maxActive=2` com limite 2; suíte MCG 34/34 PASS e syntax 30 módulos PASS. Restante dos requisitos M0.9 continua sujeito à validação operacional completa; este teste isolado não fecha o gate.
+
 ### M0.10 Evidence, Progress e Confidence
 
 Separar:
@@ -1357,6 +1359,8 @@ Somente depois calcular como validated:
 - Trust
 - Efficiency
 - Regression baseline
+
+Estado real observado (2026-09-23): o agregador do runtime global encontrou 2 pares válidos, ambos sem categoria definida (`undefined`); o requisito permanece em 30 pares reais distribuídos nas 6 categorias. São necessários pelo menos 28 pares adicionais categorizados. Não sintetizar esses dados nem marcar Trust/Regression como validated antes disso.
 
 ### M0.12 Dashboard e história
 
@@ -1568,7 +1572,7 @@ Só termina quando:
 
 ACTIVE — M0 REMEDIATION INCOMPLETE / M0.3 BLOCKED BY EXISTING CORE GATES / M0.13 OPEN / M1 BLOCKED ON M0 CLOSE
 
-O dashboard possui evidência local e remota MCG: unit 34/34, sintaxe 30 módulos, scan, dashboard 12/12, contracts 1/1 e Actions MCG PASS no PR draft #26. Os checks `core` e `verify` da integração falham em erros existentes de typecheck em `packages/lumenva-core`, fora da allowlist MCG; `invariants` e `vertical` passaram. Não alterar esse pacote nem enfraquecer seus gates dentro da remediação MCG. M0.3 permanece bloqueado até os checks obrigatórios passarem; M0.13 continua aberto até todos os gates serem comprovados. Não iniciar M1 antes de fechar M0.
+O dashboard possui evidência local e remota MCG: unit 34/34, sintaxe 30 módulos, scan, dashboard 12/12, contracts 1/1 e Actions MCG PASS no PR draft #26. O scheduler também tem teste local de concorrência real dentro do limite configurado. O runtime contém somente 2 pares válidos e sem categoria; M0.11 requer 30 categorizados. Os checks `core` e `verify` da integração falham em erros existentes de typecheck em `packages/lumenva-core`, fora da allowlist MCG; `invariants` e `vertical` passaram. Não alterar esse pacote nem enfraquecer seus gates dentro da remediação MCG. M0.3 e M0.11 permanecem abertos; M0.13 continua aberto até todos os gates serem comprovados. Não iniciar M1 antes de fechar M0.
 
 Este documento é a fonte de verdade única da branch Lumenva Command Center.
 Não criar um segundo plano concorrente para o mesmo escopo; atualizar este arquivo.

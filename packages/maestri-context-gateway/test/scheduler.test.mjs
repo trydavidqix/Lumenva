@@ -32,5 +32,22 @@ try{
  await breaker.failure('x');await breaker.failure('x');assert.equal(await breaker.allow(),false);
  const breaker2=new PersistentCircuitBreaker(root,'codex',{threshold:2,cooldown_ms:60000});assert.equal((await breaker2.state()).status,'CIRCUIT_OPEN');
  assert.equal(selectRoute({capability:'code'},[{id:'offline',capabilities:['code'],health:'UNAVAILABLE'}]).selected,null);
+
+ const parallelScheduler=new PersistentScheduler(root,{concurrency_limit:2});
+ await parallelScheduler.submitTask({task_id:'parallel',objective:'parallel independent nodes',nodes:[
+  {node_id:'build',depends_on:[],capability:'build',status:'PENDING'},
+  {node_id:'review',depends_on:[],capability:'review',status:'PENDING'}
+ ]});
+ let active=0,maxActive=0;
+ const parallelRun=await parallelScheduler.runOnce({
+  registry:[
+   {id:'builder',name:'Builder',capabilities:['build'],health:'OBSERVED',success_rate:99,measurement_type:'exact'},
+   {id:'reviewer',name:'Reviewer',capabilities:['review'],health:'OBSERVED',success_rate:99,measurement_type:'exact'}
+  ],
+  execute:async()=>{active+=1;maxActive=Math.max(maxActive,active);await new Promise(resolve=>setTimeout(resolve,25));active-=1;return {success:true};},
+  verify:async()=>({pass:true})
+ });
+ assert.equal(maxActive,2,'independent ready nodes should use the configured concurrency');
+ assert.deepEqual(parallelRun.outcomes.map(item=>item.status),['DONE','DONE']);
 }finally{await rm(root,{recursive:true,force:true});}
 console.log('scheduler/reliability tests: 1 passed');

@@ -44,3 +44,9 @@ Dashboard tests cover the read-only local endpoints, keyboard-accessible navigat
 - Repository CI verify run `35802405587`: FAIL at the same `lumenva-core` typecheck while running the monorepo-wide typecheck.
 
 The MCG-specific remote gate is green. The PR remains draft/open because the mandatory core and general verify checks are red due to errors outside the MCG allowlist. No merge or main-branch change was made. The separate M0.13 completion gate remains open.
+
+## Follow-up verification
+
+- Scheduler concurrency regression: RED before implementation (`maxActive` was 1 with a limit of 2); GREEN after the fix (`maxActive` reached 2 for independent ready nodes).
+- Full MCG unit suite after scheduler change: 34/34 PASS; syntax/import smoke: 30 modules PASS; `git diff --check` PASS.
+- Read-only runtime aggregate: 2 valid paired evaluations; both lack a category. M0.11 still requires 30 real, categorized pairs. No runtime records were changed and no provider evaluations were launched.
