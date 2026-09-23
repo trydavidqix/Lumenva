@@ -52,12 +52,12 @@ import * as nextNav from "next/navigation";
 describe("Task 5 Auth Actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(nextHeaders.cookies).mockResolvedValue({
+    (nextHeaders.cookies as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       delete: vi.fn(),
-    } as unknown as Awaited<ReturnType<typeof nextHeaders.cookies>>);
-    vi.mocked(nextHeaders.headers).mockResolvedValue({
+    });
+    (nextHeaders.headers as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       get: vi.fn(),
-    } as unknown as Awaited<ReturnType<typeof nextHeaders.headers>>);
+    });
   });
 
   describe("signOut", () => {
@@ -65,9 +65,9 @@ describe("Task 5 Auth Actions", () => {
       mockLoadAuthUser.mockResolvedValueOnce(mockAuthUser);
 
       const mockDelete = vi.fn();
-      vi.mocked(nextHeaders.cookies).mockResolvedValueOnce({
+      (nextHeaders.cookies as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         delete: mockDelete,
-      } as unknown as Awaited<ReturnType<typeof nextHeaders.cookies>>);
+      });
 
       await signOut();
 
@@ -87,9 +87,9 @@ describe("Task 5 Auth Actions", () => {
       mockLoadAuthUser.mockResolvedValueOnce(mockAuthUser);
 
       const mockDelete = vi.fn();
-      vi.mocked(nextHeaders.cookies).mockResolvedValueOnce({
+      (nextHeaders.cookies as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         delete: mockDelete,
-      } as unknown as Awaited<ReturnType<typeof nextHeaders.cookies>>);
+      });
 
       await signOutEverywhere();
 

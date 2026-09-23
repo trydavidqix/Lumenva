@@ -38,10 +38,7 @@ export async function updateProfile(input: ProfileInput): Promise<UpdateProfileR
       photoURL: parsed.data.avatar_url ?? undefined,
     });
   } catch (error: unknown) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : "update_failed",
-    };
+    return { ok: false, error: error instanceof Error ? error.message : "update_failed" };
   }
 
   const activeOrg = await resolveActiveOrg(authUser);
