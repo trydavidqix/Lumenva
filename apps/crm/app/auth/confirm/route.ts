@@ -29,9 +29,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // We mock the Supabase User object enough to satisfy ensureTenantForUser
+    // Keep only the compatibility fields required by ensureTenantForUser.
     const stubUser = { id: user.id, email: user.email, app_metadata: {}, user_metadata: {} };
-    // @ts-expect-error - we only need id and email to satisfy ensureTenantForUser in F4 transition
     await ensureTenantForUser(stubUser);
   } catch (e) {
     await audit({
