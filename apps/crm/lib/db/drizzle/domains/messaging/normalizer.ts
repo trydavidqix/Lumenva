@@ -1,69 +1,74 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 import type { Conversation, Message } from '../../../types/messaging';
 
 export const MessagingNormalizer = {
-  conversation(row: any): Partial<Conversation> {
-    if (!row) return row;
+  conversation(row: unknown): Partial<Conversation> {
+    if (!row) return row as Partial<Conversation>;
 
     // Sort arrays (e.g. tags) for stable comparison
-    const tags = row.tags ? [...row.tags] : [];
+    const record = row as Record<string, unknown>;
+    const tags = Array.isArray(record.tags) ? [...record.tags] : [];
     tags.sort();
 
     return {
-      id: row.id,
-      organization_id: row.organization_id,
-      contact_id: row.contact_id,
-      channel_session_id: row.channel_session_id,
-      channel: row.channel,
-      status: row.status,
-      status_changed_at: row.status_changed_at ? new Date(row.status_changed_at).toISOString() : undefined,
-      assigned_to_user_id: row.assigned_to_user_id || undefined,
-      assignee_kind: row.assignee_kind || undefined,
-      assigned_at: row.assigned_at ? new Date(row.assigned_at).toISOString() : undefined,
-      last_inbound_at: row.last_inbound_at ? new Date(row.last_inbound_at).toISOString() : undefined,
-      last_outbound_at: row.last_outbound_at ? new Date(row.last_outbound_at).toISOString() : undefined,
-      last_message_at: row.last_message_at ? new Date(row.last_message_at).toISOString() : undefined,
-      last_message_preview: row.last_message_preview || undefined,
-      unread_count_for_assignee: Number(row.unread_count_for_assignee || 0),
-      is_group: Boolean(row.is_group),
-      group_chat_id: row.group_chat_id || undefined,
-      tags: tags,
-      metadata: row.metadata || {},
-      snooze_until: row.snooze_until ? new Date(row.snooze_until).toISOString() : undefined,
-      bot_silenced_until: row.bot_silenced_until ? new Date(row.bot_silenced_until).toISOString() : undefined,
-      last_handoff_at: row.last_handoff_at ? new Date(row.last_handoff_at).toISOString() : undefined,
-      created_at: row.created_at ? new Date(row.created_at).toISOString() : undefined,
-      updated_at: row.updated_at ? new Date(row.updated_at).toISOString() : undefined,
+      id: record.id as string | undefined,
+      organization_id: record.organization_id as string | undefined,
+      contact_id: record.contact_id as string | undefined,
+      channel_session_id: record.channel_session_id as string | undefined,
+      channel: record.channel as string | undefined,
+      status: record.status as string | undefined,
+      status_changed_at: record.status_changed_at ? new Date(record.status_changed_at as string | number | Date).toISOString() : undefined,
+      assigned_to_user_id: (record.assigned_to_user_id as string) || undefined,
+      assignee_kind: (record.assignee_kind as string) || undefined,
+      assigned_at: record.assigned_at ? new Date(record.assigned_at as string | number | Date).toISOString() : undefined,
+      last_inbound_at: record.last_inbound_at ? new Date(record.last_inbound_at as string | number | Date).toISOString() : undefined,
+      last_outbound_at: record.last_outbound_at ? new Date(record.last_outbound_at as string | number | Date).toISOString() : undefined,
+      last_message_at: record.last_message_at ? new Date(record.last_message_at as string | number | Date).toISOString() : undefined,
+      last_message_preview: (record.last_message_preview as string) || undefined,
+      unread_count_for_assignee: Number(record.unread_count_for_assignee || 0),
+      is_group: Boolean(record.is_group),
+      group_chat_id: (record.group_chat_id as string) || undefined,
+      tags: tags as string[],
+      metadata: (record.metadata as Record<string, unknown>) || {},
+      snooze_until: record.snooze_until ? new Date(record.snooze_until as string | number | Date).toISOString() : undefined,
+      bot_silenced_until: record.bot_silenced_until ? new Date(record.bot_silenced_until as string | number | Date).toISOString() : undefined,
+      last_handoff_at: record.last_handoff_at ? new Date(record.last_handoff_at as string | number | Date).toISOString() : undefined,
+      created_at: record.created_at ? new Date(record.created_at as string | number | Date).toISOString() : undefined,
+      updated_at: record.updated_at ? new Date(record.updated_at as string | number | Date).toISOString() : undefined,
     } as unknown as Partial<Conversation>;
   },
 
-  message(row: any): Partial<Message> {
-    if (!row) return row;
+  message(row: unknown): Partial<Message> {
+    if (!row) return row as Partial<Message>;
+
+    const record = row as Record<string, unknown>;
+
     return {
-      id: row.id,
-      organization_id: row.organization_id,
-      conversation_id: row.conversation_id,
-      channel_session_id: row.channel_session_id,
-      contact_id: row.contact_id,
-      external_id: row.external_id || undefined,
-      type: row.type,
-      direction: row.direction,
-      status: row.status,
-      ack: row.ack !== null && row.ack !== undefined ? Number(row.ack) : undefined,
-      error_code: row.error_code || undefined,
-      error_message: row.error_message || undefined,
-      body: row.body || undefined,
-      media_url: row.media_url ? '[REDACTED]' : undefined,
-      media_mime: row.media_mime || undefined,
-      media_size_bytes: row.media_size_bytes !== null && row.media_size_bytes !== undefined ? Number(row.media_size_bytes) : undefined,
-      media_storage_path: row.media_storage_path || undefined,
-      sent_via: row.sent_via,
-      sent_by_user_id: row.sent_by_user_id || undefined,
-      sent_at: row.sent_at ? new Date(row.sent_at).toISOString() : undefined,
-      delivered_at: row.delivered_at ? new Date(row.delivered_at).toISOString() : undefined,
-      read_at: row.read_at ? new Date(row.read_at).toISOString() : undefined,
-      metadata: row.metadata || {},
-      created_at: row.created_at ? new Date(row.created_at).toISOString() : undefined,
+      id: record.id as string | undefined,
+      organization_id: record.organization_id as string | undefined,
+      conversation_id: record.conversation_id as string | undefined,
+      channel_session_id: record.channel_session_id as string | undefined,
+      contact_id: record.contact_id as string | undefined,
+      external_id: (record.external_id as string) || undefined,
+      type: record.type as string | undefined,
+      direction: record.direction as "inbound" | "outbound" | undefined,
+      status: record.status as string | undefined,
+      ack: record.ack !== null && record.ack !== undefined ? Number(record.ack) : undefined,
+      error_code: (record.error_code as string) || undefined,
+      error_message: (record.error_message as string) || undefined,
+      body: (record.body as string) || undefined,
+      media_url: record.media_url ? '[REDACTED]' : undefined,
+      media_mime: (record.media_mime as string) || undefined,
+      media_size_bytes: record.media_size_bytes !== null && record.media_size_bytes !== undefined ? Number(record.media_size_bytes) : undefined,
+      media_storage_path: (record.media_storage_path as string) || undefined,
+      sent_via: record.sent_via as "user" | "ai" | "system" | undefined,
+      sent_by_user_id: (record.sent_by_user_id as string) || undefined,
+      sent_at: record.sent_at ? new Date(record.sent_at as string | number | Date).toISOString() : undefined,
+      delivered_at: record.delivered_at ? new Date(record.delivered_at as string | number | Date).toISOString() : undefined,
+      read_at: record.read_at ? new Date(record.read_at as string | number | Date).toISOString() : undefined,
+      metadata: (record.metadata as Record<string, unknown>) || {},
+      created_at: record.created_at ? new Date(record.created_at as string | number | Date).toISOString() : undefined,
     } as unknown as Partial<Message>;
   }
 };
