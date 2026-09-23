@@ -24,13 +24,13 @@ interface RouteCtx {
 export async function POST(req: NextRequest, ctx: RouteCtx): Promise<Response> {
   const requestId = randomUUID();
   const { id: conversationId } = await ctx.params;
-  const admin = createAdminClient();
 
   const authz = await requireRole("agent", { requestId });
   if (!authz.ok) return authz.response;
   const { org: activeOrg } = authz;
+  const admin = createAdminClient();
 
-  // RLS + filtro explícito: a conversa precisa ser da org ativa.
+  // Admin client bypassa RLS; filtro explícito mantém a conversa na org ativa.
   const { data: conv, error: convErr } = await admin
     .from("conversations")
     .select("id")

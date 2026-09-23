@@ -28,7 +28,6 @@ interface RouteCtx {
 export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
   const requestId = randomUUID();
   const { id: messageId } = await ctx.params;
-  const admin = createAdminClient();
 
   const authUser = await loadAuthUser();
   if (!authUser) {
@@ -38,9 +37,9 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
   if (!activeOrg) {
     return fail("no_active_org", "No active organization.", 403, { requestId });
   }
+  const admin = createAdminClient();
 
-  // Client de sessão: RLS garante que a mensagem pertence a uma org do usuário.
-  // Filtro explícito de organization_id por doutrina (defense-in-depth).
+  // Admin client bypassa RLS; filtro explícito de organization_id é obrigatório.
   const { data: msg, error } = await admin
     .from("messages")
     .select("id, media_url, media_mime, media_storage_path")
