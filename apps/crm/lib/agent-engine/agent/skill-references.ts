@@ -13,6 +13,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { LoadedSkill } from './skills';
 
+import { getGcsBucket } from "@lumenva/db/gcp/cloud-storage";
+import { createGcsObjectStore } from "@lumenva/db/storage/gcs";
+
 const SKILL_ASSETS_BUCKET = 'skill-assets';
 
 interface ManifestEntry {
@@ -69,8 +72,13 @@ export async function readSkillReference(
     };
   }
   const objectPath = `${input.organizationId}/${skill.name}/${skill.versionId}/${input.refPath}`;
-  const { data, error } = await deps.admin.storage.from(SKILL_ASSETS_BUCKET).download(objectPath);
-  if (error || data === null) {
+
+  try {
+    const store = createGcsObjectStore(getGcsBucket());
+    const data = await store.get({ provider: "gcs", bucket: SKILL_ASSETS_BUCKET, key: objectPath });
+    const content = new TextDecoder().decode(data);
+    return { ok: true, skill_name: skill.name, ref_path: input.refPath, content };
+  } catch (error) {
     return {
       ok: false,
       error: {
@@ -79,5 +87,4 @@ export async function readSkillReference(
       },
     };
   }
-  return { ok: true, skill_name: skill.name, ref_path: input.refPath, content: await data.text() };
 }

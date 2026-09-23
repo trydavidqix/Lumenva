@@ -10,6 +10,9 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
 
+import { getGcsBucket } from "@lumenva/db/gcp/cloud-storage";
+import { createGcsObjectStore } from "@lumenva/db/storage/gcs";
+
 export interface DrainStats {
   attempted: number;
   deleted: number;
@@ -58,19 +61,25 @@ export async function drainStorageRedactionQueue(
 
   const queueRows = (rows ?? []) as QueueRow[];
 
-  for (const row of queueRows) {
-    stats.attempted++;
-    const nextAttempts = row.attempts + 1;
+  if (queueRows.length > 0) {
+    const store = createGcsObjectStore(getGcsBucket());
 
-    try {
-      const { error: removeErr } = await admin.storage
-        .from(row.bucket)
-        .remove([row.object_path]);
+    for (const row of queueRows) {
+      stats.attempted++;
+      const nextAttempts = row.attempts + 1;
 
-      if (removeErr) {
-        // Treat "not found" as deleted (idempotent / object already gone).
-        const msg = removeErr.message ?? "";
-        const notFound = /not\s+found|not_found|no such/i.test(msg);
+      try {
+        let notFound = false;
+        try {
+          await store.delete({ provider: "gcs", bucket: row.bucket, key: row.object_path });
+        } catch (removeErr) {
+          const msg = removeErr instanceof Error ? removeErr.message : String(removeErr);
+          notFound = /not\s+found|not_found|no such/i.test(msg);
+          if (!notFound) {
+            throw removeErr;
+          }
+        }
+
         if (notFound) {
           await admin
             .from("storage_redaction_queue")
@@ -84,38 +93,37 @@ export async function drainStorageRedactionQueue(
           stats.skipped++;
           continue;
         }
-        throw new Error(msg || "storage_remove_failed");
-      }
 
-      await admin
-        .from("storage_redaction_queue")
-        .update({
-          status: "deleted",
+        await admin
+          .from("storage_redaction_queue")
+          .update({
+            status: "deleted",
+            attempts: nextAttempts,
+            processed_at: new Date().toISOString(),
+            error_message: null,
+          })
+          .eq("id", row.id);
+        stats.deleted++;
+      } catch (err) {
+        const detail = err instanceof Error ? err.message : String(err);
+        const terminal = nextAttempts >= MAX_ATTEMPTS;
+        await admin
+          .from("storage_redaction_queue")
+          .update({
+            status: terminal ? "failed" : "pending",
+            attempts: nextAttempts,
+            processed_at: terminal ? new Date().toISOString() : null,
+            error_message: detail.slice(0, 500),
+          })
+          .eq("id", row.id);
+        if (terminal) stats.failed++;
+        logger.warn("[lgpd-redact-worker] media remove failed", {
+          queue_id: row.id,
+          organization_id: row.organization_id,
           attempts: nextAttempts,
-          processed_at: new Date().toISOString(),
-          error_message: null,
-        })
-        .eq("id", row.id);
-      stats.deleted++;
-    } catch (err) {
-      const detail = err instanceof Error ? err.message : String(err);
-      const terminal = nextAttempts >= MAX_ATTEMPTS;
-      await admin
-        .from("storage_redaction_queue")
-        .update({
-          status: terminal ? "failed" : "pending",
-          attempts: nextAttempts,
-          processed_at: terminal ? new Date().toISOString() : null,
-          error_message: detail.slice(0, 500),
-        })
-        .eq("id", row.id);
-      if (terminal) stats.failed++;
-      logger.warn("[lgpd-redact-worker] media remove failed", {
-        queue_id: row.id,
-        organization_id: row.organization_id,
-        attempts: nextAttempts,
-        terminal,
-      });
+          terminal,
+        });
+      }
     }
   }
 

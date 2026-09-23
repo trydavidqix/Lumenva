@@ -1,4 +1,16 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const { mockGcsGet } = vi.hoisted(() => ({
+  mockGcsGet: vi.fn(),
+}));
+
+vi.mock("@lumenva/db/storage/gcs", () => ({
+  createGcsObjectStore: vi.fn(() => ({ get: mockGcsGet })),
+}));
+
+vi.mock("@lumenva/db/gcp/cloud-storage", () => ({
+  getGcsBucket: vi.fn(() => ({ file: vi.fn() })),
+}));
 
 import { buildNativeMediaParts } from "./media-parts";
 import type { LeadContextMessage } from "@/lib/agent-engine/edge/crm/get-lead-context";
@@ -36,9 +48,14 @@ const imageInbound: LeadContextMessage = {
   media_mime: "image/jpeg",
 };
 
+beforeEach(() => {
+  mockGcsGet.mockReset();
+});
+
 describe("buildNativeMediaParts — regressão da visão nativa", () => {
   it("imagem inbound + provider capaz + multimodal on → 1 file part com mediaType MIME e bytes Buffer", async () => {
     const bytes = Buffer.from([0xff, 0xd8, 0xff, 0xe0]); // header JPEG
+    mockGcsGet.mockResolvedValue(bytes);
     const parts = await buildNativeMediaParts({
       messages: [imageInbound],
       provider: "openai",
@@ -54,6 +71,7 @@ describe("buildNativeMediaParts — regressão da visão nativa", () => {
   });
 
   it("multimodalInput=false → [] (feature desligada no agente)", async () => {
+    mockGcsGet.mockResolvedValue(new Uint8Array([1]));
     const parts = await buildNativeMediaParts({
       messages: [imageInbound],
       provider: "openai",
@@ -65,6 +83,7 @@ describe("buildNativeMediaParts — regressão da visão nativa", () => {
   });
 
   it("provider sem capacidade de visão → [] (derivado textual cobre)", async () => {
+    mockGcsGet.mockResolvedValue(new Uint8Array([1]));
     const parts = await buildNativeMediaParts({
       messages: [imageInbound],
       provider: "desconhecido",
@@ -76,6 +95,7 @@ describe("buildNativeMediaParts — regressão da visão nativa", () => {
   });
 
   it("última inbound sem mídia → [] (não re-anexa mídia antiga do histórico)", async () => {
+    mockGcsGet.mockResolvedValue(new Uint8Array([1]));
     const parts = await buildNativeMediaParts({
       messages: [imageInbound, { direction: "inbound", body: "e aí?", sent_at: "2026-07-23T10:05:00Z" }],
       provider: "openai",
@@ -87,6 +107,7 @@ describe("buildNativeMediaParts — regressão da visão nativa", () => {
   });
 
   it("download do storage falha → [] sem lançar (turno nunca aborta pela mídia)", async () => {
+    mockGcsGet.mockRejectedValue(new Error("boom"));
     const parts = await buildNativeMediaParts({
       messages: [imageInbound],
       provider: "openai",

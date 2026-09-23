@@ -15,6 +15,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { insertSkillVersion, setSkillPointer, type SkillMatcher } from '../../agent-engine/agent/skills';
 import type { ParsedSkillPackage } from './package';
 
+import { getGcsBucket } from "@lumenva/db/gcp/cloud-storage";
+import { createGcsObjectStore } from "@lumenva/db/storage/gcs";
+
 const SKILL_ASSETS_BUCKET = 'skill-assets';
 
 /**
@@ -39,22 +42,26 @@ export async function importSkillPackage(
     manifest: pkg.files.map((f) => f.entry),
   });
 
+  const store = createGcsObjectStore(getGcsBucket());
   const uploaded: string[] = [];
   for (const f of pkg.files) {
     const objectPath = `${organizationId}/${pkg.name}/${version.id}/${f.path}`;
-    const { error } = await deps.admin.storage
-      .from(SKILL_ASSETS_BUCKET)
-      .upload(objectPath, Buffer.from(f.bytes), { upsert: false });
-    if (error) {
+
+    try {
+      await store.put({ provider: "gcs", bucket: SKILL_ASSETS_BUCKET, key: objectPath }, new Uint8Array(f.bytes), "application/octet-stream");
+      uploaded.push(objectPath);
+    } catch (error) {
       if (uploaded.length > 0) {
-        await deps.admin.storage.from(SKILL_ASSETS_BUCKET).remove(uploaded);
+        for (const up of uploaded) {
+          await store.delete({ provider: "gcs", bucket: SKILL_ASSETS_BUCKET, key: up }).catch(() => {});
+        }
       }
+      const msg = error instanceof Error ? error.message : String(error);
       console.error(
-        `[install-skill] upload falhou (${objectPath}): ${error.message} — versão órfã ${version.id} fica no banco, ponteiro não move`,
+        `[install-skill] upload falhou (${objectPath}): ${msg} — versão órfã ${version.id} fica no banco, ponteiro não move`,
       );
       throw new Error(`falha ao subir arquivo do pacote de skill: ${f.path}`);
     }
-    uploaded.push(objectPath);
   }
 
   await setSkillPointer(deps.db, { tenantId: organizationId, name: pkg.name, versionId: version.id });
