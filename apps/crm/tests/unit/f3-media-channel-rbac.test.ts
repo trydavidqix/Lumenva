@@ -24,19 +24,6 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: vi.fn(),
 }));
 
-const gcsPut = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
-
-vi.mock("@lumenva/db/storage/gcs", () => ({
-  createGcsObjectStore: vi.fn(() => ({
-    put: gcsPut,
-    createReadUrl: vi.fn(),
-  })),
-}));
-
-vi.mock("@lumenva/db/gcp/cloud-storage", () => ({
-  getGcsBucket: vi.fn(() => ({})),
-}));
-
 vi.mock("@/lib/waha/client", () => ({
   getWahaClient: vi.fn(),
 }));
@@ -100,11 +87,17 @@ describe("F3 Task 3 - Mutation Gates RBAC", () => {
       };
       (createClient as unknown as Mock).mockResolvedValue(mockSupabase);
 
+      const mockAdminStorage = {
+        from: vi.fn().mockReturnThis(),
+        upload: vi.fn().mockResolvedValueOnce({ error: null })
+      };
+      (createAdminClient as unknown as Mock).mockReturnValue({ storage: mockAdminStorage });
+
       const ctx = { params: Promise.resolve({ id: "123" }) };
       const res = await mediaPost(req, ctx);
 
       expect(res.status).toBe(200);
-      expect(gcsPut).toHaveBeenCalled();
+      expect(mockAdminStorage.upload).toHaveBeenCalled();
     });
   });
 
