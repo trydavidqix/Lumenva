@@ -1060,6 +1060,20 @@ Durante transição, Maestri Wire pode ser bridge temporária.
 
 Nenhuma feature nova do Command Center deve ser construída antes de fechar M0.
 
+### M0.0 Auditoria de caminhos do ambiente Windows
+
+Antes de qualquer migração ou correção de configuração pessoal:
+
+- comparar o perfil Windows e as raízes usadas pelos apps/CLIs;
+- inventariar caminhos globais e por workspace de Codex/ChatGPT, Claude Code, Gemini CLI e Antigravity para config, skills, plugins, hooks, MCP, cache/runtime e estado de autenticação, sem ler valores de credenciais;
+- distinguir app, runtime empacotado, CLI independente, cache e configuração do usuário;
+- conferir caminhos com documentação oficial e registrar divergências;
+- não mover, sobrescrever, apagar, reinstalar ou editar configurações globais nesta etapa.
+
+Evidência: `docs/superpowers/audits/2026-09-22-windows-agent-profile-path-audit.md`.
+
+Estado: **AUDIT PASS / NO CONFIG CHANGES**. O perfil e os diretórios padrão observados são consistentes. A entrada `CODEX_HOME` dentro do `config.toml` não foi comprovada como causa de erro e não foi alterada. A auditoria não prova que o erro do app foi corrigido; qualquer migração segue bloqueada até diagnóstico específico, backup e autorização.
+
 ### M0.1 Preservação
 
 Branch de recuperação já criada:
@@ -1104,6 +1118,8 @@ Antes de mover lumenva-command-center para a história limpa:
 A reescrita de lumenva-command-center está autorizada somente depois desses gates.
 A main não deve ser alterada.
 
+Estado da comparação (2026-09-23): reconstrução local baseada em `ed148778a4591a8aaf0e1b1efd5c90007f00cfd6`; o delta desde o merge-base de `origin/main` contém apenas plan/docs/superpowers/MCG e o lockfile necessário. Nenhum arquivo MCG foi removido em relação ao backup. O remoto `lumenva-command-center` avançou com runtime/workflows laterais; a branch de reconstrução não foi publicada, pois isso apagaria arquivos no diff. A integração MCG foi feita em branch separada baseada no remoto atual (`codex/mcg-ci-integration`), preservando os laterais; PR draft #26 aponta somente para `lumenva-command-center`. Nenhuma reescrita ou alteração em `main` foi feita; sem merge.
+
 ### M0.3 Integração correta com monorepo e CI
 
 Corrigir package scripts do MCG para participar dos gates do monorepo.
@@ -1126,6 +1142,10 @@ Gates:
 - contracts smoke
 
 Nenhum commit do MCG pode ser considerado PASS sem testes automáticos.
+
+Falha remota observada: run `35687560851` (MCG gates) parou em `pnpm install --frozen-lockfile` porque o lockfile remoto não tinha os specifiers de `packages/lumenva-core/package.json` (`@types/node` e `typescript`). Isto é um gate de lockfile do monorepo, não um erro de teste do MCG; atualizar o lockfile contra o workspace atual e repetir todos os gates.
+
+Baseline histórico (2026-09-23, antes da autorização desta correção): lockfile consistente e gates MCG locais PASS; CI do Core falhava por imports TypeScript, callbacks e divergência entre teste e API `EventBus`. Com autorização do usuário, a correção limitada a `packages/lumenva-core/**` alinhou imports `.ts`, habilitou a transformação TypeScript que o teste Node usa, ativou `allowImportingTsExtensions` no typecheck e fez o teste usar `EventBus.on`. Typecheck e 9/9 testes do Core agora passam localmente. Nenhum arquivo de `apps/crm` foi alterado; workflows não foram enfraquecidos. CI remoto para esta correção ainda precisa passar. PR draft #26 continua sem merge e `main` intocada.
 
 ### M0.4 Correções conhecidas de métricas
 
@@ -1261,6 +1281,12 @@ Cada registro:
 - measurement_type
 - source
 
+Progresso verificável (2026-09-23): os 12 tipos de contrato têm validação em runtime nos caminhos correspondentes: entradas e histórico de task, eventos recebidos e publicados, traces/spans, telemetry, registries, alerts, evals e artifacts/evidence. `saveEvaluation` valida antes de persistir; `measurement_type` só é `exact` quando ambas as metades baseline/MCG são exatas. Regressões confirmaram rejeição de timestamp inválido em event, trace sem `trace_id`, alert incompatível e measurement fabricada, além de par com medição parcial classificado como `unavailable`.
+
+Integração verificável (2026-09-23): a dashboard chama `refreshRegistries` ao abrir `/api/views` e ao consultar `/api/agents`, `/api/tools`, `/api/plugins`, `/api/mcps`, `/api/runtimes` e `/api/models`; grava seis catálogos em `state/registry/` e serve-os nas views Agents/Tools/Plugins/MCPs. Catálogos sem evidência ficam `UNAVAILABLE`, sem serem apresentados como saudáveis. Testes cobrem os endpoints, arquivos, views e descoberta por telemetria. O código, contratos, testes e CI do MCG foram extraídos para o repositório público [maestri-context-gateway](https://github.com/trydavidqix/maestri-context-gateway); esse é agora o local canônico da implementação. O clone no monorepo foi removido nesta branch para evitar duas cópias editáveis.
+
+M0.8 permanece PARCIAL: o registry agrega `success_rate`, `failure_rate` e latência média apenas a partir de telemetria observada; sem amostra, os valores ficam nulos. Ainda faltam descoberta/validação das configurações reais dos providers e capability/health probes de tools e MCPs. O CI standalone do novo repositório passou no commit inicial de extração; isso valida o pacote, mas não comprova conectividade/capacidade real e não conclui M0.8.
+
 ### M0.9 Scheduler, Router e Reliability
 
 Transformar primitives isoladas em fluxo operacional:
@@ -1288,6 +1314,8 @@ Adicionar:
 - worktree allocation
 
 Circuit Breaker deve persistir estado entre reinícios.
+
+Progresso verificável (2026-09-23): `PersistentScheduler.runOnce` executa nodes READY independentes em paralelo até `concurrency_limit`, preservando route/resource leases e aguardando a verificação de cada resultado. O `PersistentCircuitBreaker` agora participa do roteamento: falhas do executor são persistidas e provedores com circuito aberto são removidos das rotas, inclusive após recriar o scheduler. Testes reproduziram RED→GREEN para concorrência (`maxActive=1` → `2`) e breaker (`CLOSED` após três falhas → `CIRCUIT_OPEN`; sem novo dispatch após restart). Suíte MCG 34/34 PASS, syntax 30 módulos PASS e scan PASS. Restante dos requisitos M0.9 continua sujeito à validação operacional completa; estes testes não fecham o gate inteiro.
 
 ### M0.10 Evidence, Progress e Confidence
 
@@ -1338,6 +1366,8 @@ Somente depois calcular como validated:
 - Efficiency
 - Regression baseline
 
+Baseline da auditoria antes das avaliações (2026-09-23): havia 16 registros A/B e 0 pares elegíveis; o dataset contém 30 casos em seis categorias. Após autorização do usuário, foram executados 30 pares reais via Codex CLI com `gpt-6-luna` e esforço `medium` (um piloto + os 29 casos restantes, sem duplicar caso). Resumo final persistido em `state/evals/suites/suite-1790128750253-0aaeed89.json`: 30/30 pares elegíveis, 5 por categoria, medição de tokens `exact`; baseline e MCG tiveram sucesso 100%, context recall 100%, evidence grounding 100% e hallucination rate 0%. A economia de tokens medida foi 10,2%, mantendo a qualidade; Trust `VALIDATED`, score 77,55. A execução adicionou evidências reais ao runtime do MCG e consumiu quota aprovada; não extrapolar esse benchmark para workloads fora do dataset.
+
 ### M0.12 Dashboard e história
 
 Dashboard deve responder:
@@ -1366,6 +1396,14 @@ Nenhuma view final aceita:
 - []
 - placeholder
 - future/prepared como PASS
+
+Snapshot anterior à Validation Lab (2026-09-23, somente GET via PowerShell; sem navegador): wire/workspace online; 15 tasks (7 concluídas, 6 ativas); antes das execuções reais, Trust estava `UNVALIDATED` e havia 0 pares elegíveis. Recursos observados: 3 agents, 3 runtimes, 1 tool; plugins e MCPs sem eventos e `unavailable`.
+
+Auditoria das 13 views no runtime real (2026-09-23): Overview, Traces, Tasks, Agents, Tools e Alerts têm observações; Plugins, MCPs, Graph, Cache e Memory permanecem indisponíveis/não configurados; Validation está `UNVALIDATED`; History mistura tipos observados e indisponíveis. A auditoria encontrou e corrigiu o agregador de History que marcava o conjunto como `exact` só porque algum tipo existia. Agora o agregado só é `exact` quando todos os subtipos são exatos, `estimated` quando todos existem mas algum é estimado, e `unavailable` quando falta qualquer subtipo. A integração posterior das views Agents, Tools, Plugins e MCPs com os catálogos persistidos não inventa observações: catálogos estáticos sem telemetria/processo continuam `UNAVAILABLE`. Regressões cobrem o agregado e as seis listas; suíte local atual: 36/36, dashboard 14/14, syntax 30 módulos, scan sensível 80 arquivos e contracts 1/1 PASS. A dashboard escreve/atualiza `state/dashboard/snapshot.json` como snapshot local periódico; essa escrita não é registro de task, telemetria ou avaliação.
+
+Atualização após Validation Lab: GET local de `/api/views` respondeu HTTP 200 com 13 views; confirma `Validation=VALIDATED`, `paired_runs=30/30`, seis categorias com cinco pares cada, tokens `exact` e economia qualificada de 10,2%; Overview reporta medição `exact`. Plugins, MCPs, Graph, Cache e Memory continuam indisponíveis porque não há fontes/eventos reais para essas views.
+
+Validação remota do commit `33cca25c` (PR #26): `core`, `mcg`, `vertical` e `invariants` PASS; o `harness:check` também passou após incluir links às regras compartilhadas em `CLAUDE.md` e o contrato portátil em `AGENTS.md`, ambos na raiz. O `verify` falhou depois, na suíte geral do CRM: 659 arquivos/4.945 testes passaram, 4 arquivos falharam (2 erros ENOENT e 2 assertions), em `e2e-workflow-honra-o-env.test.ts`, `evidencia-citada.test.ts`, `manifest-x-migrations.test.ts` e `next-config-output.test.ts`. São falhas fora do MCG; nenhum código funcional do CRM foi alterado. O PR #26 permanece aberto e sem merge.
 
 ### M0.13 Gate de conclusão
 
@@ -1546,7 +1584,9 @@ Só termina quando:
 
 ## Status atual
 
-ACTIVE — M0 REMEDIATION / CONSOLIDATION
+ACTIVE — M0 REMEDIATION INCOMPLETE / MCG EXTRACTED TO https://github.com/trydavidqix/maestri-context-gateway / STANDALONE MCG CI PASS AT 7dc2f71 / CORE+VERTICAL+INVARIANTS PASS / VERIFY FAILS ON 4 CRM UNIT-TEST FAILURES / M0.8 PARTIAL (PROVIDER DISCOVERY + CAPABILITY PROBES OPEN) / M0.13 OPEN / M1 BLOCKED ON M0 CLOSE
+
+Estado desta execução (2026-09-23): MCG extraído para https://github.com/trydavidqix/maestri-context-gateway; unit 36/36, dashboard 14/14, contracts 1/1, syntax 30 módulos e scan sensível PASS na árvore standalone; seu workflow remoto PASS no commit `7dc2f71`. Validation Lab: 30 pares reais Codex CLI, `gpt-6-luna`/`medium`, medição exata, categorias 5×6, Trust `VALIDATED`, economia qualificada 10,2%, sem queda de sucesso. Core/Vertical/Invariant passaram na PR #26; `verify` falhou em quatro testes gerais do CRM (dois ENOENT e duas assertions, listadas acima), sem tocar no CRM. M0.8 e M0.13 seguem abertos; M1 não começa antes de fechar os gates exigidos. Sem merge, main ou deploy.
 
 Este documento é a fonte de verdade única da branch Lumenva Command Center.
 Não criar um segundo plano concorrente para o mesmo escopo; atualizar este arquivo.

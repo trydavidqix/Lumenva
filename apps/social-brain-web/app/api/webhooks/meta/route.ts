@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySignature, verifyChallenge } from "@lumenva/integration-meta";
-import { normalizeMetaPayload } from "@lumenva/integration-meta";
+import { normalizeMetaPayload, verifyChallenge, verifySignature } from "@lumenva/integration-meta/webhook";
 
 const META_APP_SECRET = process.env.META_APP_SECRET ?? "";
 const META_WEBHOOK_VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN ?? "";
