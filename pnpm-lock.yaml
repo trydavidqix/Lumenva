@@ -119,6 +119,9 @@ importers:
       '@langchain/langgraph-checkpoint-postgres':
         specifier: 1.0.4
         version: 1.0.4(@langchain/core@1.2.8(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.222.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(openai@7.20.0(@smithy/signature-v4@5.7.3)(undici@7.29.1)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(@langchain/langgraph-checkpoint@1.1.5(@langchain/core@1.2.8(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.222.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(openai@7.20.0(@smithy/signature-v4@5.7.3)(undici@7.29.1)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)))
+      '@lumenva/db':
+        specifier: workspace:*
+        version: link:../../packages/social-brain/db
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.0
         version: 1.30.0(@cfworker/json-schema@4.1.1)(zod@4.6.5)
@@ -282,9 +285,6 @@ importers:
       '@axe-core/playwright':
         specifier: ^4.12.1
         version: 4.13.0(playwright-core@1.63.0)
-      '@lumenva/db':
-        specifier: workspace:*
-        version: link:../../packages/social-brain/db
       '@next/eslint-plugin-next':
         specifier: 16.3.0
         version: 16.3.0(eslint@9.39.5(jiti@2.7.0))

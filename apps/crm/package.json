@@ -63,6 +63,7 @@
     "@langchain/core": "1.2.8",
     "@langchain/langgraph": "1.4.10",
     "@langchain/langgraph-checkpoint-postgres": "1.0.4",
+    "@lumenva/db": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@phosphor-icons/react": "catalog:",
     "@radix-ui/react-alert-dialog": "^1.1.23",
@@ -118,7 +119,6 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@lumenva/db": "workspace:*",
     "@axe-core/playwright": "^4.12.1",
     "@next/eslint-plugin-next": "16.3.0",
     "@playwright/test": "catalog:",
