@@ -2,7 +2,7 @@ import { appendFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises
 import { createHash, randomUUID } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { readyNodes, validateDag } from './dag.mjs';
-import { classifyRisk, retryPlan, selectRoute } from '../routing/router.mjs';
+import { classifyRisk, PersistentCircuitBreaker, retryPlan, selectRoute } from '../routing/router.mjs';
 import { recordHistory } from '../history/store.mjs';
 
 const terminal=new Set(['DONE','BLOCKED','CANCELLED','FAILED_FINAL']);
@@ -64,13 +64,18 @@ export class PersistentScheduler{
     if(typeof execute!=='function')throw new Error('execute callback required');
     const state=await this.cleanupExpired(await this.state());
     for(const task of Object.values(state.tasks))this.refreshReadyInState(state,task);
+    const healthyRegistry=await Promise.all(registry.map(async item=>{
+      if(!item?.id)return item;
+      const circuit=new PersistentCircuitBreaker(this.root,item.id);
+      return await circuit.allow()?item:{...item,health:'CIRCUIT_OPEN'};
+    }));
     let active=Object.keys(state.leases).length;const outcomes=[],workers=[];
     for(const task of Object.values(state.tasks)){
       if(active>=this.concurrency_limit)break;
       if(terminal.has(task.status)||task.cancel_requested)continue;
       for(const node of task.nodes.filter(item=>item.status==='READY')){
         if(active>=this.concurrency_limit)break;
-        const route=selectRoute(node,registry);
+        const route=selectRoute(node,healthyRegistry);
         if(!route.selected){node.status='WAITING_RESOURCE';node.last_error='no healthy capability route';outcomes.push({task_id:task.task_id,node_id:node.node_id,status:node.status});continue;}
         if(route.owner_approval_required&&!node.approved){
           const approved=typeof approve==='function'?await approve({task,node,route}):false;
@@ -79,18 +84,21 @@ export class PersistentScheduler{
         }
         const resource=node.resource_lock||route.selected.id;const lease=this.acquire(state,task,node,worker_id,resource);
         if(!lease){node.status='WAITING_RESOURCE';continue;}
+        const circuit=new PersistentCircuitBreaker(this.root,route.selected.id);
         active+=1;node.status='RUNNING';task.status='RUNNING';node.attempts=(node.attempts||0)+1;node.route={selected:route.selected.id,risk:route.risk,reasoning:route.reasoning};
         workers.push((async()=>{
-          let worktree=null;
+          let worktree=null,executorStarted=false,breakerRecorded=false;
           try{
             if(node.requires_worktree){if(!worktreeManager)throw new Error('worktree manager required');worktree=await worktreeManager.allocate({repo:node.repo||task.repo,base_commit:node.base_commit||task.base_commit||'HEAD',task_id:`${task.task_id}-${node.node_id}`,agent:route.selected.id});}
+            executorStarted=true;
             const result=await execute({task,node,route,lease,worktree});
+            await circuit.success();breakerRecorded=true;
             const verification=typeof verify==='function'?await verify({task,node,route,result,worktree}):{pass:result?.success===true,evidence:result?.evidence||null};
             node.result=result??null;node.verification=verification;node.completed_at=now();
             if(verification?.pass===true){node.status='DONE';node.last_error=null;outcomes.push({task_id:task.task_id,node_id:node.node_id,status:'DONE'});}
             else throw new Error(verification?.reason||'verification failed');
           }catch(error){
-            const reason=String(error?.message||error);node.last_error=reason;const retry=retryPlan(node.attempts+1,{reason,allow_fallback:node.allow_fallback});
+            const reason=String(error?.message||error);if(executorStarted&&!breakerRecorded){await circuit.failure(reason);breakerRecorded=true;}node.last_error=reason;const retry=retryPlan(node.attempts+1,{reason,allow_fallback:node.allow_fallback});
             const history={task_id:task.task_id,node_id:node.node_id,attempt:node.attempts,reason,strategy:retry.strategy,timestamp:now()};node.retry_history.push(history);state.retry_history.push(history);
             if(node.attempts>=this.max_attempts||retry.strategy==='BLOCKED'){await this.deadLetter(state,task,node,reason);outcomes.push({task_id:task.task_id,node_id:node.node_id,status:'FAILED_FINAL',reason});}
             else{node.status='READY';outcomes.push({task_id:task.task_id,node_id:node.node_id,status:'RETRYING',strategy:retry.strategy});}

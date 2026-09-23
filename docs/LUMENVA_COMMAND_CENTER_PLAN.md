@@ -1309,7 +1309,7 @@ Adicionar:
 
 Circuit Breaker deve persistir estado entre reinícios.
 
-Progresso verificável (2026-09-23): `PersistentScheduler.runOnce` agora executa nodes READY independentes em paralelo até `concurrency_limit`, preservando route/resource leases e aguardando a verificação de cada resultado. Teste de regressão reproduziu `maxActive=1` antes da correção e confirmou `maxActive=2` com limite 2; suíte MCG 34/34 PASS e syntax 30 módulos PASS. Restante dos requisitos M0.9 continua sujeito à validação operacional completa; este teste isolado não fecha o gate.
+Progresso verificável (2026-09-23): `PersistentScheduler.runOnce` executa nodes READY independentes em paralelo até `concurrency_limit`, preservando route/resource leases e aguardando a verificação de cada resultado. O `PersistentCircuitBreaker` agora participa do roteamento: falhas do executor são persistidas e provedores com circuito aberto são removidos das rotas, inclusive após recriar o scheduler. Testes reproduziram RED→GREEN para concorrência (`maxActive=1` → `2`) e breaker (`CLOSED` após três falhas → `CIRCUIT_OPEN`; sem novo dispatch após restart). Suíte MCG 34/34 PASS, syntax 30 módulos PASS e scan PASS. Restante dos requisitos M0.9 continua sujeito à validação operacional completa; estes testes não fecham o gate inteiro.
 
 ### M0.10 Evidence, Progress e Confidence
 

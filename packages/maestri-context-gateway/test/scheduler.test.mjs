@@ -49,5 +49,21 @@ try{
  });
  assert.equal(maxActive,2,'independent ready nodes should use the configured concurrency');
  assert.deepEqual(parallelRun.outcomes.map(item=>item.status),['DONE','DONE']);
+
+ const circuitRoot=await mkdtemp(join(tmpdir(),'mcg-scheduler-circuit-'));
+ try{
+  const circuitScheduler=new PersistentScheduler(circuitRoot,{concurrency_limit:1,max_attempts:5});
+  const circuitRegistry=[{id:'unreliable-agent',name:'Unreliable Agent',capabilities:['code'],health:'OBSERVED',success_rate:99,measurement_type:'exact'}];
+  await circuitScheduler.submitTask({task_id:'circuit-task',objective:'circuit breaker integration',nodes:[{node_id:'main',depends_on:[],capability:'code'}]});
+  let attempts=0;
+  for(let index=0;index<3;index++) await circuitScheduler.runOnce({registry:circuitRegistry,execute:async()=>{attempts+=1;throw new Error('provider unavailable');}});
+  assert.equal(attempts,3);
+  const persistedBreaker=new PersistentCircuitBreaker(circuitRoot,'unreliable-agent');
+  assert.equal((await persistedBreaker.state()).status,'CIRCUIT_OPEN');
+  const afterRestart=new PersistentScheduler(circuitRoot,{concurrency_limit:1,max_attempts:5});
+  const blocked=await afterRestart.runOnce({registry:circuitRegistry,execute:async()=>{attempts+=1;return {success:true};}});
+  assert.equal(attempts,3,'an open persistent circuit must prevent another provider dispatch');
+  assert.equal(blocked.outcomes.at(-1).status,'WAITING_RESOURCE');
+ }finally{await rm(circuitRoot,{recursive:true,force:true});}
 }finally{await rm(root,{recursive:true,force:true});}
 console.log('scheduler/reliability tests: 1 passed');
