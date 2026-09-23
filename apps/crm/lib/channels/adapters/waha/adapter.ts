@@ -1,4 +1,4 @@
-import { ChannelTransportPort, ChannelTransportCommand, ChannelTransportResult, ExternalOperationContext } from "./types";
+import type { ChannelTransportPort, ChannelTransportCommand, ChannelTransportResult, ExternalOperationContext } from "./types";
 import { wahaSendPlanFor } from "@/lib/waha/media-send";
 import { parseWahaMessageId } from "@/lib/waha/message-id";
 import { env } from "@/lib/env";
@@ -26,7 +26,7 @@ export class WahaTransportAdapter implements ChannelTransportPort {
 
     try {
       if (command.type === "stop_session") {
-        const res = await this.request(`/api/sessions/${encodeURIComponent(command.sessionRef)}/stop`, { method: "POST", body: {} });
+        const res = await this.request(`/api/sessions/${encodeURIComponent(command.sessionRef)}/stop`, { method: "POST" });
         if (!res.ok && ![404, 422, 409].includes(res.status)) throw await this.buildError(res, "stop");
         return {};
       }
@@ -34,21 +34,21 @@ export class WahaTransportAdapter implements ChannelTransportPort {
         const createRes = await this.request(`/api/sessions`, { method: "POST", body: { name: command.sessionRef, config: {} } });
         if (!createRes.ok && createRes.status !== 422 && createRes.status !== 409) throw await this.buildError(createRes, "create");
 
-        const startRes = await this.request(`/api/sessions/${encodeURIComponent(command.sessionRef)}/start`, { method: "POST", body: {} });
+        const startRes = await this.request(`/api/sessions/${encodeURIComponent(command.sessionRef)}/start`, { method: "POST" });
         if (!startRes.ok && startRes.status !== 422 && startRes.status !== 409) throw await this.buildError(startRes, "start");
 
         if (startRes.status === 422 || startRes.status === 409) {
           const checkRes = await this.request(`/api/sessions/${encodeURIComponent(command.sessionRef)}`, { method: "GET" });
           if (!checkRes.ok) throw await this.buildError(checkRes, "get");
-          const data = await checkRes.json() as any;
-          return { status: data.status, qr: data.qr };
+          const data = await checkRes.json() as Record<string, unknown>;
+          return { status: typeof data.status === "string" ? data.status : undefined, qr: typeof data.qr === "string" ? data.qr : undefined };
         }
 
-        const data = await startRes.json() as any;
-        return { status: data.status, qr: data.qr };
+        const data = await startRes.json() as Record<string, unknown>;
+        return { status: typeof data.status === "string" ? data.status : undefined, qr: typeof data.qr === "string" ? data.qr : undefined };
       }
       if (command.type === "logout_session") {
-        const res = await this.request(`/api/sessions/${encodeURIComponent(command.sessionRef)}/logout`, { method: "POST", body: {} });
+        const res = await this.request(`/api/sessions/${encodeURIComponent(command.sessionRef)}/logout`, { method: "POST" });
         if (!res.ok && ![404, 422, 409].includes(res.status)) throw await this.buildError(res, "logout");
         return {};
       }
@@ -84,7 +84,8 @@ export class WahaTransportAdapter implements ChannelTransportPort {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Unknown error";
 
-      if (message.includes("23505") || (err as any)?.code === "23505") {
+      const errCode = (err as Record<string, unknown>)?.code;
+      if (message.includes("23505") || errCode === "23505") {
         return {
           externalId: ctx.idempotencyKey ?? null,
           error: undefined
@@ -95,8 +96,8 @@ export class WahaTransportAdapter implements ChannelTransportPort {
     }
   }
 
-  private async request(path: string, init: { method: string, body?: any }) {
-    const headers: Record<string, string> = { "X-Api-Key": this.apiKey! };
+  private async request(path: string, init: { method: string, body?: Record<string, unknown> }) {
+    const headers: Record<string, string> = { "X-Api-Key": this.apiKey ?? "" };
     if (init.body) headers["Content-Type"] = "application/json";
 
     return fetch(`${this.baseUrl}${path}`, {

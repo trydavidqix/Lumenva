@@ -45,4 +45,4 @@ export type ChannelTransportResult = {
   };
 };
 
-export interface ChannelTransportPort extends ExternalAdapter<ChannelTransportCommand, ChannelTransportResult> {}
+export type ChannelTransportPort = ExternalAdapter<ChannelTransportCommand, ChannelTransportResult>;

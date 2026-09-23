@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import type { ExternalOperationContext, ChannelTransportCommand } from "./types";
 import { WahaTransportAdapter } from "./adapter";
-import { ExternalOperationContext, ChannelTransportCommand } from "./types";
 import { env } from "@/lib/env";
 
 const globalFetch = global.fetch;
@@ -16,8 +16,8 @@ describe("WahaTransportAdapter (TDD Fakes)", () => {
     vi.stubEnv("WAHA_API_KEY", "fake-api-key");
 
     // Explicitly update the mocked env object which adapter uses via dynamic getter
-    (env as any).WAHA_API_BASE_URL = "http://fake-waha";
-    (env as any).WAHA_API_KEY = "fake-api-key";
+    (env as unknown as Record<string, string>).WAHA_API_BASE_URL = "http://fake-waha";
+    (env as unknown as Record<string, string>).WAHA_API_KEY = "fake-api-key";
 
     adapter = new WahaTransportAdapter();
   });

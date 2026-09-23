@@ -1,4 +1,4 @@
-import { ChannelAdapter, OutboundEnvelope } from "../../types";
+import type { ChannelAdapter, OutboundEnvelope } from "../../types";
 import { WahaTransportAdapter } from "./adapter";
 import { getWahaClient } from "@/lib/waha/client";
 import { wahaSendPlanFor } from "@/lib/waha/media-send";
@@ -54,15 +54,12 @@ export function createWahaF7Adapter(): ChannelAdapter {
         return { externalId: parseWahaMessageId(res) };
       }
 
-      // Infer context from envelope or use F7 fallbacks if not fully wired in F7 yet
-      // The idempotencyKey is critical to fallback to when handling 23505 deduplication.
-      // Since `OutboundEnvelope` does not guarantee an idempotencyKey at this point,
-      // we generate one as a fallback or extract one if it was provided in some extended signature.
+      const extendedEnvelope = envelope as unknown as Record<string, unknown>;
 
       const ctx = {
         organizationId: "f7-adapter-org-fallback",
         requestId: "f7-req-" + Date.now(),
-        idempotencyKey: (envelope as any).idempotencyKey || randomUUID()
+        idempotencyKey: typeof extendedEnvelope.idempotencyKey === "string" ? extendedEnvelope.idempotencyKey : randomUUID()
       };
 
       const result = await wahaTransportAdapter.execute(ctx, {
@@ -79,7 +76,6 @@ export function createWahaF7Adapter(): ChannelAdapter {
         } : undefined
       });
 
-      // Fix: Error must be bubbled up, not swallowed, so retries and background jobs function as intended
       if (result.error) {
         throw new Error(`WahaTransport error: ${result.error.code} - ${result.error.message}`);
       }
