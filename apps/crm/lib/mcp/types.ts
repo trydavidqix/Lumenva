@@ -9,11 +9,11 @@ import type { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Actor } from "@/lib/api/handlers/types";
-import type { Role } from "@/lib/auth/types";
+import type { ActorRole } from "@/lib/auth/types";
 
 export interface McpContext {
   organizationId: string;
-  role: Role;
+  role: ActorRole;
   actor: Actor;
   apiTokenId: string;
   requestId: string;
@@ -29,7 +29,7 @@ export interface McpToolDefinition<TInput extends z.ZodRawShape = z.ZodRawShape>
   inputSchema: TInput;
   category: McpToolCategory;
   /** Role mínima para invocar. Read default agent; Write default manager. */
-  requiresRole: Role;
+  requiresRole: ActorRole;
   /**
    * Scope obrigatório no `api_tokens.scopes` (ex: `mcp:read`, `mcp:write`).
    * Ausência → -32002 forbidden.

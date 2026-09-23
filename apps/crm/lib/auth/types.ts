@@ -17,8 +17,26 @@
  * consulta `fn_user_role_in_org`, que lê `user_organizations`. O agente não é
  * usuário. A RLS segue intacta.
  */
-export type Role = "viewer" | "agent" | "ai_operator" | "manager" | "admin";
-export const ROLE_RANK: Record<Role, number> = {
+export type HumanRole = "viewer" | "agent" | "manager" | "admin";
+export type ActorRole = HumanRole | "ai_operator";
+
+/**
+ * Compatibilidade para consumidores antigos que só trabalham com membership.
+ * Código MCP/ator deve usar `ActorRole` explicitamente.
+ */
+export type Role = HumanRole;
+
+export const HUMAN_ROLES = ["viewer", "agent", "manager", "admin"] as const satisfies readonly HumanRole[];
+
+export function isHumanRole(value: unknown): value is HumanRole {
+  return typeof value === "string" && (HUMAN_ROLES as readonly string[]).includes(value);
+}
+
+export function isActorRole(value: unknown): value is ActorRole {
+  return isHumanRole(value) || value === "ai_operator";
+}
+
+export const ROLE_RANK: Record<ActorRole, number> = {
   viewer: 1,
   agent: 2,
   ai_operator: 3,
@@ -27,10 +45,10 @@ export const ROLE_RANK: Record<Role, number> = {
 };
 
 /** Papéis que uma PESSOA pode ter. Espelha `user_organizations_role_check`. */
-export const PAPEIS_HUMANOS: ReadonlyArray<Role> = ["viewer", "agent", "manager", "admin"];
+export const PAPEIS_HUMANOS: ReadonlyArray<HumanRole> = HUMAN_ROLES;
 
 /** Rótulo pt-BR para quem configura. `ai_operator` nunca aparece em seletor de time. */
-export const ROTULO_DO_PAPEL: Record<Role, string> = {
+export const ROTULO_DO_PAPEL: Record<ActorRole, string> = {
   viewer: "Somente leitura",
   agent: "Atendente",
   ai_operator: "Assistente com autonomia de operação",
@@ -48,7 +66,7 @@ export const DEFAULT_VISIBILITY_MODE: VisibilityMode = "own_and_unassigned"; // 
 export interface UserOrgMembership {
   organization_id: string;
   organization_name: string;
-  role: Role;
+  role: HumanRole;
 }
 
 export interface AuthUser {
@@ -63,7 +81,7 @@ export interface AuthUser {
 export interface ActiveOrg {
   orgId: string;
   name: string;
-  role: Role;
+  role: HumanRole;
   /**
    * Escopo de visualização da org (G4-01). Opcional: só é preenchido no client
    * context (AppLayout) para a UI do inbox decidir visões visíveis. Não é fonte

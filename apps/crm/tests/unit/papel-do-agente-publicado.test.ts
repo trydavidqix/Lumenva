@@ -20,7 +20,12 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { PAPEIS_HUMANOS, ROLE_RANK, ROTULO_DO_PAPEL, type Role } from "@/lib/auth/types";
+import {
+  PAPEIS_HUMANOS,
+  ROLE_RANK,
+  ROTULO_DO_PAPEL,
+  type ActorRole,
+} from "@/lib/auth/types";
 
 const RAIZ = join(__dirname, "..", "..");
 const baseline = readFileSync(join(RAIZ, "supabase/baseline.sql"), "utf8");
@@ -60,7 +65,7 @@ describe("papel do agente publicado", () => {
   });
 
   it("tem rótulo em português para todo papel, inclusive o do agente", () => {
-    for (const papel of Object.keys(ROLE_RANK) as Role[]) {
+    for (const papel of Object.keys(ROLE_RANK) as ActorRole[]) {
       expect(ROTULO_DO_PAPEL[papel]?.trim()).not.toBe("");
       expect(ROTULO_DO_PAPEL[papel]).not.toContain("_");
     }

@@ -21,7 +21,13 @@ import type { NextResponse } from "next/server";
 import { fail, type ApiError } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
-import { ROLE_RANK, type ActiveOrg, type AuthUser, type Role } from "@/lib/auth/types";
+import {
+  isHumanRole,
+  ROLE_RANK,
+  type ActiveOrg,
+  type AuthUser,
+  type HumanRole,
+} from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/server";
 
 export type RoleCheck =
@@ -48,12 +54,18 @@ interface RequireRoleOpts {
  * Gate de rota: `const authz = await requireRole("manager", { requestId });`
  * `if (!authz.ok) return authz.response;`
  */
-export async function requireRole(min: Role, opts: RequireRoleOpts = {}): Promise<RoleCheck> {
+export async function requireRole(min: HumanRole, opts: RequireRoleOpts = {}): Promise<RoleCheck> {
   const { requestId, resource, allowPlatformAdmin = false, organizationId } = opts;
 
   const user = await loadAuthUser();
   if (!user) {
     return { ok: false, response: fail("unauthenticated", "Auth required.", 401, { requestId }) };
+  }
+  if (!isHumanRole(min)) {
+    return {
+      ok: false,
+      response: fail("forbidden_role", "Papel de autorização inválido.", 403, { requestId }),
+    };
   }
 
   let org: ActiveOrg | null;
@@ -91,8 +103,9 @@ export async function requireRole(min: Role, opts: RequireRoleOpts = {}): Promis
     return { ok: false, response: fail("internal_error", error.message, 500, { requestId }) };
   }
 
-  const rank = effectiveRole ? (ROLE_RANK[effectiveRole as Role] ?? 0) : 0;
-  if (rank < ROLE_RANK[min]) {
+  const effectiveHumanRole = isHumanRole(effectiveRole) ? effectiveRole : null;
+  const rank = effectiveHumanRole ? ROLE_RANK[effectiveHumanRole] : 0;
+  if (!effectiveHumanRole || rank < ROLE_RANK[min]) {
     // Fire-and-forget: falha de audit alerta, não bloqueia o 403.
     void audit({
       action: "authz.denied",
@@ -110,5 +123,5 @@ export async function requireRole(min: Role, opts: RequireRoleOpts = {}): Promis
     };
   }
 
-  return { ok: true, user, org: { ...org, role: effectiveRole as Role } };
+  return { ok: true, user, org: { ...org, role: effectiveHumanRole } };
 }
