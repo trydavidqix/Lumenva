@@ -12,10 +12,10 @@ function readWorkflow() {
   return readFileSync(workflowPath, 'utf8')
 }
 
-test('GCP CI workflow exists and uses correct Node/pnpm versions', () => {
+test('GCP CI workflow exists and uses correct Node version', () => {
   const workflow = readWorkflow()
   assert.match(workflow, /node-version: ['"]?22['"]?/, 'Must use Node 22')
-  assert.match(workflow, /version: ['"]?9\.15\.9['"]?/, 'Must use pnpm 9.15.9')
+  // The pnpm version is enforced by packageManager field in package.json, so action-setup should not duplicate it
   assert.match(workflow, /pnpm install --frozen-lockfile/, 'Must use frozen-lockfile for install')
 })
 
