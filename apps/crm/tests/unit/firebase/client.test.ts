@@ -27,7 +27,7 @@ describe("Firebase Client Auth Wrapper", () => {
 
   beforeEach(() => {
     fetchMock = vi.fn();
-    global.fetch = fetchMock;
+    global.fetch = fetchMock as unknown as typeof fetch;
     signInWithEmailAndPasswordMock.mockReset();
     signInWithPopupMock.mockReset();
     getIdTokenMock.mockReset();
@@ -86,10 +86,9 @@ describe("Firebase Client Auth Wrapper", () => {
   });
 
   it("handles Firebase errors without leaking tokens", async () => {
-    signInWithEmailAndPasswordMock.mockRejectedValueOnce({
-      code: "auth/invalid-credential",
-      message: "Firebase errored",
-    });
+    signInWithEmailAndPasswordMock.mockRejectedValueOnce(Object.assign(new Error("Firebase errored"), {
+      code: "auth/invalid-credential"
+    }));
 
     const result = await signInWithEmail("bad@example.com", "wrong");
 

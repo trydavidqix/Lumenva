@@ -28,15 +28,6 @@ export type AuthResult = {
   error?: "invalid_credentials" | "session_creation_failed" | "unknown_error" | "popup_closed" | "rate_limited";
 };
 
-function getFirebaseErrorCode(error: unknown): string | undefined {
-  if (typeof error !== "object" || error === null || !("code" in error)) {
-    return undefined;
-  }
-
-  const code = (error as { code?: unknown }).code;
-  return typeof code === "string" ? code : undefined;
-}
-
 async function createSession(idToken: string): Promise<AuthResult> {
   try {
     const response = await fetch("/api/auth/session", {
@@ -61,7 +52,7 @@ export async function signInWithEmail(email: string, password: string): Promise<
     const idToken = await userCredential.user.getIdToken();
     return createSession(idToken);
   } catch (error: unknown) {
-    const code = getFirebaseErrorCode(error);
+    const code = error && typeof error === "object" && "code" in error ? (error as { code: string }).code : null;
     if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") {
       return { ok: false, error: "invalid_credentials" };
     }
@@ -76,7 +67,8 @@ export async function signInWithGoogle(): Promise<AuthResult> {
     const idToken = await userCredential.user.getIdToken();
     return createSession(idToken);
   } catch (error: unknown) {
-    if (getFirebaseErrorCode(error) === "auth/popup-closed-by-user") {
+    const code = error && typeof error === "object" && "code" in error ? (error as { code: string }).code : null;
+    if (code === "auth/popup-closed-by-user") {
       return { ok: false, error: "popup_closed" };
     }
     return { ok: false, error: "unknown_error" };

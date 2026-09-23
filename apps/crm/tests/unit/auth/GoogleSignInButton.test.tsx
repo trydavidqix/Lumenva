@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { GoogleSignInButton } from "../../../components/auth/GoogleSignInButton";
 import * as firebaseClient from "../../../lib/firebase/client";
-import type { AuthResult } from "../../../lib/firebase/client";
 
 const replaceMock = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -57,8 +56,8 @@ describe("GoogleSignInButton", () => {
   });
 
   it("shows pending state and disables button during login", async () => {
-    let resolveLogin: (value: AuthResult) => void;
-    vi.mocked(firebaseClient.signInWithGoogle).mockReturnValue(new Promise<AuthResult>(res => {
+    let resolveLogin: (value: firebaseClient.AuthResult) => void;
+    vi.mocked(firebaseClient.signInWithGoogle).mockReturnValue(new Promise(res => {
       resolveLogin = res;
     }));
 
