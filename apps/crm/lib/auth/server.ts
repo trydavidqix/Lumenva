@@ -157,3 +157,20 @@ export async function requireAuth(): Promise<AuthUser> {
   return user;
 }
 
+/**
+ * Returns true if the current session has at least one verified TOTP factor.
+ * Use only in Server Components / Server Actions (cookie session).
+ * Deprecated in F4: always returns false to disable MFA enforcement.
+ */
+export async function isMfaEnrolled(): Promise<boolean> {
+  return false;
+}
+
+/**
+ * MFA enforcement policy: platform admins and tenant `admin` role MUST enroll.
+ * `manager`/`agent`/`viewer` are optional in MVP.
+ * Deprecated in F4: always returns false to disable MFA enforcement.
+ */
+export function requiresMfa(role: Role | undefined, isPlatformAdmin: boolean): boolean {
+  return false;
+}
