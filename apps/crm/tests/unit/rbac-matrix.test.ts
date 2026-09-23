@@ -14,6 +14,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
+import { resolvePlatformAdmin } from "@/lib/auth/requirePlatformAdmin";
 import { audit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
 import type { AuthUser, Role } from "@/lib/auth/types";
@@ -22,6 +23,7 @@ vi.mock("@/lib/auth/server", () => ({
   loadAuthUser: vi.fn(),
   resolveActiveOrg: vi.fn(),
 }));
+vi.mock("@/lib/auth/requirePlatformAdmin", () => ({ resolvePlatformAdmin: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
 vi.mock("@/lib/audit", () => ({
@@ -86,6 +88,7 @@ function session(role: Role | null, tables: Record<string, unknown> = {}) {
   vi.mocked(resolveActiveOrg).mockResolvedValue(
     role ? { orgId: ORG_ID, name: "Org", role } : null,
   );
+  vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: false, reason: "forbidden" });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(role, tables) as any);
 }

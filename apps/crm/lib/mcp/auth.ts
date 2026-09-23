@@ -101,7 +101,7 @@ export async function validateBearerToken(
     .maybeSingle();
 
   if (error) {
-    throw new McpAuthError(-32603, 500, `Token lookup failed: ${error.message}`);
+    throw new McpAuthError(-32603, 500, "Token lookup failed.");
   }
   if (!data) {
     throw new McpAuthError(-32001, 401, "Token not recognized.");

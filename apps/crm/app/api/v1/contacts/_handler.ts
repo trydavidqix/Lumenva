@@ -14,6 +14,7 @@ import type { Actor, HandlerCtx } from "@/lib/api/handlers/types";
 import { audit } from "@/lib/audit";
 import { hashCpf, encryptCpfSql } from "@/lib/contacts/cpf";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isHumanRole, ROLE_RANK } from "@/lib/auth/types";
 import type { Contact } from "@/lib/types/contacts";
 import type {
   ContactCreate,
@@ -26,13 +27,6 @@ type SB = SupabaseClient;
 const SELECT_COLS =
   "id, organization_id, name, display_name, email, email_normalized, phone_number, birthdate, is_blocked, blocked_reason, is_anonymized, anonymized_at, is_merged_into, merged_at, consent, tags, source, source_metadata, created_at, updated_at, last_activity_at";
 const SELECT_INTERNAL_COLS = `${SELECT_COLS}, cpf_hash`;
-
-const ROLE_RANK: Record<string, number> = {
-  viewer: 1,
-  agent: 2,
-  manager: 3,
-  admin: 4,
-};
 
 interface CursorPayload {
   last_activity_at: string | null;
@@ -234,7 +228,7 @@ export async function getContactHandler(
       const { data: effectiveRole } = await supabase.rpc("fn_user_role_in_org", {
         p_org: contact.organization_id,
       });
-      rank = effectiveRole ? (ROLE_RANK[effectiveRole] ?? 0) : 0;
+      rank = isHumanRole(effectiveRole) ? ROLE_RANK[effectiveRole] : 0;
     }
 
     if (rank < ROLE_RANK.manager!) {

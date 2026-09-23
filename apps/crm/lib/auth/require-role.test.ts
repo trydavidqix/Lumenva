@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { requireRole } from "@/lib/auth/require-role";
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
+import { resolvePlatformAdmin } from "@/lib/auth/requirePlatformAdmin";
 import { audit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
 import type { AuthUser, HumanRole, Role } from "@/lib/auth/types";
@@ -18,6 +19,7 @@ vi.mock("@/lib/auth/server", () => ({
   loadAuthUser: vi.fn(),
   resolveActiveOrg: vi.fn(),
 }));
+vi.mock("@/lib/auth/requirePlatformAdmin", () => ({ resolvePlatformAdmin: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/audit", () => ({ audit: vi.fn(async () => undefined) }));
 
@@ -38,7 +40,10 @@ function authUserFixture(role: Role | null, platformAdmin = false): AuthUser {
 }
 
 /** Configura sessão + role efetivo devolvido pelo banco (fn_user_role_in_org). */
-function session(role: Role | null, opts: { dbRole?: string | null; platformAdmin?: boolean } = {}) {
+function session(
+  role: Role | null,
+  opts: { dbRole?: string | null; dbError?: { message: string }; platformAdmin?: boolean } = {},
+) {
   const platformAdmin = opts.platformAdmin ?? false;
   const dbRole = opts.dbRole === undefined ? role : opts.dbRole;
   vi.mocked(loadAuthUser).mockResolvedValue(
@@ -50,7 +55,7 @@ function session(role: Role | null, opts: { dbRole?: string | null; platformAdmi
   vi.mocked(createClient).mockResolvedValue({
     rpc: vi.fn(async (fn: string) =>
       fn === "fn_user_role_in_org"
-        ? { data: dbRole, error: null }
+        ? { data: dbRole, error: opts.dbError ?? null }
         : { data: null, error: null },
     ),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -213,8 +218,40 @@ describe("requireRole — helper único (spec 13 §4)", () => {
     const denied = await requireRole("admin");
     expect(denied.ok).toBe(false);
 
+    vi.mocked(resolvePlatformAdmin).mockResolvedValue({
+      ok: true,
+      context: {
+        user: {} as never,
+        platformAdmin: { user_id: USER_ID, scope: "*", mfa_required: false },
+      },
+    });
     session("viewer", { platformAdmin: true });
     const granted = await requireRole("admin", { allowPlatformAdmin: true });
     expect(granted.ok).toBe(true);
+  });
+
+  it("não devolve detalhe bruto do banco quando RPC de autorização falha", async () => {
+    session("admin", { dbError: { message: "permission denied: internal auth detail" } });
+
+    const res = await requireRole("viewer");
+
+    expect(res.ok).toBe(false);
+    if (res.ok) throw new Error("unreachable");
+    expect(res.response.status).toBe(500);
+    const body = await res.response.json();
+    expect(body.error.message).toBe("Não foi possível validar permissões.");
+    expect(JSON.stringify(body)).not.toContain("internal auth detail");
+  });
+
+  it("não concede bypass tenant a platform admin quando MFA/AAL2 falha", async () => {
+    session("viewer", { platformAdmin: true });
+    vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: false, reason: "mfa_required" });
+
+    const result = await requireRole("admin", { allowPlatformAdmin: true });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("unreachable");
+    expect(result.response.status).toBe(403);
+    expect((await result.response.json()).error.code).toBe("forbidden_role");
   });
 });

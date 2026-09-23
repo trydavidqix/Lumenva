@@ -14,7 +14,7 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
 
 const TOKEN = "dsk_test_secret";
 
-function mockToken(scopes: string[]): void {
+function mockToken(scopes: string[], lookupError: { message: string } | null = null): void {
   const row = {
     id: "token-1",
     organization_id: "org-1",
@@ -26,7 +26,8 @@ function mockToken(scopes: string[]): void {
     select: () => chain,
     eq: () => chain,
     update: () => chain,
-    maybeSingle: () => Promise.resolve({ data: row, error: null }),
+    maybeSingle: () =>
+      Promise.resolve({ data: lookupError ? null : row, error: lookupError }),
     then: (resolve: (value: { error: null }) => unknown) =>
       Promise.resolve({ error: null }).then(resolve),
   };
@@ -71,6 +72,15 @@ describe("F3 role domains", () => {
 
     await expect(validateBearerToken(`Bearer ${TOKEN}`)).rejects.toMatchObject({
       httpStatus: 401,
+    });
+  });
+
+  it("não devolve detalhe bruto do banco no erro de lookup do token", async () => {
+    mockToken(["mcp:read"], { message: "internal token index detail" });
+
+    await expect(validateBearerToken(`Bearer ${TOKEN}`)).rejects.toMatchObject({
+      httpStatus: 500,
+      message: "Token lookup failed.",
     });
   });
 });

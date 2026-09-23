@@ -21,6 +21,7 @@ import type { NextResponse } from "next/server";
 import { fail, type ApiError } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
+import { resolvePlatformAdmin } from "@/lib/auth/requirePlatformAdmin";
 import {
   isHumanRole,
   ROLE_RANK,
@@ -68,6 +69,12 @@ export async function requireRole(min: HumanRole, opts: RequireRoleOpts = {}): P
     };
   }
 
+  // Platform bypass must use the canonical platform_admins row and its MFA
+  // policy, never the in-memory compatibility flag from AuthUser.
+  const platformAdminAllowed = allowPlatformAdmin
+    ? (await resolvePlatformAdmin()).ok
+    : false;
+
   let org: ActiveOrg | null;
   if (organizationId) {
     const membership = user.organizations.find((o) => o.organization_id === organizationId);
@@ -77,7 +84,7 @@ export async function requireRole(min: HumanRole, opts: RequireRoleOpts = {}): P
           name: membership.organization_name,
           role: membership.role,
         }
-      : allowPlatformAdmin && user.is_platform_admin
+      : platformAdminAllowed
         ? { orgId: organizationId, name: "—", role: "viewer" }
         : null;
   } else {
@@ -90,7 +97,7 @@ export async function requireRole(min: HumanRole, opts: RequireRoleOpts = {}): P
     };
   }
 
-  if (allowPlatformAdmin && user.is_platform_admin) {
+  if (platformAdminAllowed) {
     return { ok: true, user, org };
   }
 
@@ -100,7 +107,10 @@ export async function requireRole(min: HumanRole, opts: RequireRoleOpts = {}): P
     p_org: org.orgId,
   });
   if (error) {
-    return { ok: false, response: fail("internal_error", error.message, 500, { requestId }) };
+    return {
+      ok: false,
+      response: fail("internal_error", "Não foi possível validar permissões.", 500, { requestId }),
+    };
   }
 
   const effectiveHumanRole = isHumanRole(effectiveRole) ? effectiveRole : null;
