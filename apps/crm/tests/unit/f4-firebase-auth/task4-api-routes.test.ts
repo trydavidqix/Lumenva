@@ -57,15 +57,15 @@ describe("Task 4: API Routes Firebase Auth Migration", () => {
   });
 
   describe("GET /api/v1/auth/realtime-token", () => {
-    it("should return 410 because Supabase realtime tokens are deprecated", async () => {
+    it("should return 501 blocker since Firebase cannot issue Supabase tokens", async () => {
       // Pass a minimal valid structure expected by typescript but fake the implementation runtime check
       vi.mocked(getServerSession).mockResolvedValue({ uid: "user-1", email: "test@test.com" } as unknown as Record<string, unknown> as never);
       const req = new NextRequest("http://localhost/api/v1/auth/realtime-token");
       const res = await getRealtimeToken(req);
 
-      expect(res.status).toBe(410);
+      expect(res.status).toBe(501);
       const data = await res.json();
-      expect(data.error.code).toBe("gone");
+      expect(data.error.code).toBe("not_implemented");
     });
   });
 
