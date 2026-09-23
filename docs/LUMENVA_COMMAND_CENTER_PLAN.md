@@ -1145,7 +1145,7 @@ Nenhum commit do MCG pode ser considerado PASS sem testes automáticos.
 
 Falha remota observada: run `35687560851` (MCG gates) parou em `pnpm install --frozen-lockfile` porque o lockfile remoto não tinha os specifiers de `packages/lumenva-core/package.json` (`@types/node` e `typescript`). Isto é um gate de lockfile do monorepo, não um erro de teste do MCG; atualizar o lockfile contra o workspace atual e repetir todos os gates.
 
-Estado local (2026-09-23): lockfile atualizado de forma consistente; frozen install PASS; os cinco gates MCG (34 testes unitários, sintaxe/import, secret/path scan, dashboard e contracts) PASS; `git diff --check` PASS. A alteração do lockfile também aciona `.github/workflows/lumenva-core.yml`: `typecheck` falha em erros existentes nos testes (imports `.ts`, callback types e `EventBus.subscribe`), e `test:unit` falha em resolução de `src/contracts.js` sob `node --experimental-strip-types`. Não alterar `packages/lumenva-core/**` nem enfraquecer seu workflow dentro desta allowlist. Evidência remota mais recente no PR draft #26 (`codex/mcg-ci-integration` → `lumenva-command-center`, sem merge), commit `7f2d23c9`: MCG run `35805179393` PASS; vertical `35805179433` PASS; invariants job PASS; core run `35805179418` FAIL e verify no CI `35805179410` FAIL pelo typecheck de `lumenva-core`. A PR permanece aberta para validação, sem tocar `main`. M0.3 permanece aberto até CI obrigatória passar. Uma remediação dos erros do core exige escopo separado.
+Baseline histórico (2026-09-23, antes da autorização desta correção): lockfile consistente e gates MCG locais PASS; CI do Core falhava por imports TypeScript, callbacks e divergência entre teste e API `EventBus`. Com autorização do usuário, a correção limitada a `packages/lumenva-core/**` alinhou imports `.ts`, habilitou a transformação TypeScript que o teste Node usa, ativou `allowImportingTsExtensions` no typecheck e fez o teste usar `EventBus.on`. Typecheck e 9/9 testes do Core agora passam localmente. Nenhum arquivo de `apps/crm` foi alterado; workflows não foram enfraquecidos. CI remoto para esta correção ainda precisa passar. PR draft #26 continua sem merge e `main` intocada.
 
 ### M0.4 Correções conhecidas de métricas
 
@@ -1362,7 +1362,7 @@ Somente depois calcular como validated:
 - Efficiency
 - Regression baseline
 
-Estado real observado (2026-09-23, auditoria somente de leitura): o runtime contém 16 registros A/B, mas 0 satisfazem o filtro atual. 14 não são execuções reais; 13 têm medição `unavailable`; 4 não têm categoria canônica. Os dois pares com `real_executor=true` também carecem de snapshot/model/tools/policy necessários à comparação. O dataset `validation.jsonl` contém 30 casos previstos (5 por cada uma das 6 categorias), ainda não executados como avaliações reais. Executá-lo exigirá chamadas reais do Codex e poderá consumir quota; não reclassificar logs incompletos nem marcar Trust/Regression como validated antes de evidência completa.
+Baseline da auditoria antes das avaliações (2026-09-23): havia 16 registros A/B e 0 pares elegíveis; o dataset contém 30 casos em seis categorias. Após autorização do usuário, foram executados 30 pares reais via Codex CLI com `gpt-6-luna` e esforço `medium` (um piloto + os 29 casos restantes, sem duplicar caso). Resumo final persistido em `state/evals/suites/suite-1790128750253-0aaeed89.json`: 30/30 pares elegíveis, 5 por categoria, medição de tokens `exact`; baseline e MCG tiveram sucesso 100%, context recall 100%, evidence grounding 100% e hallucination rate 0%. A economia de tokens medida foi 10,2%, mantendo a qualidade; Trust `VALIDATED`, score 77,55. A execução adicionou evidências reais ao runtime do MCG e consumiu quota aprovada; não extrapolar esse benchmark para workloads fora do dataset.
 
 ### M0.12 Dashboard e história
 
@@ -1393,11 +1393,13 @@ Nenhuma view final aceita:
 - placeholder
 - future/prepared como PASS
 
-Verificação local do dashboard real (2026-09-23, somente GET via PowerShell; sem navegador): dashboard respondeu em loopback; `/api/health` confirmou wire `ONLINE` e workspace online. `/api/tasks` mostrou 15 registros; `/api/stats`, 7 concluídas e 6 ativas. Métricas MCG estão `unavailable`, Trust `UNVALIDATED` e dataset real tem 0 pares elegíveis entre 16 registros A/B armazenados. Descoberta observada: 3 agents, 3 runtimes, 1 tool; plugins e MCPs sem eventos reais, portanto vazios/`unavailable`. O dashboard está servindo dados atuais corretamente, mas ainda não demonstra economia de tokens nem avaliação positiva; não preencher essas lacunas com mocks.
+Snapshot anterior à Validation Lab (2026-09-23, somente GET via PowerShell; sem navegador): wire/workspace online; 15 tasks (7 concluídas, 6 ativas); antes das execuções reais, Trust estava `UNVALIDATED` e havia 0 pares elegíveis. Recursos observados: 3 agents, 3 runtimes, 1 tool; plugins e MCPs sem eventos e `unavailable`.
 
 Auditoria das 13 views no runtime real (2026-09-23): Overview, Traces, Tasks, Agents, Tools e Alerts têm observações; Plugins, MCPs, Graph, Cache e Memory permanecem indisponíveis/não configurados; Validation está `UNVALIDATED`; History mistura tipos observados e indisponíveis. A auditoria encontrou e corrigiu o agregador de History que marcava o conjunto como `exact` só porque algum tipo existia. Agora o agregado só é `exact` quando todos os subtipos são exatos, `estimated` quando todos existem mas algum é estimado, e `unavailable` quando falta qualquer subtipo. Regressão coberta por teste; suíte local atual: 35/35, dashboard 13/13, syntax 30 módulos, scan sensível 80 arquivos e contracts 1/1 PASS. A dashboard escreve/atualiza `state/dashboard/snapshot.json` como snapshot local periódico; essa escrita não é registro de task, telemetria ou avaliação.
 
-Validação remota da correção `dbb102c6` no PR draft #26: MCG `35806666214` PASS, vertical `35806666216` PASS e invariants `35806666208` PASS. Core `35806666207` e verify `35806666208` FAIL por erros existentes de typecheck em `packages/lumenva-core`, fora do escopo MCG. PR segue sem merge; M0.3/M0.13 continuam abertos.
+Atualização após Validation Lab: GET local de `/api/views` respondeu HTTP 200 com 13 views; confirma `Validation=VALIDATED`, `paired_runs=30/30`, seis categorias com cinco pares cada, tokens `exact` e economia qualificada de 10,2%; Overview reporta medição `exact`. Plugins, MCPs, Graph, Cache e Memory continuam indisponíveis porque não há fontes/eventos reais para essas views.
+
+Validação remota anterior à correção do Core (`dbb102c6`): MCG `35806666214`, vertical `35806666216` e invariants `35806666208` PASS; core/verify falharam nos erros que foram corrigidos localmente acima. Nova rodada remota fica pendente para o commit que inclui a correção. PR segue sem merge.
 
 ### M0.13 Gate de conclusão
 
@@ -1578,9 +1580,9 @@ Só termina quando:
 
 ## Status atual
 
-ACTIVE — M0 REMEDIATION INCOMPLETE / M0.3 BLOCKED BY EXISTING CORE GATES / M0.13 OPEN / M1 BLOCKED ON M0 CLOSE
+ACTIVE — M0 REMEDIATION INCOMPLETE / LOCAL CORE + VALIDATION PASS / REMOTE CI PENDING / M0.13 OPEN / M1 BLOCKED ON M0 CLOSE
 
-O dashboard possui evidência local e remota MCG: unit 34/34, sintaxe 30 módulos, scan, dashboard 12/12, contracts 1/1 e Actions MCG PASS no PR draft #26. `saveEvaluation` valida o contrato e não promove medições incompletas a `exact`; scheduler tem testes para concorrência limitada e circuit breaker persistente. O runtime tem 0 pares elegíveis; há dataset estático com 30 casos equilibrados, ainda sem execução real. No commit `ea3d122a`, `core` e `verify` falharam em erros de typecheck em `packages/lumenva-core`, fora da allowlist MCG; `invariants` e `vertical` passaram. Não alterar esse pacote nem enfraquecer seus gates dentro da remediação MCG. M0.3 e M0.11 permanecem abertos; M0.13 continua aberto até todos os gates serem comprovados. Não iniciar M1 antes de fechar M0.
+Estado desta execução: Core typecheck e 9/9 testes locais PASS; MCG unit 35/35, dashboard 13/13, syntax 30 módulos, scan 80 arquivos e contracts 1/1 PASS. Validation Lab: 30 pares reais Codex CLI, `gpt-6-luna`/`medium`, medição exata, categorias 5×6, Trust `VALIDATED`, economia qualificada 10,2%, sem queda de sucesso (100% em ambas as lanes). O plano e evidências já registram os resultados; M0.11 está validado para este dataset. M0.3/M0.13 aguardam Actions verdes para o commit que corrige Core e adiciona retomada/progresso do runner. Não iniciar M1 antes do fechamento dos gates obrigatórios.
 
 Este documento é a fonte de verdade única da branch Lumenva Command Center.
 Não criar um segundo plano concorrente para o mesmo escopo; atualizar este arquivo.

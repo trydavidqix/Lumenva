@@ -24,7 +24,7 @@ test('terminal runtime owns PTY lifecycle and emits real runtime events', async 
   const adapter: TerminalAdapter = { spawn: () => pty };
   const runtime = new TerminalRuntime(bus, adapter);
   const events: Array<{ type: string; payload: unknown }> = [];
-  bus.on('*', (event) => events.push({ type: event.type, payload: event.payload }));
+  bus.on('*', (event) => { events.push({ type: event.type, payload: event.payload }); });
 
   const session = await runtime.create({ executable: 'pwsh', args: ['-NoLogo'], cwd: 'C:\\repo', cols: 100, rows: 25, traceId: 'trace-1' });
   assert.equal(session.status, 'RUNNING');

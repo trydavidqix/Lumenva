@@ -44,12 +44,20 @@ try {
     baseline: { task_success: true, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, total_tokens: 100, real_executor: true, measurement_type: 'exact', model: null, effort: 'same', workspace: root },
     mcg: { task_success: true, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, total_tokens: 70, real_executor: true, measurement_type: 'exact', model: null, effort: 'same', workspace: root }
   });
+  await saveEvaluation(root, {
+    run_id: 'pair-scoped', dataset: 'dataset-a', kind: 'A/B', category: 'coding',
+    baseline: { task_success: true, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, total_tokens: 100, real_executor: true, measurement_type: 'exact', model: 'gpt-6-luna', effort: 'medium', workspace: root, workspace_snapshot: 'snapshot-a', tools: [], policy: {} },
+    mcg: { task_success: true, context_recall: 100, evidence_grounding: 100, hallucination_rate: 0, total_tokens: 90, real_executor: true, measurement_type: 'exact', model: 'gpt-6-luna', effort: 'medium', workspace: root, workspace_snapshot: 'snapshot-a', tools: [], policy: {} }
+  });
   const aggregate = await aggregatePairedEvaluations(root);
-  assert.equal(aggregate.dataset_size, 2);
-  assert.deepEqual(aggregate.valid_run_ids, ['pair-0', 'pair-1']);
-  assert.equal(aggregate.baseline.total_tokens, 200);
-  assert.equal(aggregate.mcg.total_tokens, 140);
+  assert.equal(aggregate.dataset_size, 3);
+  assert.deepEqual(aggregate.valid_run_ids, ['pair-0', 'pair-1', 'pair-scoped']);
+  assert.equal(aggregate.baseline.total_tokens, 300);
+  assert.equal(aggregate.mcg.total_tokens, 230);
   assert.equal(aggregate.mcg.task_success, 100);
+  const scoped = await aggregatePairedEvaluations(root, { dataset: 'dataset-a', model: 'gpt-6-luna', effort: 'medium' });
+  assert.equal(scoped.dataset_size, 1);
+  assert.deepEqual(scoped.valid_run_ids, ['pair-scoped']);
 } finally {
   await rm(root, { recursive: true, force: true });
 }

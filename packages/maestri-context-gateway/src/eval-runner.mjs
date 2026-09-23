@@ -40,6 +40,12 @@ export function buildCodexArgs({ model = DEFAULT_MODEL, effort = DEFAULT_EFFORT,
   return ['exec', '--ignore-user-config', '--ephemeral', '--skip-git-repo-check', '--sandbox', 'read-only', '--model', model, '--config', 'model_reasoning_effort="' + effort + '"', '--json', '-C', workspace, prompt];
 }
 
+export function selectValidationCases(tests, { offset = 0, limit = null } = {}) {
+  if (!Number.isInteger(offset) || offset < 0 || offset > tests.length) throw new Error('validation offset must be an integer within the dataset');
+  if (limit !== null && (!Number.isInteger(limit) || limit < 1)) throw new Error('validation limit must be a positive integer');
+  return tests.slice(offset, limit === null ? undefined : offset + limit);
+}
+
 export function buildLanePrompt(lane, test) {
   const evidence = String(test.evidence || '');
   const context = lane === 'baseline' ? evidence + '\n' + archiveFor(test) : evidence;
@@ -96,14 +102,17 @@ export async function runPairedCase({ root, binary, workspace = root, test, mode
   return saveEvaluation(root, { run_id, kind: 'A/B', dataset: test.dataset || null, case_id: test.id, category: test.category, baseline, mcg, quality_preserving_savings: qualityPreservingSavings(baseline, mcg) });
 }
 
-export async function runValidationSuite({ root, binary, workspace = root, dataset, model = DEFAULT_MODEL, effort = DEFAULT_EFFORT, limit = null, timeout_ms, signal } = {}) {
+export async function runValidationSuite({ root, binary, workspace = root, dataset, model = DEFAULT_MODEL, effort = DEFAULT_EFFORT, offset = 0, limit = null, timeout_ms, signal, onProgress } = {}) {
   const tests = await readJsonl(dataset);
-  const selected = limit ? tests.slice(0, limit) : tests;
+  const selected = selectValidationCases(tests, { offset, limit });
   const runs = [];
-  for (const test of selected) runs.push(await runPairedCase({ root, binary, workspace, test: { ...test, dataset }, model, effort, timeout_ms, signal }));
-  const aggregate = await aggregatePairedEvaluations(root);
+  for (const [index, test] of selected.entries()) {
+    runs.push(await runPairedCase({ root, binary, workspace, test: { ...test, dataset }, model, effort, timeout_ms, signal }));
+    onProgress?.({ completed: index + 1, total: selected.length, offset, caseId: test.id });
+  }
+  const aggregate = await aggregatePairedEvaluations(root, { dataset, model, effort });
   const trust = trustScore({ baseline: aggregate.baseline, mcg: aggregate.mcg, context_recall: aggregate.context_recall, evidence_grounding: aggregate.evidence_grounding, hallucination_rate: aggregate.hallucination_rate, dataset_size: aggregate.dataset_size, last_validation: new Date().toISOString() });
-  const summary = { suite_id: 'suite-' + Date.now() + '-' + randomUUID().slice(0, 8), dataset, model, effort, pairs: runs.length, run_ids: runs.map(run => run.run_id), aggregate, trust, timestamp: new Date().toISOString(), source: 'real Codex CLI paired validation', measurement_type: aggregate.measurement_type };
+  const summary = { suite_id: 'suite-' + Date.now() + '-' + randomUUID().slice(0, 8), dataset, model, effort, offset, pairs: aggregate.dataset_size, executed_pairs: runs.length, run_ids: aggregate.valid_run_ids, executed_run_ids: runs.map(run => run.run_id), aggregate, trust, timestamp: new Date().toISOString(), source: 'real Codex CLI paired validation', measurement_type: aggregate.measurement_type };
   const out = join(root, 'state', 'evals', 'suites', summary.suite_id + '.json');
   await mkdir(dirname(out), { recursive: true, mode: 0o700 });
   await writeFile(out, JSON.stringify(summary, null, 2) + '\n', { mode: 0o600 });
