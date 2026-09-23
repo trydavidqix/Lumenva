@@ -6,6 +6,7 @@ import { createTrace, startSpan, finishSpan, loadTrace } from '../src/traces.mjs
 
 const root = await mkdtemp(join(tmpdir(), 'mcg-trace-'));
 try {
+  await assert.rejects(startSpan(root, {}, { source: 'test' }), /trace contract invalid/);
   const trace = await createTrace(root, { task_id: 'trace-task', source: 'test' });
   const parent = await startSpan(root, trace, { operation_type: 'context.compile', source: 'test' });
   const child = await startSpan(root, trace, { operation_type: 'tool.call', parent_span_id: parent.span_id, tool_name: 'test-tool', source: 'test' });

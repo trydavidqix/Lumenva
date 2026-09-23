@@ -9,6 +9,7 @@ const root = await mkdtemp(join(tmpdir(), 'mcg-core-'));
 try {
   const task = await dispatch({ task_id: 'real-metadata', executor: 'codex', agent: 'Codex CTO', runtime: 'Codex CLI', ide: 'Codex CLI', source: { plugin_id: 'caveman', plugin_name: 'Caveman', skill_name: 'caveman', host_agent: 'Codex CTO' } }, root);
   assert.equal(task.source.plugin_id, 'caveman');
+  await assert.rejects(ingest({ task_id: task.task_id, event_id: 'invalid-timestamp', state: 'WORKING', timestamp: 'not-a-date' }, root), /event contract invalid/);
   await ingest({ task_id: task.task_id, event_id: 'complete', sequence: 1, state: 'DONE', result: 'ok', usage: { input_tokens: 100, cached_input_tokens: 25, output_tokens: 20, reasoning_tokens: 10, total_tokens: 130, source: 'codex.cli.usage' } }, root);
   assert.equal((await loadState(task.task_id, root)).source.skill_name, 'caveman');
   const telemetry = await telemetryEvents(root);

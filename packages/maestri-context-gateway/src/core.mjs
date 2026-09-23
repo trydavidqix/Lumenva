@@ -9,6 +9,7 @@ import { getEventBus } from './events/bus.mjs';
 import { compileContext } from './context/compiler.mjs';
 import { cacheContext } from './context/cache.mjs';
 import { recordHistory } from './history/store.mjs';
+import { assertContract } from './contracts.mjs';
 
 export const ROOT = process.env.MCG_ROOT || join(homedir(), '.lumenva', 'maestri-context-gateway');
 export const TASKS = join(ROOT, 'tasks');
@@ -41,7 +42,12 @@ export function statePath(id, root = ROOT) { return join(taskDir(id, root), 'sta
 export function evidencePath(id, root = ROOT) { return join(taskDir(id, root), 'evidence'); }
 
 export async function saveState(state, root = ROOT) {
+  assertTaskContract(state);
   await atomicJson(statePath(state.task_id, root), state);
+}
+
+function assertTaskContract(state) {
+  assertContract('task', { ...state, status: state.external_state || state.internal_state, timestamp: state.updated_at || state.created_at, source: 'mcg.task-state', measurement_type: 'exact' });
 }
 
 export async function loadState(id, root = ROOT) {
@@ -99,6 +105,7 @@ export async function dispatch(input, root = ROOT) {
   const trace = await createTrace(root, { task_id: id, session_id: input.session_id || input.session, source: 'mcg.dispatch' });
   const dispatchSpan = await startSpan(root, trace, { task_id: id, workspace: input.workspace || null, agent_name: input.agent || source.host_agent || null, executor: input.executor || 'codex', runtime: input.runtime || null, ide: input.ide || null, operation_type: 'mcg.dispatch', source: 'mcg.dispatch' });
   const state = { task_id: id, trace_id: trace.trace_id, session_id: trace.session_id, project: input.project || process.cwd(), executor: input.executor || 'codex', agent: input.agent || source.host_agent || null, runtime: input.runtime || null, ide: input.ide || null, source, session: input.session || null, created_at: now, updated_at: now, internal_state: 'DISPATCHED', external_state: null, last_event_id: null, last_sequence: null, result_reference: null, evidence_reference: `${id}/manifest.json`, objective: input.objective || null, constraints: input.constraints || [], acceptance: input.acceptance || [] };
+  assertTaskContract(state);
   await mkdir(join(root, 'tasks', id, 'evidence'), { recursive: true, mode: 0o700 });
   const contextFragments = input.context_fragments || [
     { id: `${id}:objective`, category: 'must_keep', priority: 100, content: input.objective || '' },
@@ -124,6 +131,7 @@ export async function dispatch(input, root = ROOT) {
 export async function ingest(event, root = ROOT) {
   assertTaskId(event.task_id);
   if (!event.task_id || !event.event_id || !event.state) throw new Error('event requires task_id, event_id and state');
+  assertContract('event', { ...event, timestamp: event.timestamp || new Date().toISOString(), source: typeof event.source === 'string' && event.source ? event.source : 'mcg.ingest', measurement_type: event.measurement_type || 'unavailable' });
   if (!INTERNAL.has(event.state)) throw new Error(`invalid internal state: ${event.state}`);
   const encoded = JSON.stringify(event);
   if (Buffer.byteLength(encoded, 'utf8') > 1024 * 1024) throw new Error('event exceeds 1 MiB limit');

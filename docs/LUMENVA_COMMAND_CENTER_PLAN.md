@@ -1281,7 +1281,7 @@ Cada registro:
 - measurement_type
 - source
 
-Progresso verificável (2026-09-23): `saveEvaluation` agora valida cada registro contra o contrato `eval` antes de persistir. O `measurement_type` do agregado só é `exact` quando ambas as metades baseline/MCG têm medição exata; dados parciais ou indisponíveis não são promovidos a exatos. Regressões cobrem categoria/medição fabricada rejeitada e par com medição parcial classificado como `unavailable`.
+Progresso verificável (2026-09-23): os 12 tipos de contrato têm validação em runtime nos caminhos correspondentes: entradas e histórico de task, eventos recebidos e publicados, traces/spans, telemetry, registries, alerts, evals e artifacts/evidence. `saveEvaluation` valida antes de persistir; `measurement_type` só é `exact` quando ambas as metades baseline/MCG são exatas. Regressões confirmaram rejeição de timestamp inválido em event, trace sem `trace_id`, alert incompatível e measurement fabricada, além de par com medição parcial classificado como `unavailable`. Testes locais da suíte, dashboard, contracts, sintaxe e scan passaram. A validação de contratos não comprova, sozinha, que registries reais foram descobertos/populados; isso continua separado no M0.8.
 
 ### M0.9 Scheduler, Router e Reliability
 

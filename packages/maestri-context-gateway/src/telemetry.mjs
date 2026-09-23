@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { randomUUID } from 'node:crypto';
-import { validateContract } from './contracts.mjs';
+import { assertContract, validateContract } from './contracts.mjs';
 import { recordHistory } from './history/store.mjs';
 
 const exec = promisify(execFile);
@@ -107,12 +107,13 @@ export async function evaluateAlerts(root, usage = {}) {
   const check = (scope, key, used, budget, thresholds = budgets.global) => {
     if (!Number.isFinite(budget) || budget <= 0 || !Number.isFinite(used)) return;
     const percent = Number((used / budget * 100).toFixed(2)); const severity = percent >= thresholds.critical_percent ? 'CRITICAL' : percent >= thresholds.warning_percent ? 'WARNING' : 'NORMAL';
-    if (severity !== 'NORMAL') results.push({ alert_id: randomUUID(), severity, level: severity, scope, key, percent, used_tokens: used, token_budget: budget, message: `${scope} ${key} atingiu ${percent}% do orçamento`, source: 'config/usage-budgets.json', measurement_type: 'estimated', timestamp: now, created_at: now });
+    if (severity !== 'NORMAL') results.push({ alert_id: randomUUID(), severity, level: severity, scope, key, percent, used_tokens: used, token_budget: budget, message: `${scope} ${key} atingiu ${percent}% do orçamento`, source: 'config/usage-budgets.json', measurement_type: 'estimated', timestamp: now, created_at: now, delivery_status: 'queued' });
   };
   check('global', 'global', usage.tokens, budgets.global.token_budget);
   const groups = { executor: usage.executors, agent: usage.agents, plugin: usage.plugins, mcp: usage.mcps, ide: usage.ides, runtime: usage.runtimes, tool: usage.tools };
   for (const [scope, values] of Object.entries(groups)) for (const [key, value] of Object.entries(values || {})) { const config = budgets[`${scope}s`]?.[key]; check(scope, key, value?.tokens, config?.token_budget, { ...budgets.global, ...config }); }
   for (const alert of results) {
+    assertContract('alert', alert);
     const created = await appendOnce(join(root, 'state', 'alerts', 'alerts.jsonl'), alert, item => item.scope === alert.scope && item.key === alert.key && item.severity === alert.severity && item.active !== false);
     if (created) { await appendFile(join(root, 'state', 'alerts', 'ceo-inbox.jsonl'), `${JSON.stringify({ alert_id: alert.alert_id, severity: alert.severity, scope: alert.scope, message: alert.message, created_at: alert.created_at, timestamp: alert.timestamp, source: alert.source, measurement_type: alert.measurement_type, delivery_status: 'queued' })}\n`, { mode: 0o600 }); await recordHistory(root, 'alerts', alert); }
   }
@@ -134,7 +135,7 @@ export async function evaluateAnomalies(root, events = [], tasks = []) {
   for (const [tool, count] of Object.entries(Object.fromEntries([...new Set(recent.map(item => item.tool).filter(Boolean))].map(tool => [tool, recent.filter(item => item.tool === tool).length])))) if (rules.tool_loop?.enabled && count >= (rules.tool_loop.calls || 4)) add('TOOL_LOOP', 'tool', tool, count, 0, rules.tool_loop.calls, `TOOL_LOOP: ${tool} chamado ${count} vezes`);
   const compiles = recent.filter(item => item.operation === 'context.compile').length; if (rules.context_churn?.enabled && compiles >= (rules.context_churn.calls || 5)) add('CONTEXT_CHURN', 'global', 'context', compiles, 0, rules.context_churn.calls, `CONTEXT_CHURN: ${compiles} compilações recentes`);
   const stuck = tasks.filter(task => task.active && task.created_at && Date.now() - Date.parse(task.created_at) > (rules.agent_stuck?.age_minutes || 30) * 60_000); if (rules.agent_stuck?.enabled && stuck.length) add('AGENT_STUCK', 'agent', stuck[0].agent || 'Não identificado', stuck.length, 0, rules.agent_stuck.age_minutes, `AGENT_STUCK: ${stuck.length} task(s) ativa(s) acima do limite`);
-  for (const alert of candidates) { const inserted = await appendOnce(join(root, 'state', 'alerts', 'alerts.jsonl'), alert, item => item.type === alert.type && item.scope === alert.scope && item.entity === alert.entity && item.active !== false); if (inserted) { await appendFile(join(root, 'state', 'alerts', 'ceo-inbox.jsonl'), `${JSON.stringify(alert)}\n`, { mode: 0o600 }); await recordHistory(root, 'alerts', alert); } }
+  for (const alert of candidates) { assertContract('alert', alert); const inserted = await appendOnce(join(root, 'state', 'alerts', 'alerts.jsonl'), alert, item => item.type === alert.type && item.scope === alert.scope && item.entity === alert.entity && item.active !== false); if (inserted) { await appendFile(join(root, 'state', 'alerts', 'ceo-inbox.jsonl'), `${JSON.stringify(alert)}\n`, { mode: 0o600 }); await recordHistory(root, 'alerts', alert); } }
   return candidates;
 }
 
