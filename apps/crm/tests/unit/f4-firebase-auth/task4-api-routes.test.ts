@@ -8,6 +8,8 @@ import { POST as anonymizePrivacy } from "@/app/api/v1/privacy/anonymize/route";
 import { loadAuthUser } from "@/lib/auth/server";
 import { requireRole } from "@/lib/auth/require-role";
 import { getServerSession } from "@/lib/firebase/server";
+import type { DecodedIdToken } from "firebase-admin/auth";
+import type { AuthUser, RoleCheck } from "@/lib/auth/types";
 
 // Mock getServerSession
 vi.mock("@/lib/firebase/server", () => ({
@@ -15,10 +17,8 @@ vi.mock("@/lib/firebase/server", () => ({
 }));
 
 // Mock loadAuthUser
-vi.mock("@/lib/auth/server", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/auth/server")>();
+vi.mock("@/lib/auth/server", async () => {
   return {
-    ...actual,
     loadAuthUser: vi.fn(),
     resolveActiveOrg: vi.fn().mockResolvedValue({ orgId: "org-1", role: "admin" })
   };
@@ -59,9 +59,7 @@ describe("Task 4: API Routes Firebase Auth Migration", () => {
 
   describe("GET /api/v1/auth/realtime-token", () => {
     it("should return 501 blocker since Firebase cannot issue Supabase tokens", async () => {
-      vi.mocked(getServerSession).mockResolvedValue(
-        { uid: "user-1", email: "test@test.com" } as unknown as Awaited<ReturnType<typeof getServerSession>>,
-      );
+      vi.mocked(getServerSession).mockResolvedValue({ uid: "user-1", email: "test@test.com" } as unknown as DecodedIdToken);
       const req = new NextRequest("http://localhost/api/v1/auth/realtime-token");
       const res = await getRealtimeToken(req);
 
@@ -82,9 +80,7 @@ describe("Task 4: API Routes Firebase Auth Migration", () => {
     });
 
     it("should return 200 with summary data if authenticated", async () => {
-      vi.mocked(loadAuthUser).mockResolvedValue(
-        { id: "user-1", email: "test@example.com", is_platform_admin: false, organizations: [] } as unknown as Awaited<ReturnType<typeof loadAuthUser>>,
-      );
+      vi.mocked(loadAuthUser).mockResolvedValue({ id: "user-1", email: "test@example.com", is_platform_admin: false, organizations: [] } as unknown as AuthUser);
       const req = new NextRequest("http://localhost/api/v1/contacts/123/crm-summary");
       const res = await getCrmSummary(req, { params: Promise.resolve({ id: "123" }) });
       expect(res.status).toBe(200);
@@ -104,7 +100,7 @@ describe("Task 4: API Routes Firebase Auth Migration", () => {
     it("should return 401 if loadAuthUser returns null", async () => {
       vi.mocked(loadAuthUser).mockResolvedValue(null);
       const req = new NextRequest("http://localhost/api/v1/conversations/counts");
-      const res = await getConversationsCounts();
+      const res = await getConversationsCounts(req);
       expect(res.status).toBe(401);
     });
   });
@@ -114,13 +110,13 @@ describe("Task 4: API Routes Firebase Auth Migration", () => {
       vi.mocked(requireRole).mockResolvedValue({
         ok: false,
         response: Response.json({ error: { code: "unauthenticated" } }, { status: 401 })
-      } as unknown as Awaited<ReturnType<typeof requireRole>>);
+      } as unknown as RoleCheck);
 
       const req = new NextRequest("http://localhost/api/v1/privacy/anonymize", {
         method: "POST",
         body: JSON.stringify({ contact_id: "123" })
       });
-      const res = await anonymizePrivacy(req);
+      const res = await anonymizePrivacy(req, { params: Promise.resolve({ id: "123" }) });
       expect(res.status).toBe(401);
     });
   });
