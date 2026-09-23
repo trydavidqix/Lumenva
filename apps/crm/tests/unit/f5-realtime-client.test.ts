@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
 import { useRealtimeChannel } from "@/hooks/realtime/useRealtimeChannel";
 import * as AuthProvider from "@/hooks/auth/AuthProvider";
 
@@ -7,28 +7,32 @@ vi.mock("@/hooks/auth/AuthProvider", () => ({
   useActiveOrg: vi.fn(),
 }));
 
+type MockEvent = { data: string };
+type MockEventListener = (event: MockEvent) => void;
+type MockEventSourceOptions = { withCredentials?: boolean };
+
 class MockEventSource {
-  static instances: any[] = [];
+  static instances: MockEventSource[] = [];
   url: string;
   withCredentials: boolean;
-  listeners: Record<string, Function[]> = {};
+  listeners: Record<string, MockEventListener[]> = {};
 
-  constructor(url: string, opts: any) {
+  constructor(url: string, opts?: MockEventSourceOptions) {
     this.url = url;
-    this.withCredentials = opts?.withCredentials;
+    this.withCredentials = opts?.withCredentials ?? false;
     MockEventSource.instances.push(this);
   }
 
-  addEventListener(type: string, listener: Function) {
+  addEventListener(type: string, listener: MockEventListener) {
     if (!this.listeners[type]) this.listeners[type] = [];
     this.listeners[type].push(listener);
   }
 
-  removeEventListener(type: string, listener: Function) {}
+  removeEventListener(_type: string, _listener: MockEventListener) {}
 
   close() {}
 
-  emit(type: string, event: any) {
+  emit(type: string, event: MockEvent) {
     if (this.listeners[type]) {
       this.listeners[type].forEach(l => l(event));
     }
@@ -40,7 +44,9 @@ describe("F5 Task 5 - useRealtimeChannel SSE Migration", () => {
     MockEventSource.instances = [];
     vi.stubGlobal("EventSource", MockEventSource);
 
-    vi.spyOn(AuthProvider, "useActiveOrg").mockReturnValue({ orgId: "o-1", name: "Org", role: "viewer" } as any);
+    vi.spyOn(AuthProvider, "useActiveOrg").mockReturnValue(
+      { orgId: "o-1", name: "Org", role: "viewer" } as ReturnType<typeof AuthProvider.useActiveOrg>,
+    );
   });
 
   afterEach(() => {
@@ -67,7 +73,7 @@ describe("F5 Task 5 - useRealtimeChannel SSE Migration", () => {
 
   it("should map table/filter correctly and trigger onChange when message matches", () => {
     const onChange = vi.fn();
-    const { result } = renderHook(() => useRealtimeChannel({
+    renderHook(() => useRealtimeChannel({
        name: "test",
        postgresChanges: { event: "*", table: "my_table" },
        onChange
