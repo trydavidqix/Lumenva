@@ -36,6 +36,22 @@ export async function loadAuthUser(): Promise<AuthUser | null> {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
+  // 1) Use the canonical chain Firebase uid -> identity_user_mappings -> internal user_id
+  const { data: mappedUserId, error: mapError } = await supabase.rpc("resolve_firebase_identity", {
+    p_firebase_uid: user.id,
+  });
+
+  if (mapError) {
+    logger.error("[auth] resolve_firebase_identity failed", { error: mapError.message });
+    throw new Error("auth_permissions_unavailable: Não foi possível mapear a identidade do usuário.");
+  }
+
+  const internalUserId = mappedUserId;
+  if (!internalUserId) {
+    // Fail closed for unmapped UID.
+    return null;
+  }
+
   // Platform admin? (active = no revoked_at). RLS returns null for non-admins.
   //
   // ⚠️ O erro é capturado de propósito: aqui `data: null` é AMBÍGUO — significa tanto
@@ -44,7 +60,7 @@ export async function loadAuthUser(): Promise<AuthUser | null> {
   const { data: paRow, error: paErro } = await supabase
     .from("platform_admins")
     .select("user_id, revoked_at")
-    .eq("user_id", user.id)
+    .eq("user_id", internalUserId)
     .is("revoked_at", null)
     .maybeSingle();
 
@@ -52,7 +68,7 @@ export async function loadAuthUser(): Promise<AuthUser | null> {
   const { data: rawMemberships, error: membErro } = await supabase
     .from("user_organizations")
     .select("organization_id, role, organizations(display_name)")
-    .eq("user_id", user.id)
+    .eq("user_id", internalUserId)
     .is("revoked_at", null);
 
   /**
@@ -102,7 +118,7 @@ export async function loadAuthUser(): Promise<AuthUser | null> {
   const avatarUrl = (user.user_metadata?.avatar_url as string | undefined) ?? null;
 
   return {
-    id: user.id,
+    id: internalUserId,
     email: user.email ?? "",
     full_name: fullName,
     avatar_url: avatarUrl,
@@ -144,17 +160,17 @@ export async function requireAuth(): Promise<AuthUser> {
 /**
  * Returns true if the current session has at least one verified TOTP factor.
  * Use only in Server Components / Server Actions (cookie session).
+ * Deprecated in F4: always returns false to disable MFA enforcement.
  */
 export async function isMfaEnrolled(): Promise<boolean> {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.mfa.listFactors();
-  return !!data?.totp?.some((f) => f.status === "verified");
+  return false;
 }
 
 /**
  * MFA enforcement policy: platform admins and tenant `admin` role MUST enroll.
  * `manager`/`agent`/`viewer` are optional in MVP.
+ * Deprecated in F4: always returns false to disable MFA enforcement.
  */
 export function requiresMfa(role: Role | undefined, isPlatformAdmin: boolean): boolean {
-  return isPlatformAdmin || role === "admin";
+  return false;
 }

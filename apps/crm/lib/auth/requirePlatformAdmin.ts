@@ -41,11 +41,26 @@ export async function resolvePlatformAdmin(): Promise<ResolveResult> {
     return { ok: false, reason: "unauthenticated" };
   }
 
+  // Use the internal user_id mapping via resolve_firebase_identity
+  const { data: mappedUserId, error: mapError } = await supabase.rpc("resolve_firebase_identity", {
+    p_firebase_uid: user.id,
+  });
+
+  if (mapError) {
+    logger.error("[auth] resolve_firebase_identity failed", { error: mapError.message });
+    return { ok: false, reason: "internal_error" };
+  }
+
+  const internalUserId = mappedUserId;
+  if (!internalUserId) {
+    return { ok: false, reason: "forbidden" }; // Unmapped Firebase UID
+  }
+
   // platform_admins RLS: only platform admins read; non-admins get null → forbid.
   const { data: paRow, error } = await supabase
     .from("platform_admins")
     .select("user_id, scope, mfa_required, revoked_at")
-    .eq("user_id", user.id)
+    .eq("user_id", internalUserId)
     .is("revoked_at", null)
     .maybeSingle();
 
@@ -58,25 +73,14 @@ export async function resolvePlatformAdmin(): Promise<ResolveResult> {
     return { ok: false, reason: "forbidden" };
   }
 
-  if (paRow.mfa_required) {
-    const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (aalError) {
-      logger.error("[auth] mfa aal query failed", { error: aalError.message });
-      return { ok: false, reason: "internal_error" };
-    }
-    if (aalData?.currentLevel !== "aal2") {
-      return { ok: false, reason: "mfa_required" };
-    }
-  }
-
   return {
     ok: true,
     context: {
-      user,
+      user: { ...user, id: internalUserId },
       platformAdmin: {
         user_id: paRow.user_id,
         scope: paRow.scope,
-        mfa_required: paRow.mfa_required,
+        mfa_required: false, // F4 disables MFA enforcement
       },
     }
   };
