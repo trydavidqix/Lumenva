@@ -16,14 +16,14 @@
 import { createHash } from "node:crypto";
 
 import type { Actor } from "@/lib/api/handlers/types";
-import type { Role } from "@/lib/auth/types";
-import { ROLE_RANK } from "@/lib/auth/types";
+import type { ActorRole } from "@/lib/auth/types";
+import { isActorRole, isHumanRole, ROLE_RANK } from "@/lib/auth/types";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface McpAuthResult {
   organizationId: string;
-  role: Role;
+  role: ActorRole;
   actor: Actor;
   apiTokenId: string;
   scopes: string[];
@@ -40,30 +40,34 @@ export class McpAuthError extends Error {
   }
 }
 
-const VALID_ROLES = new Set<Role>(["viewer", "agent", "ai_operator", "manager", "admin"]);
+const VALID_ROLES = new Set<ActorRole>(["viewer", "agent", "ai_operator", "manager", "admin"]);
 
 function parseScopes(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
   return raw.filter((s): s is string => typeof s === "string");
 }
 
-function scopesRole(scopes: string[]): Role {
-  for (const s of scopes) {
-    if (s.startsWith("role:")) {
-      const r = s.slice("role:".length) as Role;
-      if (VALID_ROLES.has(r)) return r;
-    }
+function scopesRole(scopes: string[]): ActorRole {
+  const roleScope = scopes.find((s) => s.startsWith("role:"));
+  if (!roleScope) return "agent";
+
+  const role = roleScope.slice("role:".length);
+  if (isActorRole(role) && VALID_ROLES.has(role)) {
+    return role;
   }
-  return "agent";
+
+  throw new McpAuthError(-32001, 401, "Invalid token role.");
 }
 
-function deriveActor(scopes: string[], tokenId: string): Actor {
+function deriveActor(scopes: string[], tokenId: string, role: ActorRole): Actor {
   const isAiAgent = scopes.includes("actor:ai_agent");
-  const role = scopesRole(scopes);
   if (isAiAgent) {
     const runScope = scopes.find((s) => s.startsWith("agent_run:"));
     const runId = runScope ? runScope.slice("agent_run:".length) : tokenId;
     return { type: "ai_agent", id: runId, role, api_token_id: tokenId };
+  }
+  if (!isHumanRole(role)) {
+    throw new McpAuthError(-32001, 401, "Internal actor role requires an AI actor token.");
   }
   return { type: "user", id: tokenId, role };
 }
@@ -97,7 +101,7 @@ export async function validateBearerToken(
     .maybeSingle();
 
   if (error) {
-    throw new McpAuthError(-32603, 500, `Token lookup failed: ${error.message}`);
+    throw new McpAuthError(-32603, 500, "Token lookup failed.");
   }
   if (!data) {
     throw new McpAuthError(-32001, 401, "Token not recognized.");
@@ -111,7 +115,7 @@ export async function validateBearerToken(
 
   const scopes = parseScopes(data.scopes);
   const role = scopesRole(scopes);
-  const actor = deriveActor(scopes, data.id);
+  const actor = deriveActor(scopes, data.id, role);
 
   supabase
     .from("api_tokens")
@@ -130,7 +134,7 @@ export async function validateBearerToken(
   };
 }
 
-export function ensureRole(actual: Role, minimum: Role): void {
+export function ensureRole(actual: ActorRole, minimum: ActorRole): void {
   if (ROLE_RANK[actual] < ROLE_RANK[minimum]) {
     throw new McpAuthError(
       -32002,

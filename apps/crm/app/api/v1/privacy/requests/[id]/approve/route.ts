@@ -108,7 +108,7 @@ export async function POST(
     .maybeSingle();
 
   if (reqErr) {
-    return fail("internal_error", reqErr.message, 500, { requestId });
+    return fail("internal_error", "Não foi possível ler a solicitação.", 500, { requestId });
   }
   if (!request) {
     return fail("not_found", "Solicitação não encontrada.", 404, { requestId });
@@ -160,8 +160,8 @@ export async function POST(
   // Transition status → processing
   try {
     await transitionLgpdRequest(orgId, id, "in_review");
-  } catch (err) {
-    return fail("internal_error", (err as Error).message, 500, { requestId });
+  } catch {
+    return fail("internal_error", "Não foi possível aprovar a solicitação.", 500, { requestId });
   }
 
   // Audit — fire-and-forget

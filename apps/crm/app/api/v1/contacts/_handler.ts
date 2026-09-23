@@ -14,6 +14,7 @@ import type { Actor, HandlerCtx } from "@/lib/api/handlers/types";
 import { audit } from "@/lib/audit";
 import { hashCpf, encryptCpfSql } from "@/lib/contacts/cpf";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isHumanRole, ROLE_RANK } from "@/lib/auth/types";
 import type { Contact } from "@/lib/types/contacts";
 import type {
   ContactCreate,
@@ -26,13 +27,6 @@ type SB = SupabaseClient;
 const SELECT_COLS =
   "id, organization_id, name, display_name, email, email_normalized, phone_number, birthdate, is_blocked, blocked_reason, is_anonymized, anonymized_at, is_merged_into, merged_at, consent, tags, source, source_metadata, created_at, updated_at, last_activity_at";
 const SELECT_INTERNAL_COLS = `${SELECT_COLS}, cpf_hash`;
-
-const ROLE_RANK: Record<string, number> = {
-  viewer: 1,
-  agent: 2,
-  manager: 3,
-  admin: 4,
-};
 
 interface CursorPayload {
   last_activity_at: string | null;
@@ -225,16 +219,18 @@ export async function getContactHandler(
   let cpfDecryptDenied = false;
 
   if (input.decryptPurpose && _cpfHash && ctx.actor.type === "user") {
-    const { data: membership } = await supabase
-      .from("user_organizations")
-      .select("role")
-      .eq("user_id", ctx.actor.id)
-      .eq("organization_id", contact.organization_id)
-      .is("revoked_at", null)
-      .maybeSingle();
+    // Utilize ctx.actor.role (resolvido pelo auth/require-role.ts).
+    // O fallback RLS/RPC é se não vier no contexto, mas o GET/PATCH usa o
+    // requireRole que injeta. Para GET de /api/v1/contacts/[id], a rota
+    // já foi interceptada pelo novo helper se necessário, ou usamos fallback RLS.
+    let rank = ctx.actor.role ? (ROLE_RANK[ctx.actor.role] ?? 0) : 0;
+    if (!ctx.actor.role) {
+      const { data: effectiveRole } = await supabase.rpc("fn_user_role_in_org", {
+        p_org: contact.organization_id,
+      });
+      rank = isHumanRole(effectiveRole) ? ROLE_RANK[effectiveRole] : 0;
+    }
 
-    const role = membership?.role as string | undefined;
-    const rank = role ? (ROLE_RANK[role] ?? 0) : 0;
     if (rank < ROLE_RANK.manager!) {
       cpfDecryptDenied = true;
     } else {

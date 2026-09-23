@@ -9,7 +9,7 @@ import type { NextRequest } from "next/server";
 
 import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
-import { loadAuthUser } from "@/lib/auth/server";
+import { requirePlatformAdminApi } from "@/lib/auth/require-platform-admin-api";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isRunStale } from "@/lib/system/update-run";
@@ -19,13 +19,9 @@ export const dynamic = "force-dynamic";
 const RUN_IN_PROGRESS_MESSAGE = "Já existe uma atualização em andamento.";
 
 export async function POST(_req: NextRequest): Promise<Response> {
-  const user = await loadAuthUser();
-  // `unauthenticated` (não `unauthorized`): esse último é reservado ao segredo
-  // interno das rotas host↔app (lib/api/errors.ts) — aqui falta é sessão.
-  if (!user) return fail("unauthenticated", "Faça login para continuar.", 401);
-  if (!user.is_platform_admin) {
-    return fail("forbidden", "Só o dono do servidor pode atualizar o sistema.", 403);
-  }
+  const authz = await requirePlatformAdminApi();
+  if (!authz.ok) return authz.response;
+  const user = authz.context.user;
 
   const db = createAdminClient();
   const { data: version, error: versionError } = await db

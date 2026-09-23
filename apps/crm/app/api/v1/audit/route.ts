@@ -62,7 +62,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   }
 
   const { data, error } = await query;
-  if (error) return fail("internal_error", error.message, 500, { requestId });
+  if (error) return fail("internal_error", "Não foi possível ler o audit log.", 500, { requestId });
 
   const rows = data ?? [];
   const hasMore = rows.length > q.limit;

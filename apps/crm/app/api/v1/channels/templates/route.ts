@@ -13,8 +13,7 @@ import { randomUUID } from "node:crypto";
 import type { NextRequest, NextResponse } from "next/server";
 
 import { fail, ok } from "@/lib/api/wrappers";
-import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
-import { ROLE_RANK } from "@/lib/auth/types";
+import { requireRole } from "@/lib/auth/require-role";
 import { metaSessionForOrg } from "@/lib/channels/meta/session";
 import { normalizeRejectedReason } from "@/lib/channels/meta/webhook";
 import { deriveTemplateContract, describeAddress } from "@/lib/channels/meta/template-contract";
@@ -71,35 +70,20 @@ function textPreviews(components: unknown): Array<{ onde: string; text: string }
   return out;
 }
 
-type OrgGate =
-  | { autorizado: true; orgId: string }
-  | { autorizado: false; resposta: NextResponse };
-
-async function orgOrFail(requestId: string): Promise<OrgGate> {
-  const user = await requireAuth();
-  const activeOrg = await resolveActiveOrg(user);
-  if (!activeOrg || ROLE_RANK[activeOrg.role] < ROLE_RANK.admin) {
-    return {
-      autorizado: false,
-      resposta: fail("forbidden", "admin_required", 403, { requestId }),
-    };
-  }
-  return { autorizado: true, orgId: activeOrg.orgId };
-}
-
 export async function GET(): Promise<NextResponse> {
   const requestId = randomUUID();
-  const r = await orgOrFail(requestId);
-  if (!r.autorizado) return r.resposta;
+  const authz = await requireRole("admin", { requestId, resource: "meta_templates" });
+  if (!authz.ok) return authz.response;
+  const { orgId } = authz.org;
 
-  const sessao = await metaSessionForOrg(r.orgId);
+  const sessao = await metaSessionForOrg(orgId);
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("meta_templates")
     .select(
       "name, language, status, category, rejected_reason, quality_score, parameter_format, contract_hash, components, synced_at",
     )
-    .eq("organization_id", r.orgId)
+    .eq("organization_id", orgId)
     .order("status")
     .order("name");
 
@@ -144,10 +128,11 @@ export async function GET(): Promise<NextResponse> {
 
 export async function POST(_req: NextRequest): Promise<NextResponse> {
   const requestId = randomUUID();
-  const r = await orgOrFail(requestId);
-  if (!r.autorizado) return r.resposta;
+  const authz = await requireRole("admin", { requestId, resource: "meta_templates" });
+  if (!authz.ok) return authz.response;
+  const { orgId } = authz.org;
 
-  const sessao = await metaSessionForOrg(r.orgId);
+  const sessao = await metaSessionForOrg(orgId);
   if (!sessao?.wabaId) {
     return fail("invalid_request", "no_meta_channel", 400, { requestId });
   }
@@ -157,7 +142,7 @@ export async function POST(_req: NextRequest): Promise<NextResponse> {
 
   try {
     const counts = await syncTemplates({
-      organizationId: r.orgId,
+      organizationId: orgId,
       wabaId: sessao.wabaId,
       token,
       graphVersion: env.META_GRAPH_VERSION,

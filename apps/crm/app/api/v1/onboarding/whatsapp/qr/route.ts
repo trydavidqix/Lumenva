@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
+import { requireRole } from "@/lib/auth/require-role";
 
 /**
  * Proxy WAHA's QR endpoint so the browser can <img src="..." /> without
@@ -8,10 +8,9 @@ import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
  * WAHA Plus exposes: GET /api/{session}/auth/qr?format=image → image/png bytes.
  */
 export async function GET() {
-  const user = await loadAuthUser();
-  if (!user) return new NextResponse(null, { status: 401 });
-  const activeOrg = await resolveActiveOrg(user);
-  if (!activeOrg) return new NextResponse(null, { status: 404 });
+  const authz = await requireRole("viewer", { allowPlatformAdmin: true });
+  if (!authz.ok) return new NextResponse(null, { status: authz.response.status });
+  const { org: activeOrg } = authz;
 
   const baseUrl = process.env.WAHA_API_BASE_URL;
   const apiKey = process.env.WAHA_API_KEY;

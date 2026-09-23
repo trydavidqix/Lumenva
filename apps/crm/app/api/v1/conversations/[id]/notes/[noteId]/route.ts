@@ -8,7 +8,6 @@ import { type NextRequest } from "next/server";
 import { audit } from "@/lib/audit";
 import { fail, noContent } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
-import { ROLE_RANK } from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +18,7 @@ interface RouteParams {
 
 export async function DELETE(_req: NextRequest, { params }: RouteParams): Promise<Response> {
   const requestId = randomUUID();
+  // Call requireRole with agent to verify base access
   const authz = await requireRole("agent", { requestId, resource: "conversation_notes" });
   if (!authz.ok) return authz.response;
   const { user, org } = authz;
@@ -37,8 +37,11 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams): Promis
     .maybeSingle();
   if (!note) return fail("not_found", "Nota não encontrada.", 404, { requestId });
 
-  if (note.created_by_user_id !== user.id && ROLE_RANK[org.role] < ROLE_RANK.manager) {
-    return fail("forbidden", "Só o autor ou manager+ pode apagar esta nota.", 403, { requestId });
+  if (note.created_by_user_id !== user.id) {
+    const managerAuthz = await requireRole("manager", { requestId, resource: "conversation_notes" });
+    if (!managerAuthz.ok) {
+      return fail("forbidden", "Só o autor ou manager+ pode apagar esta nota.", 403, { requestId });
+    }
   }
 
   const { data: deleted, error } = await supabase

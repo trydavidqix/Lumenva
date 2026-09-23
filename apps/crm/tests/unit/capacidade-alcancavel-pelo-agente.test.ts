@@ -35,7 +35,7 @@ import { describe, expect, it } from "vitest";
 
 import { allTools } from "@/lib/mcp/tools";
 import { catalogEntry } from "@/lib/mcp/tools/catalog";
-import { ROLE_RANK, type Role } from "@/lib/auth/types";
+import { ROLE_RANK, type ActorRole } from "@/lib/auth/types";
 
 const RAIZ = join(__dirname, "..", "..");
 
@@ -43,7 +43,7 @@ const RAIZ = join(__dirname, "..", "..");
  * O papel que um agente publicado de fato recebe. Constante local de propósito —
  * ver o controle positivo no fim, que confere que ela ainda descreve o código.
  */
-const PAPEL_DO_AGENTE_PUBLICADO: Role = "ai_operator";
+const PAPEL_DO_AGENTE_PUBLICADO: ActorRole = "ai_operator";
 
 /**
  * DÍVIDA MEDIDA em `99cd0fc` e PAGA em `bddeeb6`: `crm_create_lead`,
@@ -101,7 +101,7 @@ const ESCRITA_QUE_E_TRABALHO_DE_ATENDENTE: ReadonlyArray<string> = [
   "crm_manage_tags",
 ];
 
-function alcancavelPeloAgente(requiresRole: Role): boolean {
+function alcancavelPeloAgente(requiresRole: ActorRole): boolean {
   return ROLE_RANK[PAPEL_DO_AGENTE_PUBLICADO] >= ROLE_RANK[requiresRole];
 }
 

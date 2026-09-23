@@ -37,10 +37,6 @@ export async function GET(_req: NextRequest): Promise<Response> {
 
 export async function POST(req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
-  const authz = await requireRole("agent", { requestId, resource: "message_templates" });
-  if (!authz.ok) return authz.response;
-  const { user, org } = authz;
-
   const raw = await req.json().catch(() => null);
   const parsed = createTemplateSchema.safeParse(raw);
   if (!parsed.success) {
@@ -50,12 +46,19 @@ export async function POST(req: NextRequest): Promise<Response> {
     });
   }
   const { title, body, shortcut, shared } = parsed.data;
-  // Compartilhado exige manager+. requireRole já resolveu o role efetivo do
-  // banco em org.role — reusar em vez de uma 2ª chamada/RPC. A RLS with_check
-  // barra de qualquer forma; isto só dá um erro claro antes do insert.
-  if (shared && ROLE_RANK[org.role] < ROLE_RANK.manager) {
-    return fail("forbidden", "Só manager+ cria template compartilhado.", 403, { requestId });
+
+  // Compartilhado exige manager+. Usa a fronteira canônica (requireRole)
+  // para verificar a permissão necessária com base no payload.
+  const authz = await requireRole(shared ? "manager" : "agent", { requestId, resource: "message_templates" });
+  if (!authz.ok) {
+    // Alinha a mensagem de erro com o comportamento anterior se for compartilhado
+    if (shared && authz.response.status === 403) {
+      return fail("forbidden", "Só manager+ cria template compartilhado.", 403, { requestId });
+    }
+    return authz.response;
   }
+  const { user, org } = authz;
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("message_templates")

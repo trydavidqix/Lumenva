@@ -243,3 +243,4 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 - 0194_command_center_overview_rls
 | 20260922130000 | 0201_f2_platform_admin_function_acl | Revoke default authenticated EXECUTE from the platform-admin audit SECURITY DEFINER function; preserve access only for platform_admin_runtime. |
 | `20260922204356` | `0202_f1_identity_mapping_v2` | F1 forward-fix over the F2 mapping: immutable canonical mapping metadata, isolated pending candidates, append-only idempotent audit, disabled dual-read flag, and migration_admin-only backfill. |
+| `20260922214356` | `0203_f3_rbac_platform_admin_acl` | Revoke excessive privileges on platform_admins. |

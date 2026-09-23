@@ -32,7 +32,7 @@ export async function GET(_req: NextRequest): Promise<Response> {
     .select(SELECT_COLS)
     .eq("organization_id", activeOrg.orgId)
     .order("created_at", { ascending: false });
-  if (error) return fail("internal_error", error.message, 500, { requestId });
+  if (error) return fail("internal_error", "Erro interno ao listar tokens.", 500, { requestId });
   return ok(data ?? [], { requestId });
 }
 
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     .select(SELECT_COLS)
     .single();
 
-  if (insErr) return fail("internal_error", insErr.message, 500, { requestId });
+  if (insErr) return fail("internal_error", "Erro interno ao criar token.", 500, { requestId });
 
   await audit({
     action: "token.created",

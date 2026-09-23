@@ -6,8 +6,10 @@
  * humano (cookie session) ou agente de IA (Bearer token com actor_type='ai_agent').
  */
 
+import type { ActorRole, HumanRole } from "@/lib/auth/types";
+
 export type Actor =
-  | { type: "user"; id: string; role?: string }
+  | { type: "user"; id: string; role?: HumanRole }
   /**
    * ⚠️ `id` E `agent_id` NÃO SÃO A MESMA COISA, e confundi-los custa a atividade.
    *
@@ -23,7 +25,7 @@ export type Actor =
    * porque nem todo caminho conhece o agente (token externo, por exemplo) — e
    * "não sei qual agente" tem de virar atividade de sistema, nunca linha perdida.
    */
-  | { type: "ai_agent"; id: string; role: string; api_token_id?: string; agent_id?: string }
+  | { type: "ai_agent"; id: string; role: ActorRole; api_token_id?: string; agent_id?: string }
   | { type: "webhook_source"; id: string };
 
 export interface HandlerCtx {
