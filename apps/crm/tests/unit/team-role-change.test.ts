@@ -1,3 +1,7 @@
+vi.mock("@/lib/supabase/admin", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/supabase/admin")>(),
+  createAdminClient: vi.fn(() => { const chain = { from: () => chain, select: () => chain, eq: () => chain, is: () => chain, not: () => chain, maybeSingle: async () => ({ data: { role: "admin" }, error: null }) }; return chain; })
+}));
 /**
  * G2-02 — PATCH /api/v1/team/[user_id] (role change).
  *

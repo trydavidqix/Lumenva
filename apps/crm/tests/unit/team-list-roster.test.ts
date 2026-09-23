@@ -1,3 +1,7 @@
+vi.mock("@/lib/supabase/admin", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/supabase/admin")>(),
+  createAdminClient: vi.fn(() => { const chain = { from: () => chain, select: () => chain, eq: () => chain, is: () => chain, not: () => chain, maybeSingle: async () => ({ data: { role: "admin" }, error: null }) }; return chain; })
+}));
 /**
  * G6-06 (INB-14) — GET /api/v1/team volta a listar o roster COMPLETO pro manager.
  *
@@ -23,7 +27,9 @@ vi.mock("@/lib/auth/server", () => ({
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 // admin.ts valida env no load; a rota só o chama quando isServiceRoleConfigured()
 // (mockado false) — mock evita a validação de env no import.
-vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn(() => ({
+    from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ is: () => ({ not: () => ({ maybeSingle: async () => ({ data: { role: "admin" }, error: null }) }) }) }) }) }) })
+  })) }));
 vi.mock("@/lib/audit", () => ({
   audit: vi.fn(async () => undefined),
   isServiceRoleConfigured: () => false,
