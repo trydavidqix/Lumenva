@@ -1395,6 +1395,8 @@ Nenhuma view final aceita:
 
 Verificação local do dashboard real (2026-09-23, somente GET via PowerShell; sem navegador): dashboard respondeu em loopback; `/api/health` confirmou wire `ONLINE` e workspace online. `/api/tasks` mostrou 15 registros; `/api/stats`, 7 concluídas e 6 ativas. Métricas MCG estão `unavailable`, Trust `UNVALIDATED` e dataset real tem 0 pares elegíveis entre 16 registros A/B armazenados. Descoberta observada: 3 agents, 3 runtimes, 1 tool; plugins e MCPs sem eventos reais, portanto vazios/`unavailable`. O dashboard está servindo dados atuais corretamente, mas ainda não demonstra economia de tokens nem avaliação positiva; não preencher essas lacunas com mocks.
 
+Auditoria das 13 views no runtime real (2026-09-23): Overview, Traces, Tasks, Agents, Tools e Alerts têm observações; Plugins, MCPs, Graph, Cache e Memory permanecem indisponíveis/não configurados; Validation está `UNVALIDATED`; History mistura tipos observados e indisponíveis. A auditoria encontrou e corrigiu o agregador de History que marcava o conjunto como `exact` só porque algum tipo existia. Agora o agregado só é `exact` quando todos os subtipos são exatos, `estimated` quando todos existem mas algum é estimado, e `unavailable` quando falta qualquer subtipo. Regressão coberta por teste; suíte local atual: 35/35, dashboard 13/13, syntax 30 módulos, scan sensível 80 arquivos e contracts 1/1 PASS. A dashboard escreve/atualiza `state/dashboard/snapshot.json` como snapshot local periódico; essa escrita não é registro de task, telemetria ou avaliação.
+
 ### M0.13 Gate de conclusão
 
 M0 fecha somente quando:

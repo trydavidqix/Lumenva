@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { request } from 'node:http';
 import { createDashboardServer } from '../src/dashboard.mjs';
+import { recordHistory } from '../src/history/store.mjs';
 import { recordTelemetry } from '../src/telemetry.mjs';
 
 function get(port, path) {
@@ -174,6 +175,21 @@ test('dashboard exposes every M0.12 view without fake zero observations', async 
     assert.equal(item.status, 200);
     assert.equal(item.body.includes('NaN'), false);
   }
+});
+
+test('history aggregate is unavailable when any history subtype is unavailable', async t => {
+  const fs = await import('node:fs/promises');
+  const path = await import('node:path');
+  const os = await import('node:os');
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'mcg-dashboard-history-'));
+  await recordHistory(root, 'tasks', { task_id: 'task-1', measurement_type: 'exact' });
+  const server = await createDashboardServer({ root, port: 0, wireProbe: async () => ({ online: false, workspace: 'Lumenva' }) });
+  t.after(async () => { await new Promise(resolve => server.close(resolve)); await fs.rm(root, { recursive: true, force: true }); });
+  const response = await get(server.address().port, '/api/history');
+  const history = JSON.parse(response.body);
+  assert.equal(response.status, 200);
+  assert.equal(history.types.tasks.measurement_type, 'exact');
+  assert.equal(history.measurement_type, 'unavailable');
 });
 
 test('dashboard exposes read-only graph view and source drill-down', async t => {

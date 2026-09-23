@@ -301,7 +301,11 @@ async function historyView(root) {
     const rows = await store.query(type, { period: 'ALL_TIME', limit: 5000 });
     types[type] = { status: 'OBSERVED', records: rows.length, measurement_type: rows.every(row => row.measurement_type === 'exact') ? 'exact' : 'estimated', source: `state/history/raw/${type}.jsonl` };
   }
-  return { types, source: 'HistoryStore', measurement_type: available.size ? 'exact' : 'unavailable', timestamp: new Date().toISOString() };
+  const measurements = Object.values(types).map(type => type.measurement_type);
+  const measurement_type = measurements.includes('unavailable')
+    ? 'unavailable'
+    : measurements.includes('estimated') ? 'estimated' : 'exact';
+  return { types, source: 'HistoryStore', measurement_type, timestamp: new Date().toISOString() };
 }
 
 async function memoryView(root) {
