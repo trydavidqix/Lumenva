@@ -273,6 +273,9 @@ importers:
       '@axe-core/playwright':
         specifier: ^4.12.1
         version: 4.13.0(playwright-core@1.63.0)
+      '@lumenva/db':
+        specifier: workspace:*
+        version: link:../../packages/social-brain/db
       '@next/eslint-plugin-next':
         specifier: 16.3.0
         version: 16.3.0(eslint@9.39.5(jiti@2.7.0))
