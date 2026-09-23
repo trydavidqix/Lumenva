@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 import type { Database } from '../types'
 
-export type StorageProvider = 'supabase' | 'r2'
+export type StorageProvider = 'supabase' | 'r2' | 'gcs'
 
 export type StorageLocator = {
   provider: StorageProvider
