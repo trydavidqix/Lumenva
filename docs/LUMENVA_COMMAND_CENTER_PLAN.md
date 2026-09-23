@@ -1397,6 +1397,8 @@ Verificação local do dashboard real (2026-09-23, somente GET via PowerShell; s
 
 Auditoria das 13 views no runtime real (2026-09-23): Overview, Traces, Tasks, Agents, Tools e Alerts têm observações; Plugins, MCPs, Graph, Cache e Memory permanecem indisponíveis/não configurados; Validation está `UNVALIDATED`; History mistura tipos observados e indisponíveis. A auditoria encontrou e corrigiu o agregador de History que marcava o conjunto como `exact` só porque algum tipo existia. Agora o agregado só é `exact` quando todos os subtipos são exatos, `estimated` quando todos existem mas algum é estimado, e `unavailable` quando falta qualquer subtipo. Regressão coberta por teste; suíte local atual: 35/35, dashboard 13/13, syntax 30 módulos, scan sensível 80 arquivos e contracts 1/1 PASS. A dashboard escreve/atualiza `state/dashboard/snapshot.json` como snapshot local periódico; essa escrita não é registro de task, telemetria ou avaliação.
 
+Validação remota da correção `dbb102c6` no PR draft #26: MCG `35806666214` PASS, vertical `35806666216` PASS e invariants `35806666208` PASS. Core `35806666207` e verify `35806666208` FAIL por erros existentes de typecheck em `packages/lumenva-core`, fora do escopo MCG. PR segue sem merge; M0.3/M0.13 continuam abertos.
+
 ### M0.13 Gate de conclusão
 
 M0 fecha somente quando:
