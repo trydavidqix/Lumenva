@@ -6,7 +6,6 @@
     "./types": "./src/types.ts",
     "./client/browser": "./src/client/browser.ts",
     "./client/server": "./src/client/server.ts",
-    "./drizzle/client": "./src/drizzle/client.ts",
     "./jobs": "./src/jobs/repository.ts",
     "./social": "./src/social/account-repository.ts",
     "./content": "./src/content/repository.ts",
