@@ -16,14 +16,14 @@ vi.mock("firebase/auth", () => ({
     addScope() {}
     setCustomParameters() {}
   },
-  signInWithEmailAndPassword: (...args: any[]) => signInWithEmailAndPasswordMock(...args),
-  signInWithPopup: (...args: any[]) => signInWithPopupMock(...args),
+  signInWithEmailAndPassword: (...args: unknown[]) => signInWithEmailAndPasswordMock(...args),
+  signInWithPopup: (...args: unknown[]) => signInWithPopupMock(...args),
 }));
 
 import { signInWithEmail, signInWithGoogle } from "../../../lib/firebase/client";
 
 describe("Firebase Client Auth Wrapper", () => {
-  let fetchMock: any;
+  let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     fetchMock = vi.fn();
