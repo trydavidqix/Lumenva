@@ -5,7 +5,7 @@ import { parseCodexJsonl, parseCodexTools } from './codex-usage.mjs';
 import { aggregatePairedEvaluations, gradeContextRecall, gradeHallucinations, qualityPreservingSavings, saveEvaluation, trustScore } from './evals.mjs';
 import { runProcess } from './executor.mjs';
 
-const DEFAULT_MODEL = 'gpt-5.6';
+const DEFAULT_MODEL = 'gpt-5.5';
 const DEFAULT_EFFORT = 'medium';
 
 async function readJsonl(path) {
@@ -32,8 +32,12 @@ function archiveFor(test) {
 }
 
 function questionFor(test) {
-  const noEvidence = test.no_evidence_question ? '\nIf evidence does not answer "' + test.no_evidence_question + '", answer exactly: Não há evidência suficiente.' : '';
-  return test.question + noEvidence + '\nDo not edit files. Return only the requested answer.';
+  const noEvidence = test.no_evidence_question ? '\nThe evidence does not contain the answer to "' + test.no_evidence_question + '". After the requested values, append exactly: Não há evidência suficiente.' : '';
+  return test.question + noEvidence + '\nUse the evidence above as authoritative. If it contains the requested values, return every requested value exactly; do not claim insufficient evidence.' + '\nDo not edit files. Return only the requested answer.';
+}
+
+export function buildCodexArgs({ model = DEFAULT_MODEL, effort = DEFAULT_EFFORT, workspace, prompt } = {}) {
+  return ['exec', '--ignore-user-config', '--ephemeral', '--skip-git-repo-check', '--sandbox', 'read-only', '--model', model, '--config', 'model_reasoning_effort="' + effort + '"', '--json', '-C', workspace, prompt];
 }
 
 export function buildLanePrompt(lane, test) {
@@ -63,7 +67,7 @@ export async function runPairedCase({ root, binary, workspace = root, test, mode
 
   const runLane = async lane => {
     const prompt = buildLanePrompt(lane, test);
-    const args = ['exec', '--ignore-user-config', '--ephemeral', '--skip-git-repo-check', '--sandbox', 'read-only', '--ask-for-approval', 'never', '--model', model, '--config', 'model_reasoning_effort="' + effort + '"', '--json', '-C', workspace, prompt];
+    const args = buildCodexArgs({ model, effort, workspace, prompt });
     const result = await runProcess({ command: binary, args, cwd: workspace, job_class, timeout_ms, signal });
     const usage = parseCodexJsonl(result.stdout);
     const answer = answerFromJsonl(result.stdout);

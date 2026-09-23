@@ -38,6 +38,18 @@ test('dashboard serves read-only local endpoints', async t => {
   assert.equal((await get(port, '/missing')).status, 404);
 });
 
+test('dashboard exposes keyboard-accessible view navigation', async t => {
+  const server = await createDashboardServer({ root: process.cwd(), port: 0 });
+  t.after(() => server.close());
+  const home = await get(server.address().port, '/');
+  assert.match(home.body, /aria-label="Dashboard views"/);
+  for (const label of ['Overview', 'History', 'Traces', 'Tasks', 'Agents', 'Tools', 'Plugins', 'MCPs', 'Graph', 'Cache', 'Memory', 'Validation', 'Alerts']) {
+    assert.match(home.body, new RegExp(`data-view="${label}"`));
+  }
+  assert.match(home.body, /role="tablist"/);
+  assert.match(home.body, /role="tabpanel"/);
+});
+
 test('dashboard exposes real telemetry resources from its configured root', async t => {
   const root = await import('node:fs/promises').then(async fs => fs.mkdtemp((await import('node:path')).join((await import('node:os')).tmpdir(), 'mcg-dashboard-')));
   t.after(async () => (await import('node:fs/promises')).rm(root, { recursive: true, force: true }));
@@ -150,7 +162,7 @@ test('dashboard exposes every M0.12 view without fake zero observations', async 
   const response = await get(server.address().port, '/api/views');
   assert.equal(response.status, 200);
   const views = JSON.parse(response.body).views;
-  assert.deepEqual(Object.keys(views), ['Overview','History','Traces','Tasks','Agents','Tools','Plugins','MCPs','Cache','Memory','Validation','Alerts']);
+  assert.deepEqual(Object.keys(views), ['Overview','History','Traces','Tasks','Agents','Tools','Plugins','MCPs','Graph','Cache','Memory','Validation','Alerts']);
   assert.equal(views.Cache.status, 'UNAVAILABLE');
   assert.equal(views.Cache.samples, null);
   assert.equal(views.Memory.records, null);
@@ -162,6 +174,26 @@ test('dashboard exposes every M0.12 view without fake zero observations', async 
     assert.equal(item.status, 200);
     assert.equal(item.body.includes('NaN'), false);
   }
+});
+
+test('dashboard exposes read-only graph view and source drill-down', async t => {
+  const server = await createDashboardServer({
+    root: process.cwd(),
+    port: 0,
+    graphView: async () => ({
+      readOnly: true,
+      namespace: 'project:lumenva',
+      query: 'context',
+      nodes: [{ id: 'fact:1', kind: 'fact', label: 'Fact', sourceId: 'note-1' }],
+      edges: [{ id: 'edge:1', source: 'fact:1', target: 'source:note-1', sourceId: 'note-1', confidence: 0.9, validFrom: '2026-01-01', validUntil: null }]
+    })
+  });
+  t.after(() => server.close());
+  const graph = await get(server.address().port, '/api/graph');
+  assert.equal(graph.status, 200);
+  assert.equal(JSON.parse(graph.body).readOnly, true);
+  assert.match((await get(server.address().port, '/')).body, /data-view="Graph"/);
+  assert.match((await get(server.address().port, '/')).body, /Graph/);
 });
 
 test('dashboard periods stay unavailable when no context compile was observed', async t => {

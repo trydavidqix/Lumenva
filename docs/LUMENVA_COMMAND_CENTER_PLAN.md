@@ -1060,6 +1060,20 @@ Durante transição, Maestri Wire pode ser bridge temporária.
 
 Nenhuma feature nova do Command Center deve ser construída antes de fechar M0.
 
+### M0.0 Auditoria de caminhos do ambiente Windows
+
+Antes de qualquer migração ou correção de configuração pessoal:
+
+- comparar o perfil Windows e as raízes usadas pelos apps/CLIs;
+- inventariar caminhos globais e por workspace de Codex/ChatGPT, Claude Code, Gemini CLI e Antigravity para config, skills, plugins, hooks, MCP, cache/runtime e estado de autenticação, sem ler valores de credenciais;
+- distinguir app, runtime empacotado, CLI independente, cache e configuração do usuário;
+- conferir caminhos com documentação oficial e registrar divergências;
+- não mover, sobrescrever, apagar, reinstalar ou editar configurações globais nesta etapa.
+
+Evidência: `docs/superpowers/audits/2026-09-22-windows-agent-profile-path-audit.md`.
+
+Estado: **AUDIT PASS / NO CONFIG CHANGES**. O perfil e os diretórios padrão observados são consistentes. A entrada `CODEX_HOME` dentro do `config.toml` não foi comprovada como causa de erro e não foi alterada. A auditoria não prova que o erro do app foi corrigido; qualquer migração segue bloqueada até diagnóstico específico, backup e autorização.
+
 ### M0.1 Preservação
 
 Branch de recuperação já criada:
@@ -1104,6 +1118,8 @@ Antes de mover lumenva-command-center para a história limpa:
 A reescrita de lumenva-command-center está autorizada somente depois desses gates.
 A main não deve ser alterada.
 
+Estado da comparação (2026-09-23): reconstrução local baseada em `ed148778a4591a8aaf0e1b1efd5c90007f00cfd6`; o delta desde o merge-base de `origin/main` contém apenas plan/docs/superpowers/MCG e o lockfile necessário. Nenhum arquivo MCG foi removido em relação ao backup. O remoto `lumenva-command-center` avançou com runtime/workflows laterais; a branch de reconstrução não será publicada diretamente porque isso apagaria esses arquivos no diff. Nenhum push, PR, rewrite ou alteração em `main` foi feito.
+
 ### M0.3 Integração correta com monorepo e CI
 
 Corrigir package scripts do MCG para participar dos gates do monorepo.
@@ -1126,6 +1142,10 @@ Gates:
 - contracts smoke
 
 Nenhum commit do MCG pode ser considerado PASS sem testes automáticos.
+
+Falha remota observada: run `35687560851` (MCG gates) parou em `pnpm install --frozen-lockfile` porque o lockfile remoto não tinha os specifiers de `packages/lumenva-core/package.json` (`@types/node` e `typescript`). Isto é um gate de lockfile do monorepo, não um erro de teste do MCG; atualizar o lockfile contra o workspace atual e repetir todos os gates.
+
+Estado local (2026-09-23): lockfile atualizado de forma consistente; frozen install PASS; os cinco gates MCG (34 testes unitários, sintaxe/import, secret/path scan, dashboard e contracts) PASS; `git diff --check` PASS. A alteração do lockfile também aciona `.github/workflows/lumenva-core.yml`: `typecheck` falha em erros existentes nos testes (imports `.ts`, callback types e `EventBus.subscribe`), e `test:unit` falha em resolução de `src/contracts.js` sob `node --experimental-strip-types`. Não alterar `packages/lumenva-core/**` nem enfraquecer seu workflow dentro desta allowlist. É permitido publicar a branch de integração e abrir PR direcionada somente a `lumenva-command-center`, sem merge, para obter a evidência remota do MCG; reportar os checks do core separadamente como bloqueio. M0.3 permanece aberto até CI obrigatória passar. Uma remediação dos erros do core exige escopo separado.
 
 ### M0.4 Correções conhecidas de métricas
 
@@ -1546,7 +1566,9 @@ Só termina quando:
 
 ## Status atual
 
-ACTIVE — M0 REMEDIATION / CONSOLIDATION
+ACTIVE — M0 REMEDIATION INCOMPLETE / M0.3 BLOCKED BY EXISTING CORE GATES / M0.13 OPEN / M1 BLOCKED ON M0 CLOSE
+
+O dashboard possui evidência de testes locais, mas isso não fecha M0. A reconstrução restrita à allowlist foi validada localmente; a integração CI usa como base o remoto atual para preservar runtime/workflows existentes. Os gates locais do MCG passam; a CI remota continua pendente e o workflow existente do `lumenva-core` falha nos checks locais acionados pelo lockfile. Não alterar esse pacote nem enfraquecer seus gates dentro da remediação MCG. M0.3 permanece aberto até os checks obrigatórios passarem; M0.13 continua aberto até todos os gates serem comprovados. Não iniciar M1 antes de fechar M0.
 
 Este documento é a fonte de verdade única da branch Lumenva Command Center.
 Não criar um segundo plano concorrente para o mesmo escopo; atualizar este arquivo.

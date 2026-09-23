@@ -141,12 +141,16 @@ export async function health(root = ROOT, wireProbe) {
 }
 
 export async function dashboardStats(root = ROOT) {
-  const [tasks, events, resources, evaluation] = await Promise.all([
+  const [tasks, events, resources, evaluation, aggregate] = await Promise.all([
     taskStats(root),
     telemetryEvents(root),
     discoverResources(root),
-    latestEvaluation(root)
+    latestEvaluation(root),
+    aggregatePairedEvaluations(root)
   ]);
+  const validation = aggregate?.dataset_size > 0
+    ? { ...aggregate, trust: trustScore({ ...aggregate, last_validation: aggregate.timestamp }) }
+    : evaluation;
   const contextMetrics = contextMetricsFromEvents(events);
   const summary = taskTokenSummary(tasks, contextMetrics.compiles);
   const groups = aggregateTelemetry(events);
@@ -179,7 +183,7 @@ export async function dashboardStats(root = ROOT) {
     .filter(event => event.timestamp && now - Date.parse(event.timestamp) <= days * 86_400_000)
     .reduce((sum, event) => sum + Math.ceil(Math.max(0, event.input_chars - event.output_chars) / 4), 0);
 
-  const trust = evaluation?.trust || trustScore({
+  const trust = validation?.trust || trustScore({
     baseline: {},
     mcg: {},
     context_recall: null,
@@ -187,31 +191,31 @@ export async function dashboardStats(root = ROOT) {
     hallucination_rate: null
   });
 
-  const workflow_token_savings = evaluation?.baseline?.total_tokens != null
-    && evaluation?.mcg?.total_tokens != null
-    && evaluation.baseline.total_tokens > 0
-    ? Number(((evaluation.baseline.total_tokens - evaluation.mcg.total_tokens) / evaluation.baseline.total_tokens * 100).toFixed(2))
+  const workflow_token_savings = validation?.baseline?.total_tokens != null
+    && validation?.mcg?.total_tokens != null
+    && validation.baseline.total_tokens > 0
+    ? Number(((validation.baseline.total_tokens - validation.mcg.total_tokens) / validation.baseline.total_tokens * 100).toFixed(2))
     : null;
 
   const workflowMeasurement = workflow_token_savings == null
     ? 'unavailable'
-    : evaluation?.baseline?.measurement_type === 'exact' && evaluation?.mcg?.measurement_type === 'exact'
+    : validation?.baseline?.measurement_type === 'exact' && validation?.mcg?.measurement_type === 'exact'
       ? 'exact'
       : 'estimated';
 
-  const efficiency = evaluation?.baseline && evaluation?.mcg
+  const efficiency = validation?.baseline && validation?.mcg
     ? efficiencyScore({
         real_token_saving: workflow_token_savings,
-        task_success: evaluation.mcg.task_success ? 100 : 0,
-        context_retention: evaluation.mcg.context_recall,
-        evidence_grounding: evaluation.mcg.evidence_grounding,
-        hallucination_rate: evaluation.mcg.hallucination_rate,
-        dataset_size: evaluation.trust?.dataset_size ?? 0
+        task_success: validation.mcg.task_success ? 100 : 0,
+        context_retention: validation.mcg.context_recall,
+        evidence_grounding: validation.mcg.evidence_grounding,
+        hallucination_rate: validation.mcg.hallucination_rate,
+        dataset_size: validation.trust?.dataset_size ?? 0
       })
     : efficiencyScore({});
 
-  const regression = evaluation?.baseline && evaluation?.mcg
-    ? regressionWatch(evaluation.baseline, evaluation.mcg, { dataset_size: evaluation.trust?.dataset_size ?? 0 })
+  const regression = validation?.baseline && validation?.mcg
+    ? regressionWatch(validation.baseline, validation.mcg, { dataset_size: validation.trust?.dataset_size ?? 0 })
     : { status: 'UNVALIDATED', regressions: [], source: 'baseline vs MCG', measurement_type: 'unavailable', timestamp: new Date().toISOString() };
 
   const result = {
@@ -336,7 +340,7 @@ async function validationView(root) {
   };
 }
 
-export async function dashboardViews(root = ROOT) {
+export async function dashboardViews(root = ROOT, { graphView } = {}) {
   const [stats, history, traces, cache, memory, validation] = await Promise.all([
     dashboardStats(root), historyView(root), listTraces(root), cacheView(root), memoryView(root), validationView(root)
   ]);
@@ -350,6 +354,7 @@ export async function dashboardViews(root = ROOT) {
     Tools: { status: stats.by_tool.length ? 'OBSERVED' : 'UNAVAILABLE', count: stats.by_tool.length || null, items: stats.by_tool.length ? stats.by_tool : null, measurement_type: stats.by_tool[0]?.measurement_type || 'unavailable', source: 'state/telemetry/events.jsonl', timestamp: new Date().toISOString() },
     Plugins: { status: stats.by_plugin.length ? 'OBSERVED' : 'UNAVAILABLE', count: stats.by_plugin.length || null, items: stats.by_plugin.length ? stats.by_plugin : null, measurement_type: stats.by_plugin[0]?.measurement_type || 'unavailable', source: 'explicit task metadata + telemetry', timestamp: new Date().toISOString() },
     MCPs: { status: stats.by_mcp.length ? 'OBSERVED' : 'UNAVAILABLE', count: stats.by_mcp.length || null, items: stats.by_mcp.length ? stats.by_mcp : null, measurement_type: stats.by_mcp[0]?.measurement_type || 'unavailable', source: 'state/telemetry/events.jsonl', timestamp: new Date().toISOString() },
+    Graph: graphView ? { ...await graphView(), measurement_type: 'exact', source: 'Core GET /graph; read-only', timestamp: new Date().toISOString() } : unavailable('Core GET /graph; graph provider not configured'),
     Cache: cache,
     Memory: memory,
     Validation: validation,
@@ -367,9 +372,53 @@ function render(data){cards('kpis',[['TAREFAS CONCLUÍDAS',data.tasks_processed]
 async function load(){const [stats,tasks,health]=await Promise.all(['/api/stats','/api/tasks','/api/health'].map(path=>fetch(path).then(response=>response.json())));render({...stats,tasks:tasks.tasks,health})}let poll;function fallback(){if(poll)return;$('live').textContent='● POLLING · 2s';poll=setInterval(()=>load().catch(()=>{$('live').textContent='● DESCONECTADO'}),2000)}const stream=new EventSource('/api/events');stream.onopen=()=>{$('live').textContent='● AO VIVO';if(poll){clearInterval(poll);poll=null}};stream.addEventListener('update',()=>load().catch(fallback));stream.onerror=()=>{stream.close();fallback()};load().catch(fallback);
 </script></body></html>`;
 
+const dashboardNav = '<section class="grid"><div class="panel"><h2>Command Center</h2><nav class="view-tabs" aria-label="Dashboard views" role="tablist">' +
+  ['Overview', 'History', 'Traces', 'Tasks', 'Agents', 'Tools', 'Plugins', 'MCPs', 'Graph', 'Cache', 'Memory', 'Validation', 'Alerts']
+    .map((view, index) => `<button class="view-tab" type="button" role="tab" data-view="${view}" aria-selected="${index === 0 ? 'true' : 'false'}" aria-controls="view-panel">${view}</button>`)
+    .join('') +
+  '</nav><div id="view-panel" role="tabpanel" tabindex="0"><p class="empty">Carregando views observadas.</p></div></div></section>';
+
+const dashboardScript = `<script>
+const viewData = {};
+const viewPanel = document.getElementById('view-panel');
+const viewTabs = [...document.querySelectorAll('[data-view]')];
+const viewValue = value => value === null || value === undefined ? 'INDISPONÍVEL' : typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
+function renderView(name) {
+  const view = viewData[name];
+  viewTabs.forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.view === name)));
+  if (!view) { viewPanel.innerHTML = '<p class="empty">View indisponível.</p>'; return; }
+  if (name === 'Graph' && view.readOnly && Array.isArray(view.nodes) && Array.isArray(view.edges)) {
+    const nodes = view.nodes.map(node => '<div class="card"><b>' + e(node.label) + '</b><br><span class="muted">' + e(node.kind) + ' · ' + e(node.id) + '</span></div>').join('');
+    const edges = view.edges.map(edge => '<div class="card"><b>' + e(edge.sourceId) + '</b><br><span class="muted">confidence ' + e(edge.confidence) + ' · ' + e(edge.validFrom || 'sem início') + ' → ' + e(edge.validUntil || 'atual') + '</span></div>').join('');
+    viewPanel.innerHTML = '<div class="view-meta"><b>Graph</b> ' + tag(view.measurement_type) + '<span class="muted">READ-ONLY · ' + e(view.namespace) + ' · ' + e(view.query) + '</span></div><h3>Entidades</h3><div class="resource">' + (nodes || '<p class="empty">Nenhum nó encontrado.</p>') + '</div><h3>Fontes / relações</h3><div class="resource">' + (edges || '<p class="empty">Nenhuma relação encontrada.</p>') + '</div>';
+    return;
+  }
+  const entries = Object.entries(view).filter(([key]) => !['timestamp', 'source'].includes(key));
+  viewPanel.innerHTML = '<div class="view-meta"><b>' + e(name) + '</b> ' + tag(view.measurement_type) + '<span class="muted">' + e(view.status || 'OBSERVED') + '</span></div>' +
+    '<pre class="view-json">' + e(JSON.stringify(Object.fromEntries(entries.map(([key, value]) => [key, viewValue(value)])), null, 2)) + '</pre>';
+}
+async function loadViewRegistry() {
+  try {
+    const response = await fetch('/api/views');
+    if (!response.ok) throw new Error('view registry unavailable');
+    Object.assign(viewData, (await response.json()).views || {});
+    renderView('Overview');
+  } catch {
+    viewPanel.innerHTML = '<p class="empty">Não foi possível carregar views. <button id="view-retry" type="button">Tentar novamente</button></p>';
+    document.getElementById('view-retry').addEventListener('click', loadViewRegistry);
+  }
+}
+viewTabs.forEach(tab => tab.addEventListener('click', () => renderView(tab.dataset.view)));
+loadViewRegistry();
+</script>`;
+
+const dashboardHtml = html
+  .replace('</header><section class="grid kpis"', `${dashboardNav}</header><section class="grid kpis"`)
+  .replace('</script></body></html>', `</script>${dashboardScript}</body></html>`);
+
 function sendJson(res, body) { res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(body)); }
 
-export function createDashboardServer({ root = ROOT, port = PORT, wireProbe } = {}) {
+export function createDashboardServer({ root = ROOT, port = PORT, wireProbe, graphView } = {}) {
   const clients = new Set(); let previous = '';
   const snapshot = async () => ({ stats: await dashboardStats(root), health: await health(root, wireProbe) });
   const publish = async () => { const data = await snapshot(); const encoded = JSON.stringify(data); if (encoded === previous) return; previous = encoded; for (const client of clients) client.write(`event: update\ndata: ${encoded}\n\n`); };
@@ -379,10 +428,11 @@ export function createDashboardServer({ root = ROOT, port = PORT, wireProbe } = 
   const server = createServer(async (req, res) => {
     if (req.method !== 'GET') { res.writeHead(405, { Allow: 'GET' }); return res.end('Method Not Allowed'); }
     try {
-      if (req.url === '/') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); return res.end(html); }
+      if (req.url === '/') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); return res.end(dashboardHtml); }
       if (req.url === '/api/events') { res.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', Connection: 'keep-alive', 'Cache-Control': 'no-cache' }); clients.add(res); await publish(); req.on('close', () => clients.delete(res)); return; }
       if (req.url === '/api/stats') return sendJson(res, await dashboardStats(root));
-      if (req.url === '/api/views') return sendJson(res, { views: await dashboardViews(root), source: 'dashboard view registry', measurement_type: 'exact', timestamp: new Date().toISOString() });
+      if (req.url === '/api/views') return sendJson(res, { views: await dashboardViews(root, { graphView }), source: 'dashboard view registry', measurement_type: 'exact', timestamp: new Date().toISOString() });
+      if (req.url === '/api/graph') return graphView ? sendJson(res, await graphView()) : sendJson(res, { error: 'GRAPH_UNAVAILABLE', readOnly: true, measurement_type: 'unavailable', source: 'Core GET /graph' });
       if (req.url === '/api/history') return sendJson(res, await historyView(root));
       if (req.url === '/api/cache') return sendJson(res, await cacheView(root));
       if (req.url === '/api/memory') return sendJson(res, await memoryView(root));
