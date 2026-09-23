@@ -91,6 +91,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "fflate": "^0.8.3",
+    "firebase": "^12.19.0",
     "gpt-tokenizer": "^3.4.0",
     "import-in-the-middle": "^3.3.3",
     "inngest": "^4.15.0",
