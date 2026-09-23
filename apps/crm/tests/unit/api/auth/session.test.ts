@@ -16,6 +16,7 @@ vi.mock("../../../../lib/firebase/server", () => ({
 }));
 
 const setCookieMock = vi.fn();
+const verifyIdTokenMock = vi.fn();
 vi.mock("next/headers", () => ({
   cookies: vi.fn(() => ({
     set: setCookieMock,
@@ -28,7 +29,7 @@ describe("Session API POST", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuth = {
-      verifyIdToken: vi.fn(),
+      verifyIdToken: verifyIdTokenMock,
     } as unknown as ReturnType<typeof initFirebaseAuth>;
     vi.mocked(initFirebaseAuth).mockReturnValue(mockAuth);
   });
@@ -64,7 +65,7 @@ describe("Session API POST", () => {
       body: JSON.stringify({ idToken: "old-token" }),
       headers: new Headers({ "content-type": "application/json" }),
     });
-    mockAuth.verifyIdToken.mockResolvedValueOnce({
+    verifyIdTokenMock.mockResolvedValueOnce({
       auth_time: new Date().getTime() / 1000 - 10 * 60, // 10 minutes ago
     });
 
@@ -80,7 +81,7 @@ describe("Session API POST", () => {
       body: JSON.stringify({ idToken: "valid-token" }),
       headers: new Headers({ "content-type": "application/json" }),
     });
-    mockAuth.verifyIdToken.mockResolvedValueOnce({
+    verifyIdTokenMock.mockResolvedValueOnce({
       auth_time: new Date().getTime() / 1000, // Now
     });
     vi.mocked(createSessionCookie).mockResolvedValueOnce("new-session-cookie");
@@ -107,7 +108,7 @@ describe("Session API POST", () => {
       body: JSON.stringify({ idToken: "bad-token" }),
       headers: new Headers({ "content-type": "application/json" }),
     });
-    mockAuth.verifyIdToken.mockRejectedValueOnce(new Error("Invalid token"));
+    verifyIdTokenMock.mockRejectedValueOnce(new Error("Invalid token"));
 
     const res = await POST(req);
     expect(res.status).toBe(401);
