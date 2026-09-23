@@ -6,7 +6,7 @@ const mockFetch = vi.fn();
 
 vi.mock("node-fetch", () => {
   return {
-    default: (...args: any[]) => mockFetch(...args),
+    default: (...args: unknown[]) => mockFetch(...args),
   };
 });
 global.fetch = mockFetch as unknown as typeof fetch;
@@ -90,7 +90,7 @@ describe("MetaAdapter", () => {
         expect.objectContaining({ organizationId: "org-1" })
       );
 
-      const logArgs = (deps.logger.error as any).mock.calls[0][1];
+      const logArgs = vi.mocked(deps.logger.error).mock.calls[0][1];
       expect(JSON.stringify(logArgs)).not.toContain("551199999999"); // PII redacted
     });
 
@@ -126,7 +126,7 @@ describe("MetaAdapter", () => {
   describe("publish", () => {
     it("skips and returns existing when idempotency key is already processed", async () => {
       // Simulate processed key
-      (deps.idempotencyStore.has as any).mockResolvedValue(true);
+      vi.mocked(deps.idempotencyStore.has).mockResolvedValue(true);
 
       const result = await adapter.execute(
         { organizationId: "org-1", requestId: "req-1", idempotencyKey: "publish_123" },
@@ -137,6 +137,7 @@ describe("MetaAdapter", () => {
           caption: "Hello world",
         }
       );
+      expect(result).toBeDefined(); // suppress unused
 
       // If we already sent it, the mock store doesn't have the real ID,
       // but in the real world we'd either look it up or at least NOT call fetch.

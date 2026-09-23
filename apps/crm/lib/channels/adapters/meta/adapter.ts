@@ -1,9 +1,8 @@
-import { SocialChannelPort, MetaCommand, MetaResult, ExternalOperationContext } from "./port";
-import { MetaDependencies } from "./dependencies";
+import type { SocialChannelPort, MetaCommand, MetaResult, ExternalOperationContext } from "./port";
+import type { MetaDependencies } from "./dependencies";
 import { verifyMetaSignature } from "../../meta/webhook";
 import { sendTemplate } from "../../meta/send-template";
 import { hashContract } from "../../meta/contract-hash";
-// @ts-ignore
 import { publishCarousel, publishPhoto } from "../../../../../../packages/integrations/meta/src/publish-ig";
 
 export class MetaAdapter implements SocialChannelPort {
@@ -19,7 +18,7 @@ export class MetaAdapter implements SocialChannelPort {
       case "publish_instagram_carousel":
         return this.handlePublish(ctx, command);
       default:
-        throw new Error(`Unknown command type: ${(command as any).type}`);
+        throw new Error(`Unknown command type`);
     }
   }
 

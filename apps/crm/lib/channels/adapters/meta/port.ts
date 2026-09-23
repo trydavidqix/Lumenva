@@ -66,4 +66,4 @@ export type MetaResult =
   | SendTemplateResult
   | PublishResult;
 
-export interface SocialChannelPort extends ExternalAdapter<MetaCommand, MetaResult> {}
+export type SocialChannelPort = ExternalAdapter<MetaCommand, MetaResult>;
