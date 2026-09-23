@@ -25,8 +25,8 @@
 import { randomUUID } from "node:crypto";
 import type { NextRequest } from "next/server";
 
-import { ok, fail } from "@/lib/api/wrappers";
-import { createClient } from "@/lib/supabase/server";
+import { fail } from "@/lib/api/wrappers";
+import { getServerSession } from "@/lib/firebase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -34,28 +34,20 @@ const NO_STORE = { "cache-control": "no-store, max-age=0" } as const;
 
 export async function GET(_req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
-  const supabase = await createClient();
+  const session = await getServerSession();
 
-  // getUser() valida o JWT no servidor — é ele que autoriza a resposta.
-  const {
-    data: { user },
-    error: authErr,
-  } = await supabase.auth.getUser();
-  if (authErr || !user) {
+  if (!session) {
     return fail("unauthenticated", "Auth required.", 401, { requestId, headers: NO_STORE });
   }
 
-  // getSession() aqui NÃO autentica (o getUser acima já autenticou): serve só
-  // para extrair o token que o cookie httpOnly guarda.
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session?.access_token) {
-    return fail("unauthenticated", "Sessão sem token.", 401, { requestId, headers: NO_STORE });
-  }
-
-  return ok(
-    { access_token: session.access_token, expires_at: session.expires_at ?? null },
+  // F4 Auth Migration: Supabase Auth is removed and Firebase Admin does not
+  // issue Supabase-compatible JWTs for Realtime. This breaks the websocket
+  // authorization mechanism, requiring either a custom JWT minting service
+  // or proxying realtime events through our own API.
+  return fail(
+    "not_implemented",
+    "blocker: Firebase migration removes Supabase Auth. Cannot issue Realtime JWTs.",
+    501,
     { requestId, headers: NO_STORE },
   );
 }

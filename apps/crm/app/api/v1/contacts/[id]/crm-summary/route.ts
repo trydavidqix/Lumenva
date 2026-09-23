@@ -31,6 +31,7 @@ import { type NextRequest } from "next/server";
 
 import { ok, fail } from "@/lib/api/wrappers";
 import { createClient } from "@/lib/supabase/server";
+import { loadAuthUser } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -46,14 +47,12 @@ export async function GET(
   const requestId = randomUUID();
   const { id: contactId } = await ctx.params;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: authErr,
-  } = await supabase.auth.getUser();
-  if (authErr || !user) {
+  const authUser = await loadAuthUser();
+  if (!authUser) {
     return fail("unauthenticated", "Auth required.", 401, { requestId });
   }
+
+  const supabase = await createClient();
 
   const [leads, orders, activities] = await Promise.all([
     supabase

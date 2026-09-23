@@ -25,6 +25,7 @@ import { requireRole } from "@/lib/auth/require-role";
 import { cascadeRedactContact } from "@/lib/lgpd/redact-cascade";
 import { lgpdAnonymizeSchema, validateRequest } from "@/lib/schemas";
 import { createClient } from "@/lib/supabase/server";
+import { loadAuthUser } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -32,11 +33,8 @@ export async function POST(req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
 
   const supabase = await createClient();
-  const {
-    data: { user },
-    error: authErr,
-  } = await supabase.auth.getUser();
-  if (authErr || !user) {
+  const user = await loadAuthUser();
+  if (!user) {
     return fail("unauthenticated", "Auth required.", 401, { requestId });
   }
 
