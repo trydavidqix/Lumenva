@@ -8,8 +8,7 @@ export class CoreTelemetrySink {
   private readonly modulePromise: Promise<MgcTelemetryModule>;
 
   constructor(private readonly mcgRoot: string) {
-    const moduleUrl = new URL("../../../packages/maestri-context-gateway/src/telemetry.mjs", import.meta.url).href;
-    this.modulePromise = import(moduleUrl) as unknown as Promise<MgcTelemetryModule>;
+    this.modulePromise = import("@lumenva/maestri-context-gateway/telemetry") as Promise<MgcTelemetryModule>;
   }
 
   attach(bus: { subscribe(listener: (event: CoreEvent) => Promise<void>): () => void }): () => void {

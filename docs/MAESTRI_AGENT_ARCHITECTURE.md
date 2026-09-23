@@ -3637,7 +3637,7 @@ RESIDUAL_UNCERTAINTY
 - Postgres remains operational truth.
 - Conversation/provider session state is never durable truth.
 - Local Runtime is execution capability, not another job engine/router.
-- MCG/Context Gateway is absorbed into the one Context Engine, not maintained as a parallel context platform.
+- MCG is a separate canonical product/repository consumed by Maestri V3 through a commit-pinned package dependency; Lumenva owns only its Core adapter and orchestration, with no copied MCG source tree.
 - TOKENS workforce routing is absorbed into the one Resource Router, not maintained as a second workforce scheduler.
 - Engineering Council role separation survives; its orchestration implementation is absorbed into Maestri + canonical roles.
 - Voice, Meta and product-domain capabilities remain outside Maestri Core.

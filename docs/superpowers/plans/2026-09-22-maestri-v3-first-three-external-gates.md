@@ -192,8 +192,9 @@ git status --short --branch
 git diff main...vps --stat
 pnpm --filter @lumenva/knowledge-graph test
 pnpm --filter @lumenva/core test
-pnpm --filter @lumenva/maestri-context-gateway test
-pnpm --filter @lumenva/maestri-context-gateway check:rollout
+$mcgRepo = Join-Path $env:USERPROFILE 'Desktop\Projetos\maestri-context-gateway'
+npm --prefix $mcgRepo test
+node scripts/maestri-v3/rollout-check.mjs
 ```
 
 Expected final state: clean `vps`, no changes to `main`, local tests green, Jules evidence present, Codex either green or explicitly blocked by missing `OPENAI_API_KEY`, Graphiti either safely `shadow`/`on` with isolation evidence or safely `off`, and OTLP either verified or safely optional with local traces intact.

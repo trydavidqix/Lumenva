@@ -11,6 +11,7 @@
   "dependencies": {
     "@lumenva/knowledge": "workspace:*",
     "@lumenva/knowledge-graph": "workspace:*",
+    "@lumenva/maestri-context-gateway": "github:trydavidqix/maestri-context-gateway#b3b5c8808b6f476654cce266f9d2cafd93a99193",
     "@lumenva/operating-core": "workspace:*"
   },
   "devDependencies": {
