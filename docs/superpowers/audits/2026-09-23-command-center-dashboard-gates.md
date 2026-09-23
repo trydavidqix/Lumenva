@@ -34,4 +34,13 @@ Dashboard tests cover the read-only local endpoints, keyboard-accessible navigat
 
 ## Pending evidence
 
-GitHub Actions has not run for this integration branch because no branch push or PR was created. Remote CI remains required before M0.3 can be marked complete. The existing core workflow is expected to fail until its independent test/runtime issues are addressed. The separate M0.13 completion gate remains open.
+## Remote GitHub evidence
+
+- Draft PR: https://github.com/trydavidqix/Lumenva/pull/26, targeting `lumenva-command-center`; no merge performed.
+- MCG workflow run `35802405655`: PASS.
+- F2/F3 vertical run `35802405657`: PASS.
+- Repository CI invariants run `35802405587`: PASS.
+- Core workflow run `35802405583`: FAIL at `lumenva-core` typecheck.
+- Repository CI verify run `35802405587`: FAIL at the same `lumenva-core` typecheck while running the monorepo-wide typecheck.
+
+The MCG-specific remote gate is green. The PR remains draft/open because the mandatory core and general verify checks are red due to errors outside the MCG allowlist. No merge or main-branch change was made. The separate M0.13 completion gate remains open.
