@@ -15,7 +15,7 @@ import { redirect } from "next/navigation";
 import { audit } from "@/lib/audit";
 import { verifyInviteToken } from "@/lib/auth/invite-token";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { loadAuthUser } from "@/lib/auth/server";
 
 export type AcceptInviteResult =
   | { ok: true }
@@ -25,10 +25,7 @@ export async function acceptInviteAction(token: string): Promise<AcceptInviteRes
   const payload = verifyInviteToken(token);
   if (!payload) return { ok: false, error: "invalid_or_expired" };
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await loadAuthUser();
   if (!user) return { ok: false, error: "not_authenticated" };
 
   const userEmail = (user.email ?? "").trim().toLowerCase();

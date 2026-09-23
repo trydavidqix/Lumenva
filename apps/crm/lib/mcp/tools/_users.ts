@@ -7,18 +7,20 @@
  * user_metadata completo, tokens ou qualquer outra PII do usuário. Mesmo mínimo
  * que /api/v1/team/assignable já expõe.
  */
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { initFirebaseAuth } from "@lumenva/db/gcp/firebase-auth";
 
 export async function resolveUserNames(
-  supabase: SupabaseClient,
+  _unused: unknown, // SupabaseClient argument preserved for compatibility but ignored
   userIds: Array<string | null | undefined>,
 ): Promise<Map<string, string | null>> {
   const unique = [...new Set(userIds.filter((id): id is string => Boolean(id)))];
+  const auth = initFirebaseAuth();
+
   const entries = await Promise.all(
     unique.map(async (id): Promise<readonly [string, string | null]> => {
       try {
-        const { data } = await supabase.auth.admin.getUserById(id);
-        const fullName = (data?.user?.user_metadata?.full_name as string | undefined) ?? null;
+        const fbUser = await auth.getUser(id);
+        const fullName = fbUser.displayName || null;
         return [id, fullName] as const;
       } catch {
         // Nome é não-crítico: falha de lookup não pode quebrar a leitura.

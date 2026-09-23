@@ -12,8 +12,8 @@ import Link from "next/link";
 
 import { verifyInviteToken } from "@/lib/auth/invite-token";
 import { authRateLimited, AUTH_LIMITS } from "@/lib/auth/rate-limit";
-import { createClient } from "@/lib/supabase/server";
 import { acceptInviteAction } from "@/app/actions/team/acceptInvite";
+import { loadAuthUser } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -52,10 +52,7 @@ export default async function AcceptInvitePage({ params }: PageProps) {
     );
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await loadAuthUser();
 
   if (!user) {
     const next = encodeURIComponent(`/team/accept-invite/${token}`);
