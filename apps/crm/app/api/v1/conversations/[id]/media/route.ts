@@ -11,7 +11,7 @@ import { requireRole } from "@/lib/auth/require-role";
 import { logger } from "@/lib/logger";
 import { extFromMime, MAX_OUTBOUND_MEDIA_BYTES } from "@/lib/messaging/media/types";
 import { validateOutboundMedia } from "@/lib/messaging/media/upload-validation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createGcsObjectStore } from "@lumenva/db/storage/gcs";
 import { getGcsBucket } from "@lumenva/db/gcp/cloud-storage";
 
@@ -24,14 +24,14 @@ interface RouteCtx {
 export async function POST(req: NextRequest, ctx: RouteCtx): Promise<Response> {
   const requestId = randomUUID();
   const { id: conversationId } = await ctx.params;
-  const supabase = await createClient();
+  const admin = createAdminClient();
 
   const authz = await requireRole("agent", { requestId });
   if (!authz.ok) return authz.response;
   const { org: activeOrg } = authz;
 
   // RLS + filtro explícito: a conversa precisa ser da org ativa.
-  const { data: conv, error: convErr } = await supabase
+  const { data: conv, error: convErr } = await admin
     .from("conversations")
     .select("id")
     .eq("id", conversationId)
