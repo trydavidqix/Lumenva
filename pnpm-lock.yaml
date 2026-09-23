@@ -596,8 +596,6 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/maestri-context-gateway: {}
-
   packages/operating-core: {}
 
   packages/social-brain/core:
