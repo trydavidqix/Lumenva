@@ -8,7 +8,6 @@ import { POST as anonymizePrivacy } from "@/app/api/v1/privacy/anonymize/route";
 import { loadAuthUser } from "@/lib/auth/server";
 import { requireRole } from "@/lib/auth/require-role";
 import { getServerSession } from "@/lib/firebase/server";
-import type { DecodedIdToken } from "firebase-admin/auth";
 import type { AuthUser, RoleCheck } from "@/lib/auth/types";
 
 // Mock getServerSession
@@ -59,7 +58,7 @@ describe("Task 4: API Routes Firebase Auth Migration", () => {
 
   describe("GET /api/v1/auth/realtime-token", () => {
     it("should return 501 blocker since Firebase cannot issue Supabase tokens", async () => {
-      vi.mocked(getServerSession).mockResolvedValue({ uid: "user-1", email: "test@test.com" } as unknown as DecodedIdToken);
+      vi.mocked(getServerSession).mockResolvedValue({ uid: "user-1", email: "test@test.com" } as unknown as Record<string, unknown>);
       const req = new NextRequest("http://localhost/api/v1/auth/realtime-token");
       const res = await getRealtimeToken(req);
 
@@ -116,7 +115,8 @@ describe("Task 4: API Routes Firebase Auth Migration", () => {
         method: "POST",
         body: JSON.stringify({ contact_id: "123" })
       });
-      const res = await anonymizePrivacy(req, { params: Promise.resolve({ id: "123" }) });
+      // Cast the second argument context as unknown to bypass RouteCtx typings
+      const res = await anonymizePrivacy(req, { params: Promise.resolve({ id: "123" }) } as unknown as { params: Promise<Record<string, string>> });
       expect(res.status).toBe(401);
     });
   });
