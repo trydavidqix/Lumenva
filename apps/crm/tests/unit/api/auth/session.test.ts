@@ -23,14 +23,14 @@ vi.mock("next/headers", () => ({
 }));
 
 describe("Session API POST", () => {
-  let mockAuth: any;
+  let mockAuth: ReturnType<typeof initFirebaseAuth>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuth = {
       verifyIdToken: vi.fn(),
-    };
-    (initFirebaseAuth as any).mockReturnValue(mockAuth);
+    } as unknown as ReturnType<typeof initFirebaseAuth>;
+    vi.mocked(initFirebaseAuth).mockReturnValue(mockAuth);
   });
 
   it("returns 401 if CSRF header is missing", async () => {
@@ -83,7 +83,7 @@ describe("Session API POST", () => {
     mockAuth.verifyIdToken.mockResolvedValueOnce({
       auth_time: new Date().getTime() / 1000, // Now
     });
-    (createSessionCookie as any).mockResolvedValueOnce("new-session-cookie");
+    vi.mocked(createSessionCookie).mockResolvedValueOnce("new-session-cookie");
 
     const res = await POST(req);
     expect(res.status).toBe(200);

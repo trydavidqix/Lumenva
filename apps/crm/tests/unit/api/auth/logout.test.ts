@@ -26,8 +26,10 @@ describe("Logout API POST", () => {
     const req = new NextRequest("http://localhost/api/auth/logout", {
       method: "POST",
     });
-    (getServerSession as any).mockResolvedValueOnce({ uid: "user-123" });
-    (revokeRefreshTokens as any).mockResolvedValueOnce(undefined);
+    vi.mocked(getServerSession).mockResolvedValueOnce(
+      { uid: "user-123" } as unknown as Awaited<ReturnType<typeof getServerSession>>,
+    );
+    vi.mocked(revokeRefreshTokens).mockResolvedValueOnce(undefined);
 
     const res = await POST(req);
     expect(res.status).toBe(302);
@@ -41,7 +43,7 @@ describe("Logout API POST", () => {
     const req = new NextRequest("http://localhost/api/auth/logout", {
       method: "POST",
     });
-    (getServerSession as any).mockResolvedValueOnce(null);
+    vi.mocked(getServerSession).mockResolvedValueOnce(null);
 
     const res = await POST(req);
     expect(res.status).toBe(302);
@@ -55,7 +57,7 @@ describe("Logout API POST", () => {
     const req = new NextRequest("http://localhost/api/auth/logout", {
       method: "POST",
     });
-    (getServerSession as any).mockRejectedValueOnce(new Error("API Error"));
+    vi.mocked(getServerSession).mockRejectedValueOnce(new Error("API Error"));
 
     const res = await POST(req);
     expect(res.status).toBe(302);
