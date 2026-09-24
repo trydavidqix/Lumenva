@@ -4,7 +4,13 @@ import { DrizzleMessagingRepository } from '../../lib/db/drizzle/domains/messagi
 
 // Mock dependencies
 const mockTx = {
-  execute: vi.fn().mockResolvedValue(true)
+  execute: vi.fn().mockResolvedValue(true),
+  select: vi.fn().mockReturnThis(),
+  from: vi.fn().mockReturnThis(),
+  where: vi.fn().mockReturnThis(),
+  limit: vi.fn().mockReturnThis(),
+  orderBy: vi.fn().mockReturnThis(),
+  offset: vi.fn()
 };
 type MockTransactionCallback = (tx: typeof mockTx) => Promise<unknown>;
 
@@ -24,6 +30,7 @@ const mockSchema = {
 };
 
 vi.mock('drizzle-orm', () => ({
+  sql: (strings: TemplateStringsArray, ...values: unknown[]) => ({ strings: [...strings], values }),
   and: vi.fn(),
   eq: vi.fn(),
   desc: vi.fn(),
@@ -127,28 +134,41 @@ describe('DrizzleMessagingRepository', () => {
   });
 
   it('findConversationById isolates by organization and executes SET LOCAL', async () => {
-    mockDb.limit.mockResolvedValueOnce([{ id: 'conv-1', organization_id: 'org-1' }]);
+    mockTx.limit.mockResolvedValueOnce([{ id: 'conv-1', organization_id: 'org-1' }]);
 
     const result = await repository.findConversationById(ctx, 'conv-1');
 
     expect(mockDb.transaction).toHaveBeenCalled();
-    expect(mockTx.execute).toHaveBeenCalledWith("SET LOCAL app.organization_id = 'org-1'");
+    const tenantSetting = mockTx.execute.mock.calls[0]?.[0] as { strings: string[]; values: unknown[] };
+    expect(tenantSetting.strings.join('')).toContain('SET LOCAL app.organization_id = ');
+    expect(tenantSetting.values).toEqual(['org-1']);
     expect(result).toBeDefined();
     expect(result?.id).toBe('conv-1');
   });
 
+  it('executes the select on the transaction that received SET LOCAL', async () => {
+    mockTx.limit.mockResolvedValueOnce([]);
+
+    await repository.findConversationById(ctx, 'conv-1');
+
+    expect(mockTx.select).toHaveBeenCalledOnce();
+    expect(mockDb.select).not.toHaveBeenCalled();
+  });
+
   it('findMessageById isolates by organization and returns null if missing', async () => {
-    mockDb.limit.mockResolvedValueOnce([]);
+    mockTx.limit.mockResolvedValueOnce([]);
 
     const result = await repository.findMessageById(ctx, 'msg-none');
 
     expect(mockDb.transaction).toHaveBeenCalled();
-    expect(mockTx.execute).toHaveBeenCalledWith("SET LOCAL app.organization_id = 'org-1'");
+    const tenantSetting = mockTx.execute.mock.calls[0]?.[0] as { strings: string[]; values: unknown[] };
+    expect(tenantSetting.strings.join('')).toContain('SET LOCAL app.organization_id = ');
+    expect(tenantSetting.values).toEqual(['org-1']);
     expect(result).toBeNull();
   });
 
   it('listConversations correctly queries by context', async () => {
-    mockDb.offset.mockResolvedValueOnce([
+    mockTx.offset.mockResolvedValueOnce([
       { id: 'conv-1', organization_id: 'org-1' },
       { id: 'conv-2', organization_id: 'org-1' }
     ]);
@@ -161,7 +181,7 @@ describe('DrizzleMessagingRepository', () => {
   });
 
   it('listMessages correctly queries by context and conversationId', async () => {
-    mockDb.limit.mockResolvedValueOnce([
+    mockTx.limit.mockResolvedValueOnce([
       { id: 'msg-1', organization_id: 'org-1', conversation_id: 'conv-1' }
     ]);
 
@@ -173,7 +193,7 @@ describe('DrizzleMessagingRepository', () => {
   });
 
   it('listMessages applies cursor filter correctly', async () => {
-    mockDb.limit.mockResolvedValueOnce([
+    mockTx.limit.mockResolvedValueOnce([
       { id: 'msg-2', organization_id: 'org-1', conversation_id: 'conv-1' }
     ]);
 
@@ -182,7 +202,7 @@ describe('DrizzleMessagingRepository', () => {
     const results = await repository.listMessages(ctx, { conversationId: 'conv-1', direction: 'forward', cursor: cursorStr });
 
     expect(mockDb.transaction).toHaveBeenCalled();
-    expect(mockDb.where).toHaveBeenCalled();
+    expect(mockTx.where).toHaveBeenCalled();
     expect(results).toHaveLength(1);
     expect(results[0]?.id).toBe('msg-2');
   });
