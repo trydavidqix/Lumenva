@@ -6,7 +6,7 @@ export interface LogEntry {
   request_id?: string;
   trace_id?: string;
   organization_id?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 function formatLogEntry(entry: LogEntry): string {
@@ -21,9 +21,13 @@ function formatLogEntry(entry: LogEntry): string {
   const severity = severityMap[entry.level] || 'DEFAULT';
 
   // Redact sensitive data from the entire entry
-  const redactedEntry = redact(entry);
+  const redacted = redact(entry);
+  const redactedEntry =
+    typeof redacted === 'object' && redacted !== null && !Array.isArray(redacted)
+      ? (redacted as Record<string, unknown>)
+      : {};
 
-  const payload = {
+  const payload: Record<string, unknown> = {
     ...redactedEntry,
     severity,
     // Add GCP specific trace field if provided
@@ -37,19 +41,19 @@ function formatLogEntry(entry: LogEntry): string {
 }
 
 export const logger = {
-  debug: (message: string, context?: Record<string, any>) => {
+  debug: (message: string, context?: Record<string, unknown>) => {
     const entry: LogEntry = { message, level: 'debug', ...context };
     process.stdout.write(formatLogEntry(entry) + '\n');
   },
-  info: (message: string, context?: Record<string, any>) => {
+  info: (message: string, context?: Record<string, unknown>) => {
     const entry: LogEntry = { message, level: 'info', ...context };
     process.stdout.write(formatLogEntry(entry) + '\n');
   },
-  warn: (message: string, context?: Record<string, any>) => {
+  warn: (message: string, context?: Record<string, unknown>) => {
     const entry: LogEntry = { message, level: 'warn', ...context };
     process.stdout.write(formatLogEntry(entry) + '\n');
   },
-  error: (message: string, context?: Record<string, any>) => {
+  error: (message: string, context?: Record<string, unknown>) => {
     const entry: LogEntry = { message, level: 'error', ...context };
     process.stderr.write(formatLogEntry(entry) + '\n');
   },

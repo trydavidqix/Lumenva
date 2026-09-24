@@ -15,7 +15,7 @@ export const SENSITIVE_KEYS = [
 
 const REDACTED_STRING = '[REDACTED]';
 
-export function redact(obj: any): any {
+export function redact(obj: unknown): unknown {
   if (obj === null || obj === undefined) {
     return obj;
   }
@@ -26,11 +26,18 @@ export function redact(obj: any): any {
 
   if (obj instanceof Error) {
     // Serialize Error objects properly
+    const additionalProperties = redact(Object.assign({}, obj));
+    const additional =
+      typeof additionalProperties === 'object' &&
+      additionalProperties !== null &&
+      !Array.isArray(additionalProperties)
+        ? additionalProperties
+        : {};
     return {
       name: obj.name,
       message: obj.message,
       stack: obj.stack,
-      ...redact(Object.assign({}, obj)), // handle any other properties attached to error
+      ...additional, // handle any other properties attached to error
     };
   }
 
@@ -38,9 +45,9 @@ export function redact(obj: any): any {
     return obj.map((item) => redact(item));
   }
 
-  const result: Record<string, any> = {};
+  const result: Record<string, unknown> = {};
 
-  for (const [key, value] of Object.entries(obj)) {
+  for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
     const lowerKey = key.toLowerCase();
 
     // Check if the key matches any sensitive keys

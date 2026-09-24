@@ -2,12 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { logger } from '../src/logger';
 
 describe('logger', () => {
-  let stdoutSpy: any;
-  let stderrSpy: any;
-
   beforeEach(() => {
-    stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
-    stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
   });
 
   afterEach(() => {
@@ -15,10 +12,11 @@ describe('logger', () => {
   });
 
   it('should output structured JSON', () => {
+    const stdoutSpy = vi.mocked(process.stdout.write);
     logger.info('test message');
     expect(stdoutSpy).toHaveBeenCalled();
     const callArg = stdoutSpy.mock.calls[0][0];
-    const parsed = JSON.parse(callArg);
+    const parsed = JSON.parse(String(callArg));
 
     expect(parsed.message).toBe('test message');
     expect(parsed.severity).toBe('INFO');
@@ -27,16 +25,18 @@ describe('logger', () => {
   });
 
   it('should output structured JSON to stderr for errors', () => {
+    const stderrSpy = vi.mocked(process.stderr.write);
     logger.error('error message');
     expect(stderrSpy).toHaveBeenCalled();
     const callArg = stderrSpy.mock.calls[0][0];
-    const parsed = JSON.parse(callArg);
+    const parsed = JSON.parse(String(callArg));
 
     expect(parsed.message).toBe('error message');
     expect(parsed.severity).toBe('ERROR');
   });
 
   it('should redact sensitive fields in context', () => {
+    const stdoutSpy = vi.mocked(process.stdout.write);
     logger.info('user login', {
       user_id: '123',
       password: 'mypassword',
@@ -44,7 +44,7 @@ describe('logger', () => {
     });
 
     const callArg = stdoutSpy.mock.calls[0][0];
-    const parsed = JSON.parse(callArg);
+    const parsed = JSON.parse(String(callArg));
 
     expect(parsed.password).toBe('[REDACTED]');
     expect(parsed.user_id).toBe('123');
@@ -52,24 +52,26 @@ describe('logger', () => {
   });
 
   it('should include GCP trace format', () => {
+    const stdoutSpy = vi.mocked(process.stdout.write);
     logger.debug('trace test', {
       trace_id: 'projects/my-project/traces/123456',
       request_id: 'req_1',
     });
 
     const callArg = stdoutSpy.mock.calls[0][0];
-    const parsed = JSON.parse(callArg);
+    const parsed = JSON.parse(String(callArg));
 
     expect(parsed['logging.googleapis.com/trace']).toBe('projects/my-project/traces/123456');
     expect(parsed.request_id).toBe('req_1');
   });
 
   it('should format Error objects properly instead of swallowing them', () => {
+    const stderrSpy = vi.mocked(process.stderr.write);
     const error = new Error('Database connection failed');
     logger.error('System failed', { error });
 
     const callArg = stderrSpy.mock.calls[0][0];
-    const parsed = JSON.parse(callArg);
+    const parsed = JSON.parse(String(callArg));
 
     expect(parsed.message).toBe('System failed');
     expect(parsed.severity).toBe('ERROR');

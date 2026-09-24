@@ -14,6 +14,12 @@ describe('F8 Infra Contract (Dry-Run & Placeholders)', () => {
     // Ensure we do not use static JSON keys
     expect(content).not.toContain('credentials_json');
 
+    // Fork pull requests cannot mint GCP credentials, and this dry-run does not need package publishing.
+    expect(content).not.toMatch(/^\s*packages:\s*write\s*$/m);
+    expect(content.match(/^\s*id-token:\s*write\s*$/gm) ?? []).toHaveLength(1);
+    expect(content).toContain("  gcp-auth:\n    if: ${{ github.event_name != 'pull_request' && vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}\n    permissions:\n      contents: read\n      id-token: write");
+    expect(content.match(/if: \$\{\{ github\.event_name != 'pull_request' && vars\.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars\.GCP_SERVICE_ACCOUNT != '' \}\}/g) ?? []).toHaveLength(4);
+
     // Ensure OIDC is used
     expect(content).toContain('google-github-actions/auth');
   });

@@ -28,6 +28,15 @@ describe('GCP Cloud Tasks / Scheduler Contract', () => {
     expect(processedTasks.size).toBe(0);
   });
 
+  it('fails closed when expected token and authorization header are both missing', async () => {
+    const ctx = createMockTaskContext({});
+    const result = await handleCloudTask(ctx, undefined, myTaskHandler);
+
+    expect(result.status).toBe('fail');
+    expect(result.error).toBe('unauthorized');
+    expect(processedTasks.size).toBe(0);
+  });
+
   it('executes task when authentication is valid', async () => {
     const ctx = createMockTaskContext({
       authHeader: `Bearer ${SECRET_AUTH_TOKEN}`,
