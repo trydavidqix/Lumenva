@@ -35,3 +35,16 @@ Você nunca aprova seu próprio código criticamente. O fluxo é:
 Toda ação crítica (como ler segredos, deletar bancos de dados ou alterar produção) passará pelos **Hooks (Automation Police)**. O MCP da Lumenva decidirá ALLOW/DENY com base nas suas permissões (geralmente restritas a DEV). Não force operações bloqueadas.
 
 - References: CLAUDE.md and .claude/rules/
+
+## TDD obrigatório
+
+- RED antes de qualquer fix: reproduza a causa certa com teste que falha.
+- GREEN: faça a menor mudança que satisfaz o teste.
+- Não enfraqueça nem afrouxe asserções. `skip`/`todo` só com gap documentado e severidade.
+- Proibidos `@ts-nocheck`, `@ts-ignore` e `any` genérico.
+- Valide somente pelos comandos canônicos do `package.json`: `pnpm --dir apps/crm typecheck`, `pnpm --dir apps/crm lint` e `pnpm --dir apps/crm test:unit`.
+- Não rode `tsc`/`eslint` manualmente nem use flags próprias; `--ignoreConfig` mascarou erro real no PR #57.
+- Não importe por caminho relativo atravessando pacote nem crie alias manual em config compartilhada para contornar resolução; declare a dependency de workspace.
+- Respeite a allowlist definida para a tarefa.
+- Reporte validação somente com a saída exata dos comandos executados.
+- Esta seção complementa a hierarquia de autoridade: `CLAUDE.md` e `.claude/rules/` prevalecem conforme suas regras.
