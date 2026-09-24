@@ -41,7 +41,10 @@ export class MetaAdapter implements SocialChannelPort {
     command: Extract<MetaCommand, { type: "send_template" }>
   ): Promise<MetaResult> {
     try {
-      const token = await this.deps.getConfig("META_TOKEN") ?? "unknown_token";
+      const token = await this.deps.getConfig("META_TOKEN");
+      if (!token?.trim()) {
+        return { sent: false, reason: "not_configured", code: null, message: "META_TOKEN is not configured" };
+      }
       const graphVersion = await this.deps.getConfig("META_GRAPH_VERSION") ?? "v20.0";
 
       const contractHash = hashContract(command.components);

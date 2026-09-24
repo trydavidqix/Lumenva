@@ -30,11 +30,14 @@
  * rede interna do Docker e nunca precisou dela pela internet. Ver Caddyfile.
  */
 import { env } from "@/lib/env";
+import { logger } from "@/lib/logger";
 
 import { verifyHmacSha512 } from "./ingest";
 
 /** Curto demais para ser segredo de verdade — é placeholder ou lixo de decrypt. */
 const MIN_SECRET_LEN = 16;
+const UNSIGNED_WARNING_INTERVAL_MS = 60_000;
+const lastUnsignedWarningAt = new Map<string, number>();
 
 export type WahaWebhookAuth =
   | { ok: true; signatureVerified: boolean }
@@ -45,6 +48,25 @@ export interface WahaWebhookAuthInput {
   signatureHeader: string | null;
   /** Segredo por sessão já decifrado (null quando não há/não decifrou). */
   sessionSecret: string | null;
+  organizationId?: string;
+  session?: string;
+}
+
+function warnUnsignedWebhook(organizationId?: string, session?: string): void {
+  const key = organizationId ? `${organizationId}:${session ?? ""}` : session ?? "unknown";
+  const now = Date.now();
+  const lastWarningAt = lastUnsignedWarningAt.get(key);
+  if (lastWarningAt !== undefined && now - lastWarningAt < UNSIGNED_WARNING_INTERVAL_MS) return;
+
+  lastUnsignedWarningAt.set(key, now);
+  for (const [knownKey, warnedAt] of lastUnsignedWarningAt) {
+    if (now - warnedAt >= UNSIGNED_WARNING_INTERVAL_MS) lastUnsignedWarningAt.delete(knownKey);
+  }
+
+  logger.warn("WAHA webhook accepted without signature", {
+    ...(organizationId ? { organization_id: organizationId } : {}),
+    ...(session ? { session } : {}),
+  });
 }
 
 export function authenticateWahaWebhook(input: WahaWebhookAuthInput): WahaWebhookAuth {
@@ -70,5 +92,6 @@ export function authenticateWahaWebhook(input: WahaWebhookAuthInput): WahaWebhoo
   }
 
   if (required) return { ok: false, reason: "signature_required" };
+  warnUnsignedWebhook(input.organizationId, input.session);
   return { ok: true, signatureVerified: false };
 }
