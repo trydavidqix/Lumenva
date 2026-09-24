@@ -14,7 +14,7 @@ function run(env: Record<string, string | undefined>) {
   const childEnv = Object.fromEntries(Object.entries({ ...process.env, LUMENVA_AGENT_REPORT: undefined, DESKCOMM_AGENT_REPORT: undefined, ...env }).filter(([, value]) => value !== undefined)) as NodeJS.ProcessEnv;
   return new Promise<{ status: number | null; stdout: string; stderr: string }>((resolveResult) => {
     execFile("bash", ["-e", "-c", script, "env-alias-test", helper, "AGENT_REPORT"], { env: childEnv, encoding: "utf8" }, (error, stdout, stderr) => {
-      resolveResult({ status: error ? (typeof error.code === "number" ? error.code : error.status ?? 1) : 0, stdout, stderr });
+      resolveResult({ status: error ? (typeof error.code === "number" ? error.code : 1) : 0, stdout, stderr });
     });
   });
 }
