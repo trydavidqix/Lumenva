@@ -8,8 +8,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write # Requerido para Workload Identity Federation (OIDC)
-  packages: write # Requerido se o publish for para GHCR, embora seja GCP focado, usamos Artifact Registry.
 
 jobs:
   verify-and-build:
@@ -37,21 +35,27 @@ jobs:
       - name: Unit tests
         run: pnpm test:unit
 
-      # Autenticação GCP via OIDC - SEM uso de chaves JSON de longo prazo
-      # Só executa se as variáveis de ambiente existirem, evitando falhas em PRs de forks ou ambientes sem credenciais
+  # Restrinja também as claims do WIF no GCP a este repositório e às refs autorizadas (F8-H1).
+  gcp-auth:
+    if: ${{ github.event_name != 'pull_request' && vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
       - name: Authenticate to Google Cloud (OIDC)
-        if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
+        if: ${{ github.event_name != 'pull_request' && vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
       - name: Set up Cloud SDK
-        if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
+        if: ${{ github.event_name != 'pull_request' && vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Configure Docker for GCP Artifact Registry
-        if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
+        if: ${{ github.event_name != 'pull_request' && vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
         run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
       - name: Docker metadata (tags/labels)
