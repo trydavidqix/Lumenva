@@ -47,6 +47,20 @@ describe('R2 object store', () => {
     await expect(makeStore().store.createReadUrl(ref, 3_601, authorization)).rejects.toMatchObject({ code: 'invalid_configuration' })
   })
 
+  it('rejects pathological references and prefixes without regex backtracking', async () => {
+    const { store } = makeStore()
+    const pathological = `${'a'.repeat(200_000)}!`
+    await expect(store.get({ workspaceId: pathological, objectId: 'asset-1' }, authorization)).rejects.toMatchObject({ code: 'invalid_reference' })
+    expect(() => createR2ObjectStore(makeBucket(), {
+      bucketName: 'private-media',
+      maxBytes: 10,
+      allowedContentTypes: ['video/mp4'],
+      readUrl: vi.fn(async () => 'https://media.test/read'),
+      authorize: async () => true,
+      keyPrefix: `${'/'.repeat(100_000)}${'a'.repeat(200_000)}!`,
+    })).toThrowError(expect.objectContaining({ code: 'invalid_configuration' }))
+  })
+
   it('fails closed when actor context is absent before calling the bucket', async () => {
     const { bucket, store } = makeStore()
     await expect(store.get(ref, undefined as never)).rejects.toMatchObject({ code: 'authorization_required' })

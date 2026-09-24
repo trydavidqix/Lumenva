@@ -68,7 +68,7 @@ async function ensureOwnerUser(): Promise<string> {
   const existing = list.users.find((u) => u.email === OWNER_EMAIL);
   if (existing) {
     await admin.auth.admin.updateUserById(existing.id, { password: OWNER_PASSWORD });
-    console.log(`[bootstrap] dono já existia, senha atualizada: ${existing.id}`);
+    console.log("[bootstrap] senha do dono existente atualizada");
     return existing.id;
   }
   const { data, error } = await admin.auth.admin.createUser({
@@ -77,8 +77,8 @@ async function ensureOwnerUser(): Promise<string> {
     email_confirm: true,
     user_metadata: { full_name: "Dono" },
   });
-  if (error || !data?.user) throw new Error(`criar dono: ${error?.message}`);
-  console.log(`[bootstrap] dono criado: ${data.user.id}`);
+  if (error || !data?.user) throw new Error("criar dono falhou");
+  console.log("[bootstrap] dono criado");
   return data.user.id;
 }
 
@@ -90,7 +90,7 @@ async function ensureOrg(ownerId: string): Promise<string> {
     .eq("slug", slug)
     .maybeSingle();
   if (existing) {
-    console.log(`[bootstrap] org já existia: ${(existing as { id: string }).id}`);
+    console.log("[bootstrap] org já existia");
     return (existing as { id: string }).id;
   }
   const { data, error } = await admin
@@ -103,8 +103,8 @@ async function ensureOrg(ownerId: string): Promise<string> {
     } as never)
     .select("id")
     .single();
-  if (error || !data) throw new Error(`criar org: ${error?.message}`);
-  console.log(`[bootstrap] org criada: ${(data as { id: string }).id}`);
+  if (error || !data) throw new Error("criar org falhou");
+  console.log("[bootstrap] org criada");
   return (data as { id: string }).id;
 }
 
@@ -130,7 +130,7 @@ async function ensureMembership(userId: string, orgId: string): Promise<void> {
     role: "admin",
     accepted_at: new Date().toISOString(),
   } as never);
-  if (error) throw new Error(`associação: ${error.message}`);
+  if (error) throw new Error("associação do dono falhou");
   console.log("[bootstrap] dono associado como admin");
 }
 
@@ -153,7 +153,7 @@ async function ensurePlatformAdmin(userId: string): Promise<void> {
     scope: "full",
     reason: "Bootstrap inicial do self-host (dono da instância)",
   } as never);
-  if (error) throw new Error(`platform_admin: ${error.message}`);
+  if (error) throw new Error("concessão platform_admin falhou");
   console.log("[bootstrap] dono promovido a super-admin de plataforma");
 }
 
@@ -162,10 +162,10 @@ async function main(): Promise<void> {
   const orgId = await ensureOrg(ownerId);
   await ensureMembership(ownerId, orgId);
   await ensurePlatformAdmin(ownerId);
-  console.log(`\n✅ Bootstrap completo.\n  dono: ${OWNER_EMAIL}\n  org:  ${orgId}\n  Faça login em ${env.NEXT_PUBLIC_APP_URL || "https://<seu-dominio>"} e conclua o onboarding.`);
+  console.log(`\n✅ Bootstrap completo.\n  Faça login em ${env.NEXT_PUBLIC_APP_URL || "https://<seu-dominio>"} e conclua o onboarding.`);
 }
 
-main().catch((err) => {
-  console.error("❌ Bootstrap falhou:", err);
+main().catch(() => {
+  console.error("❌ Bootstrap falhou.");
   process.exit(1);
 });

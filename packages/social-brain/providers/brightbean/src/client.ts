@@ -35,7 +35,9 @@ export class BrightBeanClient {
   private readonly timeoutMs: number
 
   constructor(options: BrightBeanClientOptions) {
-    this.baseUrl = options.baseUrl.replace(/\/+$/, '')
+    let baseUrlEnd = options.baseUrl.length
+    while (baseUrlEnd > 0 && options.baseUrl[baseUrlEnd - 1] === '/') baseUrlEnd -= 1
+    this.baseUrl = options.baseUrl.slice(0, baseUrlEnd)
     this.apiKey = options.apiKey
     this.fetchImpl = options.fetchImpl ?? fetch
     this.timeoutMs = options.timeoutMs ?? 10_000
