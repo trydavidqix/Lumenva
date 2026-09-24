@@ -130,4 +130,3 @@ describe('CrmLeadNormalizer', () => {
     expect(normalizedList?.[1]!.id).toBe('lead-b');
   });
 });
-
