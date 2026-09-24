@@ -49,14 +49,19 @@ describe("F7 Adapter Contracts Matrix", () => {
     it("handles idempotency correctly", async () => {
       const adapter = new StripeAdapter({ apiKey: "sk_test_123" });
 
-      const priceSpy = vi.spyOn(adapter["stripe"].prices, "list").mockResolvedValue({
+      type StripeClient = {
+        prices: { list: Stripe["prices"]["list"] };
+        checkout: { sessions: { create: Stripe["checkout"]["sessions"]["create"] } };
+      };
+      const stripeClient = adapter["stripe"] as unknown as StripeClient;
+      const priceSpy = vi.spyOn(stripeClient.prices, "list").mockResolvedValue({
         data: [{ id: "price_1", unit_amount: 1000, currency: "usd" }]
-      } as any);
+      } as unknown as Awaited<ReturnType<Stripe["prices"]["list"]>>);
 
-      const createSpy = vi.spyOn(adapter["stripe"].checkout.sessions, "create").mockResolvedValue({
+      const createSpy = vi.spyOn(stripeClient.checkout.sessions, "create").mockResolvedValue({
         id: "cs_123",
         url: "https://checkout.stripe.com/123"
-      } as any);
+      } as unknown as Awaited<ReturnType<Stripe["checkout"]["sessions"]["create"]>>);
 
       await adapter.createCheckoutSession(
         { organizationId: "org-1", requestId: "req-1", idempotencyKey: "idem_123" },
@@ -129,7 +134,9 @@ describe("F7 Adapter Contracts Matrix", () => {
         error: { name: "RateLimitError", message: "Too many requests" }
       });
 
-      vi.spyOn(adapter as any, 'getClient').mockReturnValue({
+      type ResendClientForTest = { emails: { send: typeof mockSend } };
+      const resendAdapter = adapter as unknown as { getClient: () => ResendClientForTest | null };
+      vi.spyOn(resendAdapter, 'getClient').mockReturnValue({
         emails: { send: mockSend }
       });
 
@@ -170,7 +177,7 @@ describe("F7 Adapter Contracts Matrix", () => {
 
   describe("Sentry Adapter", () => {
     it("scrubs PII", () => {
-      const event: any = {
+      const event: Parameters<typeof scrubEvent>[0] = {
         request: {
           headers: {
             authorization: "Bearer secret",
@@ -191,15 +198,17 @@ describe("F7 Adapter Contracts Matrix", () => {
 
   describe("Meta Adapter gaps", () => {
     it.skip("gap_meta_adapter_missing_webhook_replay_protection", async () => {
+      type MetaDependencies = ConstructorParameters<typeof MetaAdapter>[0];
+      const getConfig = vi.fn<MetaDependencies["getConfig"]>();
       const deps = {
-        getConfig: vi.fn(),
+        fetch,
+        getConfig,
         logger: { warn: vi.fn(), error: vi.fn() },
         idempotencyStore: { has: vi.fn(), set: vi.fn() }
-      } as any;
+      } satisfies MetaDependencies;
       const adapter = new MetaAdapter(deps);
 
-      deps.getConfig.mockResolvedValue("secret");
-
+      getConfig.mockResolvedValue("secret");
       const res = await adapter.execute(
         { organizationId: "org-1", requestId: "req-1" },
         { type: "verify_webhook", rawBody: "body", signatureHeader: "sig" }
