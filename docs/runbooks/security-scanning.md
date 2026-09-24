@@ -8,16 +8,16 @@ scanner para gate exige triagem do baseline e decisao explicita do Owner.
 
 | Item | Estado | Motivo curto |
 | --- | --- | --- |
-| Claude Code + Claude Security Plugin | **FALTA** | Claude Code 2.1.281 esta instalado; o plugin oficial existe no marketplace local, mas nao esta instalado nem ativo. |
-| `security-guidance` | **FALTA** | Existe no marketplace oficial local, mas nao esta instalado nem ativo. |
-| Claude `/security-review` | **FALTA** | Nao ha comando instalado; a unica ocorrencia local e um exemplo de criacao de comando. O `security-guidance` ja oferece revisao de diff e de commit com escopo semelhante. |
+| Claude Code + Claude Security Plugin | **FALTA** | Claude Code 2.1.281 esta instalado; o plugin oficial e local ao Claude Code do Owner, nao e parte do CI, e nao esta instalado nem ativo. |
+| `security-guidance` | **FALTA** | E um plugin local do Claude Code do Owner, nao uma etapa de CI; existe no marketplace oficial local, mas nao esta instalado nem ativo. |
+| Claude `/security-review` | **FALTA** | E um comando/plugin local do Claude Code do Owner, nao CI. Nao ha comando instalado; a unica ocorrencia local e um exemplo de criacao de comando. |
 | Codex | **JA TEMOS** | Codex CLI 0.155.1 esta disponivel para segunda analise e correcao em branch isolada. |
 | CodeQL | **JA TEMOS** | Default setup do GitHub esta configurado para Actions, JavaScript/TypeScript e Python. |
 | Semgrep | **FALTA** | Nao existe no `main`; este PR adiciona scan CE em PR, semanal e manual. |
 | OSV-Scanner | **FALTA** | Nao existe no `main`; este PR adiciona scan recursivo de lockfiles e SARIF. |
 | Gitleaks | **FALTA** | Secret scanning e push protection do GitHub estao ativos, mas nao substituem a varredura completa do historico; este PR adiciona Gitleaks. |
-| OWASP ZAP | **DECISAO DO OWNER** | Precisa de URL de teste estavel, autenticacao de teste e regras de escopo. Sem esse ambiente, automatizar DAST criaria ruido ou atingiria o alvo errado. |
-| Dependabot | **JA TEMOS** | `.github/dependabot.yml` cobre npm e GitHub Actions semanalmente. Alertas existem; updates de seguranca automaticos estao desativados na configuracao do repositorio. |
+| OWASP ZAP | **ADIADO — DECISAO DO OWNER (2026-09-24)** | Sem Docker e sem ambiente E2E isolado. A action oficial nao sera usada porque executa Docker internamente. |
+| Dependabot | **JA TEMOS** | `.github/dependabot.yml` cobre npm e GitHub Actions semanalmente. Os security updates seguem desligados, aguardando decisao do Owner. |
 | OSS-Fuzz / ClusterFuzzLite | **NAO SE APLICA** | O produto e majoritariamente TypeScript; a documentacao publicada do ClusterFuzzLite nao lista JavaScript/TypeScript entre as linguagens suportadas. OSS-Fuzz tambem exige integracao e elegibilidade proprias. |
 
 ## Ordem do pipeline
@@ -30,8 +30,8 @@ scanner para gate exige triagem do baseline e decisao explicita do Owner.
    report-only; achados sao triados, nao tratados automaticamente como bloqueio.
 4. **Revisao final:** `/security-review` so entra se o Owner instalar/criar esse comando. Depois,
    Claude compara achados, diff e checks antes do PR seguir para decisao humana.
-5. **Depois da decisao do Owner:** ZAP entra somente contra ambiente de teste autorizado; fuzzing
-   entra somente depois de existir um harness reproduzivel e corpus inicial.
+5. **Depois dos pre-requisitos e de nova decisao do Owner:** ZAP entra somente contra ambiente de
+   teste autorizado; fuzzing entra somente depois de existir um harness reproduzivel e corpus inicial.
 
 ## Cadencia
 
@@ -40,8 +40,19 @@ scanner para gate exige triagem do baseline e decisao explicita do Owner.
 | A cada PR | CodeQL existente; Semgrep; OSV-Scanner; Gitleaks. |
 | Semanal | Semgrep; OSV-Scanner; Gitleaks. O CodeQL continua sob o default setup gerenciado pelo GitHub. |
 | Manual | O mesmo workflow via `workflow_dispatch`; Claude Security e Codex conforme o risco da mudanca. |
-| Futuro, com ambiente de teste | ZAP baseline autenticado, limitado ao host autorizado e inicialmente report-only. |
+| Futuro, com ambiente de teste | ZAP via tarball Java e `zap.sh`, limitado ao host autorizado e inicialmente report-only. |
 | Futuro, com harness | Fuzzing curto em PR e campanha mais longa semanal. |
+
+## OWASP ZAP: adiado
+
+Decisao do Owner em **2026-09-24**: a integracao do ZAP esta adiada.
+
+- Nao usar Docker para executar o ZAP.
+- Nao usar a action oficial do ZAP, pois ela executa Docker internamente.
+- So retomar quando existir um ambiente de teste do app com `.env.e2e` e banco de teste isolado.
+- Nunca apontar o ZAP para producao ou para um banco de producao.
+- Quando os pre-requisitos existirem, baixar o tarball Java do ZAP no GitHub Actions e executar
+  `zap.sh` diretamente, com versao fixada, escopo restrito e modo report-only inicial.
 
 ## Fuzzing: avaliacao pratica
 
@@ -71,8 +82,11 @@ Alvos plausiveis, por receberem entrada nao confiavel e terem contrato relativam
 
 ## Limites atuais
 
-- Nao ha ZAP sem ambiente de teste autorizado.
+- ZAP esta adiado por decisao do Owner: sem Docker; futuramente usar tarball Java + `zap.sh` apenas
+  contra `.env.e2e` e banco de teste, nunca producao.
 - Nao ha fuzzing sem harness e targets mantidos pelo time de produto.
-- O workflow nao instala nem configura plugins do Claude Code e nao altera configuracoes globais.
+- Claude Security Plugin, `security-guidance` e `/security-review` sao recursos locais do Claude
+  Code do Owner, nao etapas de CI; o workflow nao os instala nem altera configuracoes globais.
+- Dependabot security updates seguem desligados, aguardando decisao do Owner.
 - O token automatico do GitHub usa apenas as permissoes declaradas por job; nao ha segredo de
   repositorio exigido.
