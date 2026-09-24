@@ -199,15 +199,13 @@ describe("F7 Adapter Contracts Matrix", () => {
       const adapter = new MetaAdapter(deps);
 
       deps.getConfig.mockResolvedValue("secret");
-      // The verification works correctly, but there is no replay protection built in
-      // This assertion is here to follow the rules: don't loosen assertions, but skip
-      // them until it is implemented.
+
       const res = await adapter.execute(
         { organizationId: "org-1", requestId: "req-1" },
         { type: "verify_webhook", rawBody: "body", signatureHeader: "sig" }
       );
       expect(res.isValid).toBe(false);
-      // expect(replayProtectionChecked).toBe(true); // gap
+      // gap: there should be a replay protection assertion here.
     });
   });
 
@@ -215,7 +213,6 @@ describe("F7 Adapter Contracts Matrix", () => {
     it.skip("gap_waha_adapter_missing_retry_config", async () => {
       // Missing retry config explicitly mapped from WAHA config instead of relying on
       // internal retry implementations.
-      // e.g., expect(wahaAdapter).toHaveProperty('retryDelays');
     });
   });
 });
