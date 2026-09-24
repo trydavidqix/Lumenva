@@ -79,8 +79,8 @@ export class StripeAdapter {
           interval: price.recurring?.interval ?? "month"
         }
       };
-    } catch (err: any) {
-      if (err instanceof Stripe.errors.StripeError || err?.name === "Error" || err instanceof Error) {
+    } catch (err: unknown) {
+      if (err instanceof Error) {
         throw new Error(`Stripe API Error: ${err.message}`);
       }
       throw err;
@@ -101,8 +101,8 @@ export class StripeAdapter {
       }, { idempotencyKey: ctx.idempotencyKey });
 
       return { subscriptionId: input.subscriptionId };
-    } catch (err: any) {
-      if (err instanceof Stripe.errors.StripeError || err?.name === "Error" || err instanceof Error) {
+    } catch (err: unknown) {
+      if (err instanceof Error) {
         throw new Error(`Stripe API Error: ${err.message}`);
       }
       throw err;

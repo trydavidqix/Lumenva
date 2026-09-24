@@ -53,6 +53,26 @@ describe("MetaAdapter", () => {
   });
 
   describe("send_template", () => {
+    it("fails closed when META_TOKEN is absent without calling Meta API", async () => {
+      vi.mocked(deps.getConfig).mockResolvedValue(null);
+
+      const result = await adapter.execute(
+        { organizationId: "org-1", requestId: "req-missing-token" },
+        {
+          type: "send_template",
+          phoneNumberId: "phone-1",
+          to: "551199999999",
+          templateName: "hello",
+          language: "en",
+          components: [],
+          bindingValues: {},
+        }
+      );
+
+      expect(result).toMatchObject({ sent: false });
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
     it("returns gracefully formatted result and redacts PII from logging on failure", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,

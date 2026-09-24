@@ -116,7 +116,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     sessionSecret = null;
   }
 
-  const auth = authenticateWahaWebhook({ rawBody, signatureHeader: sigHeader, sessionSecret });
+  const auth = authenticateWahaWebhook({
+    rawBody,
+    signatureHeader: sigHeader,
+    sessionSecret,
+    organizationId: session.organization_id,
+    session: session.waha_session_name,
+  });
   if (!auth.ok) {
     await audit({
       action: "webhook.hmac_invalid",

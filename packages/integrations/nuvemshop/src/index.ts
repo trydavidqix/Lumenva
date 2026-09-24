@@ -1,3 +1,5 @@
+import { isIP } from "node:net";
+
 export type ExternalOperationContext = {
   organizationId: string;
   requestId: string;
@@ -22,8 +24,8 @@ export interface NuvemshopCommand {
 
 export interface NuvemshopResult {
   ok: boolean;
-  data?: any;
-  error?: "not_configured" | "invalid_webhook_url" | "unauthorized" | "forbidden" | "not_found" | "rate_limited" | "upstream_error" | "network_error" | "request_failed" | "invalid_json";
+  data?: unknown;
+  error?: "not_configured" | "invalid_api_url" | "invalid_webhook_url" | "unauthorized" | "forbidden" | "not_found" | "rate_limited" | "upstream_error" | "network_error" | "request_failed" | "invalid_json";
   details?: string;
 }
 
@@ -31,17 +33,62 @@ export interface NuvemshopAdapterOptions {
   retryDelaysMs?: readonly number[];
   sleep?: (ms: number) => Promise<void>;
   apiBase?: string;
+  callbackBaseUrl?: string;
+}
+
+const OFFICIAL_API_HOSTS = new Set(["api.nuvemshop.com.br", "api.tiendanube.com"]);
+const METADATA_HOSTS = new Set(["metadata", "metadata.google.internal"]);
+
+function isOfficialApiBase(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" &&
+      OFFICIAL_API_HOSTS.has(url.hostname.toLowerCase()) &&
+      !url.port && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
+function isPublicHttpsUrl(value: string): URL | null {
+  try {
+    const url = new URL(value);
+    const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/, "");
+    const localHostname = hostname === "localhost" || hostname.endsWith(".localhost");
+    const privateHostname = METADATA_HOSTS.has(hostname) ||
+      hostname.endsWith(".metadata.google.internal") ||
+      hostname.endsWith(".internal") ||
+      hostname.endsWith(".local");
+
+    if (
+      url.protocol !== "https:" ||
+      !hostname.includes(".") ||
+      localHostname ||
+      privateHostname ||
+      url.username.length > 0 ||
+      url.password.length > 0
+    ) return null;
+    if (isIP(hostname) !== 0) return null;
+    return url;
+  } catch {
+    return null;
+  }
 }
 
 export class NuvemshopAdapter implements ExternalAdapter<NuvemshopCommand, NuvemshopResult> {
   private readonly retryDelaysMs: readonly number[];
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly apiBase: string;
+  private readonly callbackBaseUrl: string | undefined;
 
   constructor(options?: NuvemshopAdapterOptions) {
     this.retryDelaysMs = options?.retryDelaysMs ?? [100, 500];
     this.sleep = options?.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
     this.apiBase = options?.apiBase ?? "https://api.nuvemshop.com.br/v1";
+    this.callbackBaseUrl = options?.callbackBaseUrl !== undefined
+      ? options.callbackBaseUrl
+      : [process.env.WAHA_WEBHOOK_BASE_URL, process.env.NEXT_PUBLIC_APP_URL]
+        .find((candidate) => Boolean(candidate && isPublicHttpsUrl(candidate)));
   }
 
   private url(storeId: string, path: string): string {
@@ -59,6 +106,8 @@ export class NuvemshopAdapter implements ExternalAdapter<NuvemshopCommand, Nuvem
   }
 
   private async request(storeId: string, token: string, method: string, path: string, body?: unknown): Promise<NuvemshopResult> {
+    if (!isOfficialApiBase(this.apiBase)) return { ok: false, error: "invalid_api_url" };
+
     for (let attempt = 0; ; attempt += 1) {
       let res: Response;
       try {
@@ -67,13 +116,14 @@ export class NuvemshopAdapter implements ExternalAdapter<NuvemshopCommand, Nuvem
           headers: this.headers(token),
           body: body !== undefined ? JSON.stringify(body) : undefined,
           cache: "no-store",
+          redirect: "error",
         });
       } catch (err) {
         if (attempt < this.retryDelaysMs.length) {
           await this.sleep(this.retryDelaysMs[attempt]!);
           continue;
         }
-        return { ok: false, error: "network_error", details: String((err as Error).message) };
+        return { ok: false, error: "network_error", details: err instanceof Error ? err.message : String(err) };
       }
 
       const text = await res.text();
@@ -120,13 +170,10 @@ export class NuvemshopAdapter implements ExternalAdapter<NuvemshopCommand, Nuvem
           return { ok: false, error: "request_failed", details: "Missing event or url" };
         }
 
-        // SSRF protection: only allow https domains (and simple url validation)
-        try {
-          const u = new URL(command.url);
-          if (u.protocol !== "https:" || u.hostname === "localhost" || u.hostname === "127.0.0.1") {
-            return { ok: false, error: "invalid_webhook_url" };
-          }
-        } catch {
+        const callbackUrl = isPublicHttpsUrl(command.url);
+        if (!callbackUrl) return { ok: false, error: "invalid_webhook_url" };
+        const configuredBaseUrl = this.callbackBaseUrl ? isPublicHttpsUrl(this.callbackBaseUrl) : null;
+        if (configuredBaseUrl && callbackUrl.hostname !== configuredBaseUrl.hostname) {
           return { ok: false, error: "invalid_webhook_url" };
         }
 

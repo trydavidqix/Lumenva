@@ -36,10 +36,10 @@ describe("StripeAdapter", () => {
     const mockCreate = vi.fn().mockResolvedValue({ id: "cs_123", url: "http://stripe/checkout" });
 
     // Override the mock instance methods
-    (Stripe as any).mockImplementation(() => ({
+    vi.mocked(Stripe).mockImplementation(() => ({
       prices: { list: mockList },
       checkout: { sessions: { create: mockCreate } }
-    }));
+    } as unknown as Stripe));
 
     const adapter = new StripeAdapter({ apiKey: "fake" });
     const result = await adapter.createCheckoutSession(
@@ -68,9 +68,9 @@ describe("StripeAdapter", () => {
 
   it("calls Stripe API for cancelSubscription when not dryRun", async () => {
     const mockUpdate = vi.fn().mockResolvedValue({ id: "sub_123" });
-    (Stripe as any).mockImplementation(() => ({
+    vi.mocked(Stripe).mockImplementation(() => ({
       subscriptions: { update: mockUpdate }
-    }));
+    } as unknown as Stripe));
 
     const adapter = new StripeAdapter({ apiKey: "fake" });
     await adapter.cancelSubscription(
@@ -83,9 +83,9 @@ describe("StripeAdapter", () => {
 
   it("throws standard error on Stripe timeout or failure", async () => {
     const mockList = vi.fn().mockRejectedValue(new Error("Stripe timeout"));
-    (Stripe as any).mockImplementation(() => ({
+    vi.mocked(Stripe).mockImplementation(() => ({
       prices: { list: mockList }
-    }));
+    } as unknown as Stripe));
 
     const adapter = new StripeAdapter({ apiKey: "fake" });
     await expect(adapter.createCheckoutSession(
