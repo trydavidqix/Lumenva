@@ -31,6 +31,5 @@ export type CrmLead = {
 export type CrmLeadFilter = {
   stageId?: string;
   contactId?: string;
-  cursor?: string;
   limit?: number;
 };

@@ -1,15 +1,54 @@
 import { describe, it, expect, vi } from 'vitest';
 import { CrmLeadsDrizzleRepository } from '../../lib/db/drizzle/domains/crm/leads-repository';
 import { CrmLeadNormalizer } from '../../lib/db/drizzle/domains/crm/normalizer';
+import { PgDialect } from 'drizzle-orm/pg-core';
 
-// Mock dependencies dynamically to avoid resolution errors
-const clientModule = {
-  getDrizzle: vi.fn(),
-};
+const { getDrizzleMock } = vi.hoisted(() => ({ getDrizzleMock: vi.fn() }));
+vi.mock('@lumenva/db/drizzle/client', () => ({ getDrizzle: getDrizzleMock }));
+
+const ctx = { userId: 'user-1', organizationId: '11111111-1111-4111-8111-111111111111', role: 'agent' as const, requestId: 'req-1' };
 
 describe('CrmLeadsDrizzleRepository', () => {
-  it('should exist', () => {
-    expect(CrmLeadsDrizzleRepository).toBeDefined();
+  it('rejects an injected stageId before opening the tenant transaction', async () => {
+    const mockDb = { transaction: vi.fn() };
+    getDrizzleMock.mockReturnValue(mockDb);
+
+    await expect(new CrmLeadsDrizzleRepository().list(ctx, { stageId: "x' OR '1'='1" }))
+      .rejects.toThrow('Invalid stageId');
+
+    expect(mockDb.transaction).not.toHaveBeenCalled();
+  });
+
+  it('binds tenant, UUID filters, and a bounded integer limit as SQL parameters', async () => {
+    const queries: unknown[] = [];
+    const tx = { execute: vi.fn(async (query: unknown) => { queries.push(query); return { rows: [] }; }) };
+    getDrizzleMock.mockReturnValue({ transaction: async (callback: (transaction: typeof tx) => unknown) => callback(tx) });
+
+    await new CrmLeadsDrizzleRepository().list(ctx, {
+      stageId: '22222222-2222-4222-8222-222222222222',
+      contactId: '33333333-3333-4333-8333-333333333333',
+      limit: 25,
+    });
+
+    const query = queries[1] as Parameters<PgDialect['sqlToQuery']>[0];
+    const compiled = new PgDialect().sqlToQuery(query);
+    expect(compiled.sql).toContain('organization_id = $1');
+    expect(compiled.params).toEqual([
+      ctx.organizationId,
+      '22222222-2222-4222-8222-222222222222',
+      '33333333-3333-4333-8333-333333333333',
+      25,
+    ]);
+    expect(compiled.sql).not.toContain("x' OR '1'='1");
+  });
+
+  it.each([0, -1, 1.5, 501])('rejects out-of-range limit %s before opening a transaction', async (limit) => {
+    const mockDb = { transaction: vi.fn() };
+    getDrizzleMock.mockReturnValue(mockDb);
+
+    await expect(new CrmLeadsDrizzleRepository().list(ctx, { limit })).rejects.toThrow('Invalid limit');
+
+    expect(mockDb.transaction).not.toHaveBeenCalled();
   });
 });
 
@@ -92,30 +131,3 @@ describe('CrmLeadNormalizer', () => {
   });
 });
 
-describe('Cross-Tenant Data Leak Check (Mocked)', () => {
-  it('should execute SET LOCAL app.organization_id before query in findById', async () => {
-    // Mock the db transaction object
-    const mockTx = {
-      execute: vi.fn().mockResolvedValue({
-        rows: [{ id: 'lead-1', organization_id: 'org-A' }]
-      }),
-    };
-
-    const mockDb = {
-      transaction: vi.fn().mockImplementation(async (cb) => {
-        return await cb(mockTx);
-      })
-    };
-
-    // Simulate injection without importing the actual module path to bypass resolution issue
-    // in testing
-    clientModule.getDrizzle.mockReturnValue(mockDb as unknown);
-
-    // We expect the mocked setup to complete successfully
-    expect(true).toBe(true);
-  });
-
-  it('should execute SET LOCAL app.organization_id before query in list', async () => {
-    expect(true).toBe(true);
-  });
-});
