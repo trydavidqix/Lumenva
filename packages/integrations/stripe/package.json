@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "main": "index.ts",
+  "scripts": {
+    "test:unit": "vitest run"
+  },
   "dependencies": {
     "stripe": "^14.18.0",
     "zod": "^3.22.4",
