@@ -1,7 +1,7 @@
 export type TenantReadContext = {
   userId: string;
   organizationId: string;
-  role: 'viewer' | 'agent' | 'manager' | 'admin';
+  role: 'viewer' | 'agent' | 'manager' | 'admin' | 'platform_admin';
   requestId: string;
 };
 
@@ -19,9 +19,9 @@ export type ShadowLogPayload = {
   organization_id: string;
   shadow_mode: ShadowMode;
   mismatch_type?: MismatchType;
-  differences?: unknown[];
+  differences?: Array<{ path: string }>;
+  difference_count?: number;
   legacy_duration_ms: number;
   shadow_duration_ms?: number;
-  error?: string;
   timestamp: string;
 };

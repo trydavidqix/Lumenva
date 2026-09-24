@@ -1,6 +1,6 @@
-import type { TenantReadContext, DomainNormalizer, ShadowLogPayload } from './types';
+import type { TenantReadContext, DomainNormalizer, MismatchType, ShadowLogPayload } from './types';
 import type { ShadowFlagProvider } from './flags';
-import type { ShadowComparator } from './comparator';
+import type { ShadowComparator, Difference } from './comparator';
 
 export interface HarnessDependencies {
   flags: ShadowFlagProvider;
@@ -9,8 +9,82 @@ export interface HarnessDependencies {
   timeoutMs?: number;
 }
 
+class ShadowTimeoutError extends Error {
+  constructor() {
+    super('Shadow read timed out');
+    this.name = 'ShadowTimeoutError';
+  }
+}
+
+function getTimeoutMs(value: number | undefined): number {
+  return Number.isFinite(value) && value !== undefined && value > 0 ? value : 1000;
+}
+
+function tenantScopeMatches(result: unknown, organizationId: string, isList: boolean): boolean {
+  if (result === null) return true;
+  const rows: readonly unknown[] = isList
+    ? Array.isArray(result) ? result : []
+    : [result];
+  if (!isList && rows.length === 0) return false;
+
+  return rows.every((row) =>
+    typeof row === 'object' && row !== null &&
+    'organization_id' in row && row.organization_id === organizationId
+  );
+}
+
+function safeDifferences(differences: readonly Difference[]): Array<{ path: string }> {
+  return differences.map(({ path }) => ({ path }));
+}
+
 export class ShadowHarness {
   constructor(private deps: HarnessDependencies) {}
+
+  private log(
+    domain: string,
+    organizationId: string,
+    mode: ShadowLogPayload['shadow_mode'],
+    mismatchType: MismatchType,
+    legacyDurationMs: number,
+    shadowDurationMs?: number,
+    differences: readonly Difference[] = []
+  ): void {
+    this.deps.logger({
+      domain,
+      organization_id: organizationId,
+      shadow_mode: mode,
+      mismatch_type: mismatchType,
+      differences: safeDifferences(differences),
+      difference_count: differences.length,
+      legacy_duration_ms: legacyDurationMs,
+      ...(shadowDurationMs === undefined ? {} : { shadow_duration_ms: shadowDurationMs }),
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  private compare<T, Canonical extends Record<string, unknown>>(
+    legacyResult: T,
+    shadowResult: T,
+    normalizer: DomainNormalizer<T, Canonical>,
+    isList: boolean
+  ): { mismatchType?: MismatchType; differences: Difference[] } {
+    const legacyCanonical = isList
+      ? normalizer.normalizeList(legacyResult as unknown as readonly T[])
+      : normalizer.normalize(legacyResult);
+    const shadowCanonical = isList
+      ? normalizer.normalizeList(shadowResult as unknown as readonly T[])
+      : normalizer.normalize(shadowResult);
+
+    return isList
+      ? this.deps.comparator.compareList(
+        legacyCanonical as unknown as readonly Canonical[],
+        shadowCanonical as unknown as readonly Canonical[]
+      )
+      : this.deps.comparator.compare(
+        legacyCanonical as unknown as Canonical,
+        shadowCanonical as unknown as Canonical
+      );
+  }
 
   public async run<T, Canonical extends Record<string, unknown>>(
     ctx: TenantReadContext,
@@ -21,127 +95,79 @@ export class ShadowHarness {
     normalizer: DomainNormalizer<T, Canonical>,
     isList: boolean = false
   ): Promise<T> {
+    // Platform-admin access uses explicit audited legacy routes; tenant shadow adapters cannot represent it.
+    if (ctx.role === 'platform_admin') return legacyFn();
+
     const mode = this.deps.flags.getFlag(domain, ctx.organizationId);
+    if (mode === 'off') return legacyFn();
 
-    if (mode === 'off') {
-      return legacyFn();
+    const startedAt = Date.now();
+    const legacyPromise = legacyFn();
+    const rawShadowPromise = Promise.resolve().then(shadowFn);
+    rawShadowPromise.catch(() => {});
+    const timeoutMs = getTimeoutMs(this.deps.timeoutMs);
+    let timer: NodeJS.Timeout | undefined;
+    const shadowPromise = Promise.race([
+      rawShadowPromise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new ShadowTimeoutError()), timeoutMs);
+      })
+    ]);
+
+    let legacyResult: T;
+    try {
+      legacyResult = await legacyPromise;
+    } catch (error) {
+      if (timer) clearTimeout(timer);
+      throw error;
     }
+    const legacyDuration = Date.now() - startedAt;
 
-    // In observe or sampled mode, we run legacy and shadow concurrently to avoid latency impact
     if (mode === 'observe' || mode === 'sampled') {
-      const t0 = Date.now();
-      const legacyPromise = legacyFn();
-
-      // We attach a catch to the shadow promise immediately to avoid UnhandledPromiseRejection
-      // if it fails later after a timeout or in the background.
-      const rawShadowPromise = shadowFn();
-      rawShadowPromise.catch(() => {});
-
-      const timeout = this.deps.timeoutMs || 1000;
-      let timer: NodeJS.Timeout | undefined;
-
-      const shadowWithTimeout = Promise.race([
-        rawShadowPromise,
-        new Promise<never>((_, reject) => {
-          timer = setTimeout(() => reject(new Error('Shadow read timeout')), timeout);
-        })
-      ]);
-
-      let legacyResult: T;
-      let legacyDuration = 0;
+      const shadowStartedAt = Date.now();
       try {
-        legacyResult = await legacyPromise;
-        legacyDuration = Date.now() - t0;
-      } catch (e) {
-        if (timer) clearTimeout(timer);
-        throw e;
-      }
-
-      // Evaluate shadow resolution in background without blocking response return.
-      // But for testing purposes, we await it here so tests can assert logs properly.
-      // Ideally this goes to a fire-and-forget background task via Next.js unstable_after or context.waitUntil
-      const t1 = Date.now();
-      let shadowResult: T | undefined;
-      let shadowError: unknown;
-      try {
-        shadowResult = await shadowWithTimeout;
-      } catch (e) {
-        shadowError = e;
+        const shadowResult = await shadowPromise;
+        const comparison = this.compare(legacyResult, shadowResult, normalizer, isList);
+        if (comparison.mismatchType) {
+          this.log(domain, ctx.organizationId, mode, comparison.mismatchType, legacyDuration,
+            Date.now() - shadowStartedAt, comparison.differences);
+          if (comparison.mismatchType === 'authorization') this.deps.flags.forceRollback(domain, ctx.organizationId);
+        }
+      } catch (error) {
+        const mismatchType = error instanceof ShadowTimeoutError ? 'timeout' : 'error';
+        this.log(domain, ctx.organizationId, mode, mismatchType, legacyDuration, Date.now() - shadowStartedAt);
       } finally {
         if (timer) clearTimeout(timer);
-      }
-      const shadowDuration = Date.now() - t1;
-
-      if (shadowError) {
-        this.deps.logger({
-          domain,
-          organization_id: ctx.organizationId,
-          shadow_mode: mode,
-          mismatch_type: shadowError instanceof Error && shadowError.message === 'Shadow read timeout' ? 'timeout' : 'error',
-          error: shadowError instanceof Error ? shadowError.message : String(shadowError),
-          legacy_duration_ms: legacyDuration,
-          timestamp: new Date().toISOString()
-        });
-        return legacyResult;
-      }
-
-      // Normalize
-      const legacyCanonical = isList
-        ? normalizer.normalizeList(legacyResult as unknown as readonly T[])
-        : normalizer.normalize(legacyResult);
-
-      const shadowCanonical = isList
-        ? normalizer.normalizeList(shadowResult as unknown as readonly T[])
-        : normalizer.normalize(shadowResult!);
-
-      // Compare
-      const { mismatchType, differences } = isList
-        ? this.deps.comparator.compareList(legacyCanonical as unknown as readonly Canonical[], shadowCanonical as unknown as readonly Canonical[])
-        : this.deps.comparator.compare(legacyCanonical as unknown as Canonical, shadowCanonical as unknown as Canonical);
-
-      if (mismatchType) {
-        this.deps.logger({
-          domain,
-          organization_id: ctx.organizationId,
-          shadow_mode: mode,
-          mismatch_type: mismatchType,
-          differences,
-          legacy_duration_ms: legacyDuration,
-          shadow_duration_ms: shadowDuration,
-          timestamp: new Date().toISOString()
-        });
-
-        // Rollback logic for severe mismatches
-        if (mismatchType === 'authorization') {
-          this.deps.flags.forceRollback(domain, ctx.organizationId);
-        }
       }
 
       return legacyResult;
     }
 
-    // Enforced mode (shadow is authority)
+    const shadowStartedAt = Date.now();
     try {
-      const shadowResult = await shadowFn();
-      return shadowResult;
-    } catch (e) {
-      // Fallback to legacy
-      const t1 = Date.now();
-      try {
-        const fallbackResult = await legacyFn();
-        this.deps.logger({
-          domain,
-          organization_id: ctx.organizationId,
-          shadow_mode: mode,
-          mismatch_type: 'error',
-          error: e instanceof Error ? e.message : String(e),
-          legacy_duration_ms: Date.now() - t1, // How long fallback took
-          timestamp: new Date().toISOString()
-        });
-        return fallbackResult;
-      } catch (legacyErr) {
-        throw legacyErr;
+      const shadowResult = await shadowPromise;
+      if (!tenantScopeMatches(shadowResult, ctx.organizationId, isList)) {
+        this.log(domain, ctx.organizationId, mode, 'authorization', legacyDuration, Date.now() - shadowStartedAt,
+          [{ path: 'organization_id', legacyValue: undefined, shadowValue: undefined }]);
+        this.deps.flags.forceRollback(domain, ctx.organizationId);
+        return legacyResult;
       }
+
+      const comparison = this.compare(legacyResult, shadowResult, normalizer, isList);
+      if (comparison.mismatchType) {
+        this.log(domain, ctx.organizationId, mode, comparison.mismatchType, legacyDuration,
+          Date.now() - shadowStartedAt, comparison.differences);
+        this.deps.flags.forceRollback(domain, ctx.organizationId);
+        return legacyResult;
+      }
+
+      return shadowResult;
+    } catch (error) {
+      const mismatchType = error instanceof ShadowTimeoutError ? 'timeout' : 'error';
+      this.log(domain, ctx.organizationId, mode, mismatchType, legacyDuration, Date.now() - shadowStartedAt);
+      return legacyResult;
+    } finally {
+      if (timer) clearTimeout(timer);
     }
   }
 }

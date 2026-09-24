@@ -1,4 +1,4 @@
-import { and, eq, desc, asc, lte, gte } from 'drizzle-orm';
+import { and, eq, desc, asc, lte, gte, sql } from 'drizzle-orm';
 import type { Conversation, Message } from '../../../../types/messaging';
 import type { TenantReadContext, ConversationFilter, MessageFilter, MessagingRepository } from './types';
 import { MessagingNormalizer, type ConversationDbRow, type MessageDbRow } from './normalizer';
@@ -38,7 +38,8 @@ interface MessagingQuery {
 }
 
 interface MessagingTransaction {
-  execute(query: string): Promise<unknown>;
+  execute(query: unknown): Promise<unknown>;
+  select(): MessagingQuery;
 }
 
 interface MessagingDatabase {
@@ -55,21 +56,21 @@ export class DrizzleMessagingRepository implements MessagingRepository {
     this.schema = schemaMap;
   }
 
-  private async executeWithContext<T>(ctx: TenantReadContext, queryFn: () => Promise<T>): Promise<T> {
+  private async executeWithContext<T>(ctx: TenantReadContext, queryFn: (tx: MessagingTransaction) => Promise<T>): Promise<T> {
     if (!ctx.organizationId) throw new Error('Missing organizationId in context');
 
     const result = await this.db.transaction(async (tx) => {
-      await tx.execute(`SET LOCAL app.organization_id = '${ctx.organizationId}'`);
-      return await queryFn();
+      await tx.execute(sql`SET LOCAL app.organization_id = ${ctx.organizationId}`);
+      return await queryFn(tx);
     });
 
     return result as T;
   }
 
   async findConversationById(ctx: TenantReadContext, id: string): Promise<Conversation | null> {
-    return this.executeWithContext(ctx, async () => {
+    return this.executeWithContext(ctx, async (tx) => {
       const { conversations } = this.schema;
-      const result = await this.db.select()
+      const result = await tx.select()
         .from(conversations)
         .where(and(
           eq(conversations.id, id),
@@ -83,7 +84,7 @@ export class DrizzleMessagingRepository implements MessagingRepository {
   }
 
   async listConversations(ctx: TenantReadContext, filter: ConversationFilter): Promise<readonly Conversation[]> {
-    return this.executeWithContext(ctx, async () => {
+    return this.executeWithContext(ctx, async (tx) => {
       const { conversations } = this.schema;
       const conditions = [eq(conversations.organization_id, ctx.organizationId)];
 
@@ -95,7 +96,7 @@ export class DrizzleMessagingRepository implements MessagingRepository {
         conditions.push(eq(conversations.channel, filter.channel));
       }
 
-      const results = await this.db.select()
+      const results = await tx.select()
         .from(conversations)
         .where(and(...conditions))
         .orderBy(desc(conversations.last_message_at))
@@ -107,9 +108,9 @@ export class DrizzleMessagingRepository implements MessagingRepository {
   }
 
   async findMessageById(ctx: TenantReadContext, id: string): Promise<Message | null> {
-    return this.executeWithContext(ctx, async () => {
+    return this.executeWithContext(ctx, async (tx) => {
       const { messages } = this.schema;
-      const result = await this.db.select()
+      const result = await tx.select()
         .from(messages)
         .where(and(
           eq(messages.id, id),
@@ -123,7 +124,7 @@ export class DrizzleMessagingRepository implements MessagingRepository {
   }
 
   async listMessages(ctx: TenantReadContext, filter: MessageFilter): Promise<readonly Message[]> {
-    return this.executeWithContext(ctx, async () => {
+    return this.executeWithContext(ctx, async (tx) => {
       const { messages } = this.schema;
       const conditions = [
         eq(messages.organization_id, ctx.organizationId),
@@ -142,7 +143,7 @@ export class DrizzleMessagingRepository implements MessagingRepository {
         ? asc(messages.sent_at)
         : desc(messages.sent_at);
 
-      const results = await this.db.select()
+      const results = await tx.select()
         .from(messages)
         .where(and(...conditions))
         .orderBy(orderByClause)

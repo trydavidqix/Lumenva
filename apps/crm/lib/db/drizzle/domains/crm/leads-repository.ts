@@ -2,6 +2,13 @@ import type { DomainRepository, TenantReadContext, CrmLead, CrmLeadFilter } from
 import { getDrizzle } from '@lumenva/db/drizzle/client';
 import { sql } from 'drizzle-orm';
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_LEAD_LIST_LIMIT = 500;
+
+function assertUuid(value: string, field: 'organizationId' | 'stageId' | 'contactId'): void {
+  if (!UUID_PATTERN.test(value)) throw new Error(`Invalid ${field}`);
+}
+
 export class CrmLeadsDrizzleRepository implements DomainRepository<CrmLead, CrmLeadFilter, unknown, unknown> {
   async findById(ctx: TenantReadContext, id: string): Promise<CrmLead | null> {
     const db = getDrizzle();
@@ -23,26 +30,29 @@ export class CrmLeadsDrizzleRepository implements DomainRepository<CrmLead, CrmL
   }
 
   async list(ctx: TenantReadContext, filter: CrmLeadFilter): Promise<readonly CrmLead[]> {
+    assertUuid(ctx.organizationId, 'organizationId');
+    if (filter.stageId !== undefined) assertUuid(filter.stageId, 'stageId');
+    if (filter.contactId !== undefined) assertUuid(filter.contactId, 'contactId');
+    const limit = filter.limit ?? 50;
+    if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LEAD_LIST_LIMIT) {
+      throw new Error('Invalid limit');
+    }
+
     const db = getDrizzle();
 
     return await db.transaction(async (tx: unknown) => {
       const transaction = tx as { execute: (query: unknown) => Promise<{ rows: unknown[] }> };
       await transaction.execute(sql`SET LOCAL app.organization_id = ${ctx.organizationId}`);
 
-      const queryParts: string[] = [`SELECT * FROM crm_leads WHERE organization_id = ${ctx.organizationId}`];
+      const conditions = [sql`organization_id = ${ctx.organizationId}`];
+      if (filter.stageId !== undefined) conditions.push(sql`stage_id = ${filter.stageId}`);
+      if (filter.contactId !== undefined) conditions.push(sql`contact_id = ${filter.contactId}`);
 
-      if (filter.stageId) {
-         queryParts.push(` AND stage_id = '${filter.stageId}'`); // Assuming safe uuids
-      }
-      if (filter.contactId) {
-         queryParts.push(` AND contact_id = '${filter.contactId}'`); // Assuming safe uuids
-      }
-
-      if (filter.limit) {
-         queryParts.push(` LIMIT ${filter.limit}`);
-      }
-
-      const finalQuery = sql.raw(queryParts.join(''));
+      const finalQuery = sql`
+        SELECT * FROM crm_leads
+        WHERE ${sql.join(conditions, sql` AND `)}
+        LIMIT ${limit}
+      `;
       const res = await transaction.execute(finalQuery);
 
       return res.rows as unknown as CrmLead[];

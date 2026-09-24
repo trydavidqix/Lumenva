@@ -1,7 +1,7 @@
 export type TenantReadContext = {
   userId: string;
   organizationId: string;
-  role: 'viewer' | 'agent' | 'manager' | 'admin';
+  role: 'viewer' | 'agent' | 'manager' | 'admin' | 'platform_admin';
   requestId: string;
 };
 
@@ -31,6 +31,5 @@ export type CrmLead = {
 export type CrmLeadFilter = {
   stageId?: string;
   contactId?: string;
-  cursor?: string;
   limit?: number;
 };
