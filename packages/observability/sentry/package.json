@@ -4,8 +4,8 @@
   "description": "Sentry observability adapter for F7",
   "main": "src/index.ts",
   "scripts": {
-    "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run"
   },
   "devDependencies": {
     "typescript": "^5.0.0",

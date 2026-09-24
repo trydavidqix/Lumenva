@@ -4,6 +4,9 @@ packages:
   - 'packages/social-brain/*'
   - 'packages/social-brain/providers/*'
   - 'packages/integrations/*'
+  - 'packages/observability/*'
+  - 'packages/platform/*'
+  - 'packages/platform/gcp/*'
 
 catalogMode: manual
 catalog:
