@@ -1,0 +1,73 @@
+name: Security scan (report-only)
+
+on:
+  pull_request:
+  schedule:
+    - cron: "23 6 * * 2"
+  workflow_dispatch:
+
+concurrency:
+  group: security-scan-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  semgrep:
+    name: Semgrep (report-only)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Install Semgrep
+        run: python3 -m pip install --disable-pip-version-check semgrep==1.178.0
+
+      - name: Scan
+        run: semgrep scan --config p/default --sarif --output semgrep.sarif .
+
+      - name: Upload SARIF
+        if: ${{ always() && github.actor != 'dependabot[bot]' && hashFiles('semgrep.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
+        with:
+          category: semgrep
+          sarif_file: semgrep.sarif
+
+  gitleaks:
+    name: Gitleaks (report-only)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Scan git history
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+          GITLEAKS_ENABLE_COMMENTS: "false"
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+
+  osv:
+    name: OSV-Scanner (report-only)
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@a345acffa64b0eaede81a3d9aae6141214d9c8fc # v2.6.0
+    with:
+      fail-on-vuln: false
+      scan-args: |-
+        --recursive
+        ./
+      upload-sarif: true
