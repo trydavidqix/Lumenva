@@ -11,9 +11,9 @@ manual. Esta decisão reverte a desativação permanente registrada em 2026-08-2
 repositório se tornou público.
 
 Para mudanças relevantes, use os dois canais de teste: Codex Cloud no environment correto e
-GitHub Actions no PR real. Leia a nota do canvas **Doutrina de Testes — Cloud + Actions** para
-identidade do environment, estado do setup e regra de confiança. Run manual isolado não substitui
-a confirmação dos checks no PR que será mergeado.
+GitHub Actions no PR real. Leia a nota do canvas **Migração GCP — Status** (seção "Doutrina de
+testes") para identidade do environment, estado do setup e regra de confiança. Run manual isolado
+não substitui a confirmação dos checks no PR que será mergeado.
 
 Verificação local continua obrigatória quando aplicável
 (`pnpm typecheck && pnpm lint && pnpm test:unit`; `pnpm test:db` quando schema/RLS mudou), junto

@@ -38,9 +38,9 @@ viewer < agent < manager < admin
 - Mudança de role é auditada.
 - Permissão por pipeline (`user_pipeline_access`) continua **fora do MVP** enquanto PRD 01 mantiver essa decisão; não crie esse eixo por antecipação.
 
-## MFA e platform admin
+## Platform admin
 
-- MFA TOTP é **obrigatório para `admin` e platform admin** conforme PRD 01.
+- Decisão do Owner (2026-09-23): **MFA/TOTP não é mais exigido** por nenhuma role, incluindo `admin` e platform admin. Login é por senha ou "Entrar com Google" (OAuth). Isso substitui a exigência anterior de MFA TOTP do PRD 01 — se o PRD ainda mencionar MFA obrigatório, esta rule prevalece por ser mais recente; atualizar o PRD quando conveniente.
 - O papel cross-tenant de plataforma é modelado pela tabela canônica `platform_admins` resolvida na Spec 01 — não por uma coluna normativa `is_platform_admin` em `auth.users`.
 - Platform admin é o único papel de usuário que atravessa tenants pelo contrato base.
 - Inclusão/remoção de platform admin não é self-service/API comum; é operação administrativa controlada e auditada.
