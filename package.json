@@ -8,7 +8,7 @@
     "lint:channels": "pnpm -r --if-present lint:channels",
     "test:harness": "pnpm -r --if-present test:harness",
     "harness:check": "pnpm -r --if-present harness:check",
-    "test:unit": "pnpm -r --if-present test:unit",
+    "test:unit": "pnpm -r --if-present --no-bail test:unit",
     "test:shell": "pnpm -r --if-present test:shell",
     "test:db": "pnpm -r --if-present test:db"
   },
