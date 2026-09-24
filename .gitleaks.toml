@@ -1,0 +1,4 @@
+title = "Lumenva Gitleaks configuration"
+
+[extend]
+useDefault = true
