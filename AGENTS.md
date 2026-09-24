@@ -36,6 +36,12 @@ Toda ação crítica (como ler segredos, deletar bancos de dados ou alterar prod
 
 - References: CLAUDE.md and .claude/rules/
 
+## Subagentes: proibidos sem autorização explícita do Owner
+
+- Nunca crie subagentes, sessões paralelas, `spawn` de agentes ou sessões `/root/...` sem autorização **explícita** do Owner (David), dada no chat para aquela tarefa. Trabalhe em uma sessão, sequencial.
+- Motivo: em 2026-09-24 subagentes em paralelo esgotaram a cota de 5h compartilhada da conta e pararam o projeto.
+- Delegação via `maestri ask` ao agente já conectado não é subagente.
+
 ## TDD obrigatório
 
 - RED antes de qualquer fix: reproduza a causa certa com teste que falha.
