@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto'
 
 const SHA256_PATTERN = /^[a-f0-9]{64}$/
-const SAFE_SEGMENT_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/
 
 export type R2ObjectRef = {
   workspaceId: string
@@ -221,7 +220,7 @@ async function authorize(
 }
 
 function keyFor(prefix: string, ref: R2ObjectRef): string {
-  if (!SAFE_SEGMENT_PATTERN.test(ref.workspaceId) || !SAFE_SEGMENT_PATTERN.test(ref.objectId)) {
+  if (!isSafeSegment(ref.workspaceId) || !isSafeSegment(ref.objectId)) {
     throw new R2StorageError('invalid_reference', 'Object reference contains an invalid segment')
   }
   return `${prefix}/workspace/${ref.workspaceId}/object/${ref.objectId}`
@@ -243,11 +242,30 @@ function validateOptions(options: R2StoreOptions): void {
 }
 
 function normalizePrefix(value: string): string {
-  const prefix = value.replace(/^\/+|\/+$/g, '')
-  if (!prefix || prefix.split('/').some((segment) => !SAFE_SEGMENT_PATTERN.test(segment))) {
+  let start = 0
+  let end = value.length
+  while (start < end && value[start] === '/') start += 1
+  while (end > start && value[end - 1] === '/') end -= 1
+  const prefix = value.slice(start, end)
+  if (!prefix || prefix.split('/').some((segment) => !isSafeSegment(segment))) {
     throw new R2StorageError('invalid_configuration', 'R2 key prefix contains an invalid segment')
   }
   return prefix
+}
+
+function isSafeSegment(value: string): boolean {
+  if (value.length < 1 || value.length > 128) return false
+  const first = value.charCodeAt(0)
+  if (!isAlphaNumeric(first)) return false
+  for (let index = 1; index < value.length; index += 1) {
+    const code = value.charCodeAt(index)
+    if (!isAlphaNumeric(code) && code !== 45 && code !== 46 && code !== 95) return false
+  }
+  return true
+}
+
+function isAlphaNumeric(code: number): boolean {
+  return (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122)
 }
 
 function normalizeContentType(value: string): string {

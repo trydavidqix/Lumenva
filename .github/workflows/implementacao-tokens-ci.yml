@@ -5,6 +5,9 @@ on:
     branches: [implementacao-tokens]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: implementacao-tokens-ci-${{ github.ref }}
   cancel-in-progress: true
