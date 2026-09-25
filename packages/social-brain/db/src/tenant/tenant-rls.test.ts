@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const root = process.cwd()
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../../')
 const migration = resolve(root, 'supabase/migrations/20260922120000_0200_f2_tenant_isolation.sql')
 const baseline = resolve(root, 'supabase/baseline.sql')
 const manifest = resolve(root, 'supabase/migrations/MANIFEST.md')

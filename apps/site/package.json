@@ -12,6 +12,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "analyze": "ANALYZE=true next build",
     "knip": "knip"
