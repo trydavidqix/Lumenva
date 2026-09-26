@@ -1,0 +1,8 @@
+{
+  "orchestration-gate": {
+    "enabled": true,
+    "PreToolUse": [{ "matcher": "run_command|write_to_file|replace_file_content|multi_replace_file_content", "hooks": [{ "type": "command", "command": "node tooling/agent-governance/gate.mjs hook antigravity", "timeout": 5 }] }],
+    "PreInvocation": [{ "type": "command", "command": "node tooling/agent-governance/gate.mjs session antigravity", "timeout": 5 }],
+    "Stop": [{ "type": "command", "command": "node tooling/agent-governance/gate.mjs hook antigravity --stop", "timeout": 5 }]
+  }
+}

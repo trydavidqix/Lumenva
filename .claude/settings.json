@@ -50,5 +50,29 @@
       "Bash(git switch *)",
       "PowerShell(git switch *)"
     ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node tooling/agent-governance/gate.mjs session claude", "timeout": 5 }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|Bash|PowerShell|NotebookEdit",
+        "hooks": [
+          { "type": "command", "command": "node tooling/agent-governance/gate.mjs hook claude", "timeout": 5 }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node tooling/agent-governance/gate.mjs hook claude", "timeout": 5 }
+        ]
+      }
+    ]
   }
 }

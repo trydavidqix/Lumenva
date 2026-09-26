@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["task_id", "provider_task_ref", "provider", "role", "branch", "head_sha", "result", "evidence", "blockers"],
+  "properties": {
+    "task_id": { "type": "string", "minLength": 1 },
+    "provider_task_ref": { "type": "string", "minLength": 1 },
+    "provider": { "enum": ["codex", "jules", "gemini", "antigravity", "github_actions"] },
+    "role": { "enum": ["executor", "reviewer", "analysis", "verification"] },
+    "branch": { "type": "string", "minLength": 1 },
+    "head_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "result": { "enum": ["pass", "fail", "pending", "blocked"] },
+    "evidence": { "type": "array", "items": { "type": "string" } },
+    "blockers": { "type": "array", "items": { "type": "string" } },
+    "run_url": { "type": "string", "format": "uri" },
+    "tests": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

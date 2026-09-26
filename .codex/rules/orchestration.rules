@@ -1,0 +1,47 @@
+prefix_rule(
+    pattern = ["git", "reset", "--hard"],
+    decision = "forbidden",
+    justification = "Preserve work; inspect status and use a targeted recovery instead.",
+    match = ["git reset --hard HEAD"],
+    not_match = ["git status"],
+)
+
+prefix_rule(
+    pattern = ["git", "clean", ["-f", "-fd", "-fdx", "--force"]],
+    decision = "forbidden",
+    justification = "Do not delete untracked work without a reviewed inventory.",
+    match = ["git clean -fd"],
+    not_match = ["git clean -n"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", ["-f", "--force", "--force-with-lease"]],
+    decision = "forbidden",
+    justification = "Force pushes are prohibited by the Lumenva Git policy.",
+    match = ["git push --force origin chore/task"],
+    not_match = ["git push origin chore/task"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", ["origin", "upstream"], ["main", "master", "HEAD:main", "HEAD:master"]],
+    decision = "forbidden",
+    justification = "Push a task branch and use a pull request for main.",
+    match = ["git push origin main"],
+    not_match = ["git push origin chore/task"],
+)
+
+prefix_rule(
+    pattern = ["git", "merge", ["main", "master"]],
+    decision = "forbidden",
+    justification = "Consolidate changes through the reviewed pull request lifecycle.",
+    match = ["git merge main"],
+    not_match = ["git merge-base main chore/task"],
+)
+
+prefix_rule(
+    pattern = ["gh", "pr", "merge"],
+    decision = "forbidden",
+    justification = "The governance lifecycle owns PR merge decisions.",
+    match = ["gh pr merge 73"],
+    not_match = ["gh pr view 73"],
+)
