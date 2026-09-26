@@ -42,8 +42,10 @@ Se o working tree estiver sujo e o trabalho não for claramente da sessão atual
 
 ## Merge e publicação
 
-- Não faça merge em `main` sem autorização explícita para aquele merge.
-- Não trate “feature pronta” como autorização de merge.
+- Autorização permanente do Owner (2026-09-22): Claude CEO tem autoridade para mergear PRs de feature branch em `main` sem pedir aprovação a cada merge, quando o PR tiver evidência de CI verde relevante ao escopo mudado (test:db/invariantes quando schema/RLS mudar, typecheck/lint conforme aplicável) e o diff já tiver sido revisado. Não pedir confirmação de novo para esse fluxo específico.
+- Reforço explícito do Owner (2026-09-23, madrugada): essa autoridade vale mesmo para mudança de schema de identidade/RBAC/permissão — não é exceção que exige segunda aprovação. Quando o plano chegar com tudo validado (CI relevante verde: invariants/vertical PASS; `verify` falhando só no `harness:check` preexistente documentado não conta como bloqueio) e testado, mergear direto em `main` sem perguntar de novo. Autoscrutínio de segurança continua acontecendo (Claude CEO revisa o diff antes), mas não vira um segundo gate de aprovação do Owner.
+- Esta autorização NÃO cobre: deploy, alteração de secrets/credenciais, infraestrutura, force-push, ou qualquer mutação de dado real de produção — essas continuam exigindo autorização explícita do Owner por instância, conforme `CLAUDE.md` seção de Sandboxing (PROD = autonomia baixa).
+- Não trate “feature pronta” sem CI como autorização de merge — a evidência de CI continua sendo a condição, não a vontade de terminar logo.
 - Não faça force-push em branches compartilhadas.
 - Antes de integrar, verifique diff, testes relevantes e estado do Git.
 
