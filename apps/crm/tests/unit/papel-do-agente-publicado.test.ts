@@ -28,7 +28,7 @@ import {
 } from "@/lib/auth/types";
 
 const RAIZ = join(__dirname, "..", "..");
-const baseline = readFileSync(join(RAIZ, "infra/supabase/baseline.sql"), "utf8");
+const baseline = readFileSync(join(RAIZ, "..", "..", "infra/supabase/baseline.sql"), "utf8");
 
 describe("papel do agente publicado", () => {
   it("senta ENTRE atendente e gerente, nessa ordem", () => {

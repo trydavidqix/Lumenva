@@ -49,7 +49,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const BASELINE = join(process.cwd(), "supabase", "baseline.sql");
+const BASELINE = join(__dirname, "../../../..", "infra", "supabase", "baseline.sql");
 
 /** Nomes de constraint em cada `add constraint <nome>`, na ordem do arquivo. */
 function constraintsAdicionadas(sql: string): string[] {

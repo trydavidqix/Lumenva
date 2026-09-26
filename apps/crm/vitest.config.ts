@@ -45,6 +45,7 @@ export default defineConfig({
       // gate. Their PostgreSQL integration tests have their own harness and
       // require external database/container setup.
       "scratchpad-*/**",
+      "docs/archive/scratchpads/**",
       "apps/website/**",
       "apps/voice-worker/**",
       "scripts/*.test.mjs",
