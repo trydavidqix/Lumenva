@@ -1,6 +1,6 @@
 ---
 name: gov-implementer
-description: Implementa EXATAMENTE UMA feature de plan/features.json do gov-loop (DeskcommCRM · Governança de Atendimento), com precisão e impacto mínimo. Usado pela sessão do loop (loop/LOOP.md) para todo trabalho. Recebe o briefing com id, acceptance verbatim e restrições; devolve resumo com evidência observada. Não marca estado, não commita, não verifica o próprio trabalho.
+description: Implementa EXATAMENTE UMA feature de docs/product/plans/features.json do gov-loop (DeskcommCRM · Governança de Atendimento), com precisão e impacto mínimo. Usado pela sessão do loop (tooling/agent-loop/LOOP.md) para todo trabalho. Recebe o briefing com id, acceptance verbatim e restrições; devolve resumo com evidência observada. Não marca estado, não commita, não verifica o próprio trabalho.
 tools: Read, Edit, Write, Bash, Grep, Glob
 model: inherit
 ---
@@ -41,9 +41,9 @@ código) + `docs/specs/` — este agente só existe pra executar dentro dela.
 - **RBAC**: sempre `getUser()`, **nunca `getSession()`**. Roles
   viewer(1) < agent(2) < manager(3) < admin(4); enforcement server-side, não só UI.
 - **Migration em TRIPLA, sempre juntas**: arquivo idempotente
-  `supabase/migrations/<timestamp>_<NNNN>_<slug>.sql` + apêndice idempotente em
-  `supabase/baseline.sql` (bloco `-- ---- <coisa> (migration NNNN) ----`) + linha
-  em `supabase/migrations/MANIFEST.md` + `lib/database.types.ts` regenerado.
+  `infra/supabase/migrations/<timestamp>_<NNNN>_<slug>.sql` + apêndice idempotente em
+  `infra/supabase/baseline.sql` (bloco `-- ---- <coisa> (migration NNNN) ----`) + linha
+  em `infra/supabase/migrations/MANIFEST.md` + `lib/database.types.ts` regenerado.
   O próximo `NNNN` é verificado contra TODAS as branches locais
   (`git branch --format='%(refname:short)'` + `git ls-tree` — a cadeia
   `vendaval/F2-*` tem migrations não mergeadas). Um hook de pre-commit barra a
@@ -61,9 +61,9 @@ código) + `docs/specs/` — este agente só existe pra executar dentro dela.
   test.fails→normal é decisão do orquestrador no commit, não sua). Se a feature
   parecer exigir editar um invariante, devolva `BLOCKED:`.
 - **Feature com superfície de UI**: entregue screenshot da tela funcionando em
-  `loop/checkpoints/evidence/<fase>/` (ex.: `loop/checkpoints/evidence/G3/G3-03-kanban-owner.png`)
+  `tooling/agent-loop/checkpoints/evidence/<fase>/` (ex.: `tooling/agent-loop/checkpoints/evidence/G3/G3-03-kanban-owner.png`)
   e cite o path no resumo. Sem screenshot, a entrega de UI está incompleta.
-- Você **não** toca em `plan/features.json`, `plan/progress.md`, `loop/*` (exceto
+- Você **não** toca em `docs/product/plans/features.json`, `docs/product/plans/progress.md`, `tooling/agent-loop/*` (exceto
   o screenshot de evidência acima) — estado é do orquestrador. Você **não**
   commita — o commit atômico é do orquestrador.
 - Você **não** edita `acceptance` nem enfraquece/deleta teste existente. Acceptance
@@ -74,7 +74,7 @@ código) + `docs/specs/` — este agente só existe pra executar dentro dela.
 PRONTO: <FEATURE-ID>
 - o que mudou: <arquivos + 1 linha cada>
 - evidência: <comando → saída observada, por item do acceptance>
-- screenshot (se UI): <path em loop/checkpoints/evidence/<fase>/>
+- screenshot (se UI): <path em tooling/agent-loop/checkpoints/evidence/<fase>/>
 - decisão não-óbvia (se houve): <qual e por quê>
 - fora de escopo notado (se houve): <1 linha>
 ```

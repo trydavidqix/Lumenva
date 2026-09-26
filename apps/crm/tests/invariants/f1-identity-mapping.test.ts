@@ -4,8 +4,8 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../../../../", import.meta.url));
-const migrationsDir = resolve(root, "supabase/migrations");
-const baseline = resolve(root, "supabase/baseline.sql");
+const migrationsDir = resolve(root, "infra/supabase/migrations");
+const baseline = resolve(root, "infra/supabase/baseline.sql");
 const manifest = resolve(migrationsDir, "MANIFEST.md");
 const migrationName = readdirSync(migrationsDir).find((name) =>
   /_0202_f1_identity_mapping_v2\.sql$/.test(name),

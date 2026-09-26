@@ -3,8 +3,8 @@
 > Stack **opcional** e **operacionalmente separada** do core do DeskcommCRM
 > (`docker-compose.prod.yml`). Não entra na cadeia de dependência de
 > `app`/`worker`/`waha`/`scheduler`; sobe/desce/atualiza de forma
-> independente. Arquivos: `ops/n8n/docker-compose.yml`,
-> `ops/n8n/.env.example`.
+> independente. Arquivos: `infra/deployment/n8n/docker-compose.yml`,
+> `infra/deployment/n8n/.env.example`.
 
 ## Escopo e limites
 
@@ -43,18 +43,18 @@ digest antes de ir a produção (`docker pull ... && docker inspect ... --format
 ## Subir
 
 ```bash
-cp ops/n8n/.env.example ops/n8n/.env
-# preencha ops/n8n/.env com valores REAIS do cofre operacional gerido
+cp infra/deployment/n8n/.env.example infra/deployment/n8n/.env
+# preencha infra/deployment/n8n/.env com valores REAIS do cofre operacional gerido
 # (docs/runbooks/ai-platform-secrets.md) — nunca use os placeholders em produção.
-chmod 600 ops/n8n/.env
+chmod 600 infra/deployment/n8n/.env
 
-docker compose -f ops/n8n/docker-compose.yml --env-file ops/n8n/.env config   # valida antes de subir
-docker compose -f ops/n8n/docker-compose.yml --env-file ops/n8n/.env up -d
-docker compose -f ops/n8n/docker-compose.yml --env-file ops/n8n/.env ps
-docker compose -f ops/n8n/docker-compose.yml logs -f n8n   # confere boot limpo
+docker compose -f infra/deployment/n8n/docker-compose.yml --env-file infra/deployment/n8n/.env config   # valida antes de subir
+docker compose -f infra/deployment/n8n/docker-compose.yml --env-file infra/deployment/n8n/.env up -d
+docker compose -f infra/deployment/n8n/docker-compose.yml --env-file infra/deployment/n8n/.env ps
+docker compose -f infra/deployment/n8n/docker-compose.yml logs -f n8n   # confere boot limpo
 ```
 
-Sem `ops/n8n/.env` preenchido, o `config`/`up` falha alto e explícito nas
+Sem `infra/deployment/n8n/.env` preenchido, o `config`/`up` falha alto e explícito nas
 variáveis obrigatórias (`N8N_DB_PASSWORD`, `N8N_ENCRYPTION_KEY`, `N8N_HOST`,
 `N8N_WEBHOOK_URL`) — nunca sobe com um segredo vazio/adivinhado.
 
@@ -69,7 +69,7 @@ openssl rand -hex 32
 ```
 
 Guarde os dois no cofre operacional gerido (Infisical, conforme
-`docs/runbooks/ai-platform-secrets.md`). Nunca em `ops/n8n/.env` commitado,
+`docs/runbooks/ai-platform-secrets.md`). Nunca em `infra/deployment/n8n/.env` commitado,
 log, ticket, screenshot ou fixture de teste.
 
 ## `N8N_ENCRYPTION_KEY` — o valor mais crítico desta stack
@@ -90,7 +90,7 @@ Auth incluindo o bearer `dsk_...` do CRM, segredos de webhook, etc.).
   segredo mestre — se ela se perder junto com o volume, o wipe é o único
   caminho (seção "Wipe" abaixo), com toda credencial recriada do zero.
 - Ao restaurar um backup de `n8n-postgres` (seção Backup), a
-  `N8N_ENCRYPTION_KEY` usada no `ops/n8n/.env` do ambiente de restauração
+  `N8N_ENCRYPTION_KEY` usada no `infra/deployment/n8n/.env` do ambiente de restauração
   **precisa ser exatamente a mesma** que cifrou aquele backup — restaurar o
   banco com uma chave diferente produz o mesmo efeito de perda descrito
   acima.
@@ -190,7 +190,7 @@ Rode periodicamente (e sempre antes de promover uma instância de piloto
 para uso real):
 
 ```bash
-docker compose -f ops/n8n/docker-compose.yml exec n8n n8n audit
+docker compose -f infra/deployment/n8n/docker-compose.yml exec n8n n8n audit
 ```
 
 Cobre credenciais desprotegidas, nodes desatualizados, webhooks sem
@@ -204,7 +204,7 @@ cifradas (com `N8N_ENCRYPTION_KEY`), histórico de execuções. Faça backup
 antes de qualquer update de imagem e em rotina programada:
 
 ```bash
-docker compose -f ops/n8n/docker-compose.yml exec -T n8n-postgres \
+docker compose -f infra/deployment/n8n/docker-compose.yml exec -T n8n-postgres \
   pg_dump -U "$N8N_DB_USER" -d "$N8N_DB_NAME" > n8n-$(date +%F).sql
 ```
 
@@ -222,13 +222,13 @@ backup se o operador tiver customizado algo além do que vive no banco.
 ## Restore
 
 ```bash
-docker compose -f ops/n8n/docker-compose.yml stop n8n
-docker compose -f ops/n8n/docker-compose.yml exec -T n8n-postgres \
+docker compose -f infra/deployment/n8n/docker-compose.yml stop n8n
+docker compose -f infra/deployment/n8n/docker-compose.yml exec -T n8n-postgres \
   psql -U "$N8N_DB_USER" -d "$N8N_DB_NAME" < n8n-YYYY-MM-DD.sql
-# ops/n8n/.env deste ambiente precisa ter a MESMA N8N_ENCRYPTION_KEY
+# infra/deployment/n8n/.env deste ambiente precisa ter a MESMA N8N_ENCRYPTION_KEY
 # que cifrou o dump restaurado — ver aviso na seção anterior.
-docker compose -f ops/n8n/docker-compose.yml start n8n
-docker compose -f ops/n8n/docker-compose.yml exec n8n n8n audit
+docker compose -f infra/deployment/n8n/docker-compose.yml start n8n
+docker compose -f infra/deployment/n8n/docker-compose.yml exec n8n n8n audit
 ```
 
 Teste esta sequência periodicamente num ambiente descartável — backup nunca
@@ -247,16 +247,16 @@ testado não é backup confiável (mesma doutrina de
    `N8N_RUNNERS_ENABLED` passou a ser exigida antes de trocar a tag em
    produção — este runbook não assume esse comportamento por não ter sido
    verificado ao vivo contra `2.34.6`).
-3. Edite `image: n8nio/n8n:<nova-tag>` em `ops/n8n/docker-compose.yml`
+3. Edite `image: n8nio/n8n:<nova-tag>` em `infra/deployment/n8n/docker-compose.yml`
    (PR revisado, nunca edição direta em produção).
 4. Suba primeiro num ambiente de teste com uma cópia do backup, rode
    `n8n audit` e um smoke test dos workflows críticos.
 5. Em produção:
 
    ```bash
-   docker compose -f ops/n8n/docker-compose.yml pull n8n
-   docker compose -f ops/n8n/docker-compose.yml up -d n8n
-   docker compose -f ops/n8n/docker-compose.yml logs -f n8n
+   docker compose -f infra/deployment/n8n/docker-compose.yml pull n8n
+   docker compose -f infra/deployment/n8n/docker-compose.yml up -d n8n
+   docker compose -f infra/deployment/n8n/docker-compose.yml logs -f n8n
    ```
 
    O n8n roda suas próprias migrations de banco automaticamente no boot.
@@ -267,7 +267,7 @@ O n8n **não suporta downgrade de schema**: depois que uma versão nova rodou
 suas migrations sobre `n8n-postgres`, voltar a imagem para uma tag antiga
 não reverte o banco. Rollback seguro é:
 
-1. Parar o n8n (`docker compose -f ops/n8n/docker-compose.yml stop n8n`).
+1. Parar o n8n (`docker compose -f infra/deployment/n8n/docker-compose.yml stop n8n`).
 2. Restaurar o `pg_dump` feito ANTES do update (seção Restore) — isso
    também reverte o schema.
 3. Voltar `image:` para a tag pinada anterior.
@@ -314,7 +314,7 @@ Só após aprovação explícita e confirmação visual do volume exato (nunca
 `docker compose down -v`, que pode remover volume não relacionado):
 
 ```bash
-docker compose -f ops/n8n/docker-compose.yml stop n8n n8n-postgres
+docker compose -f infra/deployment/n8n/docker-compose.yml stop n8n n8n-postgres
 docker volume ls --format '{{.Name}}' | grep n8n
 # confirme visualmente os nomes exatos acima antes de remover
 docker volume rm <nome-exato-n8n-postgres-data> <nome-exato-n8n-data>
@@ -326,7 +326,7 @@ totalmente independentes.
 
 ## Referências
 
-- `ops/n8n/docker-compose.yml`, `ops/n8n/.env.example` — esta stack.
+- `infra/deployment/n8n/docker-compose.yml`, `infra/deployment/n8n/.env.example` — esta stack.
 - `docs/runbooks/n8n-token.md` — provisionamento least-privilege do token
   MCP usado por workflows n8n (`n8n -> CRM`).
 - `docs/runbooks/ai-platform-secrets.md` — cofre operacional, kill

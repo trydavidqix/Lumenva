@@ -6,8 +6,8 @@ import { execFile } from "node:child_process";
 
 // Resolve from this test file, not process.cwd(). Docker/build runners may
 // invoke Vitest from a different working directory.
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const helper = resolve(repoRoot, "hostgator-setup-kit/_env-alias.sh");
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
+const helper = resolve(repoRoot, "docs/legacy/hostgator-setup-kit/_env-alias.sh");
 
 function run(env: Record<string, string | undefined>) {
   const script = 'set -e; source "$1"; env_alias "$2"; printf \'%s\' "${LUMENVA_AGENT_REPORT-}"';

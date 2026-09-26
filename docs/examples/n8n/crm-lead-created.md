@@ -105,7 +105,7 @@ Pseudocode (Node.js, `n8n-nodes-base.code`, mode: "Run Once for All Items"):
 const crypto = require('crypto');
 
 // Shared secret lives ONLY in an n8n environment variable set at the
-// container level (ops/n8n/.env on the standalone stack, Task 5), never in
+// container level (infra/deployment/n8n/.env on the standalone stack, Task 5), never in
 // this workflow's JSON/credentials export. Rotate it the same way any other
 // webhook secret is rotated (docs/runbooks/n8n.md, docs/runbooks/n8n-token.md).
 const secret = $env.CRM_N8N_WEBHOOK_SECRET;
@@ -157,7 +157,7 @@ verifiers do (fail closed, no early-return timing leak).
 ### 4. Postgres — "Claim idempotency key"
 
 Runs against **n8n's own dedicated Postgres** (`n8n-postgres` in
-`ops/n8n/docker-compose.yml`, Task 5) — never the CRM's Supabase/Postgres.
+`infra/deployment/n8n/docker-compose.yml`, Task 5) — never the CRM's Supabase/Postgres.
 This is a durable store (survives n8n process restarts), not in-memory
 dedup, satisfying the brief's "supported persistent store, not process
 memory" requirement.
@@ -300,7 +300,7 @@ Webhook - CRM lead.created
   shared transport (HMAC, anti-SSRF, retry/backoff, timeout).
 - `app/api/v1/leads/_handler.ts` — real producer of the `lead.created` event
   whose payload shape this document's `data` field is derived from.
-- `docs/runbooks/n8n.md` — standalone n8n stack (`ops/n8n/docker-compose.yml`,
+- `docs/runbooks/n8n.md` — standalone n8n stack (`infra/deployment/n8n/docker-compose.yml`,
   its own dedicated Postgres referenced by node 4).
 - `tests/unit/n8n-reference-workflow.test.ts` — proves the CRM-side
   properties this document assumes (envelope shape, HMAC algorithm,

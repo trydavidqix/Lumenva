@@ -23,7 +23,7 @@ Every production-capable agent definition must identify:
 - allowed skill selectors;
 - allowed tool/capability selectors;
 - model capability requirements rather than hard-coded provider where possible;
-- loop/budget limits;
+- tooling/agent-loop/budget limits;
 - escalation behavior;
 - memory read/write policy;
 - approval policy;

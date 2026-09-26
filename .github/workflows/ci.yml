@@ -59,7 +59,7 @@ jobs:
   # Gate de isolamento multi-tenant + invariantes de governança.
   # Job separado de propósito: roda em paralelo ao verify (não atrasa o feedback
   # rápido) e vira um check nomeado, que é o que a doutrina de RLS exige provar.
-  # scripts/test-db.sh sobe pgvector/pgvector:pg17, aplica supabase/baseline.sql
+  # apps/crm/scripts/test-db.sh sobe pgvector/pgvector:pg17, aplica infra/supabase/baseline.sql
   # em modo install (ON_ERROR_STOP=1) e update (idempotência), e roda
   # tests/invariants/** contra ele. Invocar via `pnpm test:db` é o que põe
   # node_modules/.bin no PATH que o script herda para chamar `vitest`.

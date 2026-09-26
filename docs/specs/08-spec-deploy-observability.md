@@ -229,13 +229,13 @@ NEXT_PUBLIC_APP_DOMAIN=localhost:3000
 
 ### 3.3 Supabase local via CLI
 ```bash
-supabase init                        # 1ª vez apenas (cria supabase/config.toml)
+supabase init                        # 1ª vez apenas (cria infra/supabase/config.toml)
 supabase start                       # sobe Postgres + Auth + Storage + Studio em Docker
 supabase db reset                    # aplica todas migrations + seed.sql
 supabase status                      # imprime URLs e keys pra .env.local
 ```
 
-`supabase/config.toml` ajustes principais:
+`infra/supabase/config.toml` ajustes principais:
 ```toml
 [db]
 major_version = 15
@@ -263,7 +263,7 @@ enroll_enabled = true
 verify_enabled = true
 ```
 
-Migrations ficam em `supabase/migrations/YYYYMMDDHHMMSS_*.sql`. Seed em `supabase/seed.sql` cria 1 organization, 1 user `dev@deskcomm.local`, 1 pipeline default.
+Migrations ficam em `infra/supabase/migrations/YYYYMMDDHHMMSS_*.sql`. Seed em `supabase/seed.sql` cria 1 organization, 1 user `dev@deskcomm.local`, 1 pipeline default.
 
 ### 3.4 WAHA via docker-compose
 
@@ -341,7 +341,7 @@ Para Nuvemshop em dev: criar app de teste no dashboard Nuvemshop apontando webho
 ### 4.2 Extensions necessárias
 
 ```sql
--- supabase/migrations/00000000000001_extensions.sql
+-- infra/supabase/migrations/00000000000001_extensions.sql
 create extension if not exists pgcrypto       with schema extensions;
 create extension if not exists "uuid-ossp"    with schema extensions;
 create extension if not exists vector         with schema extensions;  -- pgvector
@@ -363,7 +363,7 @@ create extension if not exists btree_gin      with schema extensions;  -- tags i
 | Phone OTP | não | Custo SMS Brasil + abuso; entra na Fase 2 se demanda |
 | MFA TOTP | **forçado** pra `admin` e `super-admin` | Configurado na primeira sessão; recovery codes gerados |
 
-Configuração via Supabase Dashboard ou `supabase/config.toml`:
+Configuração via Supabase Dashboard ou `infra/supabase/config.toml`:
 ```toml
 [auth]
 site_url = "https://app.deskcomm.com.br"
@@ -909,7 +909,7 @@ name: DB Migrations
 on:
   push:
     branches: [main]
-    paths: ["supabase/migrations/**"]
+    paths: ["infra/supabase/migrations/**"]
   workflow_dispatch:
 
 jobs:

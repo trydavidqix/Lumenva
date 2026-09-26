@@ -348,7 +348,7 @@ modelo — `OpenAIEmbedderConfig.embedding_model` fica travado no default
 Graphiti no mesmo dia: o bug segue presente na versão mais recente, não é
 algo específico da `0.22.0`.
 
-**Correção adotada**: `docker/graphiti/zep_graphiti.py` neste repo é uma
+**Correção adotada**: `infra/docker/graphiti/zep_graphiti.py` neste repo é uma
 cópia do arquivo original da imagem com **uma linha adicionada**:
 
 ```python

@@ -79,7 +79,7 @@ The August 2026 security sweep already addressed important agent-facing gaps, in
 Existing Deskcomm                       Agent OS concept
 ---------------------------------------------------------------
 lib/agent-engine                        Agent Kernel/runtime base
-lib/ai/runtime/agent.ts                 current inner-loop/runtime behavior
+lib/ai/runtime/agent.ts                 current inner-tooling/agent-loop/runtime behavior
 event_log                               Event Bus/business facts
 job_queue + workers                     initial ExecutionPort adapter
 ai_agents / versions / runs             Agent Registry + Run records

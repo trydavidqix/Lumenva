@@ -62,7 +62,7 @@ psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -c \
   'create extension if not exists vector with schema public;
    create extension if not exists citext with schema public;
    create extension if not exists pg_trgm with schema public;'
-psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/baseline.sql
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f infra/supabase/baseline.sql
 ```
 
 O `baseline.sql` é idempotente — cria o CRM inteiro + as tabelas do agente
@@ -133,7 +133,7 @@ chegando com link para `https://SEU_DOMINIO/auth/confirm`.
 `GOTRUE_URI_ALLOW_LIST=https://SEU_DOMINIO/auth/confirm`,
 `GOTRUE_SMTP_{HOST,PORT,USER,PASS}` e
 `GOTRUE_MAILER_TEMPLATES_{CONFIRMATION,RECOVERY}` apontando para os templates
-de `supabase/templates/` (mesmo link `token_hash` acima).
+de `infra/supabase/templates/` (mesmo link `token_hash` acima).
 
 ## 4. Conectar o WhatsApp
 

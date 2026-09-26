@@ -1,7 +1,7 @@
 # AI Platform — Execution Index
 
 **Branch:** `ai-platform-foundation`
-**Entry point:** `CODEX-AI-PLATFORM.md`  
+**Entry point:** `../../product/plans/CODEX-AI-PLATFORM.md`
 **Master spec:** `docs/superpowers/specs/2026-08-10-ai-platform-master-design.md`  
 **QA gates:** `docs/superpowers/specs/2026-08-10-ai-platform-qa-release-gates.md`
 

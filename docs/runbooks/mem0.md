@@ -111,7 +111,7 @@ um commit do source em vez de uma tag de imagem que pode sumir.
 
 O banco (`mem0-postgres`) também precisa criar um segundo banco
 (`mem0_app`, para users/api-keys, separado do banco de vetores). O compose
-deste repo já monta `docker/mem0/init-db.sh` (cópia do `init-db.sh` oficial,
+deste repo já monta `infra/docker/mem0/init-db.sh` (cópia do `init-db.sh` oficial,
 Apache-2.0) em `/docker-entrypoint-initdb.d/`. Se copiar esse arquivo de novo
 a partir do checkout do source no Windows, salve-o com quebra de linha LF —
 CRLF faz o entrypoint do Postgres falhar com "cannot execute: required file

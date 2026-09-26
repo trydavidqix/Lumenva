@@ -16,7 +16,7 @@ import {
 
 /**
  * Fase 7 (LangGraph), Task 2 — o que a migration 0119 promete, cobrado no banco
- * que o CLONE recebe (supabase/baseline.sql, não a migration isolada — mesma
+ * que o CLONE recebe (infra/supabase/baseline.sql, não a migration isolada — mesma
  * disciplina de meta-templates-rls.test.ts / reactivation-schema.test.ts).
  *
  * Sob prova:

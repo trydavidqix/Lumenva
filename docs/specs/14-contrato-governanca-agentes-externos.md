@@ -266,7 +266,7 @@ Enriquecimento aditivo (`enrichLeads`, `leads.ts:34-67`):
 ### 3.7 `assignee_kind` — semântica canônica
 
 Coluna `conversations.assignee_kind` (migration
-`0032_conversation_assignee_kind`, `supabase/migrations/20260717150000_0032_conversation_assignee_kind.sql:33-34`),
+`0032_conversation_assignee_kind`, `infra/supabase/migrations/20260717150000_0032_conversation_assignee_kind.sql:33-34`),
 com constraint de coerência (`0032:57-62`):
 
 - `'user'` ⇔ `assigned_to_user_id is not null` (humano atende);
@@ -285,7 +285,7 @@ família de guard que `force_human` e `bot_silenced_until` (§6.2).
 
 `visibility_mode` vive em `organizations.settings` (jsonb), valores
 `'all'` | `'own_and_unassigned'` | `'own'`, **default `'own_and_unassigned'`**
-(migration `0035`, `supabase/migrations/20260717200000_0035_visibility_mode_conversation_rls.sql:1-3`).
+(migration `0035`, `infra/supabase/migrations/20260717200000_0035_visibility_mode_conversation_rls.sql:1-3`).
 Restringe **apenas o role `agent`**; `viewer`/`manager`/`admin` veem toda a org.
 
 O agente externo lê via MCP **org-scoped e sujeito à RLS**. A visibilidade é
@@ -296,12 +296,12 @@ imposta no banco, não na aplicação — o agente **não vê além do escopo**:
   fila não-atribuída; `'own'` = só as suas (`0035:36-44`). Mensagens herdam
   (conversa oculta ⇒ mensagens ocultas, `0035:91-93`).
 - **Leads:** policy `crm_leads_select` usa `fn_can_view_lead(org, owner_user_id)`
-  (migration `0036`, `supabase/migrations/20260717210000_0036_visibility_mode_lead_rls.sql:32-70`),
+  (migration `0036`, `infra/supabase/migrations/20260717210000_0036_visibility_mode_lead_rls.sql:32-70`),
   mesma lógica sobre `owner_user_id`.
 - **Filhas de lead:** `crm_lead_activities` e `crm_lead_links` só são visíveis se o
   lead-pai é visível — SELECT via EXISTS na mesma `fn_can_view_lead` (migration
   `0042`, G6-00/INB-10,
-  `supabase/migrations/20260718160000_0042_lead_children_visibility_rls.sql:41-56`).
+  `infra/supabase/migrations/20260718160000_0042_lead_children_visibility_rls.sql:41-56`).
   Fecha o vazamento de herança (activities/links de lead invisível).
 
 > **Regra para o Vendaval:** trate o que a tool retorna como o **teto** do que existe
@@ -347,7 +347,7 @@ Toda tool é **org-scoped pelo ctx** — `organization_id` vem do token, nunca d
   `governance.ts:72-74`) **e** o destino tem que ser membro ativo `agent+` da MESMA
   org — guard **INB-06a** dentro de `fn_conversation_assign` v2, que faz `RAISE` se o
   destino não é membro (migration `0032`,
-  `supabase/migrations/20260717150000_0032_conversation_assignee_kind.sql:101-145`,
+  `infra/supabase/migrations/20260717150000_0032_conversation_assignee_kind.sql:101-145`,
   comentário `0032:117`). O `membership`/role não é enumerável cross-org (a validação
   vive DENTRO da função, `0032:15-22`).
 - `crm_manage_tags`: filtro `organization_id` explícito no fetch e no update
@@ -437,10 +437,10 @@ O que o **Vendaval** precisa fazer do seu lado para consumir este contrato:
 | `lib/mcp/tools/handoff.ts:29-176` | input/semântica/output `crm_request_human_handoff` v2 |
 | `lib/mcp/tools/conversations.ts:66-83,117-138` | campos de governança expostos |
 | `lib/mcp/tools/leads.ts:34-67` | `enrichLeads` (owner_user_name, stage) |
-| `supabase/migrations/…0032…:33-62,101-145` | `assignee_kind` + guard INB-06a |
-| `supabase/migrations/…0035…:1-57` | `visibility_mode` + `fn_can_view_conversation` |
-| `supabase/migrations/…0036…:32-70` | `fn_can_view_lead` |
-| `supabase/migrations/…0042…:41-56` | filhas de lead visibility (G6-00) |
+| `infra/supabase/migrations/…0032…:33-62,101-145` | `assignee_kind` + guard INB-06a |
+| `infra/supabase/migrations/…0035…:1-57` | `visibility_mode` + `fn_can_view_conversation` |
+| `infra/supabase/migrations/…0036…:32-70` | `fn_can_view_lead` |
+| `infra/supabase/migrations/…0042…:41-56` | filhas de lead visibility (G6-00) |
 | `lib/schemas/settings.ts:22-24` | `aiDispatchModeSchema` + `.catch("native")` |
 | `lib/ai/dispatcher/index.ts:143-151,352-371` | skip antes do claim (org `external`) |
 | `app/api/v1/messages/_handler.ts:151-159` | guard `is_blocked` no SEND |

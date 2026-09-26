@@ -85,7 +85,7 @@ O gate completo não fechou porque `pnpm typecheck` esgotou heap — limite do r
 reprovação do código. O fluxo ainda não conclui uma chamada PSTN/SIP real com áudio.
 
 No checkout atual (`codex/crm-consolidated`), a auditoria confirmou zero ficheiros rastreados em
-`lib/voice/**`, `workers/voice-worker/**` e `workers/voice-runtime/**`. Portanto, não há
+`lib/voice/**`, `apps/voice-worker/**` e `workers/voice-runtime/**`. Portanto, não há
 alteração de código de voz sincronizada nesta branch.
 
 ## O que falta antes de ligar

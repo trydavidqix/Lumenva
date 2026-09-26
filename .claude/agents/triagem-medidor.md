@@ -13,7 +13,7 @@ recomendação, não veredito. Se você entregar "está bom", entregou a coisa e
 - número do PR e o SHA da cabeça dele;
 - o SHA de `origin/main` no momento da triagem (**ancore tudo nele**);
 - o caminho do worktree que é **seu** e de mais ninguém;
-- quais linhas do `triagem/references/complemento-do-ci.md` estão ligadas pelo raio de dano.
+- quais linhas do `docs/audits/triagem/references/complemento-do-ci.md` estão ligadas pelo raio de dano.
 
 ## Como você trabalha
 

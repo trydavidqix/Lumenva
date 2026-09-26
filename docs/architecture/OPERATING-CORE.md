@@ -24,6 +24,6 @@ Status: canonicalized on 2026-09-18.
 
 ## Superseded paths
 
-`packages/operating-core` found on remediation branches is a provider-free in-memory prototype. It is not present on `origin/main`, is not production-wired, and is superseded by the production modules above. Do not reintroduce it as a parallel runtime.
+`packages/core/operating-core` is retained as a provider-free package, but it is not the CRM's production runtime authority. The CRM's durable queue, event dispatch, and worker composition remain the production owners listed above. Do not wire a second runtime in parallel without an approved architecture decision.
 
 Inngest, Vercel Workflow, and other runtime experiments remain adapters or benchmarks only. They are not production authority.

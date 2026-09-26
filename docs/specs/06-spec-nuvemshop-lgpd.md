@@ -393,7 +393,7 @@ export async function loadContext(integrationId: string): Promise<AdapterContext
 
 ## 3. Schema SQL
 
-Migrations vivem em `supabase/migrations/`. Toda tabela tenant-aware tem `organization_id uuid not null` e RLS via `fn_user_org_ids()` (helper definido na Spec 01).
+Migrations vivem em `infra/supabase/migrations/`. Toda tabela tenant-aware tem `organization_id uuid not null` e RLS via `fn_user_org_ids()` (helper definido na Spec 01).
 
 ### 3.1 `tenant_integrations`
 

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 
-const migration = readFileSync("supabase/migrations/20260814082914_content_os_foundation.sql", "utf8");
-const baseline = readFileSync("supabase/baseline.sql", "utf8");
+const migration = readFileSync(new URL("../../../../infra/supabase/migrations/20260814082914_content_os_foundation.sql", import.meta.url), "utf8");
+const baseline = readFileSync(new URL("../../../../infra/supabase/baseline.sql", import.meta.url), "utf8");
 
 describe("Content OS tenant FK integrity", () => {
   it("installs a SECURITY DEFINER tenant trigger and rejects mismatched parent organizations", () => {

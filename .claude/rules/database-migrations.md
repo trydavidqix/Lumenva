@@ -6,9 +6,9 @@
 
 Toda mudança de schema precisa sair junta em:
 
-1. migration versionada em `supabase/migrations/<timestamp>_<NNNN>_<slug>.sql`;
-2. apêndice idempotente correspondente em `supabase/baseline.sql`;
-3. linha em `supabase/migrations/MANIFEST.md`.
+1. migration versionada em `infra/supabase/migrations/<timestamp>_<NNNN>_<slug>.sql`;
+2. apêndice idempotente correspondente em `infra/supabase/baseline.sql`;
+3. linha em `infra/supabase/migrations/MANIFEST.md`.
 
 Se o contrato de tipos mudou, regenere `lib/database.types.ts` pelo fluxo canônico do projeto; não edite manualmente esse arquivo gerado.
 

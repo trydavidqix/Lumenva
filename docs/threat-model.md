@@ -169,7 +169,7 @@ ausentes). `.gitignore` cobre `.env*` corretamente, e essa é a única camada.
 
 Agravante específico deste repo: a doutrina de QA visual **incentiva commitar evidência
 visual**, e há **116 PNGs rastreados** (85 em `evidence/` contando subpastas, 18 em
-`docs/evidence/`, 13 em `loop/checkpoints/evidence/`). Screenshot de tela autenticada pode conter telefone, nome de
+`docs/evidence/`, 13 em `tooling/agent-loop/checkpoints/evidence/`). Screenshot de tela autenticada pode conter telefone, nome de
 cliente ou token em URL — e várias evidências são explicitamente descritas nos HANDOFFs como
 tiradas em **conta e conversa reais de WhatsApp**. Num repo público, é irreversível.
 

@@ -34,7 +34,7 @@ Cada passo deve ser validado isoladamente. Se falhar, desligar a flag, preservar
 
 ### `RGPD_STATE_MACHINE_V1`
 
-- Leitura: `lib/lgpd/repository.ts:13`; migration `supabase/migrations/20260905120000_0150_rgpd_state_machine.sql`.
+- Leitura: `lib/lgpd/repository.ts:13`; migration `infra/supabase/migrations/20260905120000_0150_rgpd_state_machine.sql`.
 - Ligar: `RGPD_STATE_MACHINE_V1=true`.
 - Validar: `pnpm exec vitest run tests/unit/lgpd-state-machine.test.ts`; consultar estados `received/in_review/extension_notified/responded/refused` e `notified_at` quando aplicável.
 - Falha: prazo em dias úteis, extensão sem notificação, estado perdido ou replay duplicado.

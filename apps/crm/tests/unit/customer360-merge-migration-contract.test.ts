@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 
 const migration = readFileSync(
-  "supabase/migrations/20260918160000_0197_customer360_merge.sql",
+  "infra/supabase/migrations/20260918160000_0197_customer360_merge.sql",
   "utf8",
 );
 

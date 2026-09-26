@@ -224,9 +224,9 @@ O pior modo de falha do produto é vazamento cross-tenant. Trate isso como sever
 
 Mudança de schema deve andar em tripla:
 
-1. migration nova em `supabase/migrations/`;
-2. mudança idempotente correspondente em `supabase/baseline.sql`;
-3. entrada em `supabase/migrations/MANIFEST.md`.
+1. migration nova em `infra/supabase/migrations/`;
+2. mudança idempotente correspondente em `infra/supabase/baseline.sql`;
+3. entrada em `infra/supabase/migrations/MANIFEST.md`.
 
 Quando o contrato muda, regenerar tipos. Não editar `lib/database.types.ts` manualmente.
 

@@ -793,7 +793,7 @@ update event_log
 
 ## 12. Migrations
 
-Ordem recomendada (sob `supabase/migrations/`):
+Ordem recomendada (sob `infra/supabase/migrations/`):
 
 1. `2026XX01_event_log_table.sql` — tabela, constraint, comments.
 2. `2026XX02_event_log_indexes.sql` — todos os 5 indexes.

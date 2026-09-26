@@ -203,7 +203,7 @@ services:
       POSTGRES_PASSWORD: ${MEM0_POSTGRES_PASSWORD:?set MEM0_POSTGRES_PASSWORD in managed runtime secrets}
     volumes:
       - mem0-postgres-data:/var/lib/postgresql/data
-      - ./docker/mem0/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+      - ./infra/docker/mem0/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mem0 -d mem0"]
       interval: 10s
@@ -310,7 +310,7 @@ services:
       # docker/graphiti/zep_graphiti.py e docs/runbooks/graphiti.md "Patch
       # local: embedder ignorado pelo upstream". Revalidar ao trocar a
       # versão da imagem — o conteúdo do arquivo pode mudar de estrutura.
-      - ./docker/graphiti/zep_graphiti.py:/app/graph_service/zep_graphiti.py:ro
+      - ./infra/docker/graphiti/zep_graphiti.py:/app/graph_service/zep_graphiti.py:ro
     depends_on:
       neo4j:
         condition: service_healthy

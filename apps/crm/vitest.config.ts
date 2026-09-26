@@ -45,8 +45,9 @@ export default defineConfig({
       // gate. Their PostgreSQL integration tests have their own harness and
       // require external database/container setup.
       "scratchpad-*/**",
-      "apps/site/**",
-      "workers/voice-worker/**",
+      "docs/archive/scratchpads/**",
+      "apps/website/**",
+      "apps/voice-worker/**",
       "scripts/*.test.mjs",
       "apps/crm/scripts/*.test.mjs",
       "**/*.integration.test.ts",
@@ -57,7 +58,7 @@ export default defineConfig({
       "**/*.rls.integration.test.ts",
       "**/scripts/check-harness-consistency.test.mjs",
       "**/workers/voice-pipecat-runtime/main.test.mjs",
-      "**/workers/voice-worker/pending-outbound.test.mjs",
+      "**/apps/voice-worker/pending-outbound.test.mjs",
       "**/_stages.test.tsx",
       "**/_mapping.test.tsx",
       "**/TeamMembersClient.test.tsx",

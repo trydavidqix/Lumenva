@@ -378,4 +378,4 @@ A serem decididas no spec correspondente (`docs/specs/02-spec-customer-360.md`):
 - `docs/research/reference-synthesis.md` (especialmente §3 Data model, §9 Anti-patterns, §10 Naming convention)
 - `docs/prd/00-prd-master.md`
 - `docs/prd/01-prd-platform-base.md`
-- `tasks/todo.md`
+- `../engineering/workflow.md`

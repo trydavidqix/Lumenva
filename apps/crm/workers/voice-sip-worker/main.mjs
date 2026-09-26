@@ -2,7 +2,7 @@
 // Real, long-running entrypoint for the SIP/BYOC voice worker (Fase 3).
 // Run via `npx tsx workers/voice-sip-worker/main.mjs` from the repo root —
 // this is a deliberate build/deploy decision (see README "Decisão de
-// build"): unlike workers/voice-worker/ (a standalone npm package with its
+// build"): unlike apps/voice-worker/ (a standalone npm package with its
 // own Dockerfile), this process imports TypeScript directly from `lib/voice/sip/**`
 // and needs the whole repo checkout + root node_modules + `tsx`. It cannot
 // ship as a slim standalone container the way the Telnyx worker does.
@@ -36,7 +36,7 @@
 //                              default "Boa tarde! Em que posso te ajudar?". Set empty string
 //                              to disable (silence until the caller speaks, old behavior).
 //
-// Deliberate deviation from workers/voice-worker/README.md's "the worker
+// Deliberate deviation from apps/voice-worker/README.md's "the worker
 // has no database credentials" principle: this process DOES read
 // voice_sip_connections/voice_phone_numbers directly (via the same
 // createVoiceOrganizationResolver used elsewhere and covered by

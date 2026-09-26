@@ -41,7 +41,7 @@ vi.mock("@/lib/agent-engine/platform/features", () => ({
 import { executeN8nWebhook } from "@/lib/automation/actions/n8n-webhook";
 import { buildN8nEnvelope, type N8nIntegrationEnvelope } from "@/lib/automation/n8n/envelope";
 
-const REPO_ROOT = join(__dirname, "..", "..");
+const REPO_ROOT = join(__dirname, "..", "..", "..", "..");
 const DOC_PATH = join(REPO_ROOT, "docs", "examples", "n8n", "crm-lead-created.md");
 
 function readDoc(): string {
@@ -268,7 +268,7 @@ describe("Step 2 — signed payload + stable idempotency across a retry", () => 
 // The receiver below is a test double that implements EXACTLY the doc's
 // nodes 2-6 (HMAC verify -> atomic dedupe claim -> mock side effect),
 // standing in for n8n's own dedicated Postgres (docs/runbooks/n8n.md,
-// ops/n8n/docker-compose.yml) with an in-process Set — durable Postgres
+// infra/deployment/n8n/docker-compose.yml) with an in-process Set — durable Postgres
 // storage is what a real deployment uses (per the doc); this test proves
 // the ALGORITHM the doc specifies is race-safe and retry-safe, driven by
 // the real signing/delivery code on the CRM side.

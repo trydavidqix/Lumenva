@@ -50,8 +50,8 @@ __pycache__/
 *.pyc
 
 # Supabase local
-supabase/.temp/
-supabase/.branches/
+infra/supabase/.temp/
+infra/supabase/.branches/
 
 # Epic executor (skill artifacts)
 .epic-executor/
@@ -90,14 +90,14 @@ deskcommcrm-setup-kit.zip
 
 # gov-loop — estado operacional fica FORA do git (a resposta do humano na inbox
 # e a linha 'started' do sessions.log não podem sujar o working tree; a guarda de
-# chão limpo do LOOP.md os stasharia). loop/checkpoints/evidence/ NÃO é ignorado:
+# chão limpo do LOOP.md os stasharia). tooling/agent-loop/checkpoints/evidence/ NÃO é ignorado:
 # screenshot de checkpoint é evidência versionada.
-loop/inbox.items.md
-loop/sessions.log
-loop/logs/
-loop/locks/
-loop/STOP
-loop/run-session.sh
+tooling/agent-loop/inbox.items.md
+tooling/agent-loop/sessions.log
+tooling/agent-loop/logs/
+tooling/agent-loop/locks/
+tooling/agent-loop/STOP
+tooling/agent-loop/run-session.sh
 .superpowers/
 .worktrees/
 
@@ -113,7 +113,7 @@ evidence/.sonda-score-residuo.json
 # sessão reusada pelas jornadas (contém tokens)
 .auth/
 .pnpm-store/
-scripts/lead-pipeline/bin/
+tooling/scripts/lead-pipeline/bin/
 
 # Maestri (config local da estação, não é doutrina compartilhada)
 .maestri/

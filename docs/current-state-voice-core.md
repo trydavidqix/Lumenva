@@ -62,7 +62,7 @@ continua pendente.
 
 - `VoiceEngine` provider-neutral e factory;
 - Patter encapsulado como implementation detail substituível;
-- worker persistente em `workers/voice-worker/**`;
+  - worker persistente em `apps/voice-worker/**`;
 - Telnyx + Deepgram + ElevenLabs no adapter atual;
 - tenant resolution por `voice_phone_numbers`;
 - registry privado `voice_worker_endpoints` com RLS e revogação explícita de tenant roles;

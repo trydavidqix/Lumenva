@@ -2,18 +2,18 @@
 
 **Status:** design aprovado para implementação incremental; este gate não executa migração, não altera schema, não habilita produção e não abre sessão Jules.
 
-**Objetivo:** substituir a leitura de um domínio por vez, mantendo o caminho Supabase/Postgres atual como autoridade até que a leitura Drizzle tenha evidência comparável, tenant-safe e reversível. A conexão Drizzle existente em `packages/social-brain/db/src/gcp/cloud-sql.ts` é apenas a fundação de transporte; ela não é, sozinha, uma migração de repositórios.
+**Objetivo:** substituir a leitura de um domínio por vez, mantendo o caminho Supabase/Postgres atual como autoridade até que a leitura Drizzle tenha evidência comparável, tenant-safe e reversível. A conexão Drizzle existente em `packages/core/social-brain/db/src/gcp/cloud-sql.ts` é apenas a fundação de transporte; ela não é, sozinha, uma migração de repositórios.
 
 ## 1. Limites do gate F6-C0
 
-Este documento define interfaces, normalização, política de mismatch, flags, rollback e critérios de promoção. Não cria tabelas, não edita `supabase/migrations/`, `supabase/baseline.sql`, `MANIFEST.md`, RLS, credenciais ou handlers de produção.
+Este documento define interfaces, normalização, política de mismatch, flags, rollback e critérios de promoção. Não cria tabelas, não edita `infra/supabase/migrations/`, `infra/supabase/baseline.sql`, `MANIFEST.md`, RLS, credenciais ou handlers de produção.
 
 Qualquer mudança futura de schema seguirá `.claude/rules/database-migrations.md`: migration versionada + apêndice idempotente em `baseline.sql` + entrada no `MANIFEST.md`. F6-C0 não precisa dessa tripla porque não muda schema.
 
 Evidência atual observada:
 
-- `packages/social-brain/db/src/gcp/cloud-sql.ts` exporta uma instância Drizzle sobre `pg`, mas os repositórios de domínio atuais ainda usam Supabase typed clients.
-- `packages/social-brain/db/src/tenant/` contém os contratos F1/F2 de identidade, tenant e RLS; eles permanecem fonte única da verdade.
+- `packages/core/social-brain/db/src/gcp/cloud-sql.ts` exporta uma instância Drizzle sobre `pg`, mas os repositórios de domínio atuais ainda usam Supabase typed clients.
+- `packages/core/social-brain/db/src/tenant/` contém os contratos F1/F2 de identidade, tenant e RLS; eles permanecem fonte única da verdade.
 - O alvo é Cloud SQL/Postgres compatível. Drizzle não ganha permissão para ignorar RLS, RBAC, filtro manual de tenant ou auditoria.
 
 ## 2. Matriz de domínios e ordem de promoção
@@ -105,7 +105,7 @@ F6-C1 é Codex-only para qualquer mudança de schema, RLS, role SQL, cutover de 
 | Tarefa | Escopo exclusivo | Não pode tocar | Saída |
 |---|---|---|---|
 | F6-C0 | este contrato e testes `tests/contracts/f6/` | produção, schema, Jules | desenho aprovado |
-| F6-J1 | `packages/social-brain/db/src/drizzle/**`, `packages/social-brain/db/tests/drizzle-bootstrap.test.ts` | migrations, RLS, rotas, secrets | bootstrap read-only |
+| F6-J1 | `packages/core/social-brain/db/src/drizzle/**`, `packages/core/social-brain/db/tests/drizzle-bootstrap.test.ts` | migrations, RLS, rotas, secrets | bootstrap read-only |
 | F6-J2 | `apps/crm/lib/db/drizzle/domains/crm/**`, `apps/crm/tests/unit/f6-shadow-crm.test.ts` | outros domínios | shadow CRM |
 | F6-J3 | `apps/crm/lib/db/drizzle/domains/messaging/**`, `apps/crm/tests/unit/f6-shadow-messaging.test.ts` | storage, SSE, schema | shadow messaging |
 | F6-J4 | `apps/crm/lib/db/shadow-read/**`, `apps/crm/tests/unit/f6-shadow-read-contract.test.ts` | adapters de domínio | comparator/flags/rollback |

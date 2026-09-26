@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const MIGRATION = join(process.cwd(), "supabase/migrations/20260827013000_0128_voice_phone_numbers.sql");
+const MIGRATION = join(process.cwd(), "infra/supabase/migrations/20260827013000_0128_voice_phone_numbers.sql");
 const sql = () => readFileSync(MIGRATION, "utf8").toLowerCase();
 
 describe("voice phone number registry migration", () => {

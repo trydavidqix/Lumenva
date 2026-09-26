@@ -3,14 +3,14 @@
 #
 # Sobe um Postgres 17 efêmero (Docker quando disponível, nativo via
 # initdb/pg_ctl caso contrário — ver detecção de ENGINE abaixo), aplica
-# supabase/baseline.sql em modo install (ON_ERROR_STOP=1 — qualquer statement
+# infra/supabase/baseline.sql em modo install (ON_ERROR_STOP=1 — qualquer statement
 # falhando derruba o run), re-aplica em modo update (sem a flag — idempotência)
 # e roda a suíte vitest de invariantes (tests/invariants/**). O Postgres é
 # SEMPRE derrubado no EXIT (sucesso ou falha), nos dois engines.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-BASELINE="$ROOT/supabase/baseline.sql"
+BASELINE="$ROOT/infra/supabase/baseline.sql"
 
 # Direct invocation must fail before starting Postgres when the test runner is
 # unavailable. Otherwise a shell-level `vitest: command not found` can get

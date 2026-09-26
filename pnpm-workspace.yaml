@@ -1,8 +1,9 @@
 packages:
   - 'apps/*'
   - 'packages/*'
-  - 'packages/social-brain/*'
-  - 'packages/social-brain/providers/*'
+  - 'packages/core/*'
+  - 'packages/core/social-brain/*'
+  - 'packages/core/social-brain/providers/*'
   - 'packages/integrations/*'
   - 'packages/observability/*'
   - 'packages/platform/*'

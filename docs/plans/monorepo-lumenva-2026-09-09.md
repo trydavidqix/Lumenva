@@ -1,5 +1,7 @@
 # Plano executável — monorepo Lumenva
 
+> **HISTÓRICO/SUPERSEDIDO:** este plano descreve a estrutura em 2026-09-09. A reorganização canônica atual está em `docs/architecture/REPOSITORY_LAYOUT.md`; os paths abaixo são evidência da época e não instruções operacionais atuais.
+
 **Data:** 2026-09-09
 **Base confirmada:** `main` em `712f3cfd6afe69d1e57d8112c13ef0bf79a51b76`
 **Branch deste plano:** `docs/monorepo-plan-2026-09-09`

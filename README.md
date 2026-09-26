@@ -68,9 +68,9 @@ docker compose up -d
 
 # 5. Schema — aplicar o baseline, NÃO as migrations
 #    As migrations 0001-0009/0013 são stubs; a cadeia não sobe do zero.
-#    O schema real vive em supabase/baseline.sql (o mesmo que o install.sh aplica).
+#    O schema real vive em infra/supabase/baseline.sql (o mesmo que o install.sh aplica).
 supabase link --project-ref <o-teu-ref>
-psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/baseline.sql
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f infra/supabase/baseline.sql
 
 # 6. Subir a app
 pnpm dev

@@ -27,9 +27,9 @@ MFA, storage, realtime, adapters ou DNS.
 
 ## Artefatos F1
 
-- `supabase/migrations/20260922204356_0202_f1_identity_mapping_v2.sql`
-- apêndice correspondente em `supabase/baseline.sql`;
-- `supabase/migrations/MANIFEST.md`;
+- `infra/supabase/migrations/20260922204356_0202_f1_identity_mapping_v2.sql`
+- apêndice correspondente em `infra/supabase/baseline.sql`;
+- `infra/supabase/migrations/MANIFEST.md`;
 - `apps/crm/tests/invariants/f1-identity-mapping.test.ts`;
 - `docs/architecture/F1-IDENTITY-TENANT-DESIGN.md`.
 

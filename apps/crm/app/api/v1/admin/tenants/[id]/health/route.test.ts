@@ -20,7 +20,7 @@ import { NUVEMSHOP_CLASSIFICACAO, type HealthStatus } from "./route";
  * esta rota alimenta tinha a cobertura e a rota não, e é a rota que decide o
  * que a tela recebe:
  *  - os casos nomeados, que fixam a saúde de cada estado que importa;
- *  - a cobertura contra o CHECK do `supabase/baseline.sql`. Status novo que uma
+ *  - a cobertura contra o CHECK do `infra/supabase/baseline.sql`. Status novo que uma
  *    migration acrescente ao banco sem entrar na classificação da rota reprova
  *    aqui, que é o modo de falha que produziu este bug (o TypeScript não
  *    enxerga o CHECK).

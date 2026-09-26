@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 const migration = fs.readFileSync(
-  path.join(process.cwd(), "supabase/migrations/20260826125500_0127_voice_hardening.sql"),
+  path.join(process.cwd(), "infra/supabase/migrations/20260826125500_0127_voice_hardening.sql"),
   "utf8",
 );
 

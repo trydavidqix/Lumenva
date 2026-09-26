@@ -127,13 +127,13 @@ fi
 # inofensivo (são objetos que já estavam lá). Filtramos esse ruído e só
 # mostramos problemas de verdade.
 step "Atualizando o banco de dados"
-if [ -f supabase/baseline.sql ]; then
+if [ -f infra/supabase/baseline.sql ]; then
   # Extensões que o schema exige (idempotente; iguais ao install.sh).
   docker run --rm postgres:17-alpine psql "$SUPABASE_DB_URL" -c \
     "create extension if not exists vector with schema public; create extension if not exists citext with schema public; create extension if not exists pg_trgm with schema public;" \
     >/dev/null 2>&1 || true
 
-  raw="$(docker run --rm -i -v "$PROJECT_DIR/supabase/baseline.sql:/b.sql:ro" \
+  raw="$(docker run --rm -i -v "$PROJECT_DIR/infra/supabase/baseline.sql:/b.sql:ro" \
         postgres:17-alpine psql "$SUPABASE_DB_URL" -f /b.sql 2>&1 || true)"
 
   # Erros benignos ao re-aplicar sobre uma base existente:
@@ -148,7 +148,7 @@ if [ -f supabase/baseline.sql ]; then
     c_grn "✓ banco atualizado (e conversas reorganizadas, se havia bagunça)."
   fi
 else
-  c_ylw "⚠ supabase/baseline.sql não encontrado — pulei a parte do banco."
+  c_ylw "⚠ infra/supabase/baseline.sql não encontrado — pulei a parte do banco."
 fi
 [ -n "${LUMENVA_AGENT_REPORT:-}" ] && eval "${LUMENVA_AGENT_REPORT_CMD}" banco
 

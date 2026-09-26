@@ -114,20 +114,20 @@ supabase login
 supabase link --project-ref <seu-project-ref>
 
 # Aplica o SCHEMA — o baseline, não a cadeia de migrations
-psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/baseline.sql
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f infra/supabase/baseline.sql
 ```
 
 > ⚠️ **Não use `supabase db push` num banco novo.** As migrations `0001`–`0009` e `0013`
 > são stubs `SELECT 1;` — o schema fundacional não está nelas, e a cadeia não sobe do
 > zero. O `db push` **passa sem erro** e te deixa com um banco vazio, e você só descobre
-> muito depois, num erro que não aponta pra cá. O `supabase/baseline.sql` é o schema real
+> muito depois, num erro que não aponta pra cá. O `infra/supabase/baseline.sql` é o schema real
 > e é exatamente o que o `hostgator-setup-kit/install.sh` aplica na VPS.
 >
 > As migrations continuam sendo a fonte da verdade para quem **já tem** um banco e está
 > atualizando — é o baseline que serve pra criar do zero.
 
 Se não conseguir usar o CLI, abra **SQL Editor → New query** no dashboard e cole o conteúdo
-de `supabase/baseline.sql`.
+de `infra/supabase/baseline.sql`.
 
 ### Storage bucket
 
@@ -513,10 +513,10 @@ Confira se você está logado: `supabase login` — vai abrir o browser pra auto
 
 Com tudo verde no `/api/v1/health`:
 
-1. Crie usuários de teste rodando `pnpm tsx scripts/seed-e2e-credentials.ts` — gera `.e2e-creds.json` com admin/manager/agent.
+1. Crie usuários de teste rodando `pnpm --dir apps/crm exec tsx scripts/seed-e2e-credentials.ts` — gera `.e2e-creds.json` com admin/manager/agent.
 2. Leia [`README.md`](../README.md) pra fluxo de criar sessão WAHA + escanear QR.
 3. Leia [`CLAUDE.md`](../CLAUDE.md) pra convenções do projeto.
-4. Veja [`tasks/todo.md`](../tasks/todo.md) pra entender o backlog atual.
+4. Veja [`engineering/workflow.md`](engineering/workflow.md) pra entender o backlog atual.
 
 Bem-vindo ao Lumenva. 🛠️
 

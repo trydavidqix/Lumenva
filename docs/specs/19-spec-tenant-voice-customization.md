@@ -16,7 +16,7 @@ autoridade para fazer/afirmar. Um não pode comprar o outro.
 
 ## 2. Onde isso vive hoje (baseline)
 
-`ai_agent_versions` (`supabase/baseline.sql`) já guarda o prompt completo do tenant em
+`ai_agent_versions` (`infra/supabase/baseline.sql`) já guarda o prompt completo do tenant em
 `system_prompt text NOT NULL`, e o runtime (`lib/ai/runtime/agent.ts:432`) passa esse valor
 **direto** como `system` para `generateText()`:
 
@@ -190,7 +190,7 @@ Proposta:
 ## 6. Versionamento e imutabilidade
 
 `ai_agent_versions` já é imutável após `published` (trigger `ai_agent_versions %` é imutável,
-`supabase/baseline.sql:6206+` — mudança de conteúdo vira draft novo). `voice_profile` segue a
+`infra/supabase/baseline.sql:6206+` — mudança de conteúdo vira draft novo). `voice_profile` segue a
 mesma regra: é parte da versão, muda junto de `system_prompt` numa versão draft nova, nunca
 editado in-place numa versão publicada. Isso preserva o histórico auditável de qual tom estava
 ativo em qual período — relevante se um cliente reclamar de uma interação específica.

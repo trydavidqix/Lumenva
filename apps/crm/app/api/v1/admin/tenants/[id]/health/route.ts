@@ -78,7 +78,7 @@ interface NuvemshopClassificacao {
  * uma cadeia de `===` logo abaixo), sem guarda nenhuma — enquanto a tela que
  * esta rota alimenta (`components/admin/tenants/TenantOverview.tsx`) já tinha a
  * dela. Exportado para o teste conferir a COBERTURA contra o CHECK
- * `tenant_integrations_status_check` do `supabase/baseline.sql`, que é o arquivo
+ * `tenant_integrations_status_check` do `infra/supabase/baseline.sql`, que é o arquivo
  * que o self-hoster aplica: status novo que uma migration acrescente ao banco
  * sem entrar aqui reprova em `route.test.ts`.
  *

@@ -49,4 +49,4 @@ Se o working tree estiver sujo e o trabalho não for claramente da sessão atual
 
 ## Exceções especializadas
 
-`loop/LOOP.md` e `triagem/TRIAGEM.md` podem impor fluxos mais restritos aos seus próprios worktrees/branches. Essas regras especializadas complementam esta rule; não reduzem as proteções de `CLAUDE.md`.
+`tooling/agent-loop/LOOP.md` e `docs/audits/triagem/TRIAGEM.md` podem impor fluxos mais restritos aos seus próprios worktrees/branches. Essas regras especializadas complementam esta rule; não reduzem as proteções de `CLAUDE.md`.

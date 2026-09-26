@@ -39,7 +39,7 @@ CANAIS_EVIDENCE_DIR=evidence/canais/task4 \
   pnpm exec playwright test --config tests/journeys/playwright.config.ts
 ```
 
-Pré-requisitos: Supabase local com `supabase/baseline.sql` aplicado, WAHA na 3030,
+Pré-requisitos: Supabase local com `infra/supabase/baseline.sql` aplicado, WAHA na 3030,
 `next build` + `next start` no ar, `.e2e-creds.json` semeado. Receita completa na seção
 "Receita do ambiente" do `HANDOFF-canais-oficial.md`.
 

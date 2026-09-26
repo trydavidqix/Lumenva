@@ -281,7 +281,7 @@ A decidir em `docs/specs/05-spec-ai-rag-handoff.md`:
 - `docs/prd/02-prd-customer-360.md` (timeline polimórfica, contacts, crm_lead_links)
 - `docs/prd/03-prd-whatsapp-waha.md` (inbound webhook, outbound dispatch, janela 24h)
 - `docs/prd/04-prd-pipeline-attendance.md` (conversation.status, roteamento, stages)
-- `tasks/todo.md`
+- `../engineering/workflow.md`
 
 ---
 

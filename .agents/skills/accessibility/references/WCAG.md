@@ -187,5 +187,5 @@
 ## Sources
 
 - [WCAG 2.2 W3C Recommendation](https://www.w3.org/TR/WCAG22/)
-- [WCAG 2.2 Quick Reference](https://www.w3.org/WAI/WCAG22/quickref/)
+- [WCAG 2.2 Quick Reference](https://www.w3.org/WAI/WCAG22/quickdocs/references/)
 - [What's New in WCAG 2.2](https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/)

@@ -1962,7 +1962,7 @@ UI sempre ordena por `sent_at desc` (não `created_at`). Re-render reativo via S
   cd /opt/deskcomm-waha && docker compose up -d
   ```
 - Nginx config: vide §2.4.
-- Backup `restic` diário pra Backblaze B2 (volumes `/var/lib/docker/volumes/waha_sessions`).
+- Backup `restic` diário pra Backblaze B2 (volumes `/var/lib/infra/docker/volumes/waha_sessions`).
 - Monitoramento: UptimeRobot apontando pra `/api/server/version` (5 min ping); alerta em PagerDuty.
 - **Egress allowlist**: Nginx só aceita conexões do range de IPs do Vercel (atualizado por cron diário consultando `https://api.vercel.com/v1/edge-config/...` ou hardcode atualizada manualmente).
 

@@ -9,13 +9,13 @@
 
 ## Control plane
 
-apps/crm é a aplicação Next.js principal (apps/crm/package.json:1-20); apps/site existe como segunda aplicação. A doutrina confirma Next.js App Router, Route Handlers, workers por event_log/scheduler, Supabase/Postgres, Upstash, Zod e Sentry (CLAUDE.md:29-41). Tenancy exige organization_id confiável e filtro explícito ao usar service role (CLAUDE.md:71-82).
+apps/crm é a aplicação Next.js principal (apps/crm/package.json:1-20); apps/website é a aplicação pública e de blog. A arquitetura também mantém Social Brain em apps/social-web, apps/social-worker e apps/social-mcp, além dos executáveis de voz e composição em apps/voice-worker e apps/video-composer. A doutrina confirma Next.js App Router, Route Handlers, workers por event_log/scheduler, Supabase/Postgres, Upstash, Zod e Sentry (CLAUDE.md:29-41). Tenancy exige organization_id confiável e filtro explícito ao usar service role (CLAUDE.md:71-82).
 
 ## Dados, eventos e workers
 
-supabase/migrations/ contém 145 arquivos; baseline.sql, MANIFEST.md e tipos gerados são os artefactos canónicos (CLAUDE.md:96-108). event_log tem dispatcher/registro de consumidores em apps/crm/lib/event-log/dispatcher.ts:1-90; o drain vive na rota cron (dispatcher.ts:8-12). EventRow inclui organization_id, payload, metadata, consumed_by e attempts (dispatcher.ts:17-36).
+infra/supabase/migrations/ contém 145 arquivos; baseline.sql, MANIFEST.md e tipos gerados são os artefactos canónicos (CLAUDE.md:96-108). event_log tem dispatcher/registro de consumidores em apps/crm/lib/event-log/dispatcher.ts:1-90; o drain vive na rota cron (dispatcher.ts:8-12). EventRow inclui organization_id, payload, metadata, consumed_by e attempts (dispatcher.ts:17-36).
 
-Há 42 arquivos em apps/crm/workers/, incluindo agent-worker, resposta, sentimento, handoff, RAG, memória e LGPD. O worker de agente inicializa env/schema check, drain, cron, health e loops (apps/crm/workers/agent-worker/main.ts:1-15, :35-46). workers/ na raiz contém apenas voice-worker.
+Há 42 arquivos em apps/crm/workers/, incluindo agent-worker, resposta, sentimento, handoff, RAG, memória e LGPD. O worker de agente inicializa env/schema check, drain, cron, health e loops (apps/crm/workers/agent-worker/main.ts:1-15, :35-46). O voice worker independente agora está em apps/voice-worker/.
 
 ## Agent OS, routers, memory e tools
 
@@ -25,10 +25,10 @@ O router de intenção resolve a configuração em cada turno, filtra organizati
 
 ## Packages e planos
 
-Não há arquivos packages/*/package.json e a árvore packages canónica do blueprint não existe como implementação. A separação atual é apps/crm/lib, apps/crm/workers e apps/site; packages shared, agent-runtime, model-router, memory, evidence e agent-factory previstos nas Waves 1–3 são target, não estado atual.
+O código compartilhado fica em packages, organizado por domínio. Os pacotes de Social Brain e operating-core estão sendo consolidados sob packages/core; integrações, observabilidade e plataforma permanecem em seus grupos. Capacidades futuras de agent-runtime, model-router, memory, evidence e agent-factory continuam sendo target quando ainda não houver implementação correspondente.
 
 ## Infraestrutura e observabilidade
 
-docs/, supabase/, docker/, ops/, services/, loop/ e .claude/ estão versionados. docs/harness-audit.md:20-29 registra GitHub Actions inativo e validação local/Preview; :33-58 classifica H4 com H5 parcial. docs/threat-model.md:27-49 inventaria superfícies públicas; :55-89 registra limites em webhooks, fallback in-memory e lacunas residuais.
+docs/, infra/, knowledge/, evidence/, tooling/ e .claude/ seguem a organização registrada em REPOSITORY_LAYOUT.md. Dockerfiles, Compose e Cloud Build permanecem na raiz por dependerem do contexto raiz de build; apps, packages, scripts e stacks de deployment usam seus destinos canônicos.
 
 Este é um snapshot do SHA acima. Não prova runtime live, credenciais, deploy, provider externo ou execução de todos os gates.

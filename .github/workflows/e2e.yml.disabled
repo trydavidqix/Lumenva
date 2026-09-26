@@ -94,14 +94,14 @@ jobs:
       # e2e aplica: o banco do teste fica igual ao de quem instalou o produto.
       - name: Subir Supabase local (sem a cadeia de migrations)
         run: |
-          mv supabase/migrations /tmp/migrations-off
-          mkdir -p supabase/migrations
-          supabase start
+          mv infra/supabase/migrations /tmp/migrations-off
+          mkdir -p infra/supabase/migrations
+          supabase --workdir infra/supabase start
 
       # O baseline é um dump `--schema-only`: ele USA os tipos das extensões
       # (public.vector, citext, gin_trgm_ops) mas não as cria. O stack local do
       # Supabase traz os binários e não as habilita — mesmo prelúdio que o
-      # scripts/test-db.sh faz para o Postgres cru, só a parte de extensões
+      # apps/crm/scripts/test-db.sh faz para o Postgres cru, só a parte de extensões
       # (roles e schema auth já vêm prontos aqui).
       - name: Habilitar extensões exigidas pelo baseline
         run: |
@@ -117,7 +117,7 @@ jobs:
       - name: Aplicar o baseline.sql (o mesmo que o install.sh do kit aplica)
         run: |
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
-            -v ON_ERROR_STOP=1 -q -f supabase/baseline.sql
+            -v ON_ERROR_STOP=1 -q -f infra/supabase/baseline.sql
 
       - name: Exportar credenciais do stack local
         run: |
@@ -192,7 +192,7 @@ jobs:
       - name: Semear credenciais de teste
         run: |
           cp .env.e2e .env.local
-          pnpm exec tsx scripts/seed-e2e-credentials.ts
+          pnpm exec tsx apps/crm/scripts/seed-e2e-credentials.ts
 
       # `SUPABASE_DB_URL` no `.env.local` (e não só no `env:` do passo de teste):
       # `seed-e2e-escalacao.ts` abre um `pg.Pool` direto, e o `.env.local` é a
@@ -218,9 +218,9 @@ jobs:
       # Sem a flag o de capacidades morre na validação Zod das 3 vars do Supabase.
       - name: Semear as fixtures que as specs não semeiam sozinhas
         run: |
-          pnpm exec tsx scripts/seed-e2e-escalacao.ts
-          pnpm exec tsx --env-file=.env.local scripts/seed-e2e-capacidades-ausentes.ts
-          pnpm exec tsx scripts/seed-e2e-followup-agent.ts
+          pnpm exec tsx apps/crm/scripts/seed-e2e-escalacao.ts
+          pnpm exec tsx --env-file=.env.local apps/crm/scripts/seed-e2e-capacidades-ausentes.ts
+          pnpm exec tsx apps/crm/scripts/seed-e2e-followup-agent.ts
 
       # Verificação visual antes da carga acumulada: estas telas fazem chamadas
       # de dados ao abrir e o spec converte qualquer 429 em falha visual. Quando

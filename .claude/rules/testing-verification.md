@@ -21,7 +21,7 @@ com Cloud e Actions. Vercel Preview prova o comportamento visual e de build quan
 exige.
 
 **Incidente 2026-08-22 (resolvido):** todo deploy Vercel (Preview e produção) ficou em `ERROR`
-desde o commit `07874472` (bem antes de 2026-08-20) — `app/api/v1/cron/flywheel-judge-loop/route.ts`
+desde o commit `07874472` (bem antes de 2026-08-20) — `app/api/v1/cron/flywheel-judge-tooling/agent-loop/route.ts`
 declarava `maxDuration = 600`, acima do teto de 300s do plano Hobby. O build passava limpo; a
 Vercel derrubava no passo `patchBuild` com `errorCode: "invalid_max_duration"`. Ou seja: por um
 período a "prova primária" descrita acima estava **sempre vermelha**, para qualquer commit,
@@ -91,7 +91,7 @@ O produto é self-host: a experiência de quem instala numa VPS é parte do prod
 
 Quando a aceitação exige reproduzir primeira instalação:
 
-- banco começa limpo e recebe **`supabase/baseline.sql`**, não depende da cadeia local de migrations já aplicada;
+- banco começa limpo e recebe **`infra/supabase/baseline.sql`**, não depende da cadeia local de migrations já aplicada;
 - use Postgres compatível com o baseline atual (o harness documenta pg17 para as invariantes que usam privilégios modernos);
 - bootstrap/owner segue o mesmo caminho do instalador, não dados pessoais da estação do dev;
 - frontend de prova usa build/runtime de produção (`next build` + `next start`) quando o objetivo é reproduzir self-host;

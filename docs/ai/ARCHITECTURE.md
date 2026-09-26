@@ -499,9 +499,9 @@ Voice QA, journeys, AI evals e benchmarks têm comandos próprios. Consultar pac
 Trate mudanças com revisão reforçada:
 
 ```text
-supabase/baseline.sql
-supabase/migrations/**
-supabase/migrations/MANIFEST.md
+infra/supabase/baseline.sql
+infra/supabase/migrations/**
+infra/supabase/migrations/MANIFEST.md
 lib/database.types.ts
 lib/supabase/admin.ts
 lib/auth/public-paths.ts

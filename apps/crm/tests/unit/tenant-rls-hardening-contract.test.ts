@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const migration = readFileSync(
-  resolve(process.cwd(), "supabase/migrations/20260915090000_0170_tenant_rls_hardening.sql"),
+  resolve(process.cwd(), "infra/supabase/migrations/20260915090000_0170_tenant_rls_hardening.sql"),
   "utf8",
 );
 
