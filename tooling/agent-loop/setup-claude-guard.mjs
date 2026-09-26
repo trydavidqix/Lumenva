@@ -1,17 +1,17 @@
-// setup-claude-guard.mjs — arma o guard PreToolUse do gov-loop no .claude/settings.json
+// setup-claude-guard.mjs — arma o guard PreToolUse do gov-loop no .claude/settings.local.json
 // LOCAL do checkout onde rodar. Merge ADITIVO e idempotente: preserva TUDO que já
 // existir no arquivo (ex.: hooks do Lina Space) e só acrescenta a entrada do guard
 // se uma idêntica ainda não estiver lá.
 //
 // Uso: node tooling/agent-loop/setup-claude-guard.mjs [caminho-do-settings.json]
-// (o argumento opcional existe para teste; default = .claude/settings.json na raiz do repo)
+// (o argumento opcional existe para teste; default = .claude/settings.local.json na raiz do repo)
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const settingsPath = process.argv[2] ?? join(repoRoot, ".claude", "settings.json");
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const settingsPath = process.argv[2] ?? join(repoRoot, ".claude", "settings.local.json");
 
 const GUARD_COMMAND = "$CLAUDE_PROJECT_DIR/tooling/agent-loop/hooks/guard-protected-paths.sh";
 const GUARD_MATCHER = "Edit|Write|Bash";

@@ -63,15 +63,19 @@ infra/supabase/.branches/
 
 # Claude Code harness artifacts (scheduled tasks lock, settings locais, etc)
 # gov-loop: agents/ e commands/ são maquinaria versionada do loop.
-# rules/ contém doutrina modular compartilhada e também viaja com o repo.
-# O restante de .claude/ segue local, salvo arquivos históricos já rastreados.
+# rules/, skills/, agents/, commands/ e settings.json são compartilhados.
+# settings.local.json e o restante de .claude/ são locais.
 .claude/
 !.claude/
 .claude/*
 !.claude/agents/
 !.claude/commands/
+!.claude/skills/
+!.claude/skills/**
 !.claude/rules/
 !.claude/rules/**
+!.claude/settings.json
+.claude/settings.local.json
 
 # Local docker volumes (WAHA)
 .waha-data/

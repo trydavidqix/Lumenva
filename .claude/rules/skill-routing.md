@@ -1,6 +1,6 @@
-# Skill Routing — DeskcommCRM
+# Skill Routing — Lumenva
 
-> Regra modular compartilhada. Em caso de conflito, `CLAUDE.md` da raiz vence.
+> Regra operacional geral do repositório Lumenva.
 
 ## Princípio
 
@@ -40,14 +40,6 @@ As skills `DeskcommCRM` para Claude/Codex devem funcionar como ponte para:
 
 Elas não devem congelar convenções voláteis de naming, imports, comandos ou contagens do repositório.
 
-## Prioridade
+## Autoridade por assunto
 
-Em conflito de instruções do harness:
-
-1. segurança/preservação de dados e instrução explícita do usuário;
-2. `CLAUDE.md`;
-3. specs/docs canônicos do domínio;
-4. `.claude/rules/`;
-5. `AGENTS.md` e adapters de plataforma;
-6. skill/agent específico;
-7. comportamento default da ferramenta.
+Segurança e preservação, mais instrução válida do Owner, governam ações. Para comportamento do produto valem as fontes canônicas do domínio (`docs/specs/`, business rules e PRDs indexados em `docs/index.md`). `CLAUDE.md` define processo e orquestração; rules definem políticas técnicas/operacionais; skills descrevem workflows; agents definem especialidades. Se fontes da mesma camada divergirem, registre e resolva a fonte obsoleta no assunto específico; não declare uma ordem universal entre produto e processo.

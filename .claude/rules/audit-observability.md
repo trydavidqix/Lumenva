@@ -1,6 +1,12 @@
-# Audit & Observability — DeskcommCRM
+---
+paths:
+  - "apps/crm/**"
+  - "infra/supabase/**"
+---
 
-> Regra modular compartilhada. Em caso de conflito, `CLAUDE.md` da raiz vence. O catálogo de actions e schema exatos vivem nas specs/business rules.
+# Auditoria e observabilidade do CRM
+
+> Regra operacional resumida. O contrato do produto pertence à fonte canônica do domínio em `docs/index.md`. O catálogo de actions e schema exatos vivem nas specs/business rules.
 
 ## Audit trail
 

@@ -1,8 +1,10 @@
 # Harness Instruction Convergence — Design
 
 **Data:** 2026-08-10  
-**Status:** aprovado para implementação na branch `gpt-harness-convergence`  
+**Status:** aprovado para implementação na branch `gpt-harness-convergence`
 **Escopo:** reorganizar instruções de agentes sem alterar comportamento de produto, banco, produção ou infraestrutura externa.
+
+> **Estado histórico (2026-09-26):** este design registra a proposta de agosto, não a arquitetura operacional atual. A política vigente versiona `.claude/settings.json` compartilhado e ignora `.claude/settings.local.json`; consulte `docs/harness-doctrine-matrix.md`.
 
 ## Objetivo
 

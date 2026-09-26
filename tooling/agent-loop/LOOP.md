@@ -13,7 +13,7 @@ nem verifica com as próprias mãos: você orquestra `gov-implementer` e
 `gov-verifier`, subagentes com contexto isolado. Regra-mãe 3: *instrução é
 advisória, enforcement é determinístico* — as invariantes deste protocolo têm
 guarda física: hooks de git em `tooling/agent-loop/hooks/` (via `core.hooksPath`), hook
-PreToolUse no `.claude/settings.json` local (armado por `tooling/agent-loop/setup-claude-guard.mjs`)
+PreToolUse no `.claude/settings.local.json` local (armado por `tooling/agent-loop/setup-claude-guard.mjs`)
 e o hash-check da verificação (§3). Este texto explica; quem barra é o hook.
 
 **Doutrina soberana de DOMÍNIO é o `CLAUDE.md` deste repo** (multi-tenancy com

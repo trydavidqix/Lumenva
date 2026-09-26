@@ -23,7 +23,7 @@ maquinaria sem tocar o checkout principal; ele não é a casa do loop.
   `DESKCOMM_GOV_PLAN_EDIT=1`; tripla de migration com NNNN validado contra todas
   as branches locais; freeze de `tests/invariants/**`) e `pre-push` (push só com
   `DESKCOMM_GOV_PHASE_MERGE=1`, exportada só pelo ritual de virada).
-- **Guard PreToolUse do Claude Code** (merge ADITIVO no `.claude/settings.json`
+- **Guard PreToolUse do Claude Code** (merge ADITIVO no `.claude/settings.local.json`
   local — preserva hooks já existentes, ex.: do Lina Space):
   ```bash
   node tooling/agent-loop/setup-claude-guard.mjs

@@ -1,18 +1,15 @@
-# Documentation — DeskcommCRM
+---
+paths:
+  - "**/*.md"
+---
 
-> Regra modular compartilhada. Em caso de conflito, `CLAUDE.md` da raiz vence.
+# Documentação do repositório
 
-## Precedência
+> Regra operacional resumida. O contrato do produto pertence à fonte canônica do domínio em `docs/index.md`.
 
-Quando documentos discordam, use a hierarquia documentada no repositório:
+## Autoridade por assunto
 
-1. `CLAUDE.md` — doutrina;
-2. `docs/specs/` — contrato técnico;
-3. `docs/prd/` — intenção de produto;
-4. handoffs/estado de sessão;
-5. READMEs e material explicativo.
-
-Corrija a fonte de menor precedência em vez de inventar uma terceira versão da regra.
+Contrato e comportamento do produto pertencem à fonte canônica do domínio (`docs/specs/`, `docs/business-rules/`, PRDs e documentos indexados). `CLAUDE.md` descreve como o agente trabalha; rules documentam políticas operacionais. Handoffs, estados e READMEs são informativos e temporais. Quando fontes do mesmo assunto discordarem, verifique versão/escopo, corrija a fonte obsoleta e evite manter cópias divergentes.
 
 ## Quando atualizar documentação
 
