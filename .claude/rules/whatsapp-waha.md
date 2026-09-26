@@ -1,6 +1,13 @@
-# WhatsApp / WAHA — DeskcommCRM
+---
+paths:
+  - "apps/crm/lib/waha/**"
+  - "apps/crm/app/api/**"
+  - "infra/supabase/**"
+---
 
-> Regra modular compartilhada. Em caso de conflito, `CLAUDE.md` da raiz vence. PRD/Spec 03 e business rules W-xx são o contrato detalhado.
+# WhatsApp / WAHA no CRM
+
+> Regra operacional resumida. O contrato do produto pertence à fonte canônica do domínio em `docs/index.md`. PRD/Spec 03 e business rules W-xx são o contrato detalhado.
 
 ## Plataforma e engine
 

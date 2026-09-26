@@ -1,6 +1,12 @@
-# Data Modeling — DeskcommCRM
+---
+paths:
+  - "apps/crm/lib/database.types.ts"
+  - "infra/supabase/**"
+---
 
-> Regra modular compartilhada. Em caso de conflito, `CLAUDE.md` da raiz vence. Schema exato pertence às specs/migrations atuais.
+# Modelagem de dados do CRM
+
+> Regra operacional resumida. O contrato do produto pertence à fonte canônica do domínio em `docs/index.md`. Schema exato pertence às specs/migrations atuais.
 
 ## DIRC antes de adicionar campo
 

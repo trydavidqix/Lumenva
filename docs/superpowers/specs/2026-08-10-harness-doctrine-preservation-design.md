@@ -5,6 +5,8 @@
 **Branch:** `gpt-harness-convergence`  
 **Base:** `main` @ `4fa4ca9a7042b88d6de35e411e4375213fb26d93`
 
+> **Estado histórico (2026-09-26):** este design registra decisões anteriores à arquitetura operacional atual. A política vigente versiona `.claude/settings.json` compartilhado e ignora `.claude/settings.local.json`; consulte `docs/harness-doctrine-matrix.md`.
+
 ## Objetivo
 
 Manter a arquitetura modular criada em `gpt-harness-convergence` sem perder, enfraquecer ou generalizar decisões válidas do `CLAUDE.md` original da `main`.

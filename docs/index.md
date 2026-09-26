@@ -1,7 +1,7 @@
 # Lumenva Knowledge Core
 
 > **O Cérebro Institucional da Lumenva**
-> Esta é a fonte única da verdade para todos os Agentes de IA (Claude, Codex, Gemini, ChatGPT Work) e Humanos. Nenhuma regra de negócio deve ser memorizada ou inferida. Se não está documentado aqui, não existe.
+> Fonte institucional que organiza e aponta para as fontes canônicas da Lumenva. Regras de produto e domínio valem conforme seus documentos canônicos; políticas de operação dos agentes ficam nos adapters e rules de cada plataforma. Não infira regra de produto ausente de documentação.
 
 ## Organograma de Domínios
 - **`/docs/architecture/`**: Decisões técnicas globais e design de software.

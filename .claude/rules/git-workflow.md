@@ -1,6 +1,6 @@
-# Git Workflow — DeskcommCRM
+# Git Workflow — Lumenva
 
-> Regra modular compartilhada. Em caso de conflito, `CLAUDE.md` da raiz vence.
+> Regra operacional geral do repositório Lumenva.
 
 ## Antes de qualquer alteração
 

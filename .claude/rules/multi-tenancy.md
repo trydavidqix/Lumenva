@@ -1,6 +1,12 @@
-# Multi-tenancy — DeskcommCRM
+---
+paths:
+  - "apps/crm/**"
+  - "infra/supabase/**"
+---
 
-> Regra modular compartilhada. Em caso de conflito, `CLAUDE.md` da raiz vence. PRD/Spec 01 e business rules T-xx definem o contrato exato.
+# Multi-tenancy do CRM
+
+> Regra operacional resumida. O contrato do produto pertence à fonte canônica do domínio em `docs/index.md`. PRD/Spec 01 e business rules T-xx definem o contrato exato.
 
 ## Invariante principal
 
