@@ -43,6 +43,7 @@ Status: IN PROGRESS. No branch refs have been deleted. No changes have been made
 | #66 | `fix/f7-nuvemshop-webhook-fail-closed` | ACTIVE | Nuvemshop webhook security |
 | #69 | `chore/package-ci-tests` | ACTIVE | Package test registration |
 | #71 | `docs/f6-f7-f8-handoff-2026-09-24` | ACTIVE | F6–F8 handoff documentation |
+| #74 | `chore/orchestration-gate` | ACTIVE | Multi-agent governance gate; opened during this consolidation |
 
 ### Merged PRs — branch-by-branch record
 
@@ -160,8 +161,9 @@ All 8 open PRs were reviewed individually by changed paths, descriptions, and cu
 | #66 `fix/f7-nuvemshop-webhook-fail-closed` | 5 files adding tenant/signing fail-closed checks and route tests; PR says local focused suite did not finish | SECURITY FIX / OPEN | `verify` and `verify-and-build` fail; CodeQL/invariants/vertical pass. Candidate for selective adoption only after failures are understood and current unified comparison passes. |
 | #69 `chore/package-ci-tests` | 18 files adding `test:unit` to 14 packages; PR claims 118 existing tests become recursively discoverable | CI COVERAGE GAP / OPEN | `verify` and `verify-and-build` fail; invariants/vertical pass on a base 4 commits behind current main. Of its 18 changed paths, 14 were moved in the architecture refactor (mostly exact Git renames; two test files were similarity-renames), while 4 remain at the same path. Map scripts/tests to current paths before adoption; do not claim this coverage ran in current parity. |
 | #71 `docs/f6-f7-f8-handoff-2026-09-24` | 5 docs/rules files; dated F6–F8 handoff, no product code | UNIQUE DOCS / OPEN | `verify` and `verify-and-build` fail; security scans/invariants/vertical pass. Keep with PR; do not copy an operational snapshot without validating currentness. |
+| #74 `chore/orchestration-gate` | 18 files, ~792 insertions; local task gate/state, provider adapters and hooks, same-HEAD Actions receipt, and tests | ACTIVE / REVIEW REQUIRED | Open head `70b6b9c6`; at last check its verify, verify-and-build, vertical, invariants, gcp-invariants, and CodeQL checks were still in progress. Its new governance behavior is distinct from the code parity suite; preserve isolated and inspect only after checks finish. |
 
-Only #66 and #69 are candidates that could directly affect unified’s security behavior or canonical test coverage. Revisit them after the pinned Actions artifacts are available; if adopted, rerun parity on both sides using equivalent inputs. No PR was merged or closed by this review.
+The parity artifacts validate only the pinned `main`/`implementation/unified` snapshots; they do not validate unmerged PR heads. #66 and #69 remain candidates for security behavior and canonical test coverage; #74 is a separate governance candidate. Rebase/port none automatically. Revisit each against the current base and its own evidence before integration. No PR was merged or closed by this review.
 
 ### Open-PR CI freshness
 
