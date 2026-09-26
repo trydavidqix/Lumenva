@@ -3,9 +3,9 @@
 # Build: docker build --build-arg APP_NAME=website -t lumenva-website .
 
 # ---- deps: instala dependências (layer cacheável) ----
-FROM node:22-alpine AS deps
+FROM node:22.23.3-alpine AS deps
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
+RUN corepack enable
 
 # Para cachear o install num monorepo, precisamos dos manifestos.
 # Usamos apenas os arquivos necessários para o pnpm install.
@@ -14,12 +14,13 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 # mas pnpm fetch/install --offline é ideal. Aqui faremos o simples: copia tudo).
 COPY . .
 RUN pnpm install --frozen-lockfile
+RUN pnpm repo:check
 
 # ---- build: gera .next/standalone ----
-FROM node:22-alpine AS build
+FROM node:22.23.3-alpine AS build
 ARG APP_NAME=crm
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
+RUN corepack enable
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
@@ -30,7 +31,7 @@ ENV NODE_ENV=production \
 RUN pnpm --filter ${APP_NAME} build
 
 # ---- runner: imagem slim de produção ----
-FROM node:22-alpine AS runner
+FROM node:22.23.3-alpine AS runner
 ARG APP_NAME=crm
 WORKDIR /app
 

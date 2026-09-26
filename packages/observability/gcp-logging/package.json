@@ -9,8 +9,8 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "vitest": "^5.0.1",
-    "@types/node": "^20.0.0"
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "@types/node": "catalog:"
   }
 }

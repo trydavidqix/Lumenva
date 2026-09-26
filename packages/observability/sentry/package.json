@@ -8,10 +8,10 @@
     "test:unit": "vitest run"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "vitest": "^2.1.1",
-    "@types/node": "^22.5.5",
-    "@sentry/types": "^8.31.0"
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "@types/node": "catalog:",
+    "@sentry/types": "catalog:"
   },
   "dependencies": {
     "@sentry/node": "^8.31.0",

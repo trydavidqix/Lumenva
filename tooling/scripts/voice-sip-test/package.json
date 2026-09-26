@@ -2,6 +2,7 @@
   "name": "voice-sip-test",
   "private": true,
   "type": "module",
+  "engines": { "node": "22.23.3" },
   "scripts": {
     "dev": "tsx src/server.ts",
     "build": "tsc -p tsconfig.json",
@@ -9,12 +10,12 @@
   },
   "dependencies": {
     "openai": "^6.0.0",
-    "ws": "^8.18.0"
+    "ws": "catalog:"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "@types/ws": "^8.5.0",
-    "tsx": "^4.19.0",
-    "typescript": "^5.9.0"
+    "@types/node": "catalog:",
+    "@types/ws": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
   }
 }

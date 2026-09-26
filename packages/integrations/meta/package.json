@@ -5,6 +5,6 @@
   "main": "src/index.ts",
   "dependencies": {},
   "devDependencies": {
-    "typescript": "^5.0.0"
+    "typescript": "catalog:"
   }
 }

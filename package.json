@@ -1,6 +1,10 @@
 {
   "name": "lumenva-monorepo",
   "private": true,
+  "engines": {
+    "node": "22.23.3",
+    "pnpm": "9.15.9"
+  },
   "packageManager": "pnpm@9.15.9+sha512.68046141893c66fad01c079231128e9afb89ef87e2691d69e4d40eee228988295fd4682181bae55b58418c3a253bde65a505ec7c5f9403ece5cc3cd37dcf2531",
   "scripts": {
     "typecheck": "cross-env NODE_OPTIONS=--max-old-space-size=6144 pnpm -r --if-present typecheck",
@@ -10,12 +14,14 @@
     "harness:check": "pnpm -r --if-present harness:check",
     "test:unit": "pnpm -r --if-present test:unit",
     "test:shell": "pnpm -r --if-present test:shell",
-    "test:db": "pnpm -r --if-present test:db"
+    "test:db": "pnpm -r --if-present test:db",
+    "repo:check": "node tooling/scripts/repo-check.mjs"
   },
   "devDependencies": {
-    "@sentry/types": "8.31.0",
+    "@sentry/types": "catalog:",
+    "@types/node": "catalog:",
     "cross-env": "^10.1.0",
-    "typescript": "^7.0.2",
-    "vitest": "2.1.1"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

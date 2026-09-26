@@ -19,7 +19,7 @@ jobs:
       contents: read
       id-token: write # Required for Google WIF
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - id: auth
         name: Autenticar via Google WIF

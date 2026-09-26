@@ -8,6 +8,7 @@ packages:
   - 'packages/observability/*'
   - 'packages/platform/*'
   - 'packages/platform/gcp/*'
+  - 'tooling/scripts/*'
 
 catalogMode: manual
 catalog:
@@ -16,20 +17,30 @@ catalog:
   '@testing-library/jest-dom': ^7.0.1
   '@testing-library/react': ^16.3.2
   '@testing-library/user-event': ^14.6.3
-  '@types/node': ^26.2.0
+  '@types/node': ^22.20.4
   '@types/react': ^19.2.18
   '@types/react-dom': ^19.2.4
+  '@types/ws': ^8.18.1
   '@upstash/redis': ^1.38.2
   eslint: ^9.12.0
   eslint-config-next: ^16.3.0
   jsdom: ^30.0.1
-  next: ^16.3.0
-  react: ^19.2.8
-  react-dom: ^19.2.8
+  next: 16.3.2
+  pg: ^8.23.0
+  react: 19.2.8
+  react-dom: 19.2.8
   resend: ^6.18.1
-  typescript: ^6.0.3
-  vitest: ^4.1.10
+  typescript: 5.9.3
+  vitest: 4.1.11
+  tsx: ^4.23.12
+  ws: ^8.18.0
   zod: ^4.4.3
+  '@sentry/types': 8.31.0
+  '@supabase/ssr': 0.12.4
+  '@supabase/supabase-js': 2.112.1
+  '@types/pg': ^8.20.4
+  '@vitest/coverage-v8': 4.1.11
+  drizzle-orm: ^0.45.2
 
 overrides:
   postcss: ^8.5.26

@@ -1,0 +1,108 @@
+name: Branch parity validation
+
+on:
+  push:
+    branches: [implementation/unified]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: Pin comparison commits
+    runs-on: windows-2025
+    outputs:
+      main_sha: ${{ steps.refs.outputs.main_sha }}
+      unified_sha: ${{ steps.refs.outputs.unified_sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Resolve immutable comparison refs
+        id: refs
+        shell: pwsh
+        run: |
+          git fetch origin main
+          "main_sha=$(git rev-parse FETCH_HEAD)" >> $env:GITHUB_OUTPUT
+          "unified_sha=${{ github.sha }}" >> $env:GITHUB_OUTPUT
+
+  validate:
+    name: ${{ matrix.suite }} — main vs unified
+    needs: [prepare]
+    runs-on: windows-2025
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [unit, typecheck, lint, build, toolchain]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.unified_sha }}
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Fetch current main for isolated comparison
+        run: git fetch origin main
+
+      - name: Run the selected suite on main and unified
+        env:
+          MAIN_REF: ${{ needs.prepare.outputs.main_sha }}
+        run: node tooling/scripts/run-branch-validation.mjs --suite=${{ matrix.suite }}
+        continue-on-error: true
+
+      - name: Enforce unified repository policy
+        if: always()
+        run: pnpm repo:check
+
+      - name: Upload raw logs and summaries
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: branch-parity-${{ matrix.suite }}
+          path: parity-artifacts/
+          if-no-files-found: error
+          retention-days: 30
+
+  compare:
+    name: Compare and classify results
+    if: always()
+    needs: [prepare, validate]
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.unified_sha }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Download all validation artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: branch-parity-*
+          path: parity-artifacts/
+          merge-multiple: true
+
+      - name: Create comparison report
+        run: node tooling/scripts/compare-branch-validation.mjs
+
+      - name: Upload comparison report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: branch-parity-comparison
+          path: |
+            parity-artifacts/comparison.md
+            parity-artifacts/comparison.json
+          if-no-files-found: error
+          retention-days: 30

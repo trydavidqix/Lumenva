@@ -14,7 +14,8 @@ function readWorkflow() {
 
 test('GCP CI workflow exists and uses correct Node version', () => {
   const workflow = readWorkflow()
-  assert.match(workflow, /node-version: ['"]?22['"]?/, 'Must use Node 22')
+  assert.match(workflow, /node-version-file: \.nvmrc/, 'Must use the canonical Node version file')
+  assert.equal(readFileSync(resolve(root, '.nvmrc'), 'utf8').trim(), '22.23.3')
   // The pnpm version is enforced by packageManager field in package.json, so action-setup should not duplicate it
   assert.match(workflow, /pnpm install --frozen-lockfile/, 'Must use frozen-lockfile for install')
 })

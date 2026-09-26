@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": "22.x"
+    "node": "22.23.3"
   },
   "scripts": {
     "dev": "next dev",
@@ -16,11 +16,11 @@
   },
   "dependencies": {
     "@lumenva/integration-meta": "workspace:*",
-    "@supabase/ssr": "0.12.4",
-    "@supabase/supabase-js": "2.111.0",
-    "next": "16.3.2",
-    "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "@supabase/ssr": "catalog:",
+    "@supabase/supabase-js": "catalog:",
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
     "@lumenva/core": "workspace:*",
@@ -28,10 +28,10 @@
     "@lumenva/provider-brightbean": "workspace:*",
     "@lumenva/provider-moneyprinter": "workspace:*",
     "@lumenva/worker": "workspace:*",
-    "@types/node": "^22.0.0",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "typescript": "^5.9.0",
-    "vitest": "4.1.10"
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }
