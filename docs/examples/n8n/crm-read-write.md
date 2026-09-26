@@ -322,7 +322,7 @@ to this workflow:
 5. In n8n: create a credential of type **HTTP Header Auth**. Header name
    `Authorization`, header value `Bearer dsk_<one-time-token>` — the
    plaintext lives only inside that credential's encrypted storage (n8n's
-   own `N8N_ENCRYPTION_KEY`, `ops/n8n/docker-compose.yml`, Task 5), never in
+   own `N8N_ENCRYPTION_KEY`, `infra/deployment/n8n/docker-compose.yml`, Task 5), never in
    the workflow JSON itself and never in a query string. Name the credential
    after the workflow (`crm-token-payment-confirmation-tagger`), not a
    shared generic name — a leaked/compromised workflow's token can then be

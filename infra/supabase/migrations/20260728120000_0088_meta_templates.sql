@@ -31,7 +31,7 @@
 -- então o CHECK move para o INSERT um erro que só apareceria no envio.
 -- ⚠️ Obrigação de registro: a convenção do repo manda um par
 -- (tabela, coluna) → (arquivo, símbolo) em vocabulario-banco-x-typescript.test.ts.
--- Esse arquivo é congelado pelo hook loop/hooks/freeze-invariants.sh e a Task 6
+-- Esse arquivo é congelado pelo hook tooling/agent-loop/hooks/freeze-invariants.sh e a Task 6
 -- da fase anterior deliberadamente não usou o escape. O par
 -- (meta_templates, parameter_format) → (lib/channels/meta/template-contract.ts,
 -- ParameterFormat) fica registrado em INBOX-004 junto com o pendente anterior.

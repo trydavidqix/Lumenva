@@ -63,7 +63,7 @@ Estado dos invariantes ao fim da fase: **96 verdes** no Postgres descartável
 novos invariantes de escopo/métrica adicionados (gov-5b inbox counts, gov-5c lead scope,
 gov-8 metrics) + gov-hardening-anon-definer. Suíte unit: **165 verdes**.
 
-Screenshots em `loop/checkpoints/evidence/G4/`: G4-02-inbox-scope-{agent,manager},
+Screenshots em `tooling/agent-loop/checkpoints/evidence/G4/`: G4-02-inbox-scope-{agent,manager},
 G4-04-metrics-{manager,agent}. (G4-01/03 são migrations de RLS sem UI nova — sem
 screenshot por design, verificado pelos invariantes; G4-04-agent saiu em loading por
 uma trava de Docker na captura, com o own-scope provado pelo gov-8.)
@@ -105,7 +105,7 @@ Todos **open**, `proposal`/follow-up **não-vetantes** — nenhum bloqueou a fas
 
 ## 5. O que a PRÓXIMA fase (G5) precisa
 
-- Aprovação deste checkpoint (`loop/checkpoints/G4.approved`).
+- Aprovação deste checkpoint (`tooling/agent-loop/checkpoints/G4.approved`).
 - Decisões do dono nos INB abertos — nenhuma bloqueia G5-01, mas INB-10 (RLS residual)
   toca o que a G6 (MCP tools) pode expor; vale decidir antes da G6.
 - G5 constrói roteamento sobre o escopo da G4: `attendant_availability` (G5-01) e o

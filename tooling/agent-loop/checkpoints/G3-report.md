@@ -53,7 +53,7 @@ lowercase/trim/dedup, ≤20 tags, ≤40 chars) com audit `conversation.tags_chan
 editor de tags no side panel + filtro por tag no inbox. Invariante do eixo 7
 flipado + invariante de filtro org-scoped (org1=1, org2=1, global≥2 — não vaza).
 
-Screenshots em `loop/checkpoints/evidence/G3/`: G3-01-reassign-dialog,
+Screenshots em `tooling/agent-loop/checkpoints/evidence/G3/`: G3-01-reassign-dialog,
 G3-03-lead-owner, G3-04-bulk-assign(+select), G3-05-conversation-tags.
 
 Estado dos invariantes ao fim da fase: **48 verdes** no Postgres descartável
@@ -105,7 +105,7 @@ nenhum bloqueou a fase. Decisão do dono no checkpoint.
 
 ## 5. O que a PRÓXIMA fase (G4) precisa
 
-- Aprovação deste checkpoint (`loop/checkpoints/G4… não — loop/checkpoints/G3.approved`).
+- Aprovação deste checkpoint (`tooling/agent-loop/checkpoints/G4… não — tooling/agent-loop/checkpoints/G3.approved`).
 - Decisões do dono nos INB abertos — nenhuma bloqueia G4-01, mas:
   - INB-06b (drift do live) é pré-requisito pra QUALQUER teste manual no dev.
   - INB-07/09 (hardening anon + org do bulk) são candidatos naturais a agrupar

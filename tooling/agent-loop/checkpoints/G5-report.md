@@ -95,7 +95,7 @@ Todos **open**, `proposal`/follow-up **não-vetantes**. Herdados de fases anteri
 
 ## 5. O que a PRÓXIMA fase (G6) precisa
 
-- Aprovação deste checkpoint (`loop/checkpoints/G5.approved`).
+- Aprovação deste checkpoint (`tooling/agent-loop/checkpoints/G5.approved`).
 - **INB-10 é pré-condição da G6** (o dono já concordou): a timeline/vínculos de
   lead ainda org-flat — a G6 (MCP tools + spec 14 pro Vendaval) NÃO deve expor
   payload de lead invisível sem fechar isto. Decidir antes da G6-03 (tools de leitura).

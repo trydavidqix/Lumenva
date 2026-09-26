@@ -100,7 +100,7 @@ Os que a fase G6 ENDEREÇOU (INB-10/12/13/14) já estão fechados.
 
 ## 5. O que a PRÓXIMA fase (FG do Vendaval) precisa
 
-- **Aprovação deste checkpoint (`loop/checkpoints/G6.approved`) — que É o gatilho da FG.**
+- **Aprovação deste checkpoint (`tooling/agent-loop/checkpoints/G6.approved`) — que É o gatilho da FG.**
 - A spec 14 (`docs/specs/14-contrato-governanca-agentes-externos.md`) é o insumo
   direto do FG-01: a seção §7 lista o que o Vendaval faz do lado dele (setar
   ai_dispatch_mode='external', consumir event_log pending, handoff v2, respeitar as

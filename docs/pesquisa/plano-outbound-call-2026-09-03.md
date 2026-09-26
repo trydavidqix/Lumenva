@@ -16,7 +16,7 @@ A documentação oficial não publica a transcrição integral do áudio automá
 
 ## Estado atual confirmado no repositório
 
-`scripts/voice-sip-test/src/server.ts` hoje:
+`tooling/scripts/voice-sip-test/src/server.ts` hoje:
 
 - aceita apenas requisições `POST` do webhook OpenAI;
 - valida a assinatura com `OPENAI_WEBHOOK_SECRET`;

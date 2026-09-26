@@ -24,7 +24,7 @@ insuficiente + 200 para role mínimo por grupo de rota) + `lib/auth/require-role
 guard de último admin (409, provado ao vivo), audit `team.role_changed` com
 old/new_role (linha real observada em api_audit_log no dev). UI: seletor inline na
 página Equipe (admin only, nunca na própria linha), otimista com rollback + toast.
-Screenshot: `loop/checkpoints/evidence/G2/G2-02-team-role-selector.png`.
+Screenshot: `tooling/agent-loop/checkpoints/evidence/G2/G2-02-team-role-selector.png`.
 
 **Gate "invariantes de RBAC de G1 todos verdes (flip dos test.fails)"** — os 2
 `it.fails` GAP(G2) de `tests/invariants/gov-1-rbac.test.ts` flipados para testes
@@ -81,7 +81,7 @@ pré-existente). Screenshot: `evidence/G2/G2-04-agent-billing-403.png`.
 
 ## 5. O que a PRÓXIMA fase (G3) precisa
 
-- Aprovação deste checkpoint (`loop/checkpoints/G2.approved`).
+- Aprovação deste checkpoint (`tooling/agent-loop/checkpoints/G2.approved`).
 - Decisões do dono nos INB-03/04/05 (nenhuma bloqueia G3-01, mas INB-03.2 toca a
   G3-04 e INB-04 pode virar mini-feature da G3).
 - Nada de infra nova: G3-01 (eventos de atribuição) usa o harness test:db/invariants

@@ -56,7 +56,7 @@ create table if not exists public.ai_workflow_runs (
   side_effect_key text not null,
 
   sent_message_id uuid references public.messages(id) on delete set null,
-  -- followup_enrollments.id é uuid (supabase/baseline.sql) — mesmo tipo aqui.
+  -- followup_enrollments.id é uuid (infra/supabase/baseline.sql) — mesmo tipo aqui.
   followup_id uuid references public.followup_enrollments(id) on delete set null,
   last_error_code text,
 

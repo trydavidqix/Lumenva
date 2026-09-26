@@ -31,7 +31,7 @@ Estes loops nao estao resolvidos. Cada encerramento exige prova reproduzivel, ex
 
 ## F2-DB-CHAIN-002 — squash canónico de migrations
 
-- Estado confirmado: a cadeia histórica é incoerente. supabase/baseline.sql e as migrations até ao cutoff 160 divergem; a migration 0014_storage_policies_ai_policy tenta recriar a policy tenant_read_ai_policy que já existe no baseline.
+- Estado confirmado: a cadeia histórica é incoerente. infra/supabase/baseline.sql e as migrations até ao cutoff 160 divergem; a migration 0014_storage_policies_ai_policy tenta recriar a policy tenant_read_ai_policy que já existe no baseline.
 - O caminho db:migrate a partir de uma base vazia não fecha EXIT=0 sem reconciliar esse histórico redundante.
 - O runner usa o baseline como base canónica (00000_baseline), regista sem executar as migrations contidas até BASELINE_APPLIED_THROUGH = 160 e executa apenas deltas posteriores.
 - Prova disponível: o baseline criou public.contacts; o runner avançou até à primeira migration fora do conjunto consolidado, onde a divergência de trigger foi observada.
