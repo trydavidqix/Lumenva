@@ -22,7 +22,7 @@
  * adicionar `lib/automation/n8n/*`, elas passam a ter algo para checar.
  */
 import { createHmac } from "node:crypto";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { lstatSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -56,7 +56,8 @@ function walk(dir: string, out: string[] = []): string[] {
   for (const entry of entries) {
     if (entry === "node_modules") continue;
     const full = join(dir, entry);
-    const st = statSync(full);
+    const st = lstatSync(full);
+    if (st.isSymbolicLink()) continue;
     if (st.isDirectory()) walk(full, out);
     else if (CODE_EXT.test(entry)) out.push(full);
   }
