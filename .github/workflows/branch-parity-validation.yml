@@ -4,7 +4,10 @@ on:
   push:
     branches: [implementation/unified]
     paths-ignore:
+      - .github/workflows/branch-parity-validation.yml
       - .github/workflows/branch-parity-report.yml
+      - BRANCH_CONSOLIDATION_REPORT.md
+      - IMPLEMENTATION_PLAN.md
       - docs/audits/**
       - tooling/scripts/compare-branch-validation.mjs
       - tooling/scripts/repo-check.mjs
