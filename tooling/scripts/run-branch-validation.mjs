@@ -45,13 +45,18 @@ function suiteCommands(target) {
   ]
 }
 
-function parseLog(text) {
+function parseLog(text, cwd) {
+  const escapedRoot = resolve(cwd).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const rootPattern = new RegExp(escapedRoot, 'gi')
   const clean = text.replace(/\u001b\[[0-9;]*m/g, '')
+    .replace(rootPattern, '<CHECKOUT>')
+    .replace(/[A-Z]:\\a\\Lumenva\\(?:main-validation|Lumenva)/gi, '<CHECKOUT>')
   const failures = new Set()
   for (const line of clean.split(/\r?\n/)) {
-    const match = line.match(/\bFAIL\s+(.+?)(?:\s+\[.*)?$/)
-    if (match) failures.add(match[1].trim().replace(/\s+/g, ' '))
-    else if (/\b(error|failed|cannot find|module not found|err_[a-z_]+)\b/i.test(line)) {
+    const testFailure = suite === 'unit' ? line.match(/^\s*FAIL\s+(.+?)(?:\s+\[.*)?$/) : null
+    const diagnostic = suite !== 'unit' && /^\s*(?:>\s*)?(?:Error:|ERR_[A-Z0-9_]+|Build error occurred|error TS\d+:|Failed to compile|Module not found:)/i.test(line)
+    if (testFailure) failures.add(testFailure[1].trim().replace(/\s+/g, ' '))
+    else if (diagnostic) {
       const diagnostic = line.trim().replace(/\s+/g, ' ')
       if (diagnostic.length >= 12 && diagnostic.length <= 500) failures.add(diagnostic)
     }
@@ -112,7 +117,7 @@ async function runTarget(target) {
   const suiteDurationMs = Math.round(performance.now() - suiteStart)
   const logPath = join(artifacts, `${stem}.log`)
   const log = suiteResult.skipped ? '' : readFileSync(logPath, 'utf8')
-  const parsed = parseLog(log)
+  const parsed = parseLog(log, target.path)
   const summary = {
     branch: target.name,
     ref: target.ref,

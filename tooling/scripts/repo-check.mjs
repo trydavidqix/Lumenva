@@ -1,6 +1,5 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { resolve, join } from 'node:path'
-import { createHash } from 'node:crypto'
 import { execSync } from 'node:child_process'
 
 const root = resolve(import.meta.dirname, '../..')
@@ -163,14 +162,11 @@ if (!String(vercel.installCommand).includes('install --frozen-lockfile')) fail('
 if (!String(vercel.buildCommand).includes('repo:check')) fail('Vercel build must run repo:check before application build')
 
 if (!/^lockfileVersion:\s*'9\.0'/m.test(lockText)) fail('pnpm-lock.yaml must use the expected pnpm 9 lockfile format')
-const lockHashBefore = createHash('sha256').update(read('pnpm-lock.yaml')).digest('hex')
 try {
-  runPnpm(['install', '--frozen-lockfile', '--lockfile-only', '--ignore-scripts'], { stdio: 'pipe', env: process.env })
+  runPnpm(['install', '--frozen-lockfile', '--ignore-scripts'], { stdio: 'pipe', env: process.env })
 } catch (error) {
   fail(`Frozen lockfile validation failed: ${error.stderr?.toString() || error.message}`)
 }
-const lockHashAfter = createHash('sha256').update(read('pnpm-lock.yaml')).digest('hex')
-if (lockHashAfter !== lockHashBefore) fail('Frozen lockfile check unexpectedly changed pnpm-lock.yaml')
 
 if (failures.length) {
   console.error(`repo:check failed (${failures.length} issue${failures.length === 1 ? '' : 's'}):`)

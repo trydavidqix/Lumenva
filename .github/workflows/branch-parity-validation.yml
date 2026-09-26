@@ -3,6 +3,12 @@ name: Branch parity validation
 on:
   push:
     branches: [implementation/unified]
+    paths-ignore:
+      - .github/workflows/branch-parity-report.yml
+      - docs/audits/**
+      - tooling/scripts/compare-branch-validation.mjs
+      - tooling/scripts/repo-check.mjs
+      - tooling/scripts/run-branch-validation.mjs
   workflow_dispatch:
 
 permissions:

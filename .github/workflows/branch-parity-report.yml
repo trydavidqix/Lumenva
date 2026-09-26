@@ -1,0 +1,52 @@
+name: Branch parity report
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: GitHub Actions run ID containing the main/unified suite artifacts
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  compare:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: implementation/unified
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Download raw suite artifacts from the source run
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.source_run_id }}
+          pattern: branch-parity-*
+          path: parity-artifacts/
+          merge-multiple: true
+
+      - name: Validate unified lockfile and workspace policy
+        run: pnpm repo:check
+
+      - name: Rebuild comparison from raw logs and summaries
+        run: node tooling/scripts/compare-branch-validation.mjs
+
+      - name: Upload canonical comparison report
+        uses: actions/upload-artifact@v4
+        with:
+          name: branch-parity-canonical-comparison
+          path: |
+            parity-artifacts/comparison.md
+            parity-artifacts/comparison.json
+          if-no-files-found: error
+          retention-days: 30
