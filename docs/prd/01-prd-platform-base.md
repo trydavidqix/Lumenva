@@ -322,4 +322,4 @@ A serem decididas no spec correspondente (`docs/specs/01-spec-platform-base.md`)
 
 - `docs/research/reference-synthesis.md` — pontos herdados (especialmente §4 Multi-tenancy, §6 API REST, §7 RBAC)
 - `docs/prd/00-prd-master.md` — visão geral
-- `tasks/todo.md` — fluxo de construção
+- `../engineering/workflow.md` — fluxo de construção

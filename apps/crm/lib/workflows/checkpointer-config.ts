@@ -16,7 +16,7 @@
  * KNOWN DEVIATION — read before reusing this in a non-pilot path:
  * `.claude/rules/database-migrations.md` and `CLAUDE.md` invariant #3
  * ("schema sai em tripla") require every schema change to ship as a
- * versioned migration + `supabase/baseline.sql` appendix + `MANIFEST.md`
+ * versioned migration + `infra/supabase/baseline.sql` appendix + `MANIFEST.md`
  * row — self-host clones only get schema that made it into the baseline.
  * `createCheckpointer()` below calls `PostgresSaver.setup()`, which creates
  * its checkpoint tables **at runtime** instead. The coordinator explicitly

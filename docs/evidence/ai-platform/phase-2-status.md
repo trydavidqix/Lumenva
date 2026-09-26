@@ -100,4 +100,4 @@ decisão explícita de produto, não promover nenhum tenant real para
 
 - Plano: [`../../superpowers/plans/2026-08-10-ai-platform-phase-2-mem0.md`](../../superpowers/plans/2026-08-10-ai-platform-phase-2-mem0.md)
 - Runbook do sidecar: [`../../runbooks/mem0.md`](../../runbooks/mem0.md)
-- Entrada da iniciativa: [`../../../CODEX-AI-PLATFORM.md`](../../../CODEX-AI-PLATFORM.md)
+- Entrada da iniciativa: [`../../product/plans/CODEX-AI-PLATFORM.md`](../../product/plans/CODEX-AI-PLATFORM.md)

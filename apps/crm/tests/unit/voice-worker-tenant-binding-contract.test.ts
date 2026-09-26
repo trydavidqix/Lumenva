@@ -6,7 +6,7 @@ const read = (path: string) => readFileSync(join(process.cwd(), "apps/crm", path
 
 describe("voice worker tenant binding", () => {
   it("sends the worker technical number with every turn and lifecycle event", () => {
-    const main = read("workers/voice-worker/main.mjs");
+      const main = read("apps/voice-worker/main.mjs");
     expect(main).toContain("technical_phone_e164: phoneNumber");
     expect(main.match(/technical_phone_e164: phoneNumber/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
   });
@@ -39,7 +39,7 @@ describe("voice worker tenant binding", () => {
   });
 
   it("keeps private worker endpoints service-only even if grants change later", () => {
-    const migration = read("supabase/migrations/20260827020000_0130_voice_worker_endpoint_privileges.sql");
+    const migration = read("infra/supabase/migrations/20260827020000_0130_voice_worker_endpoint_privileges.sql");
     expect(migration).toContain("revoke all on table public.voice_worker_endpoints from anon");
     expect(migration).toContain("revoke all on table public.voice_worker_endpoints from authenticated");
   });

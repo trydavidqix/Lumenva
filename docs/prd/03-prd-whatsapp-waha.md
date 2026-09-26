@@ -446,4 +446,4 @@ A serem decididas no spec correspondente (`docs/specs/03-spec-whatsapp-waha.md`)
 - `docs/prd/00-prd-master.md` — visão geral
 - `docs/prd/01-prd-platform-base.md` — auth, RLS, audit, event_log, convenções API
 - `docs/prd/02-prd-customer-360.md` — Contact, identity resolution, timeline polimórfica
-- `tasks/todo.md` — fluxo de construção
+- `../engineering/workflow.md` — fluxo de construção

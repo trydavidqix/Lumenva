@@ -1,7 +1,7 @@
 /**
  * Authenticated HTTP client from the SIP/BYOC worker process to the CRM's
  * internal voice control plane — the TypeScript, SIP-shaped sibling of
- * `workers/voice-worker/brain-client.mjs` (same auth header, same error
+ * `apps/voice-worker/brain-client.mjs` (same auth header, same error
  * shape, same fetch/timeout discipline). Only `resolveContext`/`recordEvent`
  * are needed here: turn/transcript handling belongs to the STT/TTS/Pipecat
  * side, which is `BLOCKED EXTERNAL` in this repo (see

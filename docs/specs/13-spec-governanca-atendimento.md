@@ -2,7 +2,7 @@
 
 > Status: esqueleto aprovado — §3/§4/§5 detalhados pelas features G1-04/G1-05/G1-06;
 > apêndices A/B preenchidos por G1-03/G1-04.
-> Construída pelo **gov-loop** (`plan/features.json`, fases em `plan/phases.md`).
+> Construída pelo **gov-loop** (`docs/product/plans/features.json`, fases em `docs/product/plans/phases.md`).
 > Complementa — **não duplica** — a `04-spec-pipeline-attendance.md` (claim atômico
 > AT-02, fila/round-robin AT-03, supervisor read-only AT-04, status/heartbeat AT-08,
 > ReassignDialog, bulk-assign §6.5) e a `05-spec-ai-rag-handoff.md` (handoff IA).
@@ -37,7 +37,7 @@ sistema-modelo (TomikCRM), **abstraídos por tema — zero PII neste repo**:
 
 ## 2. O que já existe (não reimplementar)
 
-Do baseline (`supabase/baseline.sql`) e das specs 04/05 — inventário completo com
+Do baseline (`infra/supabase/baseline.sql`) e das specs 04/05 — inventário completo com
 evidência `arquivo:linha` no **Apêndice B** (G1-04):
 
 - `user_organizations.role` CHECK `viewer|agent|manager|admin` + helpers
@@ -283,7 +283,7 @@ conversas), manager+ = org-wide (bulk assign G3-04 intacto), viewer = none.
 
 ### 4.1 Auditoria de policies RLS por role (G2-03)
 
-Auditoria mecânica do `supabase/baseline.sql` (gov/G2, 2026-07-16): tabela →
+Auditoria mecânica do `infra/supabase/baseline.sql` (gov/G2, 2026-07-16): tabela →
 policy de escrita → role mínimo efetivo. **Org-flat** = qualquer membro da org
 (incl. viewer) escreve. Tabelas fora da matriz §4 (ai_*, channel_sessions,
 contacts operacionais etc.) não são "config" e ficam fora do alvo desta fase.
@@ -346,7 +346,7 @@ a migration `20260716120000_0030_config_rls_role_policies.sql` aplica
   status `open`).
 
 > Origem das decisões deste documento (§3.5 defaults, §4 matriz, §5 roteamento):
-> decisões do dono, 2026-07-16, inbox INB-01/INB-02 (`loop/inbox.items.md`).
+> decisões do dono, 2026-07-16, inbox INB-01/INB-02 (`tooling/agent-loop/inbox.items.md`).
 
 ## 6. Métricas por responsável (G4-04)
 
@@ -514,7 +514,7 @@ entre orgs (pré-requisito de tudo) já é coberto por
 Auditoria mecânica em `gov/G1` (2026-07-16). Status: **implementado** = funciona
 de ponta a ponta; **parcial** = existe mas incompleto (a evidência diz o que
 falta); **ausente** = só spec. Itens parcial/ausente apontam a feature G* que os
-cobre (`plan/features.json`); gap sem feature → proposta na inbox do loop.
+cobre (`docs/product/plans/features.json`); gap sem feature → proposta na inbox do loop.
 Conferido também nas branches `vendaval/F2-19..22` (`git grep`): nenhum artefato
 de governança implementado lá além das próprias specs — nada a anotar.
 
@@ -526,9 +526,9 @@ de governança implementado lá além das próprias specs — nada a anotar.
 | Claim UI §9.1/§9.3: botão "Eu cuido" + tratamento de 409 | implementado | botão "Assumir" em `components/inbox/ConversationHeader.tsx:55-68` (render se `isOpen`, `:36`); hook `hooks/inbox/useClaimConversation.ts:15-29` (409 → `showApiError` + `invalidateQueries` `:21-24`) | — (sem o Dialog de confirmação da §9.1 — claim é 1 clique; desvio de UX, não de mecânica) |
 | Release (soltar conversa — par do claim, base do `reason=release` da spec 13 §3) | implementado | `app/api/v1/conversations/[id]/release/route.ts:47-53` (UPDATE limpa assignee, filtro `assigned_to_user_id = caller`), `:61` (409 se não é o dono); botão "Liberar" `components/inbox/ConversationHeader.tsx:70-78` | — |
 | `<ReassignDialog>` (transferir para outro atendente — §3 estrutura de pastas, §14) | ausente | nenhum componente/endpoint de reassign: `components/kanban/`+`components/inbox/` não têm o arquivo (`ls components/inbox components/kanban`); único caminho de troca de dono é claim com `expected_assignee` (`claim/route.ts:69-76`), que é takeover pelo próprio caller, não atribuição a terceiro | **G3-01** (desc.: "habilita o ReassignDialog de verdade") |
-| `<UnassignedQueueAlert>` §8.3 (alerta de contagem "N conversas sem responsável") | parcial | componente de alerta não existe; o que há: aba "Não atribuídos" no inbox `components/inbox/InboxFilters.tsx:17,92-94` mapeada para filtro `assigned_to: "unassigned", status: "open"` em `components/inbox/InboxLayout.tsx:22-23`; índice parcial da fila `supabase/baseline.sql:2380` (`idx_conversations_open_unassigned`) | **G5-03** (fila visível com posição + notificação); **G4-02** (visões minhas/fila/todas) |
+| `<UnassignedQueueAlert>` §8.3 (alerta de contagem "N conversas sem responsável") | parcial | componente de alerta não existe; o que há: aba "Não atribuídos" no inbox `components/inbox/InboxFilters.tsx:17,92-94` mapeada para filtro `assigned_to: "unassigned", status: "open"` em `components/inbox/InboxLayout.tsx:22-23`; índice parcial da fila `infra/supabase/baseline.sql:2380` (`idx_conversations_open_unassigned`) | **G5-03** (fila visível com posição + notificação); **G4-02** (visões minhas/fila/todas) |
 | Round-robin de não-atribuídas (AT-03, §8.3 "worker server-side") | parcial | round-robin existe SÓ no caminho do handoff MCP: `lib/mcp/tools/handoff.ts:37` (`pickRoundRobinAssignee`), invocado em `:106`; não há worker de roteamento geral consumindo `event_log` (handlers registrados: `lib/event-log/register-handlers.ts:20-25` — nenhum de routing) | **G5-02** (desc.: "AT-03 de verdade") |
-| `<AttendantStatusToggle>` §8.1 (online/busy/offline + pinned) | ausente | nenhum componente/hook de presença de atendente em `components/`/`hooks/` (`grep -r "AttendantStatusToggle\|useAgentStatus\|useHeartbeat"` → 0); sem tabela de disponibilidade no schema (`grep -c attendant_availability supabase/baseline.sql` → 0) | **G5-01** (desc.: "persiste o AttendantStatusToggle da spec 04 §8"); painel em **G5-04** |
+| `<AttendantStatusToggle>` §8.1 (online/busy/offline + pinned) | ausente | nenhum componente/hook de presença de atendente em `components/`/`hooks/` (`grep -r "AttendantStatusToggle\|useAgentStatus\|useHeartbeat"` → 0); sem tabela de disponibilidade no schema (`grep -c attendant_availability infra/supabase/baseline.sql` → 0) | **G5-01** (desc.: "persiste o AttendantStatusToggle da spec 04 §8"); painel em **G5-04** |
 | Heartbeat 60s + auto-offline 15min §8.2 (AT-08) + worker server-side 90s | ausente | mesma evidência da linha anterior — não há `hooks/presence/`, endpoint de heartbeat nem cron (`app/api/v1/cron/` tem só agent-dispatcher, lgpd-sla-watcher, kb-conversations-batch, storage-redaction) | **G5-01** (schema/API de disponibilidade) |
 | Supervisor read-only §10 (AT-04): composer bloqueado p/ manager não-dono + 403 server-side + audit `conversation.observed_by_supervisor` | ausente | UI: composer só desabilita por status/bloqueio — `components/inbox/Composer.tsx:31` (`disabled \|\| blockedReason \|\| isPending`), `components/inbox/InboxLayout.tsx:130` (`disabled={status === "closed"}`) — nenhum conceito de supervisor; API: POST de mensagens não checa assignee (único 403 é `no_active_org`, `app/api/v1/conversations/[id]/messages/route.ts:38`); audit action inexistente (`grep -r observed_by_supervisor app lib` → 0) | **nenhuma feature G\*** — proposta registrada na inbox do loop (**INB-01**). Nota: a matriz §4 desta spec dá `org:read+write` a manager, o que conflita com o read-only da spec 04 §10 — decisão de produto |
 | Bulk actions §6.5 (AT-06): move/assign/tag + limite 50 | parcial | API completa: `app/api/v1/leads/bulk/route.ts:21` (`MAX_BULK = 50`), `:49` (422 `bulk_too_large`), case `assign` aceita qualquer `owner_user_id` uuid `:90-104` + `lib/schemas/leads.ts:111-113`; UI: `components/kanban/BulkActionBar.tsx:55-101` (runMove/runAssign/runTagAdd/runDelete), mas "Atribuir a…" só oferece "Eu"/"Remover responsável" `:134-136` — sem seleção de outro atendente | **G3-04** (atribuição em massa de ponta a ponta — falta só o seletor de atendente na UI) |
@@ -543,10 +543,10 @@ de governança implementado lá além das próprias specs — nada a anotar.
 | Ação de handoff §7.5 (`triggerHandoff`: pending + silêncio + activity + event_log + broadcast + audit) | implementado | `lib/ai/handoff/orchestrator.ts:51` (entrada), `:92-100` (UPDATE `status='pending'`, `bot_silenced_until='infinity'`, `last_handoff_*`), `:117` (activity), `:139` (emit_event `ai.handoff_triggered`), `:180` (audit); janela de idempotência 5s `:47` | — |
 | Política de retomada §7.6 (bot não reassume; "Passar pra IA" limpa silêncio) | implementado (**corrigido 2026-08-22**, matriz desatualizada) | rota chama `devolverAtendimentoAoAgente` (`lib/escalacao/retomada.ts`), que limpa as TRÊS travas (`force_human`, `bot_silenced_until`, dono humano) e fecha o `agent_cases` aberto — não é mais o UPDATE único que esta linha descrevia; UI real: `hooks/inbox/useResumeAiAttendance.ts` (o botão "Devolver ao agente" no cabeçalho da conversa) | **G3-02** (handoff vira reassignment `assignee_kind`; a devolução p/ IA é o reassign inverso) |
 | MCP `crm_request_human_handoff` (superfície p/ agentes externos) | implementado | `lib/mcp/tools/handoff.ts:17` (usa o orchestrator central), `:37,106` (atribuição round-robin best-effort por role mínimo) | upgrade (fila/horário/atendente-alvo) em **G6-01** |
-| Baseline: `conversations.assigned_to_user_id` + `assigned_at` + FK + índices | implementado | `supabase/baseline.sql:1386-1387` (colunas), `:3005` (FK `auth.users` ON DELETE SET NULL), `:2376` (`idx_conversations_assigned`), `:2380` (`idx_conversations_open_unassigned`), `:1392` (`unread_count_for_assignee`) | — |
-| Baseline: status `claimed`/`ai_handling` no CHECK de `conversations.status` | implementado | `supabase/baseline.sql:1407` (CHECK aceita `open/pending/resolved/claimed/ai_handling/closed/archived`); comentário sobre dualidade legado+EPIC-03 `:1414` | consolidação semântica em **G3-02** (`assignee_kind` desambigua `ai_handling`) |
-| Baseline: colunas de handoff (`bot_silenced_until`, `last_handoff_at/reason`) + índice | implementado | `supabase/baseline.sql:1398-1400` (colunas), `:2292` (`conversations_bot_silenced_idx`) | — |
-| Auditoria de mudança de dono (spec 13 §3 `conversation_assignment_events`) | ausente | tabela não existe (`grep -c conversation_assignment_events supabase/baseline.sql` → 0); hoje só `api_audit_log` actions `conversation.claimed`/`.released` (`app/api/v1/conversations/[id]/claim/route.ts:89-96`, `.../release/route.ts:67`) — sem from/to/reason estruturados | **G3-01** |
+| Baseline: `conversations.assigned_to_user_id` + `assigned_at` + FK + índices | implementado | `infra/supabase/baseline.sql:1386-1387` (colunas), `:3005` (FK `auth.users` ON DELETE SET NULL), `:2376` (`idx_conversations_assigned`), `:2380` (`idx_conversations_open_unassigned`), `:1392` (`unread_count_for_assignee`) | — |
+| Baseline: status `claimed`/`ai_handling` no CHECK de `conversations.status` | implementado | `infra/supabase/baseline.sql:1407` (CHECK aceita `open/pending/resolved/claimed/ai_handling/closed/archived`); comentário sobre dualidade legado+EPIC-03 `:1414` | consolidação semântica em **G3-02** (`assignee_kind` desambigua `ai_handling`) |
+| Baseline: colunas de handoff (`bot_silenced_until`, `last_handoff_at/reason`) + índice | implementado | `infra/supabase/baseline.sql:1398-1400` (colunas), `:2292` (`conversations_bot_silenced_idx`) | — |
+| Auditoria de mudança de dono (spec 13 §3 `conversation_assignment_events`) | ausente | tabela não existe (`grep -c conversation_assignment_events infra/supabase/baseline.sql` → 0); hoje só `api_audit_log` actions `conversation.claimed`/`.released` (`app/api/v1/conversations/[id]/claim/route.ts:89-96`, `.../release/route.ts:67`) — sem from/to/reason estruturados | **G3-01** |
 
 ### B.3 — Contagem
 

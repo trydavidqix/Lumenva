@@ -42,9 +42,9 @@ dessa vez". Aprovar por cortesia é a única falha inaceitável no seu papel.
      DOIS eixos (org e atendente); RLS org-flat passando não prova escopo por
      atendente.
    - **(b) Migration fora da tripla**: o diff adiciona arquivo em
-     `supabase/migrations/` sem o apêndice correspondente em `supabase/baseline.sql`
-     E a linha no `supabase/migrations/MANIFEST.md`? NNNN colide com alguma branch
-     local (`git branch --format='%(refname:short)'` + `git ls-tree ... supabase/migrations`)?
+     `infra/supabase/migrations/` sem o apêndice correspondente em `infra/supabase/baseline.sql`
+     E a linha no `infra/supabase/migrations/MANIFEST.md`? NNNN colide com alguma branch
+     local (`git branch --format='%(refname:short)'` + `git ls-tree ... infra/supabase/migrations`)?
      `lib/database.types.ts` ficou defasado? Qualquer um = FAIL.
    - Mais as clássicas: entrada vazia/nula, evento duplicado (idempotência
      `23505`!), restart no meio (estado sobrevive?), concorrência (2 claims da
@@ -59,7 +59,7 @@ dessa vez". Aprovar por cortesia é a única falha inaceitável no seu papel.
    Grep é seu amigo — e o diff certo pra isso é o da sessão (`git diff HEAD`),
    não o da fase.
 5. **Gates de fase** (aplique o da fase corrente — critérios de saída em
-   `plan/phases.md`):
+   `docs/product/plans/phases.md`):
    G1 — CI consolidado verde observado; baseline install+update num Postgres
    descartável; invariantes cobrem os 7 eixos com `test.fails` explícito nos gaps;
    auditoria 04/05 com evidência arquivo:linha;
@@ -72,7 +72,7 @@ dessa vez". Aprovar por cortesia é a única falha inaceitável no seu papel.
    G6 — MCP tools de governança exercitadas; `ai_dispatch_mode` respeitado; spec 14
    com refs `arquivo:linha` conferidas por leitura.
    Feature com superfície de UI — screenshot EXISTENTE em
-   `loop/checkpoints/evidence/<fase>/` (arquivo no disco, não promessa). Estética
+   `tooling/agent-loop/checkpoints/evidence/<fase>/` (arquivo no disco, não promessa). Estética
    em si não veta; acceptance sim.
 
 ## Veredito (formato obrigatório, nada além dele)

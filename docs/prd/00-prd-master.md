@@ -340,4 +340,4 @@ Cada sub-PRD contém: contexto, escopo, requisitos funcionais, requisitos não-f
 ## Anexos
 
 - `docs/research/reference-synthesis.md` — Síntese da arquitetura herdada
-- `tasks/todo.md` — Workflow de construção (PRD → Regras → Specs → Epics → Stories → Plano)
+- `../engineering/workflow.md` — Workflow de construção (PRD → Regras → Specs → Epics → Stories → Plano)

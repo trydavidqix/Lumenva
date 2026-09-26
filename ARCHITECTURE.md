@@ -8,7 +8,7 @@
 ## Camadas
 
 - **App (Next.js 16 App Router)**: UI + Route Handlers no mesmo repo. Server Components por default, Client onde precisa de estado. Middleware de borda em `proxy.ts` (Next 16 renomeou `middleware.ts` → `proxy.ts`).
-- **DB (Supabase Postgres)**: RLS em toda tabela tenant-aware via `fn_user_org_ids()`. Migrations versionadas em `supabase/migrations/`.
+- **DB (Supabase Postgres)**: RLS em toda tabela tenant-aware via `fn_user_org_ids()`. Migrations versionadas em `infra/supabase/migrations/`.
 - **Auth (Supabase Auth + `@supabase/ssr`)**: cookie SameSite=Strict, MFA TOTP forçado pra admin/super-admin. Sempre `getUser()` no server.
 - **Realtime (Supabase Realtime)**: `postgres_changes` para inbox/kanban; `broadcast` para sinais leves.
 - **Storage (Supabase Storage)**: bucket `whatsapp-media` privado, URLs assinadas.

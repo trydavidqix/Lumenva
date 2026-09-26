@@ -1,7 +1,7 @@
 # Voice SIP Worker (Fase 3 — código completo, ainda não implantado)
 
 **Status: nada aqui está em produção.** O worker real continua sendo
-`workers/voice-worker/main.mjs` (Patter/Telnyx/Deepgram/ElevenLabs) — não toque nele a partir
+`apps/voice-worker/main.mjs` (Patter/Telnyx/Deepgram/ElevenLabs) — não toque nele a partir
 deste diretório sem uma decisão explícita de troca de arquitetura. `main.mjs` deste diretório é um
 processo real e testado (não mais um scaffold), mas nunca rodou contra um Asterisk de verdade nem
 foi implantado em lugar nenhum.
@@ -31,7 +31,7 @@ foi implantado em lugar nenhum.
   fechar).
 - `lib/voice/sip/brain-client.ts` (`createSipVoiceBrainClient`) — cliente HTTP real
   (`resolveContext`/`recordEvent`) pra `/api/internal/voice/context`/`event`, sibling TypeScript
-  de `workers/voice-worker/brain-client.mjs`. `lib/voice/sip/event-forwarder.ts`
+  de `apps/voice-worker/brain-client.mjs`. `lib/voice/sip/event-forwarder.ts`
   (`createSipEventForwarder`) liga um evento normalizado do listener a esse cliente:
   `StasisStart→active`, `StasisEnd`/`ChannelHangupRequest→completed`, sempre resolvendo o
   `voice_call_id` de novo via `/context` (idempotente, sem cache local) antes de gravar o evento.

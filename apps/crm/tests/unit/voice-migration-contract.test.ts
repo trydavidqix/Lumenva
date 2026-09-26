@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const MIGRATION = join(process.cwd(), "supabase/migrations/20260826111500_0126_voice_calls.sql");
+const MIGRATION = join(process.cwd(), "infra/supabase/migrations/20260826111500_0126_voice_calls.sql");
 
 function sql(): string {
   return readFileSync(MIGRATION, "utf8").toLowerCase();

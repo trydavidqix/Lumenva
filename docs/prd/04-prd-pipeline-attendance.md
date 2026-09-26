@@ -418,4 +418,4 @@ A serem decididas em `docs/specs/04-spec-pipeline-attendance.md`:
 - `docs/prd/01-prd-platform-base.md` — auth, RBAC, audit
 - `docs/prd/02-prd-customer-360.md` — leads, stages, vocabulary, timeline, custom fields
 - `docs/prd/03-prd-whatsapp-waha.md` — conversations, messages, sessões, typing
-- `tasks/todo.md` — workflow de construção
+- `../engineering/workflow.md` — workflow de construção

@@ -1,0 +1,13 @@
+{
+  "name": "@lumenva/voice-worker",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node main.mjs",
+    "check": "node --check main.mjs && node --check brain-client.mjs && node --check call-context.mjs && node --check control-server.mjs && node --check pending-outbound.mjs && node --test pending-outbound.test.mjs"
+  },
+  "dependencies": {
+    "getpatter": "0.7.0"
+  }
+}

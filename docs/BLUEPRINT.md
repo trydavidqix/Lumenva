@@ -87,7 +87,7 @@ Há implementação substancial já existente:
 - `lib/agent-engine` é o runtime canônico; não deve nascer um segundo engine.
 - `AgentKernel.run()` e `createAgentKernelComposition()` já definem composição de resolução, contexto, runtime, loop, política, checkpoint, verificação e evidência.
 - `event_log`, `job_queue`, workers, Supabase/Postgres, MCP, skills, memory e observabilidade já aparecem como contratos do Agent OS.
-- `loop/LOOP.md`, `RUN.md`, `CHECKPOINT.md`, hooks, `plan/features.json`, `plan/progress.md` e `docs/runbooks/agent-harness.md` já implementam parte da governança maker≠checker.
+- `tooling/agent-loop/LOOP.md`, `RUN.md`, `CHECKPOINT.md`, hooks, `docs/product/plans/features.json`, `docs/product/plans/progress.md` e `docs/runbooks/agent-harness.md` já implementam parte da governança maker≠checker.
 - Há `docs/architecture/agent-os/`, specs, fixtures, migrations de harness/memory/approvals e testes de invariantes.
 - O estado documentado ainda registra lacunas: GitHub Actions desabilitado; `gov:verify` não inclui `test:db` nem E2E; benchmark comparativo da Fase 7 incompleto; Fase 5 com verificação pendente; worktrees e docs históricos coexistem.
 - Maestri é tratado localmente como transporte/control plane, mas o próprio documento local registra que o CLI instalado não expõe event feed/WebSocket documentado. A arquitetura não pode depender de scrollback ou de conectividade viva para recuperar um run.

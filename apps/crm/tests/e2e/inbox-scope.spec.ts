@@ -18,7 +18,7 @@ interface E2ECreds {
 
 const CREDS_PATH = path.join(process.cwd(), ".e2e-creds.json");
 const creds = JSON.parse(fs.readFileSync(CREDS_PATH, "utf8")) as E2ECreds;
-const EVIDENCE = path.join(process.cwd(), "loop/checkpoints/evidence/G4");
+const EVIDENCE = path.join(process.cwd(), "tooling/agent-loop/checkpoints/evidence/G4");
 
 async function login(page: Page, email: string): Promise<void> {
   await page.goto("/login");

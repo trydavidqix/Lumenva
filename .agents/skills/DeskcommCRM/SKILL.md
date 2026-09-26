@@ -35,7 +35,7 @@ description: Ponte para a doutrina viva do DeskcommCRM. Use ao escrever, revisar
 
 **Multi-tenancy:** `organization_id` vem de fonte confiável; RLS em tabela tenant-aware; service role filtra a organização manualmente; backend usa `getUser()`, nunca `getSession()` como prova de identidade.
 
-**Schema:** mudança de banco via migration versionada + apêndice idempotente em `supabase/baseline.sql` + linha no `supabase/migrations/MANIFEST.md`; tipos gerados acompanham quando o contrato muda.
+**Schema:** mudança de banco via migration versionada + apêndice idempotente em `infra/supabase/baseline.sql` + linha no `infra/supabase/migrations/MANIFEST.md`; tipos gerados acompanham quando o contrato muda.
 
 **Self-host:** uma mudança que funciona no ambiente do dev e quebra instalação/update fresco é bug de produto. Não torne serviço pago obrigatório, não deixe env crítica sem contrato e não confunda sonda verde com jornada real verde.
 

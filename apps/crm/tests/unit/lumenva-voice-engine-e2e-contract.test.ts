@@ -6,7 +6,7 @@ const read = (path: string) => readFileSync(join(process.cwd(), "apps/crm", path
 
 describe("Lumenva Voice Engine E2E architecture", () => {
   it("keeps Patter in the media worker and CRM/Agent OS as the brain", () => {
-    const worker = read("workers/voice-worker/main.mjs");
+      const worker = read("apps/voice-worker/main.mjs");
     expect(worker).toContain('from "getpatter"');
     expect(worker).toContain("new Telnyx");
     expect(worker).toContain("persist: false");
@@ -31,14 +31,14 @@ describe("Lumenva Voice Engine E2E architecture", () => {
   });
 
   it("does not require LiveKit for normal AI calls", () => {
-    const worker = read("workers/voice-worker/main.mjs").toLowerCase();
+      const worker = read("apps/voice-worker/main.mjs").toLowerCase();
     expect(worker).not.toContain("livekit");
     const browser = read("lib/voice/human-browser/adapter.ts");
     expect(browser).toContain('kind: "disabled"');
   });
 
   it("keeps outbound dialing behind an authenticated worker control plane", () => {
-    const control = read("workers/voice-worker/control-server.mjs");
+      const control = read("apps/voice-worker/control-server.mjs");
     expect(control).toContain('"x-internal-secret"');
     expect(control).toContain('path !== "/v1/calls"');
     expect(control).toContain("voice_live_disabled");

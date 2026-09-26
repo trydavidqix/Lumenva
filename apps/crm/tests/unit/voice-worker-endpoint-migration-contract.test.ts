@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const sql = () => readFileSync(join(process.cwd(), "supabase/migrations/20260827014500_0129_voice_worker_endpoints.sql"), "utf8").toLowerCase();
+const sql = () => readFileSync(join(process.cwd(), "infra/supabase/migrations/20260827014500_0129_voice_worker_endpoints.sql"), "utf8").toLowerCase();
 
 describe("voice worker endpoint registry", () => {
   it("binds one private control endpoint to one technical phone number", () => {

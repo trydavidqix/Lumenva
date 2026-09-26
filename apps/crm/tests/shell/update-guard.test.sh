@@ -24,7 +24,7 @@
 #      isolam cada uma, provado por sabotagem cirúrgica de cada linha.
 set -uo pipefail
 
-REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
@@ -113,10 +113,10 @@ export PATH="$WORK/bin:$PATH"
 
 # ── Instalação de mentira: repo git + kit + .env ─────────────────────────────
 PROJ="$WORK/deskcommcrm"
-mkdir -p "$PROJ/hostgator-setup-kit" "$PROJ/supabase"
-cp "$REPO_ROOT/hostgator-setup-kit/_common.sh" "$REPO_ROOT/hostgator-setup-kit/_env-alias.sh" \
-   "$REPO_ROOT/hostgator-setup-kit/update.sh" \
-   "$REPO_ROOT/hostgator-setup-kit/agent.sh" "$PROJ/hostgator-setup-kit/"
+mkdir -p "$PROJ/hostgator-setup-kit" "$PROJ/infra/supabase"
+cp "$REPO_ROOT/docs/legacy/hostgator-setup-kit/_common.sh" "$REPO_ROOT/docs/legacy/hostgator-setup-kit/_env-alias.sh" \
+   "$REPO_ROOT/docs/legacy/hostgator-setup-kit/update.sh" \
+   "$REPO_ROOT/docs/legacy/hostgator-setup-kit/agent.sh" "$PROJ/hostgator-setup-kit/"
 # backup.sh de mentira: deixa um rastro. É o marco "o script já começou a
 # mexer" — a guarda de retrocesso só vale se abortar ANTES dele.
 BACKUP_MARK="$WORK/backup-rodou"
@@ -126,7 +126,7 @@ touch "$BACKUP_MARK"
 STUB
 # shellcheck disable=SC2016  # o ${APP_IMAGE} é literal DENTRO do compose
 printf 'services:\n  app:\n    image: \${APP_IMAGE:-x}\n' > "$PROJ/docker-compose.prod.yml"
-printf 'select 1;\n' > "$PROJ/supabase/baseline.sql"
+printf 'select 1;\n' > "$PROJ/infra/supabase/baseline.sql"
 cat > "$PROJ/.env" <<ENV
 APP_IMAGE=ghcr.io/melgarafael/deskcommcrm:latest
 APP_PULL_POLICY=always
@@ -200,7 +200,7 @@ check ".env continua 600 (só o dono lê)" test -n "$(find .env -perm 600)"
 SRC="$WORK/src"
 mkdir -p "$SRC"
 cp -R "$PROJ/hostgator-setup-kit" "$SRC/"
-mkdir -p "$SRC/supabase"; printf 'select 1;\n' > "$SRC/supabase/baseline.sql"
+mkdir -p "$SRC/infra/supabase"; printf 'select 1;\n' > "$SRC/infra/supabase/baseline.sql"
 # shellcheck disable=SC2016  # o ${APP_IMAGE} é literal DENTRO do compose
 printf 'services:\n  app:\n    image: \${APP_IMAGE:-x}\n' > "$SRC/docker-compose.prod.yml"
 printf '.env\n' > "$SRC/.gitignore"

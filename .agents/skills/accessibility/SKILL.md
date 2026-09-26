@@ -442,7 +442,7 @@ See the [screen reader commands reference](references/A11Y-PATTERNS.md#screen-re
 
 ## References
 
-- [WCAG 2.2 Quick Reference](https://www.w3.org/WAI/WCAG22/quickref/)
+- [WCAG 2.2 Quick Reference](https://www.w3.org/WAI/WCAG22/quickdocs/references/)
 - [WAI-ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/)
 - [Deque axe Rules](https://dequeuniversity.com/rules/axe/)
 - [Web Quality Audit](../web-quality-audit/SKILL.md)

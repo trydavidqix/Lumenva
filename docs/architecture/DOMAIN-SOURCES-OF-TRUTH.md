@@ -13,7 +13,7 @@ Status: canonical map, consolidated 2026-09-18.
 | Content OS | `apps/crm/lib/content-os/` + `apps/crm/workers/content-os-*` | Content tables, `creative_jobs`, and `event_log` | Content job state is domain-specific; it is not a second generic queue |
 | Providers | `apps/crm/lib/agent-engine/edge/llm/providers/` and `lib/content-os/providers/` | Tenant configuration and provider job rows | Provider clients never own CRM truth |
 | Integrations | `apps/crm/lib/waha/`, `lib/nuvemshop/`, `lib/channels/`, `lib/mcp/`, `lib/voice/` | CRM integration tables plus audit/event records | External systems are adapters and delivery endpoints |
-| Operational state | queue/event/session/approval/receipt tables in `supabase/migrations/` | PostgreSQL with tenant filters, leases, idempotency, audit | In-memory state is cache or test double only |
+| Operational state | queue/event/session/approval/receipt tables in `infra/supabase/migrations/` | PostgreSQL with tenant filters, leases, idempotency, audit | In-memory state is cache or test double only |
 
 ## Rules
 

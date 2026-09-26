@@ -64,8 +64,8 @@ Ao finalizar um epic:
    - Sem `console.log` esquecido (use `lib/logger.ts`). **O `pnpm lint` não reprova isso** — a regra
      está como aviso, então ele passa verde; a conferência é humana
    - Env vars novas em `.env.example` **e** `lib/env.ts`, com default que não quebre instalação nova
-   - Mudança de schema saiu como **tripla**: arquivo em `supabase/migrations/`, apêndice idempotente
-     no `supabase/baseline.sql` e linha no `MANIFEST.md`. O kit self-host aplica **só o baseline** —
+   - Mudança de schema saiu como **tripla**: arquivo em `infra/supabase/migrations/`, apêndice idempotente
+     no `infra/supabase/baseline.sql` e linha no `MANIFEST.md`. O kit self-host aplica **só o baseline** —
      migration que não chega lá não chega em quem instalou numa VPS. Nenhum job de CI confere isso
    - Docs atualizadas se mudou contrato (PRD/spec)
    - `pnpm test:e2e` (subset relevante) — **opcional se você contribui de fora**, ver abaixo

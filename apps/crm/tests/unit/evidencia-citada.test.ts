@@ -21,7 +21,7 @@ import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const RAIZ = process.cwd();
+const RAIZ = path.resolve(__dirname, "../../../..");
 
 /** Subpastas reais de `evidence/` — o discriminador do caminho relativo. */
 const SUBPASTAS = new Set(
@@ -33,8 +33,8 @@ const SUBPASTAS = new Set(
 
 /** Tudo que o git ENTREGA — não o que o disco tem. */
 function versionados(padrao: string): string[] {
-  return execFileSync("git", ["ls-files", padrao], { cwd: RAIZ, encoding: "utf8" })
-    .split("\n")
+  return execFileSync("git", ["ls-files", "-z", padrao], { cwd: RAIZ, encoding: "utf8" })
+    .split("\0")
     .filter(Boolean);
 }
 
@@ -152,9 +152,9 @@ const LEGADO = new Set([
   "docs/handoff/HANDOFF-operacao-visivel.md",
   "docs/superpowers/plans/2026-07-21-onda0-fundacao-midia.md",
   "docs/superpowers/plans/2026-07-24-harness-fase2-skills.md",
-  "loop/checkpoints/G2-report.md",
-  "loop/checkpoints/G4-report.md",
-  "loop/checkpoints/G5-report.md",
+  "tooling/agent-loop/checkpoints/G2-report.md",
+  "tooling/agent-loop/checkpoints/G4-report.md",
+  "tooling/agent-loop/checkpoints/G5-report.md",
 ]);
 
 /**

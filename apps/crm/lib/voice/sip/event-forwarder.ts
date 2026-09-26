@@ -12,7 +12,7 @@ import type { SipBrainClient, SipEventRequest } from "./brain-client";
  * itself couldn't parse or authorize.
  *
  * Deliberately stateless: no local cache of channelId -> voiceCallId. The
- * Telnyx worker (`workers/voice-worker/call-context.mjs`) keeps one because
+ * Telnyx worker (`apps/voice-worker/call-context.mjs`) keeps one because
  * Patter's event shape needs it to survive between calls in the same
  * process; this forwarder re-resolves via `/context` every time instead,
  * trading one extra idempotent round-trip for zero local state to get

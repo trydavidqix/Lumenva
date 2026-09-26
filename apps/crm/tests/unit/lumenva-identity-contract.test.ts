@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const root = resolve(process.cwd());
+const root = resolve(process.cwd(), "../..");
 
 function read(path: string): string {
   return readFileSync(resolve(root, path), "utf8");
@@ -19,7 +19,7 @@ describe("contrato de identidade Lumenva", () => {
 
   it("mantém os nomes novos dos pacotes privados", () => {
     const crm = JSON.parse(read("apps/crm/package.json")) as { name: string; private: boolean };
-    const site = JSON.parse(read("apps/site/package.json")) as { name: string; private: boolean };
+    const site = JSON.parse(read("apps/website/package.json")) as { name: string; private: boolean };
 
     expect(crm).toMatchObject({ name: "lumenva-crm", private: true });
     expect(site).toMatchObject({ name: "lumenva-website", private: true });
@@ -28,6 +28,6 @@ describe("contrato de identidade Lumenva", () => {
   it("preserva os identificadores técnicos legados que não podem ser renomeados cosmeticamente", () => {
     expect(read("docker-compose.prod.yml")).toContain("deskcommcrm:latest");
     expect(read("docs/runbooks/deploy.md")).toContain("deskcommcrm_mem0-postgres-data");
-    expect(read("supabase/baseline.sql")).toContain("crm_leads");
+    expect(read("infra/supabase/baseline.sql")).toContain("crm_leads");
   });
 });

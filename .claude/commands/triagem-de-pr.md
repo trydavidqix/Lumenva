@@ -2,7 +2,7 @@
 description: Tria um PR de contribuidor de ponta a ponta — acolhe, mede, reproduz, corrige, responde. Para no merge, que é do mantenedor.
 ---
 
-Leia `triagem/TRIAGEM.md` e siga-o à risca. O número do PR veio no argumento; se não veio, rode
+Leia `docs/audits/triagem/TRIAGEM.md` e siga-o à risca. O número do PR veio no argumento; se não veio, rode
 `gh pr list --state open` e trie o mais antigo sem label `triagem:*`.
 
 Quatro lembretes que valem antes mesmo de abrir o arquivo:

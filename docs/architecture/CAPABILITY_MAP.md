@@ -7,7 +7,7 @@ Legenda: EXISTS = código/contrato identificável; PARTIAL = parte existente; MI
 | Capacidade | Evidência real | Estado | Ação |
 |---|---|---|---|
 | CRM/control plane | apps/crm/package.json:1-20; CLAUDE.md:21-41 | EXISTS | REUSE |
-| tenancy/RLS/auth/LGPD | CLAUDE.md:71-108; supabase/migrations/ | EXISTS | REUSE |
+| tenancy/RLS/auth/LGPD | CLAUDE.md:71-108; infra/supabase/migrations/ | EXISTS | REUSE |
 | event_log/event contracts | apps/crm/lib/event-log/dispatcher.ts:1-90 | EXISTS | EXTEND por contrato |
 | Job Engine/workers | apps/crm/lib/agent-engine/queue; apps/crm/workers/agent-worker/main.ts:1-15 | PARTIAL | EXTEND |
 | Evidence como package | apps/crm/lib/agent-engine/obs e lib/audit | PARTIAL | REFACTOR/EXTEND; packages/evidence MISSING |

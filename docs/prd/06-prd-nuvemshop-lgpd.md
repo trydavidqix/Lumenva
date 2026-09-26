@@ -410,4 +410,4 @@ A serem decididas no spec correspondente (`docs/specs/06-spec-nuvemshop-lgpd.md`
 - `docs/prd/00-prd-master.md` (especialmente §6.1 Adapter pattern, §6.6 LGPD, §7 Conformidade)
 - `docs/prd/01-prd-platform-base.md` (especialmente §3.6 LGPD framework, §3.8 API conventions)
 - `docs/prd/02-prd-customer-360.md` (especialmente §3.1 Contact, §3.2 Lead, §3.3 Identity resolution, §3.4 Merge)
-- `tasks/todo.md`
+- `../engineering/workflow.md`

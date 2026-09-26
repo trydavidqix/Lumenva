@@ -1188,7 +1188,7 @@ fi
 
 # ── 7. Aplica o schema (baseline) no Supabase — via container postgres ───────
 step "Aplicando o schema no Supabase (baseline.sql)"
-if [ -f supabase/baseline.sql ]; then
+if [ -f infra/supabase/baseline.sql ]; then
   # O baseline é um pg_dump: referencia public.vector, public.citext e gin_trgm_ops
   # (pg_trgm) mas NÃO cria as extensões. Supabase não as habilita no schema public por
   # padrão — criamos aqui, senão o schema quebra no meio (ex.: "type public.vector does
@@ -1213,7 +1213,7 @@ if [ -f supabase/baseline.sql ]; then
 
   if [ "$has_schema" = "1" ]; then
     c_ylw "• schema já existe — re-aplicando em modo update (erros 'já existe' são esperados e ficam no log)"
-    raw="$(docker run --rm -i -v "$PROJECT_DIR/supabase/baseline.sql:/baseline.sql:ro" \
+    raw="$(docker run --rm -i -v "$PROJECT_DIR/infra/supabase/baseline.sql:/baseline.sql:ro" \
           postgres:17-alpine psql "$SUPABASE_DB_URL" -q -f /baseline.sql 2>&1 || true)"
     printf '%s\n' "$raw" > "$SCHEMA_LOG"
     benign='already exists|multiple primary keys|multiple default values|is already a member|already a partition'
@@ -1225,7 +1225,7 @@ if [ -f supabase/baseline.sql ]; then
       c_grn "✓ schema re-aplicado (apêndice de migrations incluído)"
     fi
   else
-    if docker run --rm -i -v "$PROJECT_DIR/supabase/baseline.sql:/baseline.sql:ro" \
+    if docker run --rm -i -v "$PROJECT_DIR/infra/supabase/baseline.sql:/baseline.sql:ro" \
         postgres:17-alpine psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f /baseline.sql \
         > "$SCHEMA_LOG" 2>&1; then
       c_grn "✓ schema aplicado (log: $SCHEMA_LOG)"
@@ -1244,7 +1244,7 @@ if [ -f supabase/baseline.sql ]; then
     c_ylw "⚠ verificação: só ${n_tables:-0} tabelas no schema public — confira $SCHEMA_LOG"
   fi
 else
-  c_ylw "⚠ supabase/baseline.sql não encontrado — pulei (aplique o schema manualmente)."
+  c_ylw "⚠ infra/supabase/baseline.sql não encontrado — pulei (aplique o schema manualmente)."
 fi
 
 # ── 8. Bootstrap do 1º dono (cria no Auth + promove via psql) ───────────────

@@ -20,8 +20,8 @@ Required APIs (such as `cloudscheduler.googleapis.com`, `cloudtasks.googleapis.c
 
 Structural interfaces and adapters have been created within the core backend to prepare for application-level integration:
 
-- **Cloud Tasks Adapter**: Located in `packages/social-brain/core/src/cloud-tasks.ts`. It provides an `enqueueTask` method serving as a drop-in abstraction over the `@google-cloud/tasks` SDK. This replaces the previous Inngest client logic.
-- **Memorystore Adapter**: Located in `packages/social-brain/core/src/memorystore.ts`. It offers standard `set`, `get`, and `delete` caching primitives. It abstracts the underlying Redis client (e.g. `ioredis`), replacing Upstash logic.
+- **Cloud Tasks Adapter**: Located in `packages/core/social-brain/core/src/cloud-tasks.ts`. It provides an `enqueueTask` method serving as a drop-in abstraction over the `@google-cloud/tasks` SDK. This replaces the previous Inngest client logic.
+- **Memorystore Adapter**: Located in `packages/core/social-brain/core/src/memorystore.ts`. It offers standard `set`, `get`, and `delete` caching primitives. It abstracts the underlying Redis client (e.g. `ioredis`), replacing Upstash logic.
 
 ## 4. Next Steps
 

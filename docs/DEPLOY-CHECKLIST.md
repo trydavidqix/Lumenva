@@ -32,7 +32,7 @@ OpenRouter não estão ativos na produção; Anthropic é fallback.
 
 ## Infrastructure
 
-- [ ] Supabase migrations applied to target environment (`supabase/migrations/`)
+- [ ] Supabase migrations applied to target environment (`infra/supabase/migrations/`)
 - [ ] Supabase RLS policies verified on tenant-aware tables (cross-tenant smoke)
 - [ ] WAHA Plus running with auth'd WhatsApp number, webhook URL pointing to deploy
 - [ ] Sentry project configured + DSN in env, test event captured

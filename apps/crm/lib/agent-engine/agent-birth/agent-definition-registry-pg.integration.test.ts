@@ -21,7 +21,7 @@ describe.skipIf(!databaseUrl)("durable registry migration RLS", () => {
     await admin.query("CREATE ROLE authenticated NOSUPERUSER NOBYPASSRLS LOGIN PASSWORD 'test'");
     await admin.query("INSERT INTO organizations VALUES ($1),($2)", [tenantId, otherTenantId]);
     await admin.query("INSERT INTO user_organizations VALUES ($1,$2)", [userId, tenantId]);
-    await admin.query(readFileSync("supabase/migrations/20260913170000_0168_agent_definition_registry.sql", "utf8"));
+    await admin.query(readFileSync("infra/supabase/migrations/20260913170000_0168_agent_definition_registry.sql", "utf8"));
     const tenant = new pg.Pool({ connectionString: url.replace("postgres:", "authenticated:"), options: "-c app.test_user=" + userId });
     try {
       const auth = new InMemoryAgentBirthAuthorityStore();

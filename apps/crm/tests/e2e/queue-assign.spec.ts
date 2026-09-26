@@ -18,7 +18,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { carregarEnvLocal } from "../../scripts/lib/env-de-teste";
 
 const CREDS_PATH = path.join(process.cwd(), ".e2e-creds.json");
-const EVIDENCE = path.join(process.cwd(), "loop/checkpoints/evidence/G5");
+const EVIDENCE = path.join(process.cwd(), "tooling/agent-loop/checkpoints/evidence/G5");
 
 interface Creds {
   password: string;

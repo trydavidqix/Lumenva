@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Lumenva — imagem genérica para Next.js no monorepo (Cloud Run).
-# Build: docker build --build-arg APP_NAME=site -t lumenva-site .
+# Build: docker build --build-arg APP_NAME=website -t lumenva-website .
 
 # ---- deps: instala dependências (layer cacheável) ----
 FROM node:22-alpine AS deps

@@ -43,7 +43,7 @@ texto que iria para o PR.
 4. **Calibre nos dois sentidos.** Não seja o paranoico: *isto contradiz o que o PR se propôs, ou É a
    coisa que ele se propôs a fazer?* E não seja o otimista: *a existência de um check não prova que a
    propriedade vale.*
-5. **Cheque o eixo self-host** (`triagem/references/eixo-selfhost.md`). Um PR tecnicamente impecável
+5. **Cheque o eixo self-host** (`docs/audits/triagem/references/eixo-selfhost.md`). Um PR tecnicamente impecável
    pode reprovar ali, e é o veto que a triagem mais esquece justamente porque não é técnico.
 
 ## Formato da devolução

@@ -20,7 +20,7 @@ Faltam a Tarefa 9 (lifecycle/rebuild LGPD) e a Tarefa 10 (gate da Fase 2), além
 ## Start here
 
 ```text
-CODEX-AI-PLATFORM.md
+../product/plans/CODEX-AI-PLATFORM.md
   -> docs/superpowers/specs/2026-08-10-ai-platform-master-design.md
   -> docs/superpowers/specs/2026-08-10-ai-platform-qa-release-gates.md
   -> docs/superpowers/plans/2026-08-10-ai-platform-execution-index.md
