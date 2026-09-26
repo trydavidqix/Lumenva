@@ -24,4 +24,6 @@ Status: **CANONICAL**. This document defines provider authority and orchestratio
 
 Provider adapters, skills, and hooks may implement this contract but may not redefine it. Changing this contract requires an explicit Owner-authorized task. Secrets, tokens, provider auth state, and runtime state are never versioned. Production mutation requires explicit Owner approval.
 
+The protected `main` branch requires the unique checks `governance-evidence`, `vertical`, `verify-and-build`, and `gcp-invariants`. `governance-evidence` succeeds only when the `ci` workflow's `verify` and `invariants` jobs succeed, and uploads evidence bound to the pull request head SHA.
+
 See `tooling/agent-governance/README.md` for implemented interfaces and `AGENTS.md` for the shared engineering contract.
