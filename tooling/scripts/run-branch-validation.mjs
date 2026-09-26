@@ -62,10 +62,15 @@ function parseLog(text, cwd) {
     }
   }
   const lastMatch = (pattern) => [...clean.matchAll(pattern)].at(-1)?.[1]?.trim() ?? null
+  const tests = lastMatch(/\bTests\s+([^\r\n]+)/g)
+  const testCount = (state) => Number(tests?.match(new RegExp(`(\\d+)\\s+${state}\\b`, 'i'))?.[1] ?? 0)
   return {
     failures: [...failures].sort(),
     testFiles: lastMatch(/Test Files\s+([^\r\n]+)/g),
-    tests: lastMatch(/\bTests\s+([^\r\n]+)/g),
+    tests,
+    passedTests: testCount('passed'),
+    failedTests: testCount('failed'),
+    skippedTests: testCount('skipped'),
     timeouts: (clean.match(/timeout|timed out|Timeout terminating/gi) ?? []).length,
     workerErrors: (clean.match(/worker error|worker failed|failed to start.*worker|Error: Worker/gi) ?? []).length,
   }

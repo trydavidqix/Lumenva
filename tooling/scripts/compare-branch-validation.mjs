@@ -47,6 +47,12 @@ for (const suite of [...new Set(summaries.map((item) => item.suite))]) {
   const unifiedExitCode = suite === 'toolchain' && unified.versionOk && unified.installExitCode === 0 ? 0 : unified.suiteExitCode
   const suiteRegression = unifiedExitCode !== 0 && (mainExitCode === 0 || regressions.length > 0)
   const unknownFailure = unifiedExitCode !== 0 && mainExitCode !== 0 && !preexisting.length && !regressions.length
+  const sameFailureSignatures = mainFailureList.length === unifiedFailureList.length
+    && mainFailureList.every((failure) => unifiedFailures.has(failure))
+  const comparableUnitFailure = sameFailureSignatures
+    && (mainFailureList.length > 0 || main.timeouts > 0 || main.workerErrors > 0)
+    && unified.timeouts === main.timeouts
+    && unified.workerErrors === main.workerErrors
   const unitRegression = suiteRegression
     || unified.timeouts > main.timeouts
     || unified.workerErrors > main.workerErrors
@@ -54,12 +60,12 @@ for (const suite of [...new Set(summaries.map((item) => item.suite))]) {
     ? 'REGRESSION'
     : unifiedExitCode === 0
       ? 'PASS'
-      : preexisting.length || (unified.timeouts === main.timeouts && unified.workerErrors === main.workerErrors)
+      : comparableUnitFailure
         ? 'PREEXISTING'
         : 'UNKNOWN'
   bySuite.set(suite, {
-    main: { commit: main.commit, exitCode: mainExitCode, durationMs: main.suiteDurationMs, failures: mainFailureList.length, timeouts: main.timeouts, workerErrors: main.workerErrors, testFiles: main.testFiles, tests: main.tests },
-    unified: { commit: unified.commit, exitCode: unifiedExitCode, durationMs: unified.suiteDurationMs, failures: unifiedFailureList.length, timeouts: unified.timeouts, workerErrors: unified.workerErrors, testFiles: unified.testFiles, tests: unified.tests },
+    main: { commit: main.commit, exitCode: mainExitCode, durationMs: main.suiteDurationMs, failures: mainFailureList.length, timeouts: main.timeouts, workerErrors: main.workerErrors, testFiles: main.testFiles, tests: main.tests, passedTests: main.passedTests, failedTests: main.failedTests, skippedTests: main.skippedTests },
+    unified: { commit: unified.commit, exitCode: unifiedExitCode, durationMs: unified.suiteDurationMs, failures: unifiedFailureList.length, timeouts: unified.timeouts, workerErrors: unified.workerErrors, testFiles: unified.testFiles, tests: unified.tests, passedTests: unified.passedTests, failedTests: unified.failedTests, skippedTests: unified.skippedTests },
     classification: suite === 'unit'
       ? { outcome: unitOutcome, preexisting, regressions, resolved }
       : { result: suiteRegression ? 'REGRESSION' : unified.suiteExitCode === 0 ? 'PASS' : unknownFailure ? 'UNKNOWN — signature not comparable' : 'PREEXISTING' },
@@ -80,14 +86,13 @@ const markdown = [
   `Runner: ${report.runtime.runner}; Node ${report.runtime.node}; pnpm ${report.runtime.pnpm}.`,
   'Each pinned main/unified SHA pair runs sequentially on the same runner with a frozen install. Test failures are matched by exact test identifier; unmatched unified failures are regressions. Unmatched non-test failures remain UNKNOWN until their signatures can be compared.',
   '',
-  '| Suite | main | unified | tests (main / unified) | failed IDs (main / unified) | timeouts (main / unified) | worker errors (main / unified) | duration (main / unified) | Classification |',
+  '| Suite | main | unified | passed / failed / skipped (main / unified) | failure IDs (main / unified) | timeouts (main / unified) | worker errors (main / unified) | duration (main / unified) | Classification |',
   '|---|---:|---:|---|---:|---:|---:|---:|---|',
   ...Object.entries(report.suites).map(([name, result]) => {
     const classification = result.classification.result
       ?? `${result.classification.outcome}: PREEXISTING ${result.classification.preexisting.length} / REGRESSION ${result.classification.regressions.length} / RESOLVED ${result.classification.resolved.length}`
-    const mainTests = String(result.main.tests ?? 'n/a').replace(/\|/g, '\\|').replace(/\s+/g, ' ')
-    const unifiedTests = String(result.unified.tests ?? 'n/a').replace(/\|/g, '\\|').replace(/\s+/g, ' ')
-    return `| ${name} | ${result.main.exitCode === 0 ? 'PASS' : 'FAIL'} | ${result.unified.exitCode === 0 ? 'PASS' : 'FAIL'} | ${mainTests} / ${unifiedTests} | ${result.main.failures} / ${result.unified.failures} | ${result.main.timeouts} / ${result.unified.timeouts} | ${result.main.workerErrors} / ${result.unified.workerErrors} | ${result.main.durationMs}ms / ${result.unified.durationMs}ms | ${classification} |`
+    const testCounts = (side) => `${side.passedTests ?? 0}/${side.failedTests ?? 0}/${side.skippedTests ?? 0}`
+    return `| ${name} | ${result.main.exitCode === 0 ? 'PASS' : 'FAIL'} | ${result.unified.exitCode === 0 ? 'PASS' : 'FAIL'} | ${testCounts(result.main)} / ${testCounts(result.unified)} | ${result.main.failures} / ${result.unified.failures} | ${result.main.timeouts} / ${result.unified.timeouts} | ${result.main.workerErrors} / ${result.unified.workerErrors} | ${result.main.durationMs}ms / ${result.unified.durationMs}ms | ${classification} |`
   }),
   ...(missingSuites.length ? ['', `MISSING SUITES: ${missingSuites.join(', ')}`] : []),
   '',
