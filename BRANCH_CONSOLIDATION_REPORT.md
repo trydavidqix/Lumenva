@@ -192,10 +192,10 @@ The open PR check results above are not canonical evidence against current `main
 - Unit suite failed identically on both sides: 5,051 passed, 36 failed, 5 skipped on each; 42 normalized failed-suite/test identifiers matched exactly; 2 timeouts each; 0 worker errors. Durations: main 1,478,040 ms; unified 1,380,893 ms. Classification: 42 `PREEXISTING`, 0 `REGRESSION`, 0 `RESOLVED`.
 - The first comparator in the run had parser/reporting defects (pnpm-prefixed failure lines and omitted toolchain summary), so its comparison artifact is not canonical. Those defects are covered by six local Node parser/summary tests; a report-only GitHub Actions rerun will consume the preserved run artifacts without rerunning the heavy suites.
 - The corrected local comparison over the downloaded raw artifacts reports all suites and the counts above. Jules has not been used because no isolated regression was found.
+- Canonical report-only run `36275665836` completed successfully; validation matrix was skipped and the report job downloaded the retained raw artifacts from `36271881713`. The corrected comparison artifact is `branch-parity-comparison` (`comparison.md` + `comparison.json`): https://github.com/trydavidqix/Lumenva/actions/runs/36275665836.
 
 ## Pending proof
 
-1. Generate a corrected GitHub Actions comparison artifact from run `36271881713`'s retained raw artifacts; do not rerun the heavy suites.
-2. If that canonical artifact agrees with the corrected local comparison, retain the parity report as evidence and continue only the remaining branch-by-branch consolidation decisions below.
-3. Supplemental bundle is created and verified; do not delete any branch before final archival proof and classification.
-4. Keep open PR branches and all recovery refs intact. No merge to `main` is authorized by this report.
+1. Done: retain canonical parity evidence and continue only the remaining branch-by-branch consolidation decisions below.
+2. Supplemental bundle is created and verified; do not delete any branch before final archival proof and classification.
+3. Keep open PR branches and all recovery refs intact. No merge to `main` is authorized by this report.
