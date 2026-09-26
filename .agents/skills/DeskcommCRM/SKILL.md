@@ -5,7 +5,7 @@ description: Ponte para a doutrina viva do DeskcommCRM. Use ao escrever, revisar
 
 # DeskcommCRM — repo skill
 
-> **Autoridade:** `CLAUDE.md` da raiz. Não confie em snapshots gerados, contagens antigas ou convenções copiadas para esta skill quando a doutrina atual puder ser lida diretamente.
+> **Autoridade por assunto:** `CLAUDE.md` define processo do agente; specs, business rules e fontes canônicas definem comportamento do produto. Não confie em snapshots gerados, contagens antigas ou convenções copiadas para esta skill quando a fonte atual puder ser lida diretamente.
 
 ## Abertura obrigatória
 

@@ -3,23 +3,14 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
-import { checkHarnessConsistency } from "./check-harness-consistency.mjs";
-
-const requiredRules = [
-  "git-workflow.md",
-  "security.md",
-  "multi-tenancy.md",
-  "api-contract.md",
-  "audit-observability.md",
-  "lgpd.md",
-  "whatsapp-waha.md",
-  "data-modeling.md",
-  "database-migrations.md",
-  "testing-verification.md",
-  "documentation.md",
-  "graphify.md",
-  "skill-routing.md",
-];
+import {
+  checkHarnessConsistency,
+  REQUIRED_ON_DEMAND_SKILLS,
+  REQUIRED_ASK_RULES,
+  REQUIRED_DENY_RULES,
+  REQUIRED_RULES,
+  SCOPED_RULES,
+} from "./check-harness-consistency.mjs";
 
 async function put(root, path, content) {
   const target = join(root, path);
@@ -32,9 +23,38 @@ async function healthyFixture() {
   await put(
     root,
     ".gitignore",
-    ".claude/\n!.claude/\n.claude/*\n!.claude/agents/\n!.claude/commands/\n!.claude/rules/\n!.claude/rules/**\n",
+    ".claude/\n!.claude/\n.claude/*\n!.claude/agents/\n!.claude/commands/\n!.claude/skills/\n!.claude/skills/**\n!.claude/rules/\n!.claude/rules/**\n!.claude/settings.json\n.claude/settings.local.json\n",
   );
-  for (const file of requiredRules) await put(root, `.claude/rules/${file}`, "# rule\n");
+  for (const file of REQUIRED_RULES) {
+    const paths = SCOPED_RULES[file];
+    for (const pattern of paths ?? []) {
+      const target = pattern.split("*")[0].replace(/\/$/, "");
+      if (target && !target.includes(".")) await mkdir(join(root, target), { recursive: true });
+      else if (target) await put(root, target, "fixture\n");
+    }
+    const frontmatter = paths ? `---\npaths:\n${paths.map((path) => `  - "${path}"`).join("\n")}\n---\n` : "";
+    await put(root, `.claude/rules/${file}`, `${frontmatter}# rule\n`);
+  }
+  for (const skill of REQUIRED_ON_DEMAND_SKILLS) {
+    await put(
+      root,
+      `.claude/skills/${skill}/SKILL.md`,
+      `---\nname: ${skill}\ndescription: Use when the task requires ${skill}.\n---\n\nRead CLAUDE.md and the applicable rule.\n`,
+    );
+  }
+  await put(
+    root,
+    ".claude/settings.json",
+    JSON.stringify({
+      permissions: {
+        defaultMode: "default",
+        disableBypassPermissionsMode: "disable",
+        disableAutoMode: "disable",
+        deny: REQUIRED_DENY_RULES,
+        ask: REQUIRED_ASK_RULES,
+      },
+    }),
+  );
   const skill = "# DeskcommCRM\nAuthority: `CLAUDE.md`. Load `.claude/rules/`.\n";
   await put(root, ".claude/skills/DeskcommCRM/SKILL.md", skill);
   await put(root, ".agents/skills/DeskcommCRM/SKILL.md", skill);
@@ -51,9 +71,10 @@ async function healthyFixture() {
   await put(root, ".codex/AGENTS.md", "Authority: ../CLAUDE.md\n");
   await put(
     root,
-    "CLAUDE.md",
-    requiredRules.map((file) => `.claude/rules/${file}`).join("\n"),
+    "tooling/agent-loop/setup-claude-guard.mjs",
+    'join(repoRoot, ".claude", "settings.local.json");\n',
   );
+  await put(root, "CLAUDE.md", "Read `.claude/rules/` as the policy index.\n");
   await put(root, "AGENTS.md", "Read CLAUDE.md and .claude/rules/.\n");
   await put(
     root,
@@ -97,7 +118,7 @@ test("requires every shared rule and a gitignore exception for rules", async () 
   await put(
     root,
     ".gitignore",
-    ".claude/\n!.claude/\n.claude/*\n!.claude/agents/\n!.claude/commands/\n",
+    ".claude/\n!.claude/\n.claude/*\n!.claude/agents/\n!.claude/commands/\n!.claude/settings.json\n.claude/settings.local.json\n",
   );
   const findings = await checkHarnessConsistency(root);
   assert.ok(findings.some((f) => f.code === "rules-not-versionable"));
@@ -115,10 +136,52 @@ test("rejects an attempt to version local Claude settings", async () => {
   await put(
     root,
     ".gitignore",
-    ".claude/\n!.claude/\n.claude/*\n!.claude/rules/\n!.claude/rules/**\n!.claude/settings.json\n",
+    ".claude/\n!.claude/\n.claude/*\n!.claude/rules/\n!.claude/rules/**\n!.claude/settings.json\n!.claude/settings.local.json\n",
   );
   const findings = await checkHarnessConsistency(root);
-  assert.ok(findings.some((f) => f.code === "settings-versioned"));
+  assert.ok(findings.some((f) => f.code === "local-settings-versioned"));
+});
+
+test("rejects obsolete monorepo paths in active harness artifacts", async () => {
+  const root = await healthyFixture();
+  await put(
+    root,
+    ".claude/skills/DeskcommCRM/SKILL.md",
+    "Read CLAUDE.md and use infra/infra/supabase/baseline.sql.\n",
+  );
+  const findings = await checkHarnessConsistency(root);
+  assert.ok(findings.some((f) => f.code === "obsolete-monorepo-path"));
+});
+
+test("keeps the gov-loop Claude guard in ignored local settings", async () => {
+  const root = await healthyFixture();
+  await put(
+    root,
+    "tooling/agent-loop/setup-claude-guard.mjs",
+    'join(repoRoot, ".claude", "settings.json");\n',
+  );
+  const findings = await checkHarnessConsistency(root);
+  assert.ok(findings.some((f) => f.code === "guard-settings-not-local"));
+});
+
+test("requires shared settings to disable bypass mode and protect destructive commands", async () => {
+  const root = await healthyFixture();
+  await put(
+    root,
+    ".claude/settings.json",
+    JSON.stringify({ permissions: { defaultMode: "bypassPermissions" } }),
+  );
+  const findings = await checkHarnessConsistency(root);
+  assert.ok(findings.some((f) => f.code === "unsafe-project-permissions"));
+});
+
+test("requires scoped rules and on-demand workflow skills", async () => {
+  const root = await healthyFixture();
+  await put(root, ".claude/rules/multi-tenancy.md", "# multi-tenancy\nNo paths.\n");
+  await rm(join(root, ".claude/skills/verify-change/SKILL.md"));
+  const findings = await checkHarnessConsistency(root);
+  assert.ok(findings.some((f) => f.code === "unscoped-domain-rule"));
+  assert.ok(findings.some((f) => f.code === "missing-on-demand-skill"));
 });
 
 test("requires both repo skills to point to CLAUDE.md", async () => {
@@ -132,11 +195,11 @@ test("requires both repo skills to point to CLAUDE.md", async () => {
   assert.ok(findings.some((f) => f.code === "missing-doctrine-pointer"));
 });
 
-test("requires CLAUDE.md to link every shared rule", async () => {
+test("requires CLAUDE.md to point to the modular rules directory", async () => {
   const root = await healthyFixture();
-  await put(root, "CLAUDE.md", ".claude/rules/security.md\n");
+  await put(root, "CLAUDE.md", "No policy index here.\n");
   const findings = await checkHarnessConsistency(root);
-  assert.ok(findings.some((f) => f.code === "missing-rule-link"));
+  assert.ok(findings.some((f) => f.code === "missing-rule-index"));
 });
 
 test("requires AGENTS.md to point to canonical doctrine and shared rules", async () => {

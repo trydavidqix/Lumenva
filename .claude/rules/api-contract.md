@@ -1,6 +1,12 @@
-# API Contract & Idempotency — DeskcommCRM
+---
+paths:
+  - "apps/crm/app/api/**"
+  - "apps/crm/lib/api/**"
+---
 
-> Regra modular compartilhada. Em caso de conflito, `CLAUDE.md` da raiz vence. Para payload/schema exato, `docs/specs/` vence este resumo.
+# Contrato de API do CRM
+
+> Regra operacional resumida. O contrato do produto pertence à fonte canônica do domínio em `docs/index.md`. Para payload/schema exato, `docs/specs/` vence este resumo.
 
 ## Contrato `/api/v1/`
 

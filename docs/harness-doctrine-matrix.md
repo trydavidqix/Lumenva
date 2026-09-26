@@ -74,3 +74,38 @@ Nenhum grupo normativo válido do baseline fica sem destino. As diferenças deli
 2. **STOP:** a fonte atual inclui `CANCELAR`; a rule usa a versão atual.
 3. **Mídia WAHA:** o caminho canônico continua Storage/URL, mas a business rule W-08 documenta exceção para payload pequeno; a rule evita uma proibição absoluta que conflitaria com essa fonte.
 4. **Snapshots:** contagens, SHAs, conjunto atual de E2E e estado de branch protection permanecem em documentos de estado/auditoria e não no contrato permanente do harness.
+
+## Auditoria 2026-09-26 — arquitetura vigente
+
+Esta seção complementa a matriz histórica; não reescreve o baseline nem muda contratos do produto.
+
+| Fonte atual | Classificação | Escopo/carregamento | Destino/canônica |
+|---|---|---|---|
+| Global `CLAUDE.md`, `rules/00`, `rules/10`, output style | A — Global permanente | Idioma, comunicação, preservação e evidência | Global `CLAUDE.md` curto + output style |
+| Global `rules/20-progress-reporting.md` + output style | D/H — Workflow/duplicação | Pipeline ativa com mudança relevante | Skill global `pipeline-report`; rules/style apontam para ela |
+| Global `rules/30-message-metadata.md` | D/H — Workflow/duplicação | Hora, favorito ou pin acionado | Skill global `message-metadata` |
+| Global `hooks/session-start.ps1` | F/H — Contexto duplicado | Injeta apenas resumo persistente da pipeline | Hook existente simplificado |
+| Global `settings.json` | F — Enforcement universal | Sai de bypass; bloqueia secrets e comandos Git destrutivos conhecidos; pede confirmação para operações Git mutáveis | Preserva plugins, output style e os três eventos de hooks existentes |
+| Root `CLAUDE.md` | B — Lumenva core permanente | Identidade Maestro, limites, evidência, fontes e seleção | Constituição operacional curta |
+| `git-workflow.md`, `security.md`, `skill-routing.md`, `testing-verification.md`, `graphify.md` | B — Política permanente | Princípios gerais; workflows completos fora do contexto permanente | Rules concisas |
+| `crm-security.md`, `multi-tenancy.md`, `api-contract.md`, `audit-observability.md`, `lgpd.md`, `whatsapp-waha.md`, `data-modeling.md`, `database-migrations.md` | C — Path-scoped | Caminhos CRM, API, WAHA, Supabase e tipos verificados em `paths:` | Rules específicas por caminho |
+| `documentation.md` | C — Path-scoped | Markdown (`**/*.md`) | Política documental, sem duplicar contratos de produto |
+| `verify-change`, `db-migration`, `graphify` | D — Skill sob demanda | Seleção automática por descrição conforme a mudança | Matrizes/workflows detalhados |
+| `.claude/agents/`, `.codex/agents/`, `.claude/commands/` | E — Agentes/comandos | Especialidades e loops existentes | Preservados, sem adicionar papéis redundantes |
+| `.claude/settings.json` | F — Enforcement compartilhado | Bloqueia secrets conhecidos, `git reset --hard` e force-push; pede confirmação para `clean`, rebase, merge e push | Versionado; settings local permanece ignorado |
+| Skills `DeskcommCRM` e `lgpd.md` | I — Legado compatível | Ponte CRM; nome LGPD acoplado ao harness | Preservados; conteúdo jurídico descreve RGPD/GDPR vigente |
+| `docs/legacy/hostgator-setup-kit/CLAUDE.md` | I — Legado escopado | Somente subtree do kit HostGator | Preservado sem generalização |
+
+### Autoridade vigente por assunto
+
+- Instrução válida do Owner e segurança/preservação governam ações.
+- Comportamento do produto pertence à fonte canônica do domínio (specs, business rules, PRDs e documentos indexados), não à política de processo do agente.
+- CLAUDE.md define identidade/processo; rules definem política técnica/operacional; skills descrevem workflows; agents definem especialidades.
+- `docs/index.md` organiza a descoberta das fontes canônicas e não reivindica precedência sobre instruções de processo.
+
+### Preservação
+
+- Workflows detalhados foram copiados integralmente para skills antes de encurtar os pointers permanentes.
+- Não foram removidas regras de produto nem regras legadas por parecerem antigas.
+- Não foi criado CLAUDE.md em cada módulo. O nested CLAUDE.md existente é específico do kit HostGator e foi preservado.
+- Nenhuma alteração de produto, schema, UI, API ou dependência integra esta auditoria.

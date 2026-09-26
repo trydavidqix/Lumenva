@@ -1,6 +1,13 @@
-# Privacidade / RGPD — DeskcommCRM
+---
+paths:
+  - "apps/crm/**"
+  - "infra/supabase/**"
+  - "knowledge/00-Canon/PRIVACY.md"
+---
 
-> Regra modular compartilhada. Em caso de conflito, `CLAUDE.md` da raiz vence. PRD/Spec e catálogo L-xx definem o contrato exato.
+# Privacidade / RGPD do CRM
+
+> Regra operacional resumida. O contrato do produto pertence à fonte canônica do domínio em `docs/index.md`. PRD/Spec e catálogo L-xx definem o contrato exato.
 >
 > **Nome do arquivo mantido por motivo técnico**: `scripts/check-harness-consistency.mjs` valida a lista de rules do
 > harness por nome de arquivo (`lgpd.md`). Renomear o arquivo exige atualizar esse gate + `CLAUDE.md` + `AGENTS.md` +

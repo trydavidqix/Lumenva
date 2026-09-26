@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# guard-protected-paths.sh — hook PreToolUse do Claude Code (via .claude/settings.json,
+# guard-protected-paths.sh — hook PreToolUse do Claude Code (via .claude/settings.local.json,
 # armado por tooling/agent-loop/setup-claude-guard.mjs). Bloqueia (exit 2; stderr volta ao modelo
 # como ensino):
 #   - Edit/Write em docs/product/plans/features.json (mutação só via node tooling/agent-loop/update-feature.ts)
