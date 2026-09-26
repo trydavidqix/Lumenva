@@ -67,8 +67,8 @@ for (const suite of [...new Set(summaries.map((item) => item.suite))]) {
         ? 'PREEXISTING'
         : 'UNKNOWN'
   bySuite.set(suite, {
-    main: { commit: main.commit, exitCode: mainExitCode, durationMs: main.suiteDurationMs, failures: mainFailureList.length, timeouts: main.timeouts, workerErrors: main.workerErrors, testFiles: main.testFiles, tests: main.tests, passedTests: main.passedTests, failedTests: main.failedTests, skippedTests: main.skippedTests },
-    unified: { commit: unified.commit, exitCode: unifiedExitCode, durationMs: unified.suiteDurationMs, failures: unifiedFailureList.length, timeouts: unified.timeouts, workerErrors: unified.workerErrors, testFiles: unified.testFiles, tests: unified.tests, passedTests: unified.passedTests, failedTests: unified.failedTests, skippedTests: unified.skippedTests },
+    main: { commit: main.commit, exitCode: mainExitCode, durationMs: suite === 'toolchain' ? main.installDurationMs : main.suiteDurationMs, failures: mainFailureList.length, timeouts: main.timeouts, workerErrors: main.workerErrors, testFiles: main.testFiles, tests: main.tests, passedTests: main.passedTests, failedTests: main.failedTests, skippedTests: main.skippedTests },
+    unified: { commit: unified.commit, exitCode: unifiedExitCode, durationMs: suite === 'toolchain' ? unified.installDurationMs : unified.suiteDurationMs, failures: unifiedFailureList.length, timeouts: unified.timeouts, workerErrors: unified.workerErrors, testFiles: unified.testFiles, tests: unified.tests, passedTests: unified.passedTests, failedTests: unified.failedTests, skippedTests: unified.skippedTests },
     classification: suite === 'unit'
       ? { outcome: unitOutcome, preexisting, regressions, resolved }
       : { result: suiteRegression ? 'REGRESSION' : unified.suiteExitCode === 0 ? 'PASS' : unknownFailure ? 'UNKNOWN — signature not comparable' : 'PREEXISTING' },
@@ -95,11 +95,12 @@ const markdown = [
     const classification = result.classification.result
       ?? `${result.classification.outcome}: PREEXISTING ${result.classification.preexisting.length} / REGRESSION ${result.classification.regressions.length} / RESOLVED ${result.classification.resolved.length}`
     const testCounts = (side) => `${side.passedTests ?? 0}/${side.failedTests ?? 0}/${side.skippedTests ?? 0}`
-    const duration = (side) => side.durationMs === null ? 'not recorded' : `${side.durationMs}ms`
+    const duration = (side) => side.durationMs === null ? 'not recorded' : `${side.durationMs}ms${name === 'toolchain' ? ' install' : ''}`
     const provenance = result.unified.reconstructedFromArtifacts ? ' (summary reconstructed from gate/install logs)' : ''
     return `| ${name} | ${result.main.exitCode === 0 ? 'PASS' : 'FAIL'} | ${result.unified.exitCode === 0 ? 'PASS' : 'FAIL'} | ${testCounts(result.main)} / ${testCounts(result.unified)} | ${result.main.failures} / ${result.unified.failures} | ${result.main.timeouts} / ${result.unified.timeouts} | ${result.main.workerErrors} / ${result.unified.workerErrors} | ${duration(result.main)} / ${duration(result.unified)} | ${classification}${provenance} |`
   }),
   ...(missingSuites.length ? ['', `MISSING SUITES: ${missingSuites.join(', ')}`] : []),
+  ...(report.suites.toolchain ? ['', 'Toolchain duration is frozen-install time only; the repository gate duration was not measured separately.'] : []),
   '',
   '## Test failure classification',
   '',

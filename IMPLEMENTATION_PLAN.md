@@ -6,9 +6,9 @@ Status: IN PROGRESS. This file lists only unresolved work from the branch consol
 
 - Done: GitHub Actions run `36271881713` completed with immutable `main` SHA `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99` and tested `unified` SHA `4f5808bf1c27225aa8ca28c23ce7d9a16444d877` on `windows-2025`, Node `22.23.3`, pnpm `9.15.9`.
 - Done: raw artifacts show lint/typecheck/toolchain pass on both sides. Build has the same 19 failures on each side (PREEXISTING). Unit has 5,051 passed, 36 failed, 5 skipped on each side; the same 42 normalized failures, 2 timeouts each, 0 worker errors (PREEXISTING 42, REGRESSION 0, RESOLVED 0). Build duration: 56,790 ms main / 56,533 ms unified. Unit duration: 1,478,040 ms main / 1,380,893 ms unified.
-- Done locally: six parser/summary tests pass; corrected comparison over downloaded GitHub artifacts produces the above classifications and reconstructs unified toolchain PASS from the install and gate logs. Unified toolchain duration was not recorded.
+- Done locally: six parser/summary tests pass; corrected comparison over downloaded GitHub artifacts produces the above classifications and reconstructs unified toolchain PASS from the install and gate logs. Frozen-install durations: 36,800 ms main / 34,200 ms unified; gate duration is not measured separately.
 - Done: report-only Actions run `36275665836` downloaded the retained raw artifacts and published the corrected canonical comparison at https://github.com/trydavidqix/Lumenva/actions/runs/36275665836. Its matrix was skipped; the heavy suite was not rerun.
-- The first run's own comparison artifact had parser/toolchain-summary defects and is not canonical; the report-only artifact supersedes it.
+- The first run's own comparison artifact had parser/toolchain-summary defects and is not canonical; the report-only artifact supersedes it. Toolchain timing reports the frozen install only, not the separate policy-gate duration.
 - Do not change preexisting failures. Jules is not needed unless the corrected Actions artifact reveals a genuine isolated regression.
 
 ## 2. Preserve archival coverage before any branch cleanup
