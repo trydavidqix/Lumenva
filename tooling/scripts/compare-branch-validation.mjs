@@ -1,8 +1,9 @@
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 const root = resolve(import.meta.dirname, '../..')
 const artifactRoot = join(root, 'parity-artifacts')
+mkdirSync(artifactRoot, { recursive: true })
 
 function filesUnder(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -50,12 +51,12 @@ const markdown = [
   `Runner: ${report.runtime.runner}; Node ${report.runtime.node}; pnpm ${report.runtime.pnpm}.`,
   'Each pinned main/unified SHA pair runs sequentially on the same runner with a frozen install. Test failures are matched by exact test identifier; unmatched unified failures are regressions. Unmatched non-test failures remain UNKNOWN until their signatures can be compared.',
   '',
-  '| Suite | main | unified | failures (main / unified) | timeouts (main / unified) | worker errors (main / unified) | duration (main / unified) | Classification |',
-  '|---|---:|---:|---:|---:|---:|---:|---|',
+  '| Suite | main | unified | tests (main / unified) | failed IDs (main / unified) | timeouts (main / unified) | worker errors (main / unified) | duration (main / unified) | Classification |',
+  '|---|---:|---:|---|---:|---:|---:|---:|---|',
   ...Object.entries(report.suites).map(([name, result]) => {
     const classification = result.classification.result
       ?? `PREEXISTING ${result.classification.preexisting.length} / REGRESSION ${result.classification.regressions.length} / RESOLVED ${result.classification.resolved.length}`
-    return `| ${name} | ${result.main.exitCode === 0 ? 'PASS' : 'FAIL'} | ${result.unified.exitCode === 0 ? 'PASS' : 'FAIL'} | ${result.main.failures} / ${result.unified.failures} | ${result.main.timeouts} / ${result.unified.timeouts} | ${result.main.workerErrors} / ${result.unified.workerErrors} | ${result.main.durationMs}ms / ${result.unified.durationMs}ms | ${classification} |`
+    return `| ${name} | ${result.main.exitCode === 0 ? 'PASS' : 'FAIL'} | ${result.unified.exitCode === 0 ? 'PASS' : 'FAIL'} | ${result.main.tests ?? 'n/a'} / ${result.unified.tests ?? 'n/a'} | ${result.main.failures} / ${result.unified.failures} | ${result.main.timeouts} / ${result.unified.timeouts} | ${result.main.workerErrors} / ${result.unified.workerErrors} | ${result.main.durationMs}ms / ${result.unified.durationMs}ms | ${classification} |`
   }),
   ...(missingSuites.length ? ['', `MISSING SUITES: ${missingSuites.join(', ')}`] : []),
   '',
