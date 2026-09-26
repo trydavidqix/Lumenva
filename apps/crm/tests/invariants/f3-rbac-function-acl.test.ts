@@ -1,4 +1,4 @@
-import { test, expect, describe, beforeAll, afterAll } from 'vitest';
+import { test, expect, describe, afterAll } from 'vitest';
 import { Pool } from 'pg';
 
 const port = process.env.TEST_DB_PORT || '54329';
@@ -28,7 +28,6 @@ describe('F3 RBAC - Function ACL (SECURITY DEFINER)', () => {
     const r = await pool.query(hasPublicGrantQuery);
 
     const publicViolations = r.rows.filter(row => row.public_can_execute);
-    console.log("PUBLIC VIOLATIONS:", publicViolations);
     expect(publicViolations.length, 'No SECURITY DEFINER function should be executable by PUBLIC role').toBe(0);
   });
 });

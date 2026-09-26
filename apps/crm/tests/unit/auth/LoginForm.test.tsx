@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LoginForm } from "../../../components/auth/LoginForm";
 import * as firebaseClient from "../../../lib/firebase/client";
+import type { AuthResult } from "../../../lib/firebase/client";
 
 // Mock NEXT router
 const replaceMock = vi.fn();
@@ -80,8 +81,8 @@ describe("LoginForm", () => {
   });
 
   it("shows pending state while logging in", async () => {
-    let resolveLogin: (value: firebaseClient.AuthResult) => void;
-    vi.mocked(firebaseClient.signInWithEmail).mockReturnValue(new Promise(res => {
+    let resolveLogin: (value: AuthResult) => void;
+    vi.mocked(firebaseClient.signInWithEmail).mockReturnValue(new Promise<AuthResult>(res => {
       resolveLogin = res;
     }));
 

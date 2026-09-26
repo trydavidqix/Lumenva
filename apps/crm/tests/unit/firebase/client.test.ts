@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 const signInWithEmailAndPasswordMock = vi.fn();
 const signInWithPopupMock = vi.fn();
 const getIdTokenMock = vi.fn();
+const fetchMock = vi.fn<typeof fetch>();
 
 vi.mock("firebase/app", () => ({
   initializeApp: vi.fn(),
@@ -23,11 +24,9 @@ vi.mock("firebase/auth", () => ({
 import { signInWithEmail, signInWithGoogle } from "../../../lib/firebase/client";
 
 describe("Firebase Client Auth Wrapper", () => {
-  let fetchMock: ReturnType<typeof vi.fn>;
-
   beforeEach(() => {
-    fetchMock = vi.fn();
-    global.fetch = fetchMock as unknown as typeof fetch;
+    fetchMock.mockReset();
+    global.fetch = fetchMock;
     signInWithEmailAndPasswordMock.mockReset();
     signInWithPopupMock.mockReset();
     getIdTokenMock.mockReset();
@@ -45,7 +44,7 @@ describe("Firebase Client Auth Wrapper", () => {
     signInWithEmailAndPasswordMock.mockResolvedValueOnce({
       user: { getIdToken: getIdTokenMock },
     });
-    fetchMock.mockResolvedValueOnce({ ok: true, status: 200 });
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 200 }));
 
     const result = await signInWithEmail("test@example.com", "password123");
 
@@ -72,7 +71,7 @@ describe("Firebase Client Auth Wrapper", () => {
     signInWithPopupMock.mockResolvedValueOnce({
       user: { getIdToken: getIdTokenMock },
     });
-    fetchMock.mockResolvedValueOnce({ ok: true, status: 200 });
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 200 }));
 
     const result = await signInWithGoogle();
 
@@ -101,7 +100,7 @@ describe("Firebase Client Auth Wrapper", () => {
     signInWithEmailAndPasswordMock.mockResolvedValueOnce({
       user: { getIdToken: getIdTokenMock },
     });
-    fetchMock.mockResolvedValueOnce({ ok: false, status: 401 });
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 401 }));
 
     const result = await signInWithEmail("test@example.com", "password");
 

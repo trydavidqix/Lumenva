@@ -7,28 +7,32 @@ vi.mock("@/hooks/auth/AuthProvider", () => ({
   useActiveOrg: vi.fn(),
 }));
 
+type MockEvent = { data: string };
+type MockEventListener = (event: MockEvent) => void;
+type MockEventSourceOptions = { withCredentials?: boolean };
+
 class MockEventSource {
   static instances: MockEventSource[] = [];
   url: string;
   withCredentials: boolean;
-  listeners: Record<string, ((event: unknown) => void)[]> = {};
+  listeners: Record<string, MockEventListener[]> = {};
 
-  constructor(url: string, opts: { withCredentials?: boolean }) {
+  constructor(url: string, opts?: MockEventSourceOptions) {
     this.url = url;
-    this.withCredentials = !!opts?.withCredentials;
+    this.withCredentials = opts?.withCredentials ?? false;
     MockEventSource.instances.push(this);
   }
 
-  addEventListener(type: string, listener: (event: unknown) => void) {
+  addEventListener(type: string, listener: MockEventListener) {
     if (!this.listeners[type]) this.listeners[type] = [];
     this.listeners[type].push(listener);
   }
 
-  removeEventListener(_type: string, _listener: (event: unknown) => void) {}
+  removeEventListener(_type: string, _listener: MockEventListener) {}
 
   close() {}
 
-  emit(type: string, event: unknown) {
+  emit(type: string, event: MockEvent) {
     if (this.listeners[type]) {
       this.listeners[type].forEach(l => l(event));
     }
