@@ -1,8 +1,10 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { extractFailureSignatures } from './branch-validation-parser.mjs'
+import { reconstructToolchainSummary } from './branch-validation-summary.mjs'
 
 const root = resolve(import.meta.dirname, '../..')
-const artifactRoot = join(root, 'parity-artifacts')
+const artifactRoot = resolve(process.env.PARITY_ARTIFACT_DIR ?? join(root, 'parity-artifacts'))
 mkdirSync(artifactRoot, { recursive: true })
 
 function filesUnder(dir) {
@@ -15,21 +17,16 @@ function filesUnder(dir) {
 const summaries = (existsSync(artifactRoot) ? filesUnder(artifactRoot) : [])
   .filter((path) => path.endsWith('.json') && !path.endsWith('comparison.json'))
   .map((path) => JSON.parse(readFileSync(path, 'utf8')))
+const reconstructedToolchain = reconstructToolchainSummary(summaries, (name) => {
+  const path = join(artifactRoot, name)
+  return existsSync(path) ? readFileSync(path, 'utf8') : null
+})
+if (reconstructedToolchain) summaries.push(reconstructedToolchain)
 const bySuite = new Map()
 function failuresFromArtifacts(branch, suite, summary) {
   const logPath = join(artifactRoot, `${branch}-${suite}.log`)
   if (!existsSync(logPath)) return suite === 'unit' ? summary.failures : []
-  const log = readFileSync(logPath, 'utf8')
-    .replace(/\u001b\[[0-9;]*m/g, '')
-    .replace(/[A-Z]:\\a\\Lumenva\\(?:main-validation|Lumenva)/gi, '<CHECKOUT>')
-  const failures = new Set()
-  for (const line of log.split(/\r?\n/)) {
-    const testFailure = suite === 'unit' ? line.match(/^\s*FAIL\s+(.+?)(?:\s+\[.*)?$/) : null
-    const diagnostic = suite !== 'unit' && /^\s*(?:>\s*)?(?:Error:|ERR_[A-Z0-9_]+|Build error occurred|error TS\d+:|Failed to compile|Module not found:)/i.test(line)
-    if (testFailure) failures.add(testFailure[1].trim().replace(/\s+/g, ' '))
-    else if (diagnostic) failures.add(line.trim().replace(/\s+/g, ' '))
-  }
-  return [...failures].sort()
+  return extractFailureSignatures(readFileSync(logPath, 'utf8'), suite)
 }
 
 for (const suite of [...new Set(summaries.map((item) => item.suite))]) {
@@ -98,7 +95,9 @@ const markdown = [
     const classification = result.classification.result
       ?? `${result.classification.outcome}: PREEXISTING ${result.classification.preexisting.length} / REGRESSION ${result.classification.regressions.length} / RESOLVED ${result.classification.resolved.length}`
     const testCounts = (side) => `${side.passedTests ?? 0}/${side.failedTests ?? 0}/${side.skippedTests ?? 0}`
-    return `| ${name} | ${result.main.exitCode === 0 ? 'PASS' : 'FAIL'} | ${result.unified.exitCode === 0 ? 'PASS' : 'FAIL'} | ${testCounts(result.main)} / ${testCounts(result.unified)} | ${result.main.failures} / ${result.unified.failures} | ${result.main.timeouts} / ${result.unified.timeouts} | ${result.main.workerErrors} / ${result.unified.workerErrors} | ${result.main.durationMs}ms / ${result.unified.durationMs}ms | ${classification} |`
+    const duration = (side) => side.durationMs === null ? 'not recorded' : `${side.durationMs}ms`
+    const provenance = result.unified.reconstructedFromArtifacts ? ' (summary reconstructed from gate/install logs)' : ''
+    return `| ${name} | ${result.main.exitCode === 0 ? 'PASS' : 'FAIL'} | ${result.unified.exitCode === 0 ? 'PASS' : 'FAIL'} | ${testCounts(result.main)} / ${testCounts(result.unified)} | ${result.main.failures} / ${result.unified.failures} | ${result.main.timeouts} / ${result.unified.timeouts} | ${result.main.workerErrors} / ${result.unified.workerErrors} | ${duration(result.main)} / ${duration(result.unified)} | ${classification}${provenance} |`
   }),
   ...(missingSuites.length ? ['', `MISSING SUITES: ${missingSuites.join(', ')}`] : []),
   '',

@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 import { performance } from 'node:perf_hooks'
+import { extractFailureSignatures } from './branch-validation-parser.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const artifacts = join(root, 'parity-artifacts')
@@ -46,26 +47,12 @@ function suiteCommands(target) {
 }
 
 function parseLog(text, cwd) {
-  const escapedRoot = resolve(cwd).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const rootPattern = new RegExp(escapedRoot, 'gi')
-  const clean = text.replace(/\u001b\[[0-9;]*m/g, '')
-    .replace(rootPattern, '<CHECKOUT>')
-    .replace(/[A-Z]:\\a\\Lumenva\\(?:main-validation|Lumenva)/gi, '<CHECKOUT>')
-  const failures = new Set()
-  for (const line of clean.split(/\r?\n/)) {
-    const testFailure = suite === 'unit' ? line.match(/^\s*FAIL\s+(.+?)(?:\s+\[.*)?$/) : null
-    const diagnostic = suite !== 'unit' && /^\s*(?:>\s*)?(?:Error:|ERR_[A-Z0-9_]+|Build error occurred|error TS\d+:|Failed to compile|Module not found:)/i.test(line)
-    if (testFailure) failures.add(testFailure[1].trim().replace(/\s+/g, ' '))
-    else if (diagnostic) {
-      const diagnostic = line.trim().replace(/\s+/g, ' ')
-      if (diagnostic.length >= 12 && diagnostic.length <= 500) failures.add(diagnostic)
-    }
-  }
+  const clean = text.replace(/[A-Z]:\\a\\Lumenva\\(?:main-validation|Lumenva)/gi, '<CHECKOUT>')
   const lastMatch = (pattern) => [...clean.matchAll(pattern)].at(-1)?.[1]?.trim() ?? null
   const tests = lastMatch(/\bTests\s+([^\r\n]+)/g)
   const testCount = (state) => Number(tests?.match(new RegExp(`(\\d+)\\s+${state}\\b`, 'i'))?.[1] ?? 0)
   return {
-    failures: [...failures].sort(),
+    failures: extractFailureSignatures(text, suite, cwd),
     testFiles: lastMatch(/Test Files\s+([^\r\n]+)/g),
     tests,
     passedTests: testCount('passed'),
@@ -121,7 +108,7 @@ async function runTarget(target) {
   }
   const suiteDurationMs = Math.round(performance.now() - suiteStart)
   const logPath = join(artifacts, `${stem}.log`)
-  const log = suiteResult.skipped ? '' : readFileSync(logPath, 'utf8')
+  const log = suiteResult.skipped || suite === 'toolchain' ? '' : readFileSync(logPath, 'utf8')
   const parsed = parseLog(log, target.path)
   const summary = {
     branch: target.name,

@@ -4,7 +4,6 @@ on:
   push:
     branches: [implementation/unified]
     paths-ignore:
-      - .github/workflows/branch-parity-validation.yml
       - .github/workflows/branch-parity-report.yml
       - BRANCH_CONSOLIDATION_REPORT.md
       - IMPLEMENTATION_PLAN.md
@@ -16,6 +15,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   prepare:
@@ -24,6 +24,7 @@ jobs:
     outputs:
       main_sha: ${{ steps.refs.outputs.main_sha }}
       unified_sha: ${{ steps.refs.outputs.unified_sha }}
+      source_run_id: ${{ steps.refs.outputs.source_run_id }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -36,9 +37,17 @@ jobs:
           git fetch origin main
           "main_sha=$(git rev-parse FETCH_HEAD)" >> $env:GITHUB_OUTPUT
           "unified_sha=${{ github.sha }}" >> $env:GITHUB_OUTPUT
+          $sourceRunId = $env:GITHUB_RUN_ID
+          if ($env:COMMIT_MESSAGE -match 'ci\(parity-report\): source-run=(\d+)') {
+            $sourceRunId = $Matches[1]
+          }
+          "source_run_id=$sourceRunId" >> $env:GITHUB_OUTPUT
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
 
   validate:
     name: ${{ matrix.suite }} — main vs unified
+    if: "${{ !startsWith(github.event.head_commit.message || '', 'ci(parity-report): source-run=') }}"
     needs: [prepare]
     runs-on: windows-2025
     timeout-minutes: 360
@@ -101,6 +110,8 @@ jobs:
           pattern: branch-parity-*
           path: parity-artifacts/
           merge-multiple: true
+          run-id: ${{ needs.prepare.outputs.source_run_id }}
+          github-token: ${{ github.token }}
 
       - name: Create comparison report
         run: node tooling/scripts/compare-branch-validation.mjs

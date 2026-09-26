@@ -186,14 +186,16 @@ The open PR check results above are not canonical evidence against current `main
 - Raw logs, per-side JSON summaries, and comparison report are uploaded as artifacts. The report includes passed/failed/skipped tests, failure IDs, timeouts, worker errors, durations, and PREEXISTING/REGRESSION/UNKNOWN classifications.
 - Run `36269336485`: superseded by a checker defect; cancelled.
 - Run `36270379852`: pinned older comparator; terminal status `cancelled`. Do not use as canonical evidence.
-- Run `36271881713`: immutable test comparison pins `main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99` against `unified` `4f5808bf1c27225aa8ca28c23ce7d9a16444d877`. Only the report classifier changed afterward; no product/test code changed. As of 2026-09-26 21:30 UTC, unit is still running (~21 minutes); four other validation jobs succeeded.
-- After raw artifacts are complete, dispatch read-only workflow `branch-parity-report.yml` on current `implementation/unified` to regenerate the canonical comparison using the stricter `153e390f` classifier without rerunning tests.
-- Jules has not been used. No isolated regression has been confirmed.
+- Run `36271881713` completed on `windows-2025`, Node `22.23.3`, pnpm `9.15.9`, comparing immutable `main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99` against tested `unified` `4f5808bf1c27225aa8ca28c23ce7d9a16444d877`. The test suite itself did not pass cleanly on either side; this run is a comparison baseline, not a green build.
+- Lint and typecheck passed on both sides. Toolchain gate passed on both: frozen install and `repo:check` verified the pinned Node/pnpm versions. Main duration was 0 ms in the summary; unified duration was not recorded, so no timing comparison is claimed for this suite.
+- Build failed on both sides with the same 19 normalized failure signatures: `PREEXISTING`. Durations: main 56,790 ms; unified 56,533 ms.
+- Unit suite failed identically on both sides: 5,051 passed, 36 failed, 5 skipped on each; 42 normalized failed-suite/test identifiers matched exactly; 2 timeouts each; 0 worker errors. Durations: main 1,478,040 ms; unified 1,380,893 ms. Classification: 42 `PREEXISTING`, 0 `REGRESSION`, 0 `RESOLVED`.
+- The first comparator in the run had parser/reporting defects (pnpm-prefixed failure lines and omitted toolchain summary), so its comparison artifact is not canonical. Those defects are covered by six local Node parser/summary tests; a report-only GitHub Actions rerun will consume the preserved run artifacts without rerunning the heavy suites.
+- The corrected local comparison over the downloaded raw artifacts reports all suites and the counts above. Jules has not been used because no isolated regression was found.
 
 ## Pending proof
 
-1. Wait for run `36271881713`; inspect the comparison artifact and raw logs.
-2. If the report identifies a genuine isolated regression, investigate only that regression; use Jules only for that case.
-3. Supplemental bundle is created and verified; do not delete any branch before reviewing Actions evidence and the final classification.
-4. Update this report with exact Actions outcomes and final branch decisions.
-5. Keep open PR branches and all recovery refs intact. No merge to `main` is authorized by this report.
+1. Generate a corrected GitHub Actions comparison artifact from run `36271881713`'s retained raw artifacts; do not rerun the heavy suites.
+2. If that canonical artifact agrees with the corrected local comparison, retain the parity report as evidence and continue only the remaining branch-by-branch consolidation decisions below.
+3. Supplemental bundle is created and verified; do not delete any branch before final archival proof and classification.
+4. Keep open PR branches and all recovery refs intact. No merge to `main` is authorized by this report.
