@@ -84,7 +84,7 @@ jobs:
           cache-to: type=gha,mode=max
 
   # Gate de banco de dados, em job separado conforme a doutrina de testes original, adaptado para este CI.
-  invariants:
+  gcp-invariants:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:

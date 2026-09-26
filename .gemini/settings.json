@@ -1,0 +1,10 @@
+{
+  "context": {
+    "fileName": ["AGENTS.md", "GEMINI.md"]
+  },
+  "hooks": {
+    "SessionStart": [{ "hooks": [{ "name": "orchestration-session", "type": "command", "command": "node tooling/agent-governance/gate.mjs session", "timeout": 5000 }] }],
+    "BeforeTool": [{ "hooks": [{ "name": "orchestration-gate", "type": "command", "command": "node tooling/agent-governance/gate.mjs hook gemini", "timeout": 5000 }] }],
+    "AfterAgent": [{ "hooks": [{ "name": "completion-gate", "type": "command", "command": "node tooling/agent-governance/gate.mjs hook gemini", "timeout": 5000 }] }]
+  }
+}

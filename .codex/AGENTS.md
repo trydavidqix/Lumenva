@@ -1,11 +1,12 @@
-# Codex adapter — DeskcommCRM
+# Codex adapter — Lumenva
 
-This file supplements the root [`AGENTS.md`](../AGENTS.md) for Codex-specific behavior.
+This file supplements the root [`AGENTS.md`](../AGENTS.md) for Codex-specific behavior. The shared governance policy is [`docs/engineering/AGENT_GOVERNANCE.md`](../docs/engineering/AGENT_GOVERNANCE.md); it is not duplicated here.
 
 ## Authority
 
 - Canonical doctrine: `../CLAUDE.md`.
 - Portable contract: `../AGENTS.md`.
+- Provider authority and lifecycle: `../docs/engineering/AGENT_GOVERNANCE.md`.
 - Shared modular rules: `../.claude/rules/`.
 - Doctrine reconciliation matrix: `../docs/harness-doctrine-matrix.md`.
 - Codex repo skill: `../.agents/skills/DeskcommCRM/SKILL.md`.
@@ -35,3 +36,7 @@ Before writing code:
 5. verify with evidence before declaring completion.
 
 Run `pnpm harness:check` after changing harness/instruction files.
+
+## CTO Engineering limits
+
+Codex is CTO Engineering under Claude CEO and David Owner. Execute or independently review only the role assigned for the current task. Do not modify governance outside an explicitly Owner-authorized task, self-approve, bypass GitHub Actions, or claim completion from a different HEAD SHA. The gate and evidence format live in `../tooling/agent-governance/`.

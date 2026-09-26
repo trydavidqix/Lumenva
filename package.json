@@ -7,6 +7,7 @@
     "lint": "pnpm -r --if-present lint",
     "lint:channels": "pnpm -r --if-present lint:channels",
     "test:harness": "pnpm -r --if-present test:harness",
+    "test:governance": "node --test tooling/agent-governance/gate.test.mjs",
     "harness:check": "pnpm -r --if-present harness:check",
     "test:unit": "pnpm -r --if-present test:unit",
     "test:shell": "pnpm -r --if-present test:shell",
