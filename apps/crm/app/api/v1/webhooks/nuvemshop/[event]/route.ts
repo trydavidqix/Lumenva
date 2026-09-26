@@ -10,7 +10,7 @@
  *     deduplicate (provider, organization_id, external_id) for idempotency.
  *  5. Emit a row in event_log via the `emit_event` SQL function. Workers
  *     consume from there — no heavy processing inside the request lifecycle.
- *  6. Always 200 quickly (Nuvemshop disables webhooks after 5 consecutive 5xx).
+ *  6. Return 200 quickly only after authentication; missing config is rejected.
  */
 
 import type { NextRequest, NextResponse } from "next/server";
@@ -80,13 +80,17 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
     .eq("store_metadata->>store_id", storeId)
     .maybeSingle();
 
-  if (lookupErr || !integration) {
-    // No tenant matches — could be a stale subscription or test ping. We
-    // intentionally return 200 so Nuvemshop stops retrying, but log silently.
-    return ok({ accepted: false, reason: "tenant_not_found" });
+  if (lookupErr) {
+    return fail("internal_error", "integration_lookup_failed", 500);
+  }
+  if (!integration) {
+    return fail("not_found", "integration_not_found", 404);
   }
 
   // Decrypt webhook secret (= app client_secret at connect time).
+  if (!integration.webhook_secret_encrypted) {
+    return fail("unauthenticated", "webhook_not_configured", 401);
+  }
   const dec = await admin.rpc("fn_decrypt_oauth", {
     ciphertext: integration.webhook_secret_encrypted,
   });
@@ -96,7 +100,7 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
       organizationId: integration.organization_id,
       metadata: { reason: "decrypt_failed", event },
     });
-    return fail("internal_error", "decrypt_failed", 500);
+    return fail("unauthenticated", "webhook_not_configured", 401);
   }
   const clientSecret = dec.data as string;
 

@@ -119,6 +119,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const orgId: string = integration.organization_id;
 
   // 4. Decrypt webhook secret and verify HMAC
+  if (!integration.webhook_secret_encrypted) {
+    return fail("unauthenticated", "webhook_not_configured", 401);
+  }
   const dec = await admin.rpc("fn_decrypt_oauth", {
     ciphertext: integration.webhook_secret_encrypted,
   });
@@ -130,7 +133,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       organizationId: orgId,
       metadata: { reason: "decrypt_failed", event: "customer/redact", store_id: storeId },
     });
-    return fail("internal_error", "decrypt_failed", 500);
+    return fail("unauthenticated", "webhook_not_configured", 401);
   }
 
   const clientSecret = dec.data as string;
