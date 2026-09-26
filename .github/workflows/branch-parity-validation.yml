@@ -4,6 +4,7 @@ on:
   push:
     branches: [implementation/unified]
     paths-ignore:
+      # Keep this workflow unignored so source-run report-only commits can dispatch it.
       - .github/workflows/branch-parity-report.yml
       - BRANCH_CONSOLIDATION_REPORT.md
       - IMPLEMENTATION_PLAN.md
