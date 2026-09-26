@@ -51,9 +51,15 @@ for (const suite of [...new Set(summaries.map((item) => item.suite))]) {
     && mainFailureList.every((failure) => unifiedFailures.has(failure))
   const comparableUnitFailure = sameFailureSignatures
     && (mainFailureList.length > 0 || main.timeouts > 0 || main.workerErrors > 0)
+    && unified.failedTests === main.failedTests
     && unified.timeouts === main.timeouts
     && unified.workerErrors === main.workerErrors
+  const mainExecutedTests = main.passedTests + main.failedTests
+  const unifiedExecutedTests = unified.passedTests + unified.failedTests
   const unitRegression = suiteRegression
+    || unified.failedTests > main.failedTests
+    || unifiedExecutedTests < mainExecutedTests
+    || unified.skippedTests > main.skippedTests
     || unified.timeouts > main.timeouts
     || unified.workerErrors > main.workerErrors
   const unitOutcome = unitRegression
