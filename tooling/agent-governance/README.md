@@ -38,6 +38,7 @@ Provider receipts must be evidence-backed JSON imported with `record <provider> 
 | `.agents/hooks.json` | SUPPORTED | Antigravity project hooks |
 | `.codex/config.toml` | SUPPORTED | Existing Codex CLI configuration; no unsupported hook claims |
 | `.codex/rules/orchestration.rules` | OPTIONAL / PREVIEW | Codex execpolicy rule file; evaluated only when explicitly passed to `codex execpolicy check`, not a native automatic interactive hook in the installed version |
+| `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.gemini/GEMINI.md` | LOCAL-ONLY | Thin Owner/CEO/CTO authority adapters appended to the existing user files; original global rules preserved |
 | `~/.claude`, `~/.codex`, `~/.gemini` | LOCAL-ONLY | Native user config/auth; not modified by this project adapter |
 | `CODEX_CLOUD_ENV_ID` | LOCAL-ONLY | Set by Owner in secure local environment; no repository value |
 | `.git/agent-governance/` | LOCAL-ONLY | Runtime state and evidence pointers |
