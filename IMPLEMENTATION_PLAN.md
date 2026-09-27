@@ -7,7 +7,8 @@ Status: IN PROGRESS. This file lists only unresolved work from the branch consol
 - Current candidate: selective CRM-only port from PR #13 (`voz`), kept separate from its draft PR and unrelated Maestri/MCG content. Notification router and voice delivery remain disabled by default; no live Asterisk call or WhatsApp send has been tested.
 - Local evidence under Node `22.23.3` / pnpm `9.15.9`: `pnpm repo:check` passed; CRM typecheck passed; CRM lint exited 0 (314 warnings, 0 errors; baseline status not established); focused notification/voice/schema tests passed (59/59 across 11 files).
 - Local database integration validation is unavailable: installed PostgreSQL 17 does not include pgvector (`vector.control` missing), so do not claim the baseline install/update gate passed.
-- Pending: review the final diff, commit/push only `implementation/unified`, run the complete main-vs-unified `branch-parity-validation` workflow on that exact commit, inspect raw artifacts and comparison, and classify every new failure before integrating further. Do not merge PRs or alter main.
+- Done: reviewed and committed only to `implementation/unified`, then pushed SHA `ad3d6cca319e782893c264f5fb6541b68892e3fa`; the updated archival bundle passed verification.
+- Pending: inspect complete main-vs-unified Actions run [36327198653](https://github.com/trydavidqix/Lumenva/actions/runs/36327198653), its raw artifacts and comparison; classify all new failures before integrating further. Do not merge PRs or alter main. The source-local Lumenva checkout was later observed dirty on `chore/orchestration-gate`; its seven modifications and untracked `.jules/` were not touched.
 
 ## 2. Resolve the four isolated Stripe test regressions
 
