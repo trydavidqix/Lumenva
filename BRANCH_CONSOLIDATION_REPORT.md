@@ -25,7 +25,7 @@ Status: IN PROGRESS. No branch refs have been deleted. No changes have been made
 - Exception: PR #26 (`codex/mcg-ci-integration`) merged only into `lumenva-command-center`, not `main`. It remains outside CRM consolidation because its MCG/dashboard ownership is Nexus.
 - PRs #39–42 targeted the F5 aggregate branch; their final aggregate entered `main` through PR #43.
 - `feat/f1-identity-mapping` is superseded by the later F1 identity mapping and F2 canonical mapping. Its Maestri/Codex plan belongs to Nexus, not Lumenva CRM.
-- `feat/f3-rbac` is an aggregator for PRs #20–24, but those PRs merged only into that feature branch, not directly into `main`. PR #27 merged the final matrix to `main`; it does not prove every RBAC code change reached `main`.
+- `feat/f3-rbac` is an aggregator for PRs #20–24, but those PRs merged only into that feature branch, not directly into `main`. The content review below distinguishes already-present pieces from the Firebase/Supabase contract conflict; PR #27's matrix alone is not treated as proof of implementation.
 - `feat/meta-direct-social-login` has no commits missing from `main`.
 - `fix/meta-provider-contracts` has no remaining tree delta in the Meta integration paths against `main`; its provider-router prototype targets an obsolete package path.
 - `feat/maestri-engineering-council` duplicates the council material in the open clean-council PR #11.
@@ -136,12 +136,13 @@ Status: IN PROGRESS. No branch refs have been deleted. No changes have been made
 | `TOKENS` | OUTSIDE CRM | Context/token gateway belongs to Nexus; preserve. |
 | `vps` | OUTSIDE CRM | Maestri V3/VPS belongs to Nexus; preserve. |
 
-### F3 security branch — partial, not safe to merge wholesale
+### F3 security branch — partial; useful pieces already represented, remainder conflicts with current auth
 
 - `origin/feat/f3-rbac` has six commits ahead of `main` and a 37-path delta from its merge base. Twenty-four touched paths match current `main`; nine differ; four old paths are absent from current `main`.
 - Its role-gate/admin changes switch Firebase identity checks to Supabase `auth.getUser()` and an `auth.uid()`-based RPC. Current `main` explicitly treats Firebase as auth authority and says Supabase `auth.uid()` cannot represent the Firebase session. Directly applying the F3 version risks breaking the F4 identity contract.
-- The branch also carries an ACL migration under the old `supabase/` path, while current canonical layout moved Supabase files, plus an unrelated `patch_session_req.ts` artifact.
-- Decision: classify as PARTIAL / AUTH-CONTRACT CONFLICT. Keep source and PR evidence archived. Do not merge these auth changes blindly. Useful remaining work: re-evaluate the ACL and human/agent role boundaries against current Firebase identity, map the migration to canonical infra, then validate on both auth paths.
+- The human/actor role separation (`HumanRole`/`ActorRole`, including MCP actor checks) is already present in current `main`; the same is true of migration `0203_f3_rbac_platform_admin_acl.sql` at canonical `infra/supabase/migrations/`. These are accounted for, not pending work to copy.
+- The remaining aggregate changes are not a safe cherry-pick: role guards/admin helpers switch the current Firebase identity contract to Supabase `auth.getUser()` and `auth.uid()` role resolution; route edits depend on those semantics. Other deltas include changed media storage behavior, removal/reversion of current Firebase-auth files and tests, and unrelated `patch_session_req.ts`.
+- Decision: classify as PARTIAL / AUTH-CONTRACT CONFLICT, resolved for consolidation purposes. No additional F3 source change is currently safe and demonstrably missing from `main`; preserve the branch/PR history and do not merge it. Reopen only if a concrete missing authorization invariant is demonstrated against current Firebase identity with a focused test.
 
 ## Merged PRs whose target was not `main`
 

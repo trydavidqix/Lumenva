@@ -19,14 +19,7 @@ Status: IN PROGRESS. This file lists only unresolved work from the branch consol
 - Do not delete `main`, `implementation/unified`, open-PR branches, recovery refs, or any branch/worktree with unique local data.
 - No branch deletion is part of the current run. Any cleanup candidate must be listed separately with archive proof first.
 
-## 3. Reconcile remaining F3 security work safely
-
-- PRs #20–24 merged into `feat/f3-rbac`, not `main`. Do not report the aggregate implementation as integrated.
-- The branch replaces Firebase identity checks with Supabase `auth.getUser()` and an `auth.uid()`-based role RPC. Current `main` explicitly uses Firebase identity and documents why Supabase `auth.uid()` cannot represent that session.
-- Re-evaluate only the still-useful RBAC/ACL work against the current Firebase identity contract. Map any retained migration into canonical `infra/supabase/`, add focused evidence, and validate before integration.
-- Do not copy unrelated `patch_session_req.ts` or merge the whole branch.
-
-## 4. Resolve individually reviewed open-PR candidates
+## 3. Resolve individually reviewed open-PR candidates
 
 - PR #11 (Maestri Council docs): outside CRM; preserve with its existing PR.
 - PR #13 (voice notifications): separate active voice workstream targeting Command Center; draft explicitly prohibits merge; preserve on `voz`.
