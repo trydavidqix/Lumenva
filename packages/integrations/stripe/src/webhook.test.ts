@@ -11,9 +11,9 @@ describe("StripeWebhookAdapter", () => {
 
   it("verifySignature returns false on error, true on success", () => {
     const constructEventMock = vi.fn();
-    vi.mocked(Stripe).mockImplementation(() => ({
-      webhooks: { constructEvent: constructEventMock }
-    } as unknown as Stripe));
+    vi.mocked(Stripe).mockImplementation(function () {
+      return { webhooks: { constructEvent: constructEventMock } } as unknown as Stripe;
+    });
 
     const adapter = new StripeWebhookAdapter({ webhookSecret: "sec_123" });
 

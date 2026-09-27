@@ -236,3 +236,11 @@ The open PR check results above are not canonical evidence against current `main
 - Created `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\repository-branch-consolidation-2026-09-27-379511a6.bundle` after pushing the checkpoint commit. `git bundle verify` succeeded; it advertises 91 refs, including `implementation/unified` at `379511a6`, local `main` at `2851ff59`, `origin/main` at `3fbe74a3`, all fetched origin/source-local refs, and the archived PR heads. Size: 81,491,614 bytes; SHA-256: `E4D2B7D35F20C93928B2DC203B3725D29EF4E148EE4C1FF6E942775C3F91BB20`.
 - The bundle contains local `main` `2851ff59085b84d5465eac45c1bb94ff0232c358`, while current `origin/main` is `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`; graph comparison is `0 1` (local main is one commit behind). The separate `Lumenva-main-validation-20260926` worktree is detached at the same `2851ff59` snapshot. Neither local main nor that validation worktree was changed; canonical parity uses the explicitly pinned current `origin/main` SHA.
 - After the documentation checkpoint, commit `379511a6` was pushed only to `implementation/unified`; it did not modify `main`. No branch refs were deleted.
+
+## Stripe mock regression repair — 2026-09-27
+
+- The owner requested an immediate autonomous fix, without waiting for Jules. Reproduced all four existing failures locally: Vitest 4 attempted `new Stripe(...)` using arrow-function mock implementations, raising `TypeError: ... is not a constructor`.
+- Changed only the four test mock factories in `packages/integrations/stripe/src/adapter.test.ts` and `src/webhook.test.ts` to constructable regular functions. No production source changed.
+- Node `22.23.3` / pnpm `9.15.9`: frozen install passed; `pnpm repo:check` passed; Stripe unit tests passed 7/7; ESLint on the two changed test files exited 0 with two React/pages-config warnings; `git diff --check` passed.
+- Full exact-toolchain main-vs-unified parity is pending for the fix commit. Do not change the 52 preexisting failure IDs or the 19 preexisting build failures.
+- Jules session `2727874664977885671` still has blank status and no diff. Jules CLI has no command to message an existing session, and the connected computer-use surface cannot access the user's Chrome window. No replacement session was created; the fix proceeded locally per the owner's instruction.
