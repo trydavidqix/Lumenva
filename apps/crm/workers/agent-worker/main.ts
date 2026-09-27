@@ -25,6 +25,7 @@ import { createInboundTurnHandler } from '@/lib/agent-engine/agent/inbound-turn'
 import { createFollowupTurnHandler, type FollowupTurnDeps } from '@/lib/agent-engine/agent/followup-turn';
 import { createCaseReplyTurnHandler } from '@/lib/agent-engine/agent/case-reply-turn';
 import { createOperatorTurnHandler } from '@/lib/agent-engine/agent/operator-turn';
+import { createNotificationDeliveryHandler } from '@/lib/notifications/worker';
 import { Mem0ContextProvider } from '@/lib/agent-engine/context/mem0-context-provider';
 import { GraphitiContextProvider } from '@/lib/agent-engine/context/graphiti-context-provider';
 import { GraphitiClient } from '@/lib/agent-engine/graph/graphiti-client';
@@ -63,6 +64,22 @@ export interface JobHandlerContext {
   workerId: string;
 }
 export type JobHandler = (job: JobRow, pool: pg.Pool, ctx: JobHandlerContext) => Promise<void>;
+
+export function registerNotificationDeliveryHandler(
+  env: Env,
+  handlers: Map<JobKind, JobHandler>,
+): void {
+  handlers.set(
+    'notification_delivery',
+    createNotificationDeliveryHandler({
+      supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL,
+      serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+      internalSecret: env.INTERNAL_SECRET,
+      routerEnabled: env.NOTIFICATION_ROUTER_ENABLED,
+      voiceEnabled: env.VOICE_NOTIFICATION_ENABLED,
+    }),
+  );
+}
 
 /** 1ª linha, truncada — PII fora de log. */
 function errMsg(err: unknown): string {
@@ -478,6 +495,7 @@ export async function main(): Promise<void> {
   // worker que não conhecesse o kind faria os jobs morrerem em 'dead' sem que
   // ninguém entendesse por quê.
   handlers.set('operator_turn', createOperatorTurnHandler(turnDeps));
+  registerNotificationDeliveryHandler(env, handlers);
   await startWorker(env, handlers, log);
 }
 

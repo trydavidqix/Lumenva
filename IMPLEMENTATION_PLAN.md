@@ -2,15 +2,22 @@
 
 Status: IN PROGRESS. This file lists only unresolved work from the branch consolidation. Do not implement new product features here.
 
-## 1. Resolve the four isolated Stripe test regressions
+## 1. Validate the current unified snapshot with canonical GitHub Actions
+
+- Current candidate: selective CRM-only port from PR #13 (`voz`), kept separate from its draft PR and unrelated Maestri/MCG content. Notification router and voice delivery remain disabled by default; no live Asterisk call or WhatsApp send has been tested.
+- Local evidence under Node `22.23.3` / pnpm `9.15.9`: `pnpm repo:check` passed; CRM typecheck passed; CRM lint exited 0 (314 warnings, 0 errors; baseline status not established); focused notification/voice/schema tests passed (59/59 across 11 files).
+- Local database integration validation is unavailable: installed PostgreSQL 17 does not include pgvector (`vector.control` missing), so do not claim the baseline install/update gate passed.
+- Pending: review the final diff, commit/push only `implementation/unified`, run the complete main-vs-unified `branch-parity-validation` workflow on that exact commit, inspect raw artifacts and comparison, and classify every new failure before integrating further. Do not merge PRs or alter main.
+
+## 2. Resolve the four isolated Stripe test regressions
 
 - Done: GitHub Actions run `36315065234` compared immutable `main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99` with tested unified snapshot `ff871fac24e5ecd0cbb892375f08bfff3721d702` on `windows-2025`, Node `22.23.3`, pnpm `9.15.9`. The five suite jobs ran in parallel; each compared main/unified on the same runner and used frozen installs. [Canonical run](https://github.com/trydavidqix/Lumenva/actions/runs/36315065234).
 - Done: lint, typecheck, and toolchain passed on both sides; unified `repo:check` passed. Build has the same 19 failure signatures on each side (`PREEXISTING`), duration 59,185 ms main / 60,349 ms unified.
 - Done: unit artifacts show main 5,487 passed / 88 failed / 10 skipped and unified 5,488 passed / 96 failed / 11 skipped. 52 normalized failure IDs are shared (`PREEXISTING`); four IDs are unified-only (`REGRESSION`). Unit duration 1,496,763 ms main / 1,416,129 ms unified. Worker errors 0/0; explicit test/hook/worker timeouts 0/0. The original comparison artifact counted timeout-like stack text incorrectly; report-only Actions run `36319801822` regenerated and uploaded the corrected comparison from retained run `36315065234` artifacts, with the heavy matrix skipped. [Corrected artifact run](https://github.com/trydavidqix/Lumenva/actions/runs/36319801822).
 - Regression cause: four Stripe tests use arrow-function mock constructors that Vitest 4 attempts to instantiate. The production Stripe `.ts` files are unchanged from main, so this is confirmed as a test/toolchain compatibility regression, not a proven production behavior regression. Do not change the 52 failures shared with main.
-- Pending: investigate/correct only those four Stripe tests with the existing Jules session, then run focused Stripe tests and a new parity validation for the changed snapshot. At 14:13 on 2026-09-27, focused tests under Node `22.23.3`, pnpm `9.15.9`, and Vitest `4.1.11` reproduced 4 failures / 3 passes; each failure is the `new Stripe(...)` TypeError from an arrow-function mock. No files were changed. `jules remote list --session` showed session `2727874664977885671` last active 36m10s earlier with blank status, and `jules remote pull --session 2727874664977885671` returned `No diff found in the remote VM.` This is inconclusive, not terminal. Chrome was running, but screenshot-backed computer use stopped because it could not determine the current URL confidently; no page interaction occurred. Do not start a replacement session, send a competing task, or modify the same tests until the existing session's state is known. Its prompt requires a new branch from `origin/implementation/unified` and proof of the validation base before editing; stop if the gate fails. Do not change preexisting failures.
+- Pending: investigate/correct only those four Stripe tests with the existing Jules session, then run focused Stripe tests and a new parity validation for the changed snapshot. At 15:37 on 2026-09-27, session `2727874664977885671` was still listed with blank status, last active 2h08m ago, and `jules remote pull` returned `No diff found in the remote VM.` This remains inconclusive, not terminal. The connected Chrome surface showed a ChatGPT tab, not the Jules session; no page interaction or replacement Jules task occurred. Its prompt requires a new branch from `origin/implementation/unified` and proof of the validation base before editing; stop if the gate fails. Do not change preexisting failures.
 
-## 2. Preserve archival coverage before any branch cleanup
+## 3. Preserve archival coverage before any branch cleanup
 
 - Done: supplemental bundle at `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\repository-branch-consolidation-2026-09-26.bundle` passed `git bundle verify`.
 - Done: 90 refs in bundle; all 88 expected local refs matched; 21 recovery refs and archived PR heads #1, #4, #5, and #12 are present.
@@ -21,10 +28,10 @@ Status: IN PROGRESS. This file lists only unresolved work from the branch consol
 - Do not delete `main`, `implementation/unified`, open-PR branches, recovery refs, or any branch/worktree with unique local data.
 - No branch deletion is part of the current run. Any cleanup candidate must be listed separately with archive proof first.
 
-## 3. Resolve individually reviewed open-PR candidates
+## 4. Resolve individually reviewed open-PR candidates
 
 - PR #11 (Maestri Council docs): outside CRM; preserve with its existing PR.
-- PR #13 (voice notifications): separate active voice workstream targeting Command Center; draft explicitly prohibits merge; preserve on `voz`.
+- PR #13 (voice notifications): `voz` and draft PR remain preserved and unchanged; a CRM-only selective port is under validation in unified. Do not merge the source PR or activate live Asterisk/WhatsApp delivery; full parity evidence is pending.
 - PR #25, `TOKENS`, `vps`, Local Runtime, Command Center/Maestri: Nexus ownership; keep outside CRM.
 - PR #40 (Jules delegation doc): docs-only; `verify` fails while invariants/vertical pass. The documented SDK is installed locally, but its workflow and secret/branch-selection behavior remain unvalidated. Preserve with PR; do not copy into this consolidation yet.
 - PR #50 (`jules-f7-waha-adapter-7831325555235237843`): disposition finalized as `SUPERSEDED FOR CURRENT BEHAVIOR / EXPERIMENTAL WRAPPER UNVALIDATED`. Current CRM already has WAHA text/media handling, `WahaClient.startSession/stopSession/logoutSession`, and `verifyHmacSha512` webhook validation. The PR's `F7_WAHA_ADAPTER` wrapper has no current-tree consumer and duplicates those capabilities; the shared command-port pattern already exists for Meta. Its tests fail during setup because they assign getter-only fields. Preserve the open PR/branch; do not port the duplicate adapter or spend Jules work on it.
@@ -40,6 +47,7 @@ Status: IN PROGRESS. This file lists only unresolved work from the branch consol
 
 ## Completion gate
 
+- Current selective PR #13 subset is not integrated until the exact candidate commit passes/gets classified by full GitHub Actions parity; current local typecheck, lint, `repo:check`, and 59 focused tests are supporting evidence only. Database baseline install/update remains unverified locally because pgvector is unavailable.
 - Exact-toolchain GitHub Actions comparison and corrected report-only artifact are complete. Four isolated Stripe test regressions remain; 52 unit failure IDs and 19 build failure signatures are preexisting. The report-only run skipped the heavy matrix and published corrected timeout counts from the retained raw artifacts.
 - Local `repo:check` passes under explicitly selected Node 22.23.3/pnpm 9.15.9. The machine's default Node remains 24.19.0; the isolated Node 22 runtime is available without a global PATH change.
 - Branch classifications and all archive refs are documented and bundle-verified.

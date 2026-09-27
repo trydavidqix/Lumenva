@@ -16,7 +16,7 @@ export const VOICE_PARTICIPANT_ROLES = ["customer", "ai_agent", "human_agent"] a
 export type VoiceParticipantRole = (typeof VOICE_PARTICIPANT_ROLES)[number];
 
 /** PSTN/SIP providers supported by the voice transport layer. */
-export const VOICE_PROVIDERS = ["telnyx"] as const;
+export const VOICE_PROVIDERS = ["telnyx", "asterisk"] as const;
 export type VoiceProvider = (typeof VOICE_PROVIDERS)[number];
 
 export type VoiceCallDirection = "inbound" | "outbound";

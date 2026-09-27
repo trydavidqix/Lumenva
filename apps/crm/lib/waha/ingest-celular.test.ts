@@ -3,8 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 // ingest.ts importa @/lib/audit (→ supabase/server → validação de env);
 // o mock corta a cadeia sem tocar no que está sob teste.
 vi.mock("@/lib/audit", () => ({ audit: vi.fn() }));
+vi.mock("@/lib/notifications/ack", () => ({ tryAcknowledgeNotification: vi.fn() }));
 
 import { dispatchWahaEvent, parseChatId, type WahaEnvelope, type WahaPayload } from "@/lib/waha/ingest";
+import { tryAcknowledgeNotification } from "@/lib/notifications/ack";
 
 /**
  * A MENSAGEM QUE O DONO DIGITA NO CELULAR TEM QUE CHEGAR NO CRM.
@@ -198,6 +200,35 @@ describe("mensagem digitada no celular do dono (fromMe)", () => {
     const contato = rpcs.find((c) => c.fn === "fn_upsert_wa_contact");
     expect(contato, "o contato do cliente nem foi criado").toBeDefined();
     expect(contato!.args.p_notify, "outbound batizou o cliente com o nome do operador").toBeNull();
+  });
+});
+
+describe("confirmação de lembrete recebida no WhatsApp", () => {
+  it("não despacha uma confirmação reconhecida para o agente", async () => {
+    vi.mocked(tryAcknowledgeNotification).mockResolvedValue({
+      acknowledged: true,
+      notificationId: "notification-1",
+    });
+    const { admin, rpcs } = bancoDeMentira();
+
+    await dispatchWahaEvent(
+      admin as never,
+      SESSION as never,
+      envelope({
+        id: "inbound-ack-1",
+        from: "5511999999999@c.us",
+        fromMe: false,
+        body: "CONFIRMAR AB23XZ",
+      }),
+      "req-ack-1",
+    );
+
+    expect(tryAcknowledgeNotification).toHaveBeenCalledWith(
+      admin,
+      { organizationId: "org-1", contactId: "contato-1", body: "CONFIRMAR AB23XZ" },
+    );
+    expect(rpcs.some(({ args }) => args.p_event_type === "ai_agent.dispatch_requested")).toBe(false);
+    expect(rpcs.some(({ args }) => args.p_event_type === "message.received")).toBe(true);
   });
 });
 

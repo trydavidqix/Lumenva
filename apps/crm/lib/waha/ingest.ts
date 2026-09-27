@@ -18,6 +18,7 @@ import { ackToStatus } from "@/lib/types/messaging";
 import type { WahaEnvelope, WahaPayload } from "@/lib/waha/envelope";
 import { bareWaMessageId, chatIdFromWaMessageId } from "@/lib/waha/message-id";
 import { logger } from "@/lib/logger";
+import { tryAcknowledgeNotification } from "@/lib/notifications/ack";
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -430,27 +431,47 @@ async function handleInbound(
     metadata: { conversation_id: conversationId, type: p.type, external_id: p.id },
   });
 
+  // Confirmações operacionais são determinísticas: consome o token antes do
+  // despacho de IA e evita gastar um turno só para interpretar o comando.
+  let notificationAcknowledged = false;
+  if (insertedMessage?.id && p.body) {
+    try {
+      const acknowledgement = await tryAcknowledgeNotification(admin, {
+        organizationId: session.organization_id,
+        contactId,
+        body: p.body,
+      });
+      notificationAcknowledged = acknowledgement.acknowledged;
+    } catch (error) {
+      logger.error("waha.ingest: notification acknowledgement failed", {
+        error: error instanceof Error ? error.message.slice(0, 160) : "unknown",
+      });
+    }
+  }
+
   // Dispara o agent-dispatcher worker (fire-and-forget; falha não quebra o 200).
   if (insertedMessage?.id) {
     const inboundMessageId = insertedMessage.id;
-    admin
-      .rpc("emit_event" as never, {
-        p_event_type: "ai_agent.dispatch_requested",
-        p_entity_kind: "message",
-        p_entity_id: inboundMessageId,
-        p_payload: {
-          organization_id: session.organization_id,
-          conversation_id: conversationId,
-          contact_id: contactId,
-          channel_session_id: session.id,
-          inbound_message_id: inboundMessageId,
-        },
-        p_metadata: { source: "waha_webhook", request_id: requestId },
-        p_organization_id: session.organization_id,
-      } as never)
-      .then(({ error }) => {
-        if (error) logger.error("waha.ingest: emit dispatch_requested failed", { error: error.message });
-      });
+    if (!notificationAcknowledged) {
+      admin
+        .rpc("emit_event" as never, {
+          p_event_type: "ai_agent.dispatch_requested",
+          p_entity_kind: "message",
+          p_entity_id: inboundMessageId,
+          p_payload: {
+            organization_id: session.organization_id,
+            conversation_id: conversationId,
+            contact_id: contactId,
+            channel_session_id: session.id,
+            inbound_message_id: inboundMessageId,
+          },
+          p_metadata: { source: "waha_webhook", request_id: requestId },
+          p_organization_id: session.organization_id,
+        } as never)
+        .then(({ error }) => {
+          if (error) logger.error("waha.ingest: emit dispatch_requested failed", { error: error.message });
+        });
+    }
 
     admin
       .rpc("emit_event" as never, {

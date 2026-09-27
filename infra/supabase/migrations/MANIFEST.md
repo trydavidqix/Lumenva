@@ -244,3 +244,5 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 | 20260922130000 | 0201_f2_platform_admin_function_acl | Revoke default authenticated EXECUTE from the platform-admin audit SECURITY DEFINER function; preserve access only for platform_admin_runtime. |
 | `20260922204356` | `0202_f1_identity_mapping_v2` | F1 forward-fix over the F2 mapping: immutable canonical mapping metadata, isolated pending candidates, append-only idempotent audit, disabled dual-read flag, and migration_admin-only backfill. |
 | `20260922214356` | `0203_f3_rbac_platform_admin_acl` | Revoke excessive privileges on platform_admins. |
+| `20260927100000` | `0204_voice_notification_router` | Tenant-bound durable reminders, delivery attempt ledger, queue/cron job vocabulary, and authenticated read-only policies. |
+| `20260927110000` | `0205_notification_delivery_policy` | Per-tenant quiet hours, E.164 voice allowlist, retries, cooldown, and call-rate safeguards; voice remains disabled by default. |

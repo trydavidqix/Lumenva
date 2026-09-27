@@ -224,4 +224,5 @@ export type AuditAction =
   | "content_os.source_collection_requested"
   | "content_os.opportunity_status_changed"
   | "content_os.creative_job_created"
-  | "content_os.asset_registered";
+  | "content_os.asset_registered"
+  | "notification.reminder_scheduled";

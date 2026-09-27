@@ -6902,7 +6902,7 @@ alter table job_queue add constraint job_queue_kind_check
   -- de todo clone que já tenha uma linha de vocabulário posterior — os blocos
   -- antigos rodam antes e falham em cadeia. Vigiado por
   -- tests/unit/baseline-constraint-reconstruida.test.ts.
-  check (kind in ('inbound_turn','followup_turn','watchdog','flywheel','case_reply_turn','operator_turn'));
+  check (kind in ('inbound_turn','followup_turn','watchdog','flywheel','case_reply_turn','operator_turn','notification_delivery'));
 alter table job_queue drop constraint if exists job_queue_turn_needs_contact;
 do $$
 declare c text;
@@ -6913,11 +6913,11 @@ begin
   if c is not null then execute format('alter table job_queue drop constraint %I', c); end if;
 end $$;
 alter table job_queue add constraint job_queue_turn_needs_contact
-  check ((kind in ('inbound_turn','followup_turn','case_reply_turn','operator_turn')) = (contact_id is not null));
+  check ((kind in ('inbound_turn','followup_turn','case_reply_turn','operator_turn','notification_delivery')) = (contact_id is not null));
 
 alter table cron_jobs drop constraint if exists cron_jobs_job_kind_check;
 alter table cron_jobs add constraint cron_jobs_job_kind_check
-  check (job_kind in ('inbound_turn','followup_turn','watchdog','flywheel','case_reply_turn'));
+  check (job_kind in ('inbound_turn','followup_turn','watchdog','flywheel','case_reply_turn','notification_delivery'));
 
 -- ---- agent_inbox_items: reconcilia kind check followup_dead+snooze_expired (migration 0065) ----
 
@@ -11114,3 +11114,142 @@ grant execute on function public.backfill_identity_user_mappings(jsonb, uuid, bo
 REVOKE ALL ON TABLE public.platform_admins FROM anon, authenticated, service_role, public;
 GRANT SELECT ON TABLE public.platform_admins TO authenticated;
 GRANT SELECT ON TABLE public.platform_admins TO service_role;
+
+-- ---- Durable voice/WhatsApp notification router (0204-0205) ----
+create unique index if not exists contacts_org_id_id_unique
+  on public.contacts (organization_id, id);
+
+create table if not exists public.notification_requests (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  contact_id uuid not null,
+  idempotency_key text not null check (char_length(idempotency_key) between 1 and 160),
+  category text not null default 'reminder' check (category in ('reminder')),
+  body text not null check (char_length(body) between 1 and 500),
+  ack_token text not null check (ack_token ~ '^[A-Z0-9]{6}$'),
+  status text not null default 'scheduled' check (
+    status in (
+      'scheduled','whatsapp_pending','whatsapp_sent','acknowledged',
+      'voice_pending','voice_queued','completed','failed','canceled'
+    )
+  ),
+  scheduled_at timestamptz not null,
+  escalation_at timestamptz not null,
+  whatsapp_message_id uuid null references public.messages(id) on delete set null,
+  voice_call_id uuid null references public.voice_calls(id) on delete set null,
+  acknowledged_at timestamptz null,
+  completed_at timestamptz null,
+  last_error_code text null check (last_error_code is null or char_length(last_error_code) <= 120),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint notification_requests_org_contact_fk
+    foreign key (organization_id, contact_id)
+    references public.contacts(organization_id, id) on delete cascade,
+  constraint notification_requests_escalation_order check (escalation_at >= scheduled_at),
+  unique (organization_id, id),
+  unique (organization_id, idempotency_key),
+  unique (organization_id, ack_token)
+);
+create index if not exists notification_requests_due_idx
+  on public.notification_requests (status, scheduled_at)
+  where status in ('scheduled','whatsapp_pending','voice_pending');
+create index if not exists notification_requests_contact_live_idx
+  on public.notification_requests (organization_id, contact_id, created_at desc)
+  where status not in ('completed','failed','canceled','acknowledged');
+
+create table if not exists public.notification_delivery_attempts (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  notification_id uuid not null,
+  channel text not null check (channel in ('whatsapp','voice')),
+  attempt smallint not null check (attempt between 1 and 10),
+  status text not null check (status in ('queued','sent','delivered','acknowledged','failed','skipped')),
+  external_id text null check (external_id is null or char_length(external_id) <= 256),
+  error_code text null check (error_code is null or char_length(error_code) <= 120),
+  queued_at timestamptz null,
+  sent_at timestamptz null,
+  delivered_at timestamptz null,
+  acknowledged_at timestamptz null,
+  failed_at timestamptz null,
+  occurred_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  constraint notification_delivery_attempts_tenant_fk
+    foreign key (organization_id, notification_id)
+    references public.notification_requests(organization_id, id) on delete cascade,
+  unique (notification_id, channel, attempt)
+);
+create index if not exists notification_delivery_attempts_org_time_idx
+  on public.notification_delivery_attempts (organization_id, occurred_at desc);
+
+create table if not exists public.notification_delivery_policies (
+  organization_id uuid primary key references public.organizations(id) on delete cascade,
+  timezone text not null default 'UTC' check (char_length(timezone) between 1 and 64),
+  voice_escalation_enabled boolean not null default false,
+  allowed_voice_destinations text[] not null default '{}'::text[],
+  whatsapp_max_attempts smallint not null default 2 check (whatsapp_max_attempts between 1 and 10),
+  voice_max_attempts smallint not null default 1 check (voice_max_attempts between 1 and 5),
+  max_voice_calls_per_hour smallint not null default 2 check (max_voice_calls_per_hour between 0 and 100),
+  max_voice_calls_per_day smallint not null default 4 check (max_voice_calls_per_day between 0 and 500),
+  voice_cooldown_seconds integer not null default 600 check (voice_cooldown_seconds between 0 and 86400),
+  quiet_hours_start time null,
+  quiet_hours_end time null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint notification_delivery_policies_quiet_hours_pair
+    check (
+      (quiet_hours_start is null and quiet_hours_end is null)
+      or (quiet_hours_start is not null and quiet_hours_end is not null)
+    )
+);
+
+alter table public.notification_requests enable row level security;
+alter table public.notification_delivery_attempts enable row level security;
+alter table public.notification_delivery_policies enable row level security;
+drop policy if exists notification_requests_select_org on public.notification_requests;
+create policy notification_requests_select_org
+  on public.notification_requests for select to authenticated
+  using (organization_id in (select public.fn_user_org_ids()));
+drop policy if exists notification_delivery_attempts_select_org on public.notification_delivery_attempts;
+create policy notification_delivery_attempts_select_org
+  on public.notification_delivery_attempts for select to authenticated
+  using (organization_id in (select public.fn_user_org_ids()));
+drop policy if exists notification_delivery_policies_select_org on public.notification_delivery_policies;
+create policy notification_delivery_policies_select_org
+  on public.notification_delivery_policies for select to authenticated
+  using (organization_id in (select public.fn_user_org_ids()));
+drop policy if exists notification_delivery_policies_insert_org on public.notification_delivery_policies;
+create policy notification_delivery_policies_insert_org
+  on public.notification_delivery_policies for insert to authenticated
+  with check (
+    public.fn_is_platform_admin()
+    or (organization_id in (select public.fn_user_org_ids())
+        and public.fn_role_at_least(organization_id, 'manager'))
+  );
+drop policy if exists notification_delivery_policies_update_org on public.notification_delivery_policies;
+create policy notification_delivery_policies_update_org
+  on public.notification_delivery_policies for update to authenticated
+  using (
+    public.fn_is_platform_admin()
+    or (organization_id in (select public.fn_user_org_ids())
+        and public.fn_role_at_least(organization_id, 'manager'))
+  )
+  with check (
+    public.fn_is_platform_admin()
+    or (organization_id in (select public.fn_user_org_ids())
+        and public.fn_role_at_least(organization_id, 'manager'))
+  );
+drop policy if exists notification_delivery_policies_delete_org on public.notification_delivery_policies;
+create policy notification_delivery_policies_delete_org
+  on public.notification_delivery_policies for delete to authenticated
+  using (
+    public.fn_is_platform_admin()
+    or (organization_id in (select public.fn_user_org_ids())
+        and public.fn_role_at_least(organization_id, 'manager'))
+  );
+revoke all on table public.notification_requests, public.notification_delivery_attempts
+  from public, anon, authenticated;
+grant select on table public.notification_requests, public.notification_delivery_attempts to authenticated;
+grant all on table public.notification_requests, public.notification_delivery_attempts to service_role;
+revoke all on table public.notification_delivery_policies from public, anon;
+grant select, insert, update, delete on table public.notification_delivery_policies to authenticated;
+grant all on table public.notification_delivery_policies to service_role;

@@ -1,11 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { GraphitiContextProvider } from "@/lib/agent-engine/context/graphiti-context-provider";
 import { Mem0ContextProvider } from "@/lib/agent-engine/context/mem0-context-provider";
 import { loadEnv } from "@/lib/agent-engine/env";
 import { createLogger } from "@/lib/agent-engine/obs/logger";
 
-import { buildTurnDeps } from "./main";
+import { buildTurnDeps, registerNotificationDeliveryHandler, type JobHandler } from "./main";
+import type { JobKind, JobRow } from "@/lib/agent-engine/queue/queue";
+import type pg from "pg";
 
 const REQUIRED: NodeJS.ProcessEnv = {
   NODE_ENV: "test",
@@ -41,5 +43,28 @@ describe("buildTurnDeps — wiring de Mem0/Graphiti nunca fica undefined", () =>
 
     expect(deps.semanticContextProvider).toBeInstanceOf(Mem0ContextProvider);
     expect(deps.graphContextProvider).toBeInstanceOf(GraphitiContextProvider);
+  });
+});
+
+describe("worker registration — notification delivery", () => {
+  it("registra o handler real e mantém o envio fechado por padrão", async () => {
+    const env = loadEnv(REQUIRED);
+    const handlers = new Map<JobKind, JobHandler>();
+    registerNotificationDeliveryHandler(env, handlers);
+    const handler = handlers.get("notification_delivery");
+    const query = vi.fn();
+    const job = {
+      id: "job-1",
+      organization_id: "org-1",
+      contact_id: "contact-1",
+      kind: "notification_delivery",
+      payload: { notification_id: "33333333-3333-4333-8333-333333333333", phase: "initial" },
+    } as unknown as JobRow;
+
+    expect(handler).toBeTypeOf("function");
+    await expect(handler?.(job, { query } as unknown as pg.Pool, { workerId: "test" })).rejects.toThrow(
+      "notification_router_disabled",
+    );
+    expect(query).not.toHaveBeenCalled();
   });
 });

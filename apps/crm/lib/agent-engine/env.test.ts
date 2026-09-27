@@ -57,3 +57,19 @@ describe("loadEnv — a chave da OpenAI existe no contrato do worker", () => {
     expect(env.OPENAI_API_KEY).toBeUndefined();
   });
 });
+
+describe("loadEnv — entrega de notificações permanece desligada por padrão", () => {
+  it("desliga o router e voz quando as flags não estão configuradas", () => {
+    const env = loadEnv(REQUIRED);
+
+    expect(env.NOTIFICATION_ROUTER_ENABLED).toBe(false);
+    expect(env.VOICE_NOTIFICATION_ENABLED).toBe(false);
+  });
+
+  it("aceita habilitação explícita, sem habilitar voz por consequência", () => {
+    const env = loadEnv({ ...REQUIRED, NOTIFICATION_ROUTER_ENABLED: "true" });
+
+    expect(env.NOTIFICATION_ROUTER_ENABLED).toBe(true);
+    expect(env.VOICE_NOTIFICATION_ENABLED).toBe(false);
+  });
+});
