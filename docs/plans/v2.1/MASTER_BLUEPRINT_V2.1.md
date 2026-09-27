@@ -1,7 +1,7 @@
 # LUMENVA — MASTER BLUEPRINT CANÔNICO V2.1
 
-**Escopo:** Lumenva / CRM / Business OS somente  
-**Repositório:** `trydavidqix/Lumenva`  
+**Escopo:** Lumenva / CRM / Business OS somente
+**Repositório:** `trydavidqix/Lumenva`
 **Princípio:** `PRESERVE FIRST → PROVE SECOND → CHANGE LAST`
 
 ## 0. Autoridade deste Blueprint
@@ -464,7 +464,7 @@ Reputation alimenta routing, nunca permission escalation.
 - Evidence Transfer
 - Result Contract
 
-`A2A = Agent ↔ Agent`  
+`A2A = Agent ↔ Agent`
 `MCP = Agent ↔ Tool/Data`
 
 ## 22. Capability OS

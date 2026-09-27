@@ -1,8 +1,8 @@
 # LUMENVA — MASTER PLAN V2.2
 
-**Status:** proposed canonical architecture + execution roadmap  
-**Base:** V2.1  
-**Scope:** Lumenva only; Nexus remains a separate project  
+**Status:** proposed canonical architecture + execution roadmap
+**Base:** V2.1
+**Scope:** Lumenva only; Nexus remains a separate project
 **Rule:** PRESERVE FIRST → PROVE SECOND → CHANGE LAST
 
 ---
@@ -649,7 +649,7 @@ Agent
 → ActionReceipt / Evidence
 ```
 
-Capability = what must be done.  
+Capability = what must be done.
 Provider = who performs it.
 
 ---
@@ -892,7 +892,7 @@ Track:
 - errors
 - business outcomes
 
-Trace metadata ON by default.  
+Trace metadata ON by default.
 Sensitive trace content OFF by default.
 
 ---

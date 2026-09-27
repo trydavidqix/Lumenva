@@ -1,7 +1,7 @@
 # LUMENVA — MASTER IMPLEMENTATION PLAN V2.1
 
-**Escopo:** Lumenva somente  
-**Repositório:** `trydavidqix/Lumenva`  
+**Escopo:** Lumenva somente
+**Repositório:** `trydavidqix/Lumenva`
 **Princípio:** `PRESERVE FIRST → PROVE SECOND → CHANGE LAST`
 
 Classificação:
