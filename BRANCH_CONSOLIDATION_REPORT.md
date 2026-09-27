@@ -9,7 +9,7 @@ Status: IN PROGRESS. No branch refs have been deleted. No changes have been made
 - `source-local`: `C:\Users\David\Desktop\Projetos\Lumenva`.
 - Source checkout was read-only and clean on `main` at `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
 - Current `origin/main`: `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
-- Current `implementation/unified`: `45771c83a9241f53abd57ea3926d460a2a0773e9`. The validation snapshot was `ff871fac24e5ecd0cbb892375f08bfff3721d702`; the current head adds only a corrected timeout parser and its regression test, pushed with `[skip ci]` so the heavy suite was not rerun.
+- Current `implementation/unified`: `957752a64d88d081683d4f1981892eb3097358a5`. The heavy-validation snapshot was `ff871fac24e5ecd0cbb892375f08bfff3721d702`. Subsequent commits corrected the timeout parser with a regression test (`45771c83`) and updated this report/plan (`957752a6`); neither changes application behavior, and the parser commit used `[skip ci]` to avoid repeating the heavy suites.
 - This branch includes the exact current `origin/main` tip and selective F3–F5 cleanups. It has not been merged to `main`.
 - Existing pre-unification bundle remains at `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\repository-pre-unification.bundle`.
 - Supplemental bundle: `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\repository-branch-consolidation-2026-09-26.bundle`. `git bundle verify` passed. It contains 90 refs; all 88 expected local refs match exactly (0 missing, 0 mismatched), including all 21 recovery refs and four archived closed-PR heads (#1, #4, #5, #12). Size: 81,425,389 bytes. SHA-256: `737FBC45553E988CC90C47D31477F67FECD3A16C0242F2D769A3706D50C048FA`.
