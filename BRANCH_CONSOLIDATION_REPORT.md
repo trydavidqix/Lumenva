@@ -172,6 +172,7 @@ The parity artifacts validate only the pinned `main`/`implementation/unified` sn
 - Session `2727874664977885671` remains the only Jules task authorized for the four isolated Stripe test regressions. `jules remote list --session` showed it last active 28m42s earlier with a blank status; `jules remote pull --session 2727874664977885671` returned `No diff found in the remote VM.` The CLI output does not establish a terminal state, so no replacement session was started and no competing edits were made.
 - Google Chrome was confirmed running, but the Windows computer-use capture could not establish the current URL with sufficient confidence and stopped before any page interaction. This is not evidence that the Jules session completed or failed.
 - At that checkpoint the clone was clean at `4c5bd766fd66888705e72b124cfc14de4b78a88`, tracking `origin/implementation/unified`; the follow-up documentation commit is `379511a60c42a980a01cf26b3a4e6f7d8e95012d` and is pushed. The parity baseline remains `origin/main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
+- Fresh check at 14:13: focused Stripe tests under Node `22.23.3`, pnpm `9.15.9`, and Vitest `4.1.11` reproduced 4 failures / 3 passes across `src/adapter.test.ts` and `src/webhook.test.ts`; all four failures are `TypeError: ... is not a constructor` at `new Stripe(...)`. No files were changed. The Jules listing showed last activity 36m10s earlier with blank status; a fresh pull still reports no diff, which remains inconclusive rather than terminal.
 
 ### Open-PR CI freshness
 
