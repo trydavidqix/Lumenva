@@ -1,6 +1,20 @@
 # Consolidation Closeout Plan
 
-Status: COMPLETE for the authorized consolidation, Stripe repair, validation, and archive-proof scope. No unfinished implementation task remains in this scope. Preserve open PRs, source refs, and recovery refs; no cleanup or merge is authorized by this closeout.
+Status: IN PROGRESS — follow-up consolidation PR #75 is awaiting current GitHub Actions validation and required Owner review. The completed parity/Stripe/archive notes below are historical checkpoints, not proof that PR #75 is merged or that final cleanup is complete.
+
+## Current follow-up — 2026-09-27
+
+1. **Fix scan findings on the consolidation PR — DONE.** Commit `a9fe7aa9fc1965868bd142edc255b5991098bbaa` removes modulo bias from notification acknowledgement tokens and replaces `shell: true` in the branch-validation runner with explicit Windows `cmd.exe` invocation (`shell: false`). TDD checks passed before and after each change.
+2. **Local validation on exact toolchain — DONE.** Node `22.23.3`, pnpm `9.15.9`; `pnpm repo:check`, CRM typecheck, focused ESLint, CRM notification tests (8/8), branch-validation parser tests (7/7), and actual `pnpm.cmd --version` invocation passed.
+3. **GitHub Actions on PR #75 — VALIDATED WITH BASELINE FAILURES.** At tested code head `a9fe7aa9`, CodeQL, Semgrep, Gitleaks, OSV, both invariant jobs, and vertical checks passed. `verify` and `verify-and-build` failed only at unit tests. Full parity run [36345096100](https://github.com/trydavidqix/Lumenva/actions/runs/36345096100) compared immutable main SHA `3fbe74a3` with candidate `a9fe7aa9` on `windows-2025`, Node `22.23.3`, pnpm `9.15.9`, and frozen installs. Lint/typecheck/toolchain passed both; build had 19 identical failures (`PREEXISTING`); unit had 5,487/88/10 main and 5,521/88/11 candidate, with 52 shared failure IDs, 0 candidate-only failures, 0 timeouts, and 0 worker errors. Candidate has one additional skipped test; preserve that coverage difference in the report. The parity workflow itself concluded success; this does not mean the shared-failing unit/build commands passed.
+4. **Refresh reports and archival bundle — IN PROGRESS.** Detailed run and raw artifacts are preserved in `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\parity-run-36345096100`. Create a new verified bundle after committing/pushing these documentation updates and compare all current ref names/SHA values. Checkpoint bundle for `a9fe7aa9`: 97 bundle heads; all 94 then-current refs included; SHA-256 `ED857DF879828C08D2C5B924590E161C7316712E4A3AD84A37E7F69856CE8A5A`.
+5. **PR merge — BLOCKED by repository governance and required checks.** GitHub main protection requires one approving review; no approval exists. Required unit checks fail on 52 baseline failure IDs shared with main, and build has 19 shared failures. Do not self-approve or bypass protection. David must review the evidence and decide the next authorized merge path; do not merge or delete refs here.
+
+No branches, PRs, recovery worktrees, or source checkouts were deleted or modified. Main and the original Lumenva checkout remain untouched.
+
+---
+
+## Prior validation record
 
 ## 1. Validate the current unified snapshot with canonical GitHub Actions — DONE
 
