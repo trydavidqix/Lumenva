@@ -174,7 +174,7 @@ The open PR check results above are not canonical evidence against current `main
 ## Validation and changes
 
 - Toolchain target: Node `22.23.3`, pnpm `9.15.9`.
-- `pnpm repo:check`: passed locally on the isolated branch.
+- `pnpm repo:check`: passed on the isolated branch with Node `22.23.3` and pnpm `9.15.9`. The host's default shell still resolves Node `24.19.0`; an official Node `22.23.3` Windows x64 archive was SHA-256-verified (`2b0ff57b049cda1bbcea2240eec20467018713c1efe1f7360c2681859b90ed71`) and extracted under `%LOCALAPPDATA%\Lumenva\toolchain\node-v22.23.3-win-x64`, without changing global PATH. The local check used that binary explicitly. Heavy comparative suites remain GitHub Actions evidence.
 - CRM typecheck: passed after typing corrections.
 - Focused tests: 4 files, 17 tests passed.
 - CRM-only lint: 0 errors, 313 warnings. This command scope differs from the earlier root lint run; warning totals are not directly comparable.
