@@ -3,6 +3,19 @@ import test from 'node:test'
 import * as validationParser from './branch-validation-parser.mjs'
 const { extractFailureSignatures, summarizeVitestOutput } = validationParser
 
+test('launches Windows pnpm without enabling implicit shell execution', () => {
+  assert.equal(typeof validationParser.spawnSpec, 'function')
+  assert.deepEqual(validationParser.spawnSpec(
+    'pnpm',
+    ['install', '--frozen-lockfile'],
+    { platform: 'win32', comSpec: 'C:\\Windows\\System32\\cmd.exe' },
+  ), {
+    command: 'C:\\Windows\\System32\\cmd.exe',
+    args: ['/d', '/s', '/c', 'pnpm.cmd', 'install', '--frozen-lockfile'],
+    options: { shell: false, windowsHide: true },
+  })
+})
+
 test('extracts stable unit failure IDs after pnpm prefixes', () => {
   const log = 'apps/crm test:unit:  FAIL  tests/unit/auth.test.ts > rejects invalid user\n'
 

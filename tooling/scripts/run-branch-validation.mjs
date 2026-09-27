@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 import { performance } from 'node:perf_hooks'
-import { countTimeouts, extractFailureSignatures, summarizeVitestOutput } from './branch-validation-parser.mjs'
+import { countTimeouts, extractFailureSignatures, spawnSpec, summarizeVitestOutput } from './branch-validation-parser.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const artifacts = join(root, 'parity-artifacts')
@@ -19,7 +19,9 @@ mkdirSync(artifacts, { recursive: true })
 function spawnLogged(args, cwd, logPath, env = process.env, append = false) {
   return new Promise((resolvePromise) => {
     const out = createWriteStream(logPath, { flags: append ? 'a' : 'w' })
-    const child = spawn('pnpm.cmd', args, { cwd, env, shell: true, windowsHide: true })
+    // pnpm.cmd is a Windows batch shim. Arguments come from fixed suite commands; paths are cwd only.
+    const spec = spawnSpec('pnpm', args)
+    const child = spawn(spec.command, spec.args, { cwd, env, ...spec.options })
     child.stdout.pipe(out)
     child.stderr.pipe(out)
     child.on('error', (error) => {
@@ -67,11 +69,8 @@ async function runTarget(target) {
   const nodeOk = process.version === 'v22.23.3'
   const pmMatch = /^pnpm@9\.15\.9\+sha512\.[a-f0-9]+$/.test(info.packageManager ?? '')
   const pnpmVersion = await new Promise((resolvePromise) => {
-    const child = spawn('pnpm.cmd', ['--version'], {
-      cwd: target.path,
-      shell: true,
-      windowsHide: true,
-    })
+    const spec = spawnSpec('pnpm', ['--version'])
+    const child = spawn(spec.command, spec.args, { cwd: target.path, ...spec.options })
     let output = ''
     child.stdout.on('data', (chunk) => {
       output += chunk
@@ -156,7 +155,8 @@ async function runTarget(target) {
 const mainPath = resolve(root, '..', 'main-validation')
 const mainRef = process.env.MAIN_REF ?? 'origin/main'
 const mainHead = await new Promise((resolvePromise) => {
-  const child = spawn('git', ['rev-parse', mainRef], { cwd: root, shell: true, windowsHide: true })
+  const spec = spawnSpec('git', ['rev-parse', mainRef])
+  const child = spawn(spec.command, spec.args, { cwd: root, ...spec.options })
   let output = ''
   child.stdout.on('data', (chunk) => {
     output += chunk
@@ -165,11 +165,8 @@ const mainHead = await new Promise((resolvePromise) => {
 })
 if (!mainHead) throw new Error(`Unable to resolve ${mainRef}`)
 const hasMainWorktree = await new Promise((resolvePromise) => {
-  const child = spawn('git', ['worktree', 'list', '--porcelain'], {
-    cwd: root,
-    shell: true,
-    windowsHide: true,
-  })
+  const spec = spawnSpec('git', ['worktree', 'list', '--porcelain'])
+  const child = spawn(spec.command, spec.args, { cwd: root, ...spec.options })
   let output = ''
   child.stdout.on('data', (chunk) => {
     output += chunk
@@ -178,19 +175,16 @@ const hasMainWorktree = await new Promise((resolvePromise) => {
 })
 if (!hasMainWorktree) {
   const add = await new Promise((resolvePromise) => {
-    const child = spawn('git', ['worktree', 'add', '--detach', mainPath, mainHead], {
-      cwd: root,
-      shell: true,
-      windowsHide: true,
-      stdio: 'inherit',
-    })
+    const spec = spawnSpec('git', ['worktree', 'add', '--detach', mainPath, mainHead])
+    const child = spawn(spec.command, spec.args, { cwd: root, ...spec.options, stdio: 'inherit' })
     child.on('close', (code) => resolvePromise(code ?? 1))
   })
   if (add !== 0) throw new Error(`Unable to create isolated main worktree at ${mainPath}`)
 }
 
 const unifiedHead = await new Promise((resolvePromise) => {
-  const child = spawn('git', ['rev-parse', 'HEAD'], { cwd: root, shell: true, windowsHide: true })
+  const spec = spawnSpec('git', ['rev-parse', 'HEAD'])
+  const child = spawn(spec.command, spec.args, { cwd: root, ...spec.options })
   let output = ''
   child.stdout.on('data', (chunk) => {
     output += chunk

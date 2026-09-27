@@ -1,6 +1,18 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { randomInt } from "node:crypto";
 
 const ACK_COMMAND = /^CONFIRMAR\s+([A-Z0-9]{6})$/i;
+const ACK_TOKEN_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+export function createNotificationAckToken(
+  boundedRandomInt: (min: number, max: number) => number = randomInt,
+): string {
+  let token = "";
+  for (let index = 0; index < 6; index += 1) {
+    token += ACK_TOKEN_ALPHABET[boundedRandomInt(0, ACK_TOKEN_ALPHABET.length)];
+  }
+  return token;
+}
 
 export function parseNotificationAckToken(input: string): string | null {
   const match = ACK_COMMAND.exec(input.trim());

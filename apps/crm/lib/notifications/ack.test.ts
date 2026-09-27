@@ -4,6 +4,22 @@ import { describe, expect, it } from "vitest";
 import { parseNotificationAckToken, tryAcknowledgeNotification } from "./ack";
 
 describe("notification acknowledgement token", () => {
+  it("uses unbiased bounded cryptographic indices for each token character", async () => {
+    const ackModule = await import("./ack");
+    expect(typeof ackModule.createNotificationAckToken).toBe("function");
+
+    const bounds: Array<[number, number]> = [];
+    const token = ackModule.createNotificationAckToken((min, max) => {
+      bounds.push([min, max]);
+      return max - 1;
+    });
+
+    expect(token).toBe("999999");
+    expect(bounds).toEqual([
+      [0, 32], [0, 32], [0, 32], [0, 32], [0, 32], [0, 32],
+    ]);
+  });
+
   it("accepts only an explicit CONFIRMAR command with a six-character token", () => {
     expect(parseNotificationAckToken("CONFIRMAR AB23XZ")).toBe("AB23XZ");
     expect(parseNotificationAckToken("  confirmar ab23xz  ")).toBe("AB23XZ");

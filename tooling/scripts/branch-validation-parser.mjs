@@ -2,6 +2,25 @@ function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+export function spawnSpec(command, args, {
+  platform = process.platform,
+  comSpec = process.env.ComSpec ?? 'cmd.exe',
+} = {}) {
+  if (platform === 'win32' && command === 'pnpm') {
+    return {
+      command: comSpec,
+      args: ['/d', '/s', '/c', 'pnpm.cmd', ...args],
+      options: { shell: false, windowsHide: true },
+    }
+  }
+
+  return {
+    command,
+    args,
+    options: { shell: false, windowsHide: true },
+  }
+}
+
 function stripRunnerPrefix(line) {
   if (/^\s*(?:ERR_|Error:|Build error occurred|error TS\d+:|Failed to compile|Module not found:)/i.test(line)) {
     return line.trimStart()

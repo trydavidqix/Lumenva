@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { NextRequest } from "next/server";
 import type pg from "pg";
 import { z } from "zod";
@@ -7,6 +7,7 @@ import { scheduleCronJob } from "@/lib/agent-engine/cron/scheduler";
 import { getRequestPool } from "@/lib/agent-engine/db/request-pool";
 import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
+import { createNotificationAckToken } from "@/lib/notifications/ack";
 import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
@@ -49,12 +50,6 @@ function authorized(req: NextRequest): boolean {
 function organizationId(req: NextRequest): string | null {
   const value = req.headers.get("x-organization-id");
   return value && z.string().uuid().safeParse(value).success ? value : null;
-}
-
-function ackToken(): string {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const bytes = randomBytes(6);
-  return [...bytes].map((byte) => alphabet[byte % alphabet.length]).join("");
 }
 
 function sameRequest(
@@ -164,7 +159,7 @@ async function reserveNotification(
            values ($1,$2,$3,$4,$5,'scheduled',$6,$7)
            returning id, organization_id, contact_id, idempotency_key, body, ack_token,
                      status, scheduled_at, escalation_at`,
-          [orgId, input.contact_id, input.idempotency_key, input.body, ackToken(), scheduledAt, escalationAt],
+          [orgId, input.contact_id, input.idempotency_key, input.body, createNotificationAckToken(), scheduledAt, escalationAt],
         );
         row = inserted.rows[0] ?? null;
         await client.query("release savepoint notification_insert");
