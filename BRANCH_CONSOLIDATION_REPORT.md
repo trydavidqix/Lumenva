@@ -9,7 +9,7 @@ Status: IN PROGRESS. No branch refs have been deleted. No changes have been made
 - `source-local`: `C:\Users\David\Desktop\Projetos\Lumenva`.
 - Source checkout was read-only and clean on `main` at `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
 - Current `origin/main`: `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
-- Current `implementation/unified`: `153e390fb3da06602c6b9ebb95ad75efe9a96a8d`.
+- Current `implementation/unified`: `4e73079c950b22e99b54634523fe4658aefe661e` before the PR #69 selective port currently being validated.
 - This branch includes the exact current `origin/main` tip and selective F3–F5 cleanups. It has not been merged to `main`.
 - Existing pre-unification bundle remains at `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\repository-pre-unification.bundle`.
 - Supplemental bundle: `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\repository-branch-consolidation-2026-09-26.bundle`. `git bundle verify` passed. It contains 90 refs; all 88 expected local refs match exactly (0 missing, 0 mismatched), including all 21 recovery refs and four archived closed-PR heads (#1, #4, #5, #12). Size: 81,425,389 bytes. SHA-256: `737FBC45553E988CC90C47D31477F67FECD3A16C0242F2D769A3706D50C048FA`.
@@ -41,7 +41,7 @@ Status: IN PROGRESS. No branch refs have been deleted. No changes have been made
 | #40 | `docs/jules-delegation-skill` | ACTIVE | Jules delegation documentation |
 | #50 | `jules-f7-waha-adapter-7831325555235237843` | ACTIVE | WAHA adapter |
 | #66 | `fix/f7-nuvemshop-webhook-fail-closed` | ACTIVE | Nuvemshop webhook security |
-| #69 | `chore/package-ci-tests` | ACTIVE | Package test registration |
+| #69 | `chore/package-ci-tests` | ACTIVE / SELECTIVELY PORTED | Package test registration; parity rerun required |
 | #71 | `docs/f6-f7-f8-handoff-2026-09-24` | ACTIVE | F6–F8 handoff documentation |
 | #74 | `chore/orchestration-gate` | ACTIVE | Multi-agent governance gate; opened during this consolidation |
 
@@ -147,9 +147,9 @@ Status: IN PROGRESS. No branch refs have been deleted. No changes have been made
 - PR #26 `codex/mcg-ci-integration` merged into `lumenva-command-center`. Its target branch is closed/unmerged to `main`; preserve it with the Command Center/MCG history. Do not treat the PR as integrated into Lumenva CRM.
 - PRs #20–24 merged into `feat/f3-rbac`, not `main`. Their branch code remains subject to the F3 security/auth-contract review above.
 
-## Open PR content review — 2026-09-26
+## Open PR content review — 2026-09-27
 
-All 8 open PRs were reviewed individually by changed paths, descriptions, and current target. Open PRs and their source refs remain preserved; none was merged during this consolidation.
+All 9 open PRs were reviewed individually by changed paths, descriptions, and current target. Open PRs and their source refs remain preserved; none was merged during this consolidation.
 
 | PR | Content | Classification | Disposition |
 |---|---|---|---|
@@ -159,11 +159,11 @@ All 8 open PRs were reviewed individually by changed paths, descriptions, and cu
 | #40 `docs/jules-delegation-skill` | One 81-line Claude skill; docs-only; PR reports harness-check findings in AGENTS/CLAUDE | UNIQUE PROCESS DOC / OPEN | `verify` fails while invariants/vertical pass. Keep with PR; not needed for CRM code consolidation. |
 | #50 `jules-f7-waha-adapter-7831325555235237843` | 5 files adding WAHA adapter, wiring and fake-based tests | UNIQUE PRODUCT FEATURE / OPEN DRAFT | `verify` and `verify-and-build` fail; invariants/vertical pass. Preserve isolated; no cherry-pick without diagnosing failures and review. |
 | #66 `fix/f7-nuvemshop-webhook-fail-closed` | 5 files adding tenant/signing fail-closed checks and route tests; PR says local focused suite did not finish | SECURITY FIX / OPEN | `verify` and `verify-and-build` fail; CodeQL/invariants/vertical pass. Candidate for selective adoption only after failures are understood and current unified comparison passes. |
-| #69 `chore/package-ci-tests` | 18 files adding `test:unit` to 14 packages; PR claims 118 existing tests become recursively discoverable | CI COVERAGE GAP / OPEN | `verify` and `verify-and-build` fail; invariants/vertical pass on a base 4 commits behind current main. Of its 18 changed paths, 14 were moved in the architecture refactor (mostly exact Git renames; two test files were similarity-renames), while 4 remain at the same path. Map scripts/tests to current paths before adoption; do not claim this coverage ran in current parity. |
+| #69 `chore/package-ci-tests` | 18 changed paths add recursive test registration to 14 packages and fix repository-relative paths in tests | INTEGRATE SELECTIVELY / VALIDATING | Ported the 14 `test:unit` registrations to current workspace paths and corrected two stale repository-root references. Inventory finds 119 test/spec files under those 14 packages (the PR description says 118). The parity runner applies an equivalent temporary registration/path-fix overlay to the pinned main worktree, then runs the same root unit command on both snapshots; no source change is made to main. Await canonical Actions result before marking validated. |
 | #71 `docs/f6-f7-f8-handoff-2026-09-24` | 5 docs/rules files; dated F6–F8 handoff, no product code | UNIQUE DOCS / OPEN | `verify` and `verify-and-build` fail; security scans/invariants/vertical pass. Keep with PR; do not copy an operational snapshot without validating currentness. |
-| #74 `chore/orchestration-gate` | 18 files, ~792 insertions; local task gate/state, provider adapters and hooks, same-HEAD Actions receipt, and tests | ACTIVE / REVIEW REQUIRED | Open head `70b6b9c6`; CodeQL, security scans, invariants, gcp-invariants, and vertical passed; `verify` and `verify-and-build` remained pending at last check. Its new governance behavior is distinct from the code parity suite; preserve isolated and inspect only after checks finish. |
+| #74 `chore/orchestration-gate` | 18 files, ~792 insertions; local task gate/state, provider adapters and hooks, same-HEAD Actions receipt, and tests | ACTIVE / REVIEW REQUIRED | Open head `70b6b9c6`; CodeQL, security scans, invariants, gcp-invariants, and vertical passed. `verify` and `verify-and-build` completed FAILURE, followed by `governance-evidence` FAILURE because verification failed. Its CI used the base `.nvmrc` value `22` (resolved to Node 22.23.2), not the requested exact 22.23.3; preserve isolated and do not treat these checks as canonical parity evidence. The exact-version parity run found no unified-only unit failures against main before PR #69 coverage was added. |
 
-The parity artifacts validate only the pinned `main`/`implementation/unified` snapshots; they do not validate unmerged PR heads. #66 and #69 remain candidates for security behavior and canonical test coverage; #74 is a separate governance candidate. Rebase/port none automatically. Revisit each against the current base and its own evidence before integration. No PR was merged or closed by this review.
+The parity artifacts validate only the pinned `main`/`implementation/unified` snapshots; they do not validate unmerged PR heads. #66 remains a security candidate; #69's coverage improvement is selectively ported and awaits the parity rerun with identical coverage on both snapshots; #74 remains a separate governance candidate. No PR was merged or closed by this review.
 
 ### Open-PR CI freshness
 
@@ -178,6 +178,8 @@ The open PR check results above are not canonical evidence against current `main
 - CRM-only lint: 0 errors, 313 warnings. This command scope differs from the earlier root lint run; warning totals are not directly comparable.
 - `node --check` for both parity scripts and `git diff --check`: passed.
 - Selective cleanup commit: `227ac411` (`fix: apply selective F3-F5 lint and typing cleanups`).
+- PR #69 selective port (current uncommitted validation change): 14 workspace `test:unit` registrations plus repository-root path corrections in two tests. The 14 affected packages contain 119 `.test.*`/`.spec.*` files by current `rg --files` inventory; PR description reported 118. The parity runner overlays the matching registration and test-path fixes only in the isolated pinned-main validation worktree, restores those files afterward, and records the overlay as an artifact. This does not modify `main` or the original Lumenva checkout.
+- Static verification after the port: all 14 package manifests parse and expose the expected `test:unit` command; parity parser/summary tests pass 6/6; Node syntax checks and `git diff --check` pass. Full authoritative validation is pending GitHub Actions on exact Node 22.23.3 / pnpm 9.15.9 because the local Node installation is 24.19.0.
 - Parity-report hardening commits: `4f5808bf` (`ci: report test counts and classify unknown failures`) and `153e390fb3da06602c6b9ebb95ad75efe9a96a8d` (`ci: detect unit coverage regressions in parity report`).
 - GitHub push reported 45 Dependabot alerts on the default branch (14 critical, 7 high, 24 moderate). This audit did not modify dependencies or security findings.
 

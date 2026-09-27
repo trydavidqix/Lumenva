@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
     "test": "vitest run",
+    "test:unit": "vitest run",
     "test:foundation": "pnpm --dir ../.. --filter @lumenva/core test && pnpm --dir ../.. --filter @lumenva/core typecheck && pnpm --dir ../.. --filter @lumenva/db test && pnpm --dir ../.. --filter @lumenva/db typecheck && pnpm --dir ../.. --filter @lumenva/worker test && pnpm --dir ../.. --filter @lumenva/worker typecheck && pnpm --dir ../.. --filter @lumenva/provider-brightbean test && pnpm --dir ../.. --filter @lumenva/provider-brightbean typecheck && pnpm --dir ../.. --filter @lumenva/provider-moneyprinter test && pnpm --dir ../.. --filter @lumenva/provider-moneyprinter typecheck && vitest run",
     "build": "next build",
     "start": "next start"

@@ -41,24 +41,28 @@ for (const suite of [...new Set(summaries.map((item) => item.suite))]) {
   const regressions = [...unifiedFailures].filter((failure) => !mainFailures.has(failure))
   const resolved = [...mainFailures].filter((failure) => !unifiedFailures.has(failure))
   const mainExitCode = suite === 'toolchain' && main.versionOk && main.installExitCode === 0 ? 0 : main.suiteExitCode
-  const unifiedExitCode = suite === 'toolchain' && unified.versionOk && unified.installExitCode === 0 ? 0 : unified.suiteExitCode
+  const unifiedExitCode =
+    suite === 'toolchain' && unified.versionOk && unified.installExitCode === 0 ? 0 : unified.suiteExitCode
   const suiteRegression = unifiedExitCode !== 0 && (mainExitCode === 0 || regressions.length > 0)
   const unknownFailure = unifiedExitCode !== 0 && mainExitCode !== 0 && !preexisting.length && !regressions.length
-  const sameFailureSignatures = mainFailureList.length === unifiedFailureList.length
-    && mainFailureList.every((failure) => unifiedFailures.has(failure))
-  const comparableUnitFailure = sameFailureSignatures
-    && (mainFailureList.length > 0 || main.timeouts > 0 || main.workerErrors > 0)
-    && unified.failedTests === main.failedTests
-    && unified.timeouts === main.timeouts
-    && unified.workerErrors === main.workerErrors
+  const sameFailureSignatures =
+    mainFailureList.length === unifiedFailureList.length &&
+    mainFailureList.every((failure) => unifiedFailures.has(failure))
+  const comparableUnitFailure =
+    sameFailureSignatures &&
+    (mainFailureList.length > 0 || main.timeouts > 0 || main.workerErrors > 0) &&
+    unified.failedTests === main.failedTests &&
+    unified.timeouts === main.timeouts &&
+    unified.workerErrors === main.workerErrors
   const mainExecutedTests = main.passedTests + main.failedTests
   const unifiedExecutedTests = unified.passedTests + unified.failedTests
-  const unitRegression = suiteRegression
-    || unified.failedTests > main.failedTests
-    || unifiedExecutedTests < mainExecutedTests
-    || unified.skippedTests > main.skippedTests
-    || unified.timeouts > main.timeouts
-    || unified.workerErrors > main.workerErrors
+  const unitRegression =
+    suiteRegression ||
+    unified.failedTests > main.failedTests ||
+    unifiedExecutedTests < mainExecutedTests ||
+    unified.skippedTests > main.skippedTests ||
+    unified.timeouts > main.timeouts ||
+    unified.workerErrors > main.workerErrors
   const unitOutcome = unitRegression
     ? 'REGRESSION'
     : unifiedExitCode === 0
@@ -67,18 +71,56 @@ for (const suite of [...new Set(summaries.map((item) => item.suite))]) {
         ? 'PREEXISTING'
         : 'UNKNOWN'
   bySuite.set(suite, {
-    main: { commit: main.commit, exitCode: mainExitCode, durationMs: suite === 'toolchain' ? main.installDurationMs : main.suiteDurationMs, failures: mainFailureList.length, timeouts: main.timeouts, workerErrors: main.workerErrors, testFiles: main.testFiles, tests: main.tests, passedTests: main.passedTests, failedTests: main.failedTests, skippedTests: main.skippedTests },
-    unified: { commit: unified.commit, exitCode: unifiedExitCode, durationMs: suite === 'toolchain' ? unified.installDurationMs : unified.suiteDurationMs, failures: unifiedFailureList.length, timeouts: unified.timeouts, workerErrors: unified.workerErrors, testFiles: unified.testFiles, tests: unified.tests, passedTests: unified.passedTests, failedTests: unified.failedTests, skippedTests: unified.skippedTests },
-    classification: suite === 'unit'
-      ? { outcome: unitOutcome, preexisting, regressions, resolved }
-      : { result: suiteRegression ? 'REGRESSION' : unified.suiteExitCode === 0 ? 'PASS' : unknownFailure ? 'UNKNOWN — signature not comparable' : 'PREEXISTING' },
+    main: {
+      commit: main.commit,
+      exitCode: mainExitCode,
+      durationMs: suite === 'toolchain' ? main.installDurationMs : main.suiteDurationMs,
+      failures: mainFailureList.length,
+      timeouts: main.timeouts,
+      workerErrors: main.workerErrors,
+      testFiles: main.testFiles,
+      tests: main.tests,
+      passedTests: main.passedTests,
+      failedTests: main.failedTests,
+      skippedTests: main.skippedTests,
+    },
+    unified: {
+      commit: unified.commit,
+      exitCode: unifiedExitCode,
+      durationMs: suite === 'toolchain' ? unified.installDurationMs : unified.suiteDurationMs,
+      failures: unifiedFailureList.length,
+      timeouts: unified.timeouts,
+      workerErrors: unified.workerErrors,
+      testFiles: unified.testFiles,
+      tests: unified.tests,
+      passedTests: unified.passedTests,
+      failedTests: unified.failedTests,
+      skippedTests: unified.skippedTests,
+    },
+    classification:
+      suite === 'unit'
+        ? { outcome: unitOutcome, preexisting, regressions, resolved }
+        : {
+            result: suiteRegression
+              ? 'REGRESSION'
+              : unified.suiteExitCode === 0
+                ? 'PASS'
+                : unknownFailure
+                  ? 'UNKNOWN — signature not comparable'
+                  : 'PREEXISTING',
+          },
   })
 }
 
 const missingSuites = ['unit', 'typecheck', 'lint', 'build', 'toolchain'].filter((suite) => !bySuite.has(suite))
 const report = {
   generatedAt: new Date().toISOString(),
-  runtime: { node: '22.23.3', pnpm: '9.15.9', runner: 'windows-2025', comparison: 'pinned main/unified SHAs run sequentially per suite on the same runner' },
+  runtime: {
+    node: '22.23.3',
+    pnpm: '9.15.9',
+    runner: 'windows-2025',
+    comparison: 'pinned main/unified SHAs run sequentially per suite on the same runner',
+  },
   missingSuites,
   suites: Object.fromEntries(bySuite),
 }
@@ -88,32 +130,45 @@ const markdown = [
   `Generated: ${report.generatedAt}`,
   `Runner: ${report.runtime.runner}; Node ${report.runtime.node}; pnpm ${report.runtime.pnpm}.`,
   'Each pinned main/unified SHA pair runs sequentially on the same runner with a frozen install. Test failures are matched by exact test identifier; unmatched unified failures are regressions. Unmatched non-test failures remain UNKNOWN until their signatures can be compared.',
+  summaries.find((item) => item.suite === 'unit')?.unitCoverageProfile
+    ? `Unit coverage profile: ${summaries.find((item) => item.suite === 'unit').unitCoverageProfile}.`
+    : null,
   '',
   '| Suite | main | unified | passed / failed / skipped (main / unified) | failure IDs (main / unified) | timeouts (main / unified) | worker errors (main / unified) | duration (main / unified) | Classification |',
   '|---|---:|---:|---|---:|---:|---:|---:|---|',
   ...Object.entries(report.suites).map(([name, result]) => {
-    const classification = result.classification.result
-      ?? `${result.classification.outcome}: PREEXISTING ${result.classification.preexisting.length} / REGRESSION ${result.classification.regressions.length} / RESOLVED ${result.classification.resolved.length}`
+    const classification =
+      result.classification.result ??
+      `${result.classification.outcome}: PREEXISTING ${result.classification.preexisting.length} / REGRESSION ${result.classification.regressions.length} / RESOLVED ${result.classification.resolved.length}`
     const testCounts = (side) => `${side.passedTests ?? 0}/${side.failedTests ?? 0}/${side.skippedTests ?? 0}`
-    const duration = (side) => side.durationMs === null ? 'not recorded' : `${side.durationMs}ms${name === 'toolchain' ? ' install' : ''}`
-    const provenance = result.unified.reconstructedFromArtifacts ? ' (summary reconstructed from gate/install logs)' : ''
+    const duration = (side) =>
+      side.durationMs === null ? 'not recorded' : `${side.durationMs}ms${name === 'toolchain' ? ' install' : ''}`
+    const provenance = result.unified.reconstructedFromArtifacts
+      ? ' (summary reconstructed from gate/install logs)'
+      : ''
     return `| ${name} | ${result.main.exitCode === 0 ? 'PASS' : 'FAIL'} | ${result.unified.exitCode === 0 ? 'PASS' : 'FAIL'} | ${testCounts(result.main)} / ${testCounts(result.unified)} | ${result.main.failures} / ${result.unified.failures} | ${result.main.timeouts} / ${result.unified.timeouts} | ${result.main.workerErrors} / ${result.unified.workerErrors} | ${duration(result.main)} / ${duration(result.unified)} | ${classification}${provenance} |`
   }),
   ...(missingSuites.length ? ['', `MISSING SUITES: ${missingSuites.join(', ')}`] : []),
-  ...(report.suites.toolchain ? ['', 'Toolchain duration is frozen-install time only; the repository gate duration was not measured separately.'] : []),
+  ...(report.suites.toolchain
+    ? ['', 'Toolchain duration is frozen-install time only; the repository gate duration was not measured separately.']
+    : []),
   '',
   '## Test failure classification',
   '',
-  ...Object.entries(report.suites).filter(([, result]) => result.classification.preexisting).flatMap(([name, result]) => [
-    `### ${name}`,
-    '',
-    `PREEXISTING (${result.classification.preexisting.length}):`,
-    ...result.classification.preexisting.map((failure) => `- ${failure}`),
-    '',
-    `REGRESSION (${result.classification.regressions.length}):`,
-    ...(result.classification.regressions.length ? result.classification.regressions.map((failure) => `- ${failure}`) : ['- none']),
-    '',
-  ]),
+  ...Object.entries(report.suites)
+    .filter(([, result]) => result.classification.preexisting)
+    .flatMap(([name, result]) => [
+      `### ${name}`,
+      '',
+      `PREEXISTING (${result.classification.preexisting.length}):`,
+      ...result.classification.preexisting.map((failure) => `- ${failure}`),
+      '',
+      `REGRESSION (${result.classification.regressions.length}):`,
+      ...(result.classification.regressions.length
+        ? result.classification.regressions.map((failure) => `- ${failure}`)
+        : ['- none']),
+      '',
+    ]),
   'Raw logs and per-branch summaries are preserved in the workflow artifacts.',
 ].join('\n')
 

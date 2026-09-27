@@ -1,4 +1,4 @@
-import { createWriteStream, mkdirSync, readFileSync } from 'node:fs'
+import { createWriteStream, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
@@ -74,22 +74,39 @@ async function runTarget(target) {
   const nodeOk = process.version === 'v22.23.3'
   const pmMatch = /^pnpm@9\.15\.9\+sha512\.[a-f0-9]+$/.test(info.packageManager ?? '')
   const pnpmVersion = await new Promise((resolvePromise) => {
-    const child = spawn('pnpm.cmd', ['--version'], { cwd: target.path, shell: true, windowsHide: true })
+    const child = spawn('pnpm.cmd', ['--version'], {
+      cwd: target.path,
+      shell: true,
+      windowsHide: true,
+    })
     let output = ''
-    child.stdout.on('data', (chunk) => { output += chunk })
+    child.stdout.on('data', (chunk) => {
+      output += chunk
+    })
     child.on('close', (code) => resolvePromise(code === 0 ? output.trim() : 'unavailable'))
     child.on('error', () => resolvePromise('unavailable'))
   })
   const versionOk = nodeOk && pmMatch && pnpmVersion === '9.15.9'
   const start = performance.now()
   const installStart = performance.now()
-  const install = await spawnLogged(['install', '--frozen-lockfile'], target.path, join(artifacts, `${stem}-install.log`))
+  const install = await spawnLogged(
+    ['install', '--frozen-lockfile'],
+    target.path,
+    join(artifacts, `${stem}-install.log`),
+  )
   const installDurationMs = Math.round(performance.now() - installStart)
   let gate = { code: 0 }
   if (install.code === 0 && suite === 'toolchain' && target.name === 'unified') {
     gate = await spawnLogged(['repo:check'], target.path, join(artifacts, `${stem}-gate.log`))
   } else {
-    await import('node:fs/promises').then(({ writeFile }) => writeFile(join(artifacts, `${stem}-gate.log`), suite === 'toolchain' ? 'Main baseline: exact runtime/packageManager checked by runner.\n' : 'No additional gate for this suite.\n'))
+    await import('node:fs/promises').then(({ writeFile }) =>
+      writeFile(
+        join(artifacts, `${stem}-gate.log`),
+        suite === 'toolchain'
+          ? 'Main baseline: exact runtime/packageManager checked by runner.\n'
+          : 'No additional gate for this suite.\n',
+      ),
+    )
   }
 
   const suiteStart = performance.now()
@@ -98,10 +115,16 @@ async function runTarget(target) {
     const logPath = join(artifacts, `${stem}.log`)
     suiteResult = { code: 0 }
     for (const args of suiteCommands(target)) {
-      const result = await spawnLogged(args, target.path, logPath, {
-        ...process.env,
-        NEXT_PUBLIC_SITE_URL: 'https://example.invalid',
-      }, suiteResult.ran === true)
+      const result = await spawnLogged(
+        args,
+        target.path,
+        logPath,
+        {
+          ...process.env,
+          NEXT_PUBLIC_SITE_URL: 'https://example.invalid',
+        },
+        suiteResult.ran === true,
+      )
       suiteResult.ran = true
       if (result.code !== 0) suiteResult.code = result.code
     }
@@ -125,11 +148,15 @@ async function runTarget(target) {
     installDurationMs,
     suiteDurationMs,
     totalDurationMs: Math.round(performance.now() - start),
+    unitCoverageProfile:
+      suite === 'unit' ? 'PR #69 registrations across 14 workspaces; identical package set on main and unified' : null,
     ...parsed,
   }
   const { writeFile } = await import('node:fs/promises')
   await writeFile(join(artifacts, `${stem}.json`), `${JSON.stringify(summary, null, 2)}\n`)
-  console.log(`${target.name}/${suite}: runtime=${versionOk ? 'PASS' : 'FAIL'}, install=${install.code}, suite=${suiteResult.code}, elapsed=${summary.totalDurationMs}ms`)
+  console.log(
+    `${target.name}/${suite}: runtime=${versionOk ? 'PASS' : 'FAIL'}, install=${install.code}, suite=${suiteResult.code}, elapsed=${summary.totalDurationMs}ms`,
+  )
   return summary
 }
 
@@ -138,19 +165,32 @@ const mainRef = process.env.MAIN_REF ?? 'origin/main'
 const mainHead = await new Promise((resolvePromise) => {
   const child = spawn('git', ['rev-parse', mainRef], { cwd: root, shell: true, windowsHide: true })
   let output = ''
-  child.stdout.on('data', (chunk) => { output += chunk })
+  child.stdout.on('data', (chunk) => {
+    output += chunk
+  })
   child.on('close', (code) => resolvePromise(code === 0 ? output.trim() : null))
 })
 if (!mainHead) throw new Error(`Unable to resolve ${mainRef}`)
 const hasMainWorktree = await new Promise((resolvePromise) => {
-  const child = spawn('git', ['worktree', 'list', '--porcelain'], { cwd: root, shell: true, windowsHide: true })
+  const child = spawn('git', ['worktree', 'list', '--porcelain'], {
+    cwd: root,
+    shell: true,
+    windowsHide: true,
+  })
   let output = ''
-  child.stdout.on('data', (chunk) => { output += chunk })
+  child.stdout.on('data', (chunk) => {
+    output += chunk
+  })
   child.on('close', () => resolvePromise(output.includes(mainPath)))
 })
 if (!hasMainWorktree) {
   const add = await new Promise((resolvePromise) => {
-    const child = spawn('git', ['worktree', 'add', '--detach', mainPath, mainHead], { cwd: root, shell: true, windowsHide: true, stdio: 'inherit' })
+    const child = spawn('git', ['worktree', 'add', '--detach', mainPath, mainHead], {
+      cwd: root,
+      shell: true,
+      windowsHide: true,
+      stdio: 'inherit',
+    })
     child.on('close', (code) => resolvePromise(code ?? 1))
   })
   if (add !== 0) throw new Error(`Unable to create isolated main worktree at ${mainPath}`)
@@ -159,17 +199,136 @@ if (!hasMainWorktree) {
 const unifiedHead = await new Promise((resolvePromise) => {
   const child = spawn('git', ['rev-parse', 'HEAD'], { cwd: root, shell: true, windowsHide: true })
   let output = ''
-  child.stdout.on('data', (chunk) => { output += chunk })
+  child.stdout.on('data', (chunk) => {
+    output += chunk
+  })
   child.on('close', (code) => resolvePromise(code === 0 ? output.trim() : null))
 })
 const results = []
-for (const target of [
+const targets = [
   { name: 'main', ref: mainRef, commit: mainHead, path: mainPath },
   { name: 'unified', ref: 'implementation/unified', commit: unifiedHead, path: root },
-]) {
-  results.push(await runTarget(target))
+]
+const unitCoveragePackages = [
+  'apps/website',
+  'apps/social-mcp',
+  'apps/social-web',
+  'apps/social-worker',
+  'packages/core/operating-core',
+  'packages/core/social-brain/core',
+  'packages/core/social-brain/db',
+  'packages/core/social-brain/engineering-core',
+  'packages/core/social-brain/providers/brightbean',
+  'packages/core/social-brain/providers/meta',
+  'packages/core/social-brain/providers/moneyprinter',
+  'packages/integrations/meta',
+  'packages/integrations/resend',
+  'packages/integrations/stripe',
+]
+
+function assertUnitCoverageContract(repositoryPath) {
+  for (const packagePath of unitCoveragePackages) {
+    const manifestPath = join(repositoryPath, packagePath, 'package.json')
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+    const expectedCommand = manifest.scripts?.test ?? 'vitest run'
+    if (manifest.scripts?.['test:unit'] !== expectedCommand) {
+      throw new Error(`Unit coverage command mismatch in ${packagePath}: expected ${expectedCommand}`)
+    }
+  }
 }
 
-if (results.some((result) => !result.versionOk || result.installExitCode !== 0 || result.gateExitCode !== 0 || result.suiteExitCode !== 0)) {
+function applyMainUnitCoverageOverlay() {
+  const originals = new Map()
+  const restore = () => {
+    for (const [path, original] of originals) writeFileSync(path, original)
+  }
+  try {
+    for (const relativePath of unitCoveragePackages.map((path) => join(path, 'package.json'))) {
+      const path = join(mainPath, relativePath)
+      const original = readFileSync(path)
+      const manifest = JSON.parse(original.toString('utf8'))
+      manifest.scripts ??= {}
+      const expectedCommand = manifest.scripts.test ?? 'vitest run'
+      if (manifest.scripts['test:unit'] && manifest.scripts['test:unit'] !== expectedCommand) {
+        throw new Error(`Main coverage overlay conflicts with existing test:unit command in ${relativePath}`)
+      }
+      if (!manifest.scripts['test:unit']) {
+        manifest.scripts['test:unit'] = expectedCommand
+        originals.set(path, original)
+        writeFileSync(path, `${JSON.stringify(manifest, null, 2)}\n`)
+      }
+    }
+
+    const pathFixes = [
+      {
+        path: 'packages/core/operating-core/src/receipt-store.integration.test.ts',
+        transform: (source) =>
+          source
+            .replace(
+              'import { join } from "node:path";',
+              'import { dirname, join, resolve } from "node:path";\nimport { fileURLToPath } from "node:url";',
+            )
+            .replace(
+              'let adminUrl = "";',
+              'let adminUrl = "";\nconst repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../");',
+            )
+            .replace(
+              'join(process.cwd(), "infra/supabase/migrations/20260917100800_0193_operating_core_receipts.sql")',
+              'join(repositoryRoot, "infra/supabase/migrations/20260917100800_0193_operating_core_receipts.sql")',
+            ),
+      },
+      {
+        path: 'packages/core/social-brain/engineering-core/src/foundation-coverage.test.ts',
+        transform: (source) =>
+          source
+            .replace(
+              "import { readFile } from 'node:fs/promises'",
+              "import { readFile } from 'node:fs/promises'\nimport { dirname, join, resolve } from 'node:path'\nimport { fileURLToPath } from 'node:url'",
+            )
+            .replace(
+              "describe('foundation coverage audit'",
+              "const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../../')\n\ndescribe('foundation coverage audit'",
+            )
+            .replace(
+              "new URL('../../../apps/web/package.json', import.meta.url)",
+              "join(repositoryRoot, 'apps/social-web/package.json')",
+            ),
+      },
+    ]
+    for (const fix of pathFixes) {
+      const path = join(mainPath, fix.path)
+      const original = readFileSync(path)
+      const updated = fix.transform(original.toString('utf8'))
+      if (updated === original.toString('utf8'))
+        throw new Error(`Coverage overlay did not apply expected path fix: ${fix.path}`)
+      originals.set(path, original)
+      writeFileSync(path, updated)
+    }
+    assertUnitCoverageContract(mainPath)
+    writeFileSync(
+      join(artifacts, 'unit-coverage-profile.json'),
+      `${JSON.stringify({ profile: 'PR #69 package unit-test discovery', packageCount: unitCoveragePackages.length, packages: unitCoveragePackages, mainOverlayPathFixes: pathFixes.map(({ path }) => path) }, null, 2)}\n`,
+    )
+    return restore
+  } catch (error) {
+    restore()
+    throw error
+  }
+}
+
+const restoreMainOverlay = suite === 'unit' ? applyMainUnitCoverageOverlay() : () => {}
+try {
+  if (suite === 'unit') assertUnitCoverageContract(root)
+  for (const target of targets) results.push(await runTarget(target))
+} finally {
+  restoreMainOverlay()
+}
+
+if (
+  results.some(
+    (result) =>
+      !result.versionOk || result.installExitCode !== 0 || result.gateExitCode !== 0 || result.suiteExitCode !== 0,
+  )
+) {
   process.exitCode = 1
 }
