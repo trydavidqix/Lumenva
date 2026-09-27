@@ -2,6 +2,13 @@
 
 Status: IN PROGRESS — PR #75 remains open and blocked by baseline failures and required Owner review. No merge or branch cleanup has occurred.
 
+## Latest verification checkpoint — 2026-09-28
+
+- Current candidate code was revalidated under Node `22.23.3` / pnpm `9.15.9`. Focused Stripe tests: 7/7 passed; `pnpm repo:check` passed.
+- Main-vs-candidate GitHub Actions parity run [36355951299](https://github.com/trydavidqix/Lumenva/actions/runs/36355951299) completed successfully on `windows-2025` with frozen installs. Lint, typecheck, and toolchain passed on both sides. Build retains 19 identical preexisting failure signatures. Unit: 52 shared failure IDs, 0 candidate-only failure IDs, 0 timeouts, 0 worker errors; main 5,487/88/10 and candidate 5,521/88/11 (pass/fail/skip). Candidate's one additional skipped integration test makes the comparator label the unit result `REGRESSION`, despite an empty new-failure list; Linux validation previously passed that integration test. No Stripe-only failures remain.
+- Raw comparison is retained in `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\parity-run-36355951299` and in the Actions run artifacts.
+- Corrected checkpoint bundle `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\repository-branch-consolidation-2026-09-27-final-1e3fb858-r2.bundle` passed `git bundle verify` and exactly matches all 95 live refs (0 missing, 0 SHA mismatches). SHA-256: `F77720FD93B5D891555B8F9B8B2E5212E0EAC726B507B3037C558F93B4C86259`. Refresh after the documentation closeout commit/push so the final archive includes the final branch tip.
+
 ## Current follow-up — 2026-09-27
 
 1. **Fix scan findings on the consolidation PR — DONE.** Commit `a9fe7aa9fc1965868bd142edc255b5991098bbaa` removes modulo bias from notification acknowledgement tokens and replaces `shell: true` in the branch-validation runner with explicit Windows `cmd.exe` invocation (`shell: false`). TDD checks passed before and after each change.
