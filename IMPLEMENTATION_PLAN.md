@@ -1,8 +1,8 @@
-# Remaining Implementation Plan
+# Consolidation Closeout Plan
 
-Status: IN PROGRESS. This file lists only unresolved work from the branch consolidation. Do not implement new product features here.
+Status: COMPLETE for the authorized consolidation, Stripe repair, validation, and archive-proof scope. No unfinished implementation task remains in this scope. Preserve open PRs, source refs, and recovery refs; no cleanup or merge is authorized by this closeout.
 
-## 1. Validate the current unified snapshot with canonical GitHub Actions
+## 1. Validate the current unified snapshot with canonical GitHub Actions — DONE
 
 - Current candidate: selective CRM-only port from PR #13 (`voz`), kept separate from its draft PR and unrelated Maestri/MCG content. Notification router and voice delivery remain disabled by default; no live Asterisk call or WhatsApp send has been tested.
 - Local evidence under Node `22.23.3` / pnpm `9.15.9`: `pnpm repo:check` passed; CRM typecheck passed; CRM lint exited 0 (314 warnings, 0 errors; baseline status not established); focused notification/voice/schema tests passed (59/59 across 11 files).
@@ -10,17 +10,20 @@ Status: IN PROGRESS. This file lists only unresolved work from the branch consol
 - Done: reviewed and committed only to `implementation/unified`, then pushed SHA `ad3d6cca319e782893c264f5fb6541b68892e3fa`; the updated archival bundle passed verification.
 - Done: inspected the complete main-vs-unified Actions run [36327198653](https://github.com/trydavidqix/Lumenva/actions/runs/36327198653) and its retained artifact. On Windows 2025 with Node `22.23.3` / pnpm `9.15.9`, frozen install, typecheck, lint, and toolchain passed on both snapshots. Build had the same 19 failure signatures on each side (`PREEXISTING`). Unit tests: main 5,487 passed / 88 failed / 10 skipped; unified 5,516 passed / 96 failed / 11 skipped; 52 failure IDs shared (`PREEXISTING`), four unified-only Stripe mock failures (`REGRESSION`), zero timeouts and worker errors. Durations and exact failure IDs are in the comparison artifact at `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\parity-run-36327198653\comparison.md`.
 - Done: supplemental `ci.yml` runs `36330502238` (`main`) and `36330503804` (`implementation/unified`) both passed `invariants`; both `verify` jobs failed unit tests. They are not exact-toolchain parity: main `.nvmrc` resolved to Node `22.23.2`, unified to `22.23.3`; both used pnpm `9.15.9`. Keep Windows run `36327198653` as canonical because it pins the same exact Node/pnpm and compares the same registered suite. Do not merge PRs or alter main. Source-local Lumenva dirty state remains untouched.
+- Final exact-toolchain comparison: run `36332873570` compared current main `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99` and unified `10532d0966cbc6b41d8575cc7a043d74289684d4` on `windows-2025`, Node `22.23.3`, pnpm `9.15.9`, frozen installs. Typecheck, lint, toolchain, and repo policy passed; build retained 19 identical baseline failures; unit failures were 52 shared IDs, zero unified-only failure IDs, zero timeouts, and zero worker errors. Stripe tests passed 7/7. One additional integration test was skipped on Windows after Docker could not pull the Linux-only `postgres:16` image; supplemental Linux CI run `36335368476` passed the receipt-store integration 1/1 and DB invariants, while unrelated unit suites still failed there. The parity artifact's overall unit outcome says `REGRESSION` solely because skipped count is 11 vs 10; its actual regression list is empty. Do not treat that skip delta as a Stripe regression or conceal it.
 
-## 2. Resolve the four isolated Stripe test regressions
+## 2. Resolve the four isolated Stripe test regressions — DONE
 
 - Done: GitHub Actions run `36315065234` compared immutable `main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99` with tested unified snapshot `ff871fac24e5ecd0cbb892375f08bfff3721d702` on `windows-2025`, Node `22.23.3`, pnpm `9.15.9`. The five suite jobs ran in parallel; each compared main/unified on the same runner and used frozen installs. [Canonical run](https://github.com/trydavidqix/Lumenva/actions/runs/36315065234).
 - Done: lint, typecheck, and toolchain passed on both sides; unified `repo:check` passed. Build has the same 19 failure signatures on each side (`PREEXISTING`), duration 59,185 ms main / 60,349 ms unified.
 - Done: unit artifacts show main 5,487 passed / 88 failed / 10 skipped and unified 5,488 passed / 96 failed / 11 skipped. 52 normalized failure IDs are shared (`PREEXISTING`); four IDs are unified-only (`REGRESSION`). Unit duration 1,496,763 ms main / 1,416,129 ms unified. Worker errors 0/0; explicit test/hook/worker timeouts 0/0. The original comparison artifact counted timeout-like stack text incorrectly; report-only Actions run `36319801822` regenerated and uploaded the corrected comparison from retained run `36315065234` artifacts, with the heavy matrix skipped. [Corrected artifact run](https://github.com/trydavidqix/Lumenva/actions/runs/36319801822).
 - Regression cause: four Stripe tests use arrow-function mock constructors that Vitest 4 attempts to instantiate. The production Stripe `.ts` files are unchanged from main, so this is confirmed as a test/toolchain compatibility regression, not a proven production behavior regression. Do not change the 52 failures shared with main.
 - Done locally (TDD): reproduced all four `TypeError: ... is not a constructor` failures before edits; changed only the four Stripe test mock factories from arrow functions to constructable regular functions. Frozen install and `pnpm repo:check` passed on Node `22.23.3` / pnpm `9.15.9`; Stripe tests passed 7/7; targeted ESLint exited 0 with two React/pages-config warnings. No production source changed.
-- Pending: commit/push the isolated test fix and rerun the full Windows main-vs-unified parity workflow for the resulting SHA. Jules CLI has no command to message an existing session; the interactive Chrome window is not attached here. Existing session `2727874664977885671` remains blank-status/no-diff; no Jules code was applied and no replacement session was created. Work proceeded autonomously. Do not change the 52 failures shared with main.
+- Done: commit `10532d0966cbc6b41d8575cc7a043d74289684d4` was pushed to `origin/implementation/unified`. Full exact-toolchain Windows parity run `36332873570` compared main `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99` with unified `10532d0966cbc6b41d8575cc7a043d74289684d4`. It confirmed all four previously unified-only Stripe failures are absent; unified now has 88 failures, matching main's 88, with 52 shared failure IDs and 0 new regressions. Unit tests: main 5,487 passed / 88 failed / 10 skipped; unified 5,520 passed / 88 failed / 11 skipped. Timeouts and worker errors: 0 on both. [Canonical comparison run](https://github.com/trydavidqix/Lumenva/actions/runs/36332873570).
+- The comparison's suite-level unit outcome remains FAIL because both branches retain the 52 preexisting failure IDs; the Actions comparison workflow itself completed successfully and classified 0 regressions. Build remains 19 identical preexisting failures on each side. Do not fix these unrelated baseline failures in this task.
+- Jules was not needed. Its existing session was not messaged or used; no replacement session was created.
 
-## 3. Preserve archival coverage before any branch cleanup
+## 3. Preserve archival coverage before any branch cleanup — DONE
 
 - Done: supplemental bundle at `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\repository-branch-consolidation-2026-09-26.bundle` passed `git bundle verify`.
 - Done: 90 refs in bundle; all 88 expected local refs matched; 21 recovery refs and archived PR heads #1, #4, #5, and #12 are present.
@@ -30,11 +33,12 @@ Status: IN PROGRESS. This file lists only unresolved work from the branch consol
 - Keep all source refs until Actions evidence and final classification are reviewed.
 - Do not delete `main`, `implementation/unified`, open-PR branches, recovery refs, or any branch/worktree with unique local data.
 - No branch deletion is part of the current run. Any cleanup candidate must be listed separately with archive proof first.
+- Final bundle `repository-branch-consolidation-2026-09-27-final.bundle` is created after the closeout documentation commit. Verify its advertised refs/SHA against local refs and retain its SHA-256 in the final response. Do not delete branches as part of this task.
 
-## 4. Resolve individually reviewed open-PR candidates
+## 4. Resolve individually reviewed open-PR candidates — DISPOSITIONS COMPLETE; SOURCE PRS PRESERVED
 
 - PR #11 (Maestri Council docs): outside CRM; preserve with its existing PR.
-- PR #13 (voice notifications): `voz` and draft PR remain preserved and unchanged; a CRM-only selective port is under validation in unified. Do not merge the source PR or activate live Asterisk/WhatsApp delivery; full parity evidence is pending.
+- PR #13 (voice notifications): `voz` and draft PR remain preserved and unchanged; the CRM-only selective port is in unified and classified by the final exact-toolchain parity run. Do not merge the source PR or activate live Asterisk/WhatsApp delivery.
 - PR #25, `TOKENS`, `vps`, Local Runtime, Command Center/Maestri: Nexus ownership; keep outside CRM.
 - PR #40 (Jules delegation doc): docs-only; `verify` fails while invariants/vertical pass. The documented SDK is installed locally, but its workflow and secret/branch-selection behavior remain unvalidated. Preserve with PR; do not copy into this consolidation yet.
 - PR #50 (`jules-f7-waha-adapter-7831325555235237843`): disposition finalized as `SUPERSEDED FOR CURRENT BEHAVIOR / EXPERIMENTAL WRAPPER UNVALIDATED`. Current CRM already has WAHA text/media handling, `WahaClient.startSession/stopSession/logoutSession`, and `verifyHmacSha512` webhook validation. The PR's `F7_WAHA_ADAPTER` wrapper has no current-tree consumer and duplicates those capabilities; the shared command-port pattern already exists for Meta. Its tests fail during setup because they assign getter-only fields. Preserve the open PR/branch; do not port the duplicate adapter or spend Jules work on it.
@@ -50,9 +54,9 @@ Status: IN PROGRESS. This file lists only unresolved work from the branch consol
 
 ## Completion gate
 
-- Current selective PR #13 subset is not integrated until the exact candidate commit passes/gets classified by full GitHub Actions parity; current local typecheck, lint, `repo:check`, and 59 focused tests are supporting evidence only. Database baseline install/update remains unverified locally because pgvector is unavailable.
-- Exact-toolchain GitHub Actions comparison and corrected report-only artifact are complete. Four isolated Stripe test regressions remain; 52 unit failure IDs and 19 build failure signatures are preexisting. The report-only run skipped the heavy matrix and published corrected timeout counts from the retained raw artifacts.
+- Current selective PR #13 subset is included on `implementation/unified` and has been classified by exact-toolchain full GitHub Actions parity. Its notification router and voice delivery remain disabled by default; no live Asterisk call or WhatsApp send was tested.
+- Exact-toolchain GitHub Actions comparison run `36332873570` completed successfully as a comparison workflow. Typecheck, lint, toolchain, and repository policy passed on both snapshots. Unit suite has 52 shared preexisting failing IDs on both sides, 0 unified-only regressions, and 0 timeout/worker errors; the four former Stripe-only failures now pass. Build has 19 identical preexisting failure signatures on both sides. This work does not include fixing baseline failures.
 - Local `repo:check` passes under explicitly selected Node 22.23.3/pnpm 9.15.9. The machine's default Node remains 24.19.0; the isolated Node 22 runtime is available without a global PATH change.
 - Branch classifications and all archive refs are documented and bundle-verified.
-- `main` and the original Lumenva checkout are unchanged. Do not consider the consolidation complete until the four isolated Stripe test regressions have been handled and the affected parity evidence is refreshed.
-- No branch is deleted until archival proof passes and its unique worktree/local data is accounted for.
+- `main` and the original Lumenva checkout are unchanged. Stripe regression repair and its full parity evidence are complete.
+- Final exact comparison and local targeted validation confirm all four Stripe-only failures fixed; no production Stripe code changed. The extra Windows integration-test skip and preexisting test/build failures are explicitly recorded above. Open source PRs, remote refs, and recovery refs remain intact; `main`, the original Lumenva checkout, and PR merge state are unchanged.
