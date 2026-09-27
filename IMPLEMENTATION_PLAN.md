@@ -24,7 +24,7 @@ Status: IN PROGRESS. This file lists only unresolved work from the branch consol
 - PR #11 (Maestri Council docs): outside CRM; preserve with its existing PR.
 - PR #13 (voice notifications): separate active voice workstream targeting Command Center; draft explicitly prohibits merge; preserve on `voz`.
 - PR #25, `TOKENS`, `vps`, Local Runtime, Command Center/Maestri: Nexus ownership; keep outside CRM.
-- PR #40 (Jules delegation doc): docs-only; verify is failing, so preserve with PR and do not claim validated.
+- PR #40 (Jules delegation doc): docs-only; `verify` fails while invariants/vertical pass. The documented SDK is installed locally, but its workflow and secret/branch-selection behavior remain unvalidated. Preserve with PR; do not copy into this consolidation yet.
 - PR #50 (WAHA adapter): unique feature, not integrated. Its five new tests all fail at setup because they assign getter-only fields; adapter contract and focused correction remain unvalidated.
 - PR #66 (Nuvemshop fail-closed): selectively ported safe subset; its five focused tests passed in PR CI. The PR's decrypt failure → 401 change was excluded. Selected changes are included in the exact-toolchain parity snapshot.
 - PR #69 (package test discovery): selectively ported `test:unit` to 14 current workspace paths and corrected two test paths. Inventory finds 119 test/spec files. The complete Actions comparison tested the same coverage on main and unified; the separate four Stripe mock regressions are recorded above. Do not fix failures shared with main.
