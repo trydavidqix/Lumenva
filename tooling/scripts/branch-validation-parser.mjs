@@ -32,3 +32,33 @@ export function extractFailureSignatures(text, suite, checkoutPath) {
 
   return [...failures].sort()
 }
+
+export function summarizeVitestOutput(text) {
+  const lines = text.replace(/\u001b\[[0-9;]*m/g, '').split(/\r?\n/)
+  const testLines = lines.filter((line) => /\bTests\s+/i.test(line))
+  const fileLines = lines.filter((line) => /\bTest Files\s+/i.test(line))
+  const total = (entries, state) => entries.reduce((sum, line) => {
+    const value = line.match(new RegExp(`(\\d+)\\s+${state}\\b`, 'i'))
+    return sum + Number(value?.[1] ?? 0)
+  }, 0)
+  const passedTests = total(testLines, 'passed')
+  const failedTests = total(testLines, 'failed')
+  const skippedTests = total(testLines, 'skipped')
+  const passedFiles = total(fileLines, 'passed')
+  const failedFiles = total(fileLines, 'failed')
+  const skippedFiles = total(fileLines, 'skipped')
+  const format = (passed, failed, skipped) => [
+    failed ? `${failed} failed` : null,
+    passed ? `${passed} passed` : null,
+    skipped ? `${skipped} skipped` : null,
+  ].filter(Boolean).join(' | ') || 'no test summary'
+
+  return {
+    passedTests,
+    failedTests,
+    skippedTests,
+    testFiles: format(passedFiles, failedFiles, skippedFiles),
+    tests: format(passedTests, failedTests, skippedTests),
+    packageSummaries: Math.max(testLines.length, fileLines.length),
+  }
+}

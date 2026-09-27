@@ -10,8 +10,10 @@ Status: IN PROGRESS. This file lists only unresolved work from the branch consol
 - Done for the original snapshot: report-only Actions run `36275964555` downloaded the retained raw artifacts and published the corrected canonical comparison at https://github.com/trydavidqix/Lumenva/actions/runs/36275964555. Its matrix was skipped; the heavy suite was not rerun. This evidence predates the PR #69 test-discovery port and is superseded for final consolidation.
 - The first run's own comparison artifact had parser/toolchain-summary defects and is not canonical; the report-only artifact supersedes it. Toolchain timing reports the frozen install only, not the separate policy-gate duration.
 - Ported PR #69 test discovery selectively: 14 workspace scripts expose 119 existing test/spec files (the PR description says 118); two repository-relative test paths were updated for the current architecture.
-- The parity runner applies an equivalent temporary script/path overlay to the pinned main validation worktree, restores it afterward, and checks that both snapshots use identical commands. It records the coverage profile as an artifact.
-- Next: push this change to `implementation/unified`, run the full Actions comparison under Node `22.23.3` / pnpm `9.15.9`, and classify exact test failures as PREEXISTING or REGRESSION. Do not change failures shared with main. Use Jules only if Actions proves a real isolated regression and diagnosis/correction is appropriate.
+- The first attempt (`36314527707`) proved why this comparison needs non-bailing execution: root `pnpm -r` stopped after one package failed, so it did not cover all 119 test/spec files. Do not use its incomplete failure/count summary as final evidence.
+- Added root `test:unit` `--no-bail` and changed the parser to sum every package's Vitest summaries. The pinned-main overlay applies the same root command, 14 package registrations, and two path fixes, then restores main's files.
+- Selected the safe PR #66 security subset: reject missing signing secrets on four webhook routes; return 500 on event-lookup errors and 404 for an unconfigured tenant. Preserve 500 for decrypt/RPC failures to avoid turning service faults into non-retryable authentication responses.
+- Next: push this follow-up to `implementation/unified`, run the complete Actions comparison under Node `22.23.3` / pnpm `9.15.9`, and classify the complete results. Do not change failures shared with main. Jules only if a real isolated regression is established and needs that specific investigation/correction.
 
 ## 2. Preserve archival coverage before any branch cleanup
 
@@ -34,9 +36,9 @@ Status: IN PROGRESS. This file lists only unresolved work from the branch consol
 - PR #13 (voice notifications): separate active voice workstream targeting Command Center; draft explicitly prohibits merge; preserve on `voz`.
 - PR #25, `TOKENS`, `vps`, Local Runtime, Command Center/Maestri: Nexus ownership; keep outside CRM.
 - PR #40 (Jules delegation doc): docs-only; verify is failing, so preserve with PR and do not claim validated.
-- PR #50 (WAHA adapter): unique feature; verify/build fail, so keep isolated pending diagnosis/review.
-- PR #66 (Nuvemshop fail-closed): security candidate; verify/build fail despite CodeQL/invariants/vertical passing. Do not port until failing checks are understood and behavior is compared with unified.
-- PR #69 (package test discovery): selectively ported `test:unit` registration to the 14 current workspace paths and corrected two test references to the current repository layout. Inventory finds 119 test/spec files across those packages (PR description claimed 118). The parity runner now applies equivalent ephemeral script/path overlays to the pinned main worktree and runs the same recursive suite on main and unified; main source remains unchanged. Pending exact Node 22.23.3 / pnpm 9.15.9 Actions comparison. Do not fix failures shared with main.
+- PR #50 (WAHA adapter): unique feature, not integrated. Its five new tests all fail at setup because they assign getter-only fields; adapter contract and focused correction remain unvalidated.
+- PR #66 (Nuvemshop fail-closed): selectively ported safe subset; its five focused tests passed in PR CI. The PR's decrypt failure -> 401 change was excluded; full current parity validation is pending.
+- PR #69 (package test discovery): selectively ported `test:unit` to 14 current workspace paths and corrected two test paths. Inventory finds 119 test/spec files. First Actions attempt stopped early; follow-up now uses `--no-bail` and aggregates all package summaries, with the same temporary overlay on main and unified. Exact-toolchain comparison is pending. Do not fix failures shared with main.
 - PR #71 (F6–F8 handoff): dated docs/rules snapshot; verify/build fail. Preserve with PR and validate currentness before any selective copy.
 - PR #74 (`chore/orchestration-gate`): new 18-file governance/hook/evidence implementation opened during parity validation. CodeQL, security scans, invariants, gcp-invariants, and vertical passed; `verify`, `verify-and-build`, and dependent `governance-evidence` completed FAILURE. Its workflow used base `.nvmrc` `22` (resolved to Node 22.23.2), so the run is not exact-toolchain evidence. Keep isolated; assess its own head and behavior before considering integration.
 - Their current failing checks are stale-base results, not proof of regressions against present `main`: PR bases trail `origin/main` by 2–47 commits. PR #74's verify/build and dependent evidence checks are complete failures; its CI resolved main's floating `.nvmrc` `22` to Node `22.23.2`, so it is not exact-toolchain evidence. Re-run/inspect only candidates on the current base before deciding whether a failure is product-caused.
@@ -47,7 +49,7 @@ Status: IN PROGRESS. This file lists only unresolved work from the branch consol
 
 ## Completion gate
 
-- Original pinned GitHub Actions comparison is published; final canonical comparison after the PR #69 coverage port is pending.
+- Original pinned GitHub Actions comparison is published; the first PR #69 coverage attempt was incomplete; corrected no-bail comparison after the selective PR #66 port is pending.
 - Branch classifications and all archive refs are documented and bundle-verified.
 - `main` and the original Lumenva checkout are unchanged. The unified branch has the described PR #69 selective port in progress; do not treat it as validated until the new Actions artifact completes.
 - No branch is deleted until archival proof passes and its unique worktree/local data is accounted for.

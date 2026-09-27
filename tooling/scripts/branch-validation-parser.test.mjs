@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { extractFailureSignatures } from './branch-validation-parser.mjs'
+import { extractFailureSignatures, summarizeVitestOutput } from './branch-validation-parser.mjs'
 
 test('extracts stable unit failure IDs after pnpm prefixes', () => {
   const log = 'apps/crm test:unit:  FAIL  tests/unit/auth.test.ts > rejects invalid user\n'
@@ -38,4 +38,22 @@ test('extracts build diagnostics after package prefixes and normalizes runner pa
 
 test('does not treat unrelated unit output as a failure signature', () => {
   assert.deepEqual(extractFailureSignatures('apps/crm test:unit: passed 42 tests', 'unit'), [])
+})
+
+test('aggregates Vitest totals from every recursively executed package', () => {
+  const output = [
+    'pkg-a test:unit:  Test Files  2 passed (2)',
+    'pkg-a test:unit:       Tests  9 passed (9)',
+    'pkg-b test:unit:  Test Files  1 failed | 3 passed | 1 skipped (5)',
+    'pkg-b test:unit:       Tests  2 failed | 12 passed | 1 skipped (15)',
+  ].join('\n')
+
+  assert.deepEqual(summarizeVitestOutput(output), {
+    passedTests: 21,
+    failedTests: 2,
+    skippedTests: 1,
+    testFiles: '1 failed | 5 passed | 1 skipped',
+    tests: '2 failed | 21 passed | 1 skipped',
+    packageSummaries: 2,
+  })
 })
