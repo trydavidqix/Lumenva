@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { extractFailureSignatures } from './branch-validation-parser.mjs'
+import { countTimeouts, extractFailureSignatures } from './branch-validation-parser.mjs'
 import { reconstructToolchainSummary } from './branch-validation-summary.mjs'
 
 const root = resolve(import.meta.dirname, '../..')
@@ -33,6 +33,10 @@ for (const suite of [...new Set(summaries.map((item) => item.suite))]) {
   const main = summaries.find((item) => item.suite === suite && item.branch === 'main')
   const unified = summaries.find((item) => item.suite === suite && item.branch === 'unified')
   if (!main || !unified) continue
+  for (const [branch, summary] of [['main', main], ['unified', unified]]) {
+    const logPath = join(artifactRoot, `${branch}-${suite}.log`)
+    if (existsSync(logPath)) summary.timeouts = countTimeouts(readFileSync(logPath, 'utf8'))
+  }
   const mainFailureList = failuresFromArtifacts('main', suite, main)
   const unifiedFailureList = failuresFromArtifacts('unified', suite, unified)
   const mainFailures = new Set(mainFailureList)

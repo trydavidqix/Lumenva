@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 import { performance } from 'node:perf_hooks'
-import { extractFailureSignatures, summarizeVitestOutput } from './branch-validation-parser.mjs'
+import { countTimeouts, extractFailureSignatures, summarizeVitestOutput } from './branch-validation-parser.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const artifacts = join(root, 'parity-artifacts')
@@ -51,7 +51,7 @@ function parseLog(text, cwd) {
   return {
     failures: extractFailureSignatures(text, suite, cwd),
     ...summarizeVitestOutput(clean),
-    timeouts: (clean.match(/timeout|timed out|Timeout terminating/gi) ?? []).length,
+    timeouts: countTimeouts(clean),
     workerErrors: (clean.match(/worker error|worker failed|failed to start.*worker|Error: Worker/gi) ?? []).length,
   }
 }

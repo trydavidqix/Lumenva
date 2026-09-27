@@ -62,3 +62,10 @@ export function summarizeVitestOutput(text) {
     packageSummaries: Math.max(testLines.length, fileLines.length),
   }
 }
+
+export function countTimeouts(text) {
+  const lines = text.replace(/\u001b\[[0-9;]*m/g, '').split(/\r?\n/)
+  return lines.filter((line) =>
+    /\b(?:Test|Hook)\s+timed out\b|\bTimeout terminating worker\b/i.test(line),
+  ).length
+}

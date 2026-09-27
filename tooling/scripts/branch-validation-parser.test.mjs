@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { extractFailureSignatures, summarizeVitestOutput } from './branch-validation-parser.mjs'
+import * as validationParser from './branch-validation-parser.mjs'
+const { extractFailureSignatures, summarizeVitestOutput } = validationParser
 
 test('extracts stable unit failure IDs after pnpm prefixes', () => {
   const log = 'apps/crm test:unit:  FAIL  tests/unit/auth.test.ts > rejects invalid user\n'
@@ -38,6 +39,18 @@ test('extracts build diagnostics after package prefixes and normalizes runner pa
 
 test('does not treat unrelated unit output as a failure signature', () => {
   assert.deepEqual(extractFailureSignatures('apps/crm test:unit: passed 42 tests', 'unit'), [])
+})
+
+test('counts actual timeout diagnostics, not test names or runWithTimeout stack frames', () => {
+  const output = [
+    'FAIL src/adapter.test.ts > StripeAdapter > throws standard error on Stripe timeout or failure',
+    'at runWithTimeout (node_modules/@vitest/runner/dist/chunk.js:2272:10)',
+    'Error: Test timed out in 5000ms.',
+    'Timeout terminating worker after test timeout',
+  ].join('\n')
+
+  assert.equal(typeof validationParser.countTimeouts, 'function')
+  assert.equal(validationParser.countTimeouts(output), 2)
 })
 
 test('aggregates Vitest totals from every recursively executed package', () => {
