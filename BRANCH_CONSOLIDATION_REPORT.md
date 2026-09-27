@@ -167,6 +167,12 @@ All 9 open PRs were reviewed individually by changed paths, descriptions, and cu
 
 The parity artifacts validate only the pinned `main`/`implementation/unified` snapshots; they do not validate unmerged PR heads. #66's selected subset and #69's test-discovery changes are in the tested snapshot; #74 remains a separate governance candidate. No PR was merged or closed by this review.
 
+### Jules regression-fix session checkpoint — 2026-09-27
+
+- Session `2727874664977885671` remains the only Jules task authorized for the four isolated Stripe test regressions. `jules remote list --session` showed it last active 28m42s earlier with a blank status; `jules remote pull --session 2727874664977885671` returned `No diff found in the remote VM.` The CLI output does not establish a terminal state, so no replacement session was started and no competing edits were made.
+- Google Chrome was confirmed running, but the Windows computer-use capture could not establish the current URL with sufficient confidence and stopped before any page interaction. This is not evidence that the Jules session completed or failed.
+- The consolidation clone remained clean at `4c5bd766fd66888705e72b124cfc14de4b78a88`, tracking `origin/implementation/unified`; `origin/main` remained `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99` during this checkpoint.
+
 ### Open-PR CI freshness
 
 The open PR check results above are not canonical evidence against current `main`: their recorded base SHAs are stale. At review time, current `origin/main` is `3fbe74a3`; PR bases lag it by #11 47 commits, #13 35, #25 35, #40 27, #50 22, #66 5, #69 4, and #71 2. Thus failed `verify`/`verify-and-build` checks do not alone prove a new defect in current code. The PRs remain unmerged; their failures must be rerun on current bases before judging their implementation.
