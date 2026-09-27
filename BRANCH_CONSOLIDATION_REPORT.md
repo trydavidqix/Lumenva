@@ -189,6 +189,13 @@ The open PR check results above are not canonical evidence against current `main
 
 ## Validation and changes
 
+### Current closeout validation — 2026-09-27
+
+- Current candidate branch `consolidation/lumenva-main-2026-09-27` is clean at `6c16c461216be82354c77c0823634f13210ef3bf`, pushed to origin, and PR #75 remains open. The Stripe mock repair is already included; only documentation changed between tested code SHA `a9fe7aa9` and this HEAD.
+- Focused Stripe validation on Node `22.23.3` / pnpm `9.15.9`: frozen install passed; all 7 tests across `adapter.test.ts` and `webhook.test.ts` passed. `pnpm repo:check` passed.
+- Full exact-toolchain parity on the same application/test code is run [36345096100](https://github.com/trydavidqix/Lumenva/actions/runs/36345096100): 0 candidate-only failures, 52 shared failure IDs, 0 timeouts, 0 worker errors; four prior Stripe-only failures absent. Fresh HEAD run [36351437826](https://github.com/trydavidqix/Lumenva/actions/runs/36351437826) passed toolchain, lint, and typecheck. The build artifacts contain 19 identical failure signatures on main and candidate. Its unit job remained in progress without accessible logs for 84 minutes and was cancelled; this incomplete run is not presented as a passing unit result. The complete parity run above remains canonical because the intervening commits are documentation-only.
+- Archive proof: bundle `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\repository-branch-consolidation-2026-09-27-6c16c461.bundle` passed `git bundle verify`; it contains 97 advertised entries. All 94 live refs in this clone match bundle names and SHAs; the three additional entries are `HEAD` and the two validation-worktree HEADs. Size `81,399,610` bytes; SHA-256 `5949D4F45237EDCFF3041D5A03B11B1E0CC9C813427115CB7FF9122C03E041D9`.
+
 - Toolchain target: Node `22.23.3`, pnpm `9.15.9`.
 - `pnpm repo:check`: passed on the isolated branch with Node `22.23.3` and pnpm `9.15.9`. The host's default shell still resolves Node `24.19.0`; an official Node `22.23.3` Windows x64 archive was SHA-256-verified (`2b0ff57b049cda1bbcea2240eec20467018713c1efe1f7360c2681859b90ed71`) and extracted under `%LOCALAPPDATA%\Lumenva\toolchain\node-v22.23.3-win-x64`, without changing global PATH. The local check used that binary explicitly. Heavy comparative suites remain GitHub Actions evidence.
 - CRM typecheck: passed after typing corrections.
