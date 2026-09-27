@@ -18,6 +18,10 @@ permissions:
   contents: read
   actions: read
 
+# Report-only refresh: push this workflow file on implementation/unified with
+# commit message `ci(parity-report): source-run=<run-id>` to reuse retained
+# suite artifacts and skip the heavy validation matrix below.
+
 jobs:
   prepare:
     name: Pin comparison commits
