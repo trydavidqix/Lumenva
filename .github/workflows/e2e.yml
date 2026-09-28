@@ -212,6 +212,8 @@ jobs:
       # mesmo — mas o contrato é único, e um workflow que contorna o gate seria
       # o começo de ele não valer para ninguém.
       - name: Gerar o .env.e2e (ambiente da suíte)
+        env:
+          SUPABASE_WORKDIR: .
         run: pnpm e2e:env
         working-directory: .target/apps/crm
 
