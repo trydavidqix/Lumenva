@@ -61,11 +61,11 @@ enable_confirmations = true
 # Self-host GoTrue: ver docs/deploy-selfhost (GOTRUE_MAILER_TEMPLATES_*).
 [auth.email.template.confirmation]
 subject = "Confirme seu e-mail — Lumenva"
-content_path = "./templates/confirmation.html"
+content_path = "./supabase/templates/confirmation.html"
 
 [auth.email.template.recovery]
 subject = "Redefinir senha — Lumenva"
-content_path = "./templates/recovery.html"
+content_path = "./supabase/templates/recovery.html"
 
 [auth.mfa]
 max_enrolled_factors = 10

@@ -35,10 +35,10 @@ cd "$(dirname "$0")/.."
 # dependência deste projeto.
 SUPABASE="supabase"
 command -v supabase >/dev/null 2>&1 || SUPABASE="npx supabase"
-SUPABASE_WORKDIR="${SUPABASE_WORKDIR:-../../infra/supabase}"
+SUPABASE_WORKDIR="${SUPABASE_WORKDIR:-.}"
 
 if ! $SUPABASE --workdir "$SUPABASE_WORKDIR" status >/dev/null 2>&1; then
-  echo "==> O Supabase local não está de pé. Rode 'supabase --workdir ../../infra/supabase start' antes." >&2
+  echo "==> O Supabase local não está de pé. Rode 'supabase --workdir . start' dentro de apps/crm antes." >&2
   exit 1
 fi
 
