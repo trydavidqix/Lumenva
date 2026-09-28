@@ -172,7 +172,11 @@ jobs:
 
       - name: Diagnosticar o link de compatibilidade do Supabase
         run: |
-          printf 'PWD=%s\n' "$PWD"
+          printf 'CWD_NAME=%s\n' "$(basename "$(pwd -P)")"
+          printf 'CRM_DIR_REALPATH=%s\n' "$(realpath -m apps/crm)"
+          printf 'INFRA_DIR_REALPATH=%s\n' "$(realpath -m infra/supabase)"
+          printf 'CRM_LINK_TARGET=%s\n' "$(readlink apps/crm/supabase)"
+          printf 'CRM_LINK_RESOLVED=%s\n' "$(realpath -m apps/crm/supabase)"
           for path in apps/crm/supabase infra/supabase infra/supabase/config.toml; do
             printf '\nPATH=%s\n' "$path"
             ls -ld "$path" 2>&1 || true
