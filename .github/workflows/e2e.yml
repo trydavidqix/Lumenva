@@ -137,7 +137,7 @@ jobs:
             echo "::error::Container local de Auth do Supabase não encontrado."
             exit 1
           fi
-          grep -R -n -E --include='docker-compose.yml' \
+          grep -R -n -E --binary-files=without-match \
             'GOTRUE_MFA_TOTP_(ENROLL|VERIFY)_ENABLED' \
             "$RUNNER_TEMP/e2e-target/infra/supabase/.temp" 2>/dev/null || true
           docker inspect "$auth_container" --format '{{range .Config.Env}}{{println .}}{{end}}' |
