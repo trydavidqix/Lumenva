@@ -167,7 +167,8 @@ jobs:
       # mesmo — mas o contrato é único, e um workflow que contorna o gate seria
       # o começo de ele não valer para ninguém.
       - name: Gerar o .env.e2e (ambiente da suíte)
-        run: pnpm --filter lumenva-crm e2e:env
+        run: pnpm e2e:env
+        working-directory: .target/apps/crm
 
       # E publica o arquivo no ambiente do JOB, para que servidor e testes leiam
       # literalmente a mesma fonte.
