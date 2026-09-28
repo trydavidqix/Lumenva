@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const signInWithEmailAndPasswordMock = vi.fn();
 const signInWithPopupMock = vi.fn();
+const connectAuthEmulatorMock = vi.fn();
 const getIdTokenMock = vi.fn();
 const fetchMock = vi.fn<typeof fetch>();
 
@@ -13,6 +14,7 @@ vi.mock("firebase/app", () => ({
 
 vi.mock("firebase/auth", () => ({
   getAuth: vi.fn(() => ({})),
+  connectAuthEmulator: (...args: unknown[]) => connectAuthEmulatorMock(...args),
   GoogleAuthProvider: class {
     addScope() {}
     setCustomParameters() {}
@@ -21,22 +23,48 @@ vi.mock("firebase/auth", () => ({
   signInWithPopup: (...args: unknown[]) => signInWithPopupMock(...args),
 }));
 
-import { signInWithEmail, signInWithGoogle } from "../../../lib/firebase/client";
+let signInWithEmail: typeof import("../../../lib/firebase/client")["signInWithEmail"];
+let signInWithGoogle: typeof import("../../../lib/firebase/client")["signInWithGoogle"];
 
 describe("Firebase Client Auth Wrapper", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     fetchMock.mockReset();
     global.fetch = fetchMock;
     signInWithEmailAndPasswordMock.mockReset();
     signInWithPopupMock.mockReset();
+    connectAuthEmulatorMock.mockReset();
     getIdTokenMock.mockReset();
 
-    // Reset environment variables for predictable initialization if needed
     vi.stubEnv("NEXT_PUBLIC_FIREBASE_API_KEY", "test-api-key");
+    vi.stubEnv("NEXT_PUBLIC_FIREBASE_PROJECT_ID", "demo-lumenva-e2e");
+    vi.stubEnv("NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST", "127.0.0.1:9099");
+    vi.resetModules();
+    ({ signInWithEmail, signInWithGoogle } = await import("../../../lib/firebase/client"));
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
+  });
+
+  it("connects to the Firebase Auth emulator only when configured", async () => {
+    expect(connectAuthEmulatorMock).toHaveBeenCalledWith(
+      expect.anything(),
+      "http://127.0.0.1:9099",
+      { disableWarnings: true },
+    );
+
+    vi.stubEnv("NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST", "");
+    vi.resetModules();
+    await import("../../../lib/firebase/client");
+
+    expect(connectAuthEmulatorMock).toHaveBeenCalledTimes(1);
+
+    vi.stubEnv("NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST", "127.0.0.1:9099");
+    vi.stubEnv("NEXT_PUBLIC_FIREBASE_PROJECT_ID", "lumenva-production");
+    vi.resetModules();
+    await expect(import("../../../lib/firebase/client")).rejects.toThrow(
+      "Firebase Auth Emulator só pode ser usado com um projeto demo.",
+    );
   });
 
   it("signInWithEmail sends ID token to backend session endpoint and does NOT return the token", async () => {

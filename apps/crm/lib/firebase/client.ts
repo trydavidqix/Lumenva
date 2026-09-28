@@ -6,6 +6,7 @@ import {
 } from "firebase/app";
 import {
   getAuth,
+  connectAuthEmulator,
   signInWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
@@ -22,6 +23,14 @@ const firebaseConfig: FirebaseOptions = {
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
+const authEmulatorHost = process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST;
+
+if (authEmulatorHost) {
+  if (!firebaseConfig.projectId?.startsWith("demo-")) {
+    throw new Error("Firebase Auth Emulator só pode ser usado com um projeto demo.");
+  }
+  connectAuthEmulator(auth, `http://${authEmulatorHost}`, { disableWarnings: true });
+}
 
 export type AuthResult = {
   ok: boolean;

@@ -145,6 +145,34 @@ jobs:
           # ignorar config.toml e iniciar Auth com os defaults.
           supabase --workdir "$RUNNER_TEMP/e2e-target/apps/crm" start
 
+      # O cliente Firebase precisa inicializar durante os specs. Use exclusivamente
+      # um projeto demo e o Auth Emulator: nenhuma chamada pode alcançar Firebase real.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Iniciar Firebase Auth Emulator de teste
+        run: |
+          npm install --global firebase-tools@14.12.0
+          firebase emulators:start --only auth \
+            --project demo-lumenva-e2e \
+            --config apps/crm/firebase.e2e.json \
+            > "$RUNNER_TEMP/firebase-auth-emulator.log" 2>&1 < /dev/null &
+          echo $! > "$RUNNER_TEMP/firebase-auth-emulator.pid"
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent \
+              http://127.0.0.1:9099/emulator/v1/projects/demo-lumenva-e2e/config \
+              >/dev/null; then
+              echo "Firebase Auth Emulator pronto no projeto demo-lumenva-e2e."
+              exit 0
+            fi
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/firebase-auth-emulator.log"
+          echo "::error::Firebase Auth Emulator não iniciou em 120 segundos."
+          exit 1
+
       - name: Verificar MFA TOTP efetivo no Auth local
         run: |
           auth_container="$(docker ps --format '{{.ID}} {{.Names}}' | awk '$2 ~ /^supabase_auth_/ { print $1; exit }')"
@@ -400,6 +428,13 @@ jobs:
           # (60/5min) é irreal aqui. O teto por CONTA (5 falhas) NÃO muda — é
           # ele que barra brute force.
           AUTH_RATE_LIMIT_LOGIN_IP: "1000"
+
+      - name: Parar Firebase Auth Emulator
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/firebase-auth-emulator.pid" ]; then
+            kill "$(cat "$RUNNER_TEMP/firebase-auth-emulator.pid")" 2>/dev/null || true
+          fi
 
       - name: Declarar o que este job ainda NÃO cobre
         if: always()

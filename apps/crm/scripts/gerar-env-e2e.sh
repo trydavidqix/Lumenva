@@ -87,6 +87,17 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON
 SUPABASE_SERVICE_ROLE_KEY=$SERVICE
 SUPABASE_DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
 
+# Firebase Auth Emulator — projeto demo, sem credenciais ou recursos de produção.
+NEXT_PUBLIC_FIREBASE_API_KEY=fake-api-key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=demo-lumenva-e2e.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=demo-lumenva-e2e
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=demo-lumenva-e2e.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=1234567890
+NEXT_PUBLIC_FIREBASE_APP_ID=1:1234567890:web:e2e
+NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
+FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
+GOOGLE_CLOUD_PROJECT=demo-lumenva-e2e
+
 # Placeholders: 'next start' roda em NODE_ENV=production, e lib/env.ts exige
 # estas vars em produção. As specs não exercitam os serviços por trás delas.
 # Local e CI falham pelos mesmos motivos porque leem ESTE arquivo: o workflow

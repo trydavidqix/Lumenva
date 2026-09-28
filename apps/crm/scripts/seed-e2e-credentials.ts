@@ -10,6 +10,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
+import { initFirebaseAuth } from "@lumenva/db/gcp/firebase-auth";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -33,6 +34,12 @@ const APP_URL = credenciais.appUrl;
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
+
+const firebaseEmulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
+if (firebaseEmulatorHost !== "127.0.0.1:9099" && firebaseEmulatorHost !== "localhost:9099") {
+  throw new Error("E2E recusado: Firebase Auth deve apontar para o emulador local.");
+}
+const firebaseAuth = initFirebaseAuth();
 
 const ORG_NAME = "E2E Test Org";
 const ORG_SLUG = "e2e-test-org";
@@ -85,6 +92,7 @@ async function ensureUser(email: string, full_name: string): Promise<string> {
     console.log(`[seed] user existing ${email}: ${existing.id}`);
     // garantir senha conhecida
     await admin.auth.admin.updateUserById(existing.id, { password: PASSWORD });
+    await ensureFirebaseUser(existing.id, email, full_name);
     return existing.id;
   }
   const { data, error } = await admin.auth.admin.createUser({
@@ -94,8 +102,20 @@ async function ensureUser(email: string, full_name: string): Promise<string> {
     user_metadata: { full_name },
   });
   if (error || !data?.user) throw new Error(`create user ${email}: ${error?.message}`);
+  await ensureFirebaseUser(data.user.id, email, full_name);
   console.log(`[seed] user created ${email}: ${data.user.id}`);
   return data.user.id;
+}
+
+async function ensureFirebaseUser(uid: string, email: string, displayName: string): Promise<void> {
+  const properties = { email, password: PASSWORD, emailVerified: true, displayName };
+  try {
+    await firebaseAuth.getUser(uid);
+    await firebaseAuth.updateUser(uid, properties);
+  } catch (error) {
+    if ((error as { code?: string }).code !== "auth/user-not-found") throw error;
+    await firebaseAuth.createUser({ uid, ...properties });
+  }
 }
 
 async function ensureMembership(userId: string, orgId: string, role: string): Promise<void> {
