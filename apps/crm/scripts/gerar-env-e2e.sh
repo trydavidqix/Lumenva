@@ -120,6 +120,10 @@ WAHA_WEBHOOK_BASE_URL=http://127.0.0.1:3001
 UPSTASH_REDIS_REST_URL=http://127.0.0.1:3998
 UPSTASH_REDIS_REST_TOKEN=$TOKEN_REDIS
 NEXT_TELEMETRY_DISABLED=1
+# E2E must not send browser/server events to the community Sentry project.
+# Empty SENTRY_DSN selects the shared community DSN; `off` keeps this test-only
+# environment isolated and prevents telemetry rate limits from polluting UI checks.
+SENTRY_DSN=off
 EOF
 
 echo "==> .env.e2e gerado, apontando para $API_URL"
