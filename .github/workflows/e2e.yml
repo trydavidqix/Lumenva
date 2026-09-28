@@ -442,7 +442,7 @@ jobs:
           {
             echo "## E2E — cobertura deste job"
             echo ""
-            echo "**Rodou (32 de 33 specs):** smoke, auth, error-pages, password-recovery,"
+            echo "**Specs selecionadas (32 de 33):** smoke, auth, error-pages, password-recovery,"
             echo "signup-journey, rbac-roles, inbox-scope, reset-password-mfa,"
             echo "degradacao-silenciosa, vps-webhook-outbound-ssrf, kanban-owner-filter,"
             echo "queue-assign, risk-radar, invite-lifecycle, system-update,"
@@ -463,6 +463,6 @@ jobs:
         with:
           name: playwright-report
           path: |
-            ${{ runner.temp }}/e2e-target/playwright-report/
-            ${{ runner.temp }}/e2e-target/test-results/
+            ${{ runner.temp }}/e2e-target/apps/crm/playwright-report/
+            ${{ runner.temp }}/e2e-target/apps/crm/test-results/
           retention-days: 7

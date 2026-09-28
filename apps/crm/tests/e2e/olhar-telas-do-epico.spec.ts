@@ -63,7 +63,12 @@ test.describe("as telas do épico abrem para uma pessoa", () => {
     await page.locator("#email").fill(creds.users.admin!.email);
     await page.locator("#password").fill(creds.password);
     await page.getByRole("button", { name: /entrar/i }).click();
-    await page.waitForURL(/\/login\/mfa/, { timeout: 30_000 });
+    try {
+      await page.waitForURL(/\/login\/mfa/, { timeout: 30_000 });
+    } catch (error) {
+      const alert = await page.getByRole("alert").innerText().catch(() => "sem mensagem visível");
+      throw new Error(`Login não chegou ao MFA; URL atual=${page.url()}; alerta=${alert}`, { cause: error });
+    }
     // Espera a janela virar: um código gerado no fim da janela expira durante a
     // digitação e o sintoma é "MFA falhou", que não parece o que é.
     await page.waitForTimeout(msUntilNextTotpWindow() + 200);
