@@ -1,39 +1,36 @@
-# Consolidation Closeout Plan — PR #75
+# Consolidation Closeout — PR #75
 
-Status: IN PROGRESS. Direct parity is complete with zero new candidate-only regressions. User approved a narrow remediation of baseline unit failures so required PR checks can pass; the changes are awaiting GitHub Actions validation. Branch classification and a 95-ref archive checkpoint are complete. PR #75 remains open and unmerged; no branch cleanup occurred.
+## Current state
 
-## Scope and evidence
+- Branch: `consolidation/lumenva-main-2026-09-27`
+- Candidate HEAD: `8d2962808a89656a106ccd6e3d729536b300d93d`
+- Base `main`: `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`
+- PR #75 is open and unmerged. Main and the original Lumenva checkout remain untouched.
+- Heavy validation runs only in GitHub Actions. No local test suite is evidence.
 
-- Candidate branch: `consolidation/lumenva-main-2026-09-27`, tested code HEAD `d02d002abdfe5c64282bf27c61c40aec3deff089`.
-- Base: `main` at `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
-- Canonical tests run only in GitHub Actions. Do not run heavy tests locally.
-- Full detailed history and branch-by-branch dispositions are in [BRANCH_CONSOLIDATION_REPORT.md](BRANCH_CONSOLIDATION_REPORT.md).
+## Completed and evidenced on current HEAD
 
-## Completed
+1. Test-only E2E identity fixtures now seed the expected Firebase UID-to-user mappings; no genuine or production credential was created.
+2. Test-only E2E environment disables external Sentry telemetry with `SENTRY_DSN=off`.
+3. Invariants, F2/F3 vertical, security scans, direct-parity toolchain, and direct-parity lint have passed.
+4. The report now records the current E2E failure and active Actions run IDs.
 
-1. **Direct Actions parity:** [run 36405174959](https://github.com/trydavidqix/Lumenva/actions/runs/36405174959), same runner, frozen install, Node `22.23.3`, pnpm `9.15.9`. Build: main had 17 failures, candidate passed. Lint, toolchain and typecheck passed both. Unit totals (pass/fail/skip): main `5,486/90/10`, candidate `5,566/17/11`; 15 shared failure IDs, 0 candidate-only regressions, 38 baseline IDs resolved, timeouts `2/0`, worker errors `0/0`. Comparator workflow succeeded.
-2. **E2E setup repair and parity diagnosis:** seed, build and browser installation pass. Runs [main 36405099925](https://github.com/trydavidqix/Lumenva/actions/runs/36405099925) and [candidate 36405103746](https://github.com/trydavidqix/Lumenva/actions/runs/36405103746) both time out waiting for Playwright's web server because Firebase reports `auth/invalid-api-key`; no test specs execute. No Firebase app configuration is available in repository Actions variables/secrets/environments. No real credential was invented or reused.
-3. **Candidate CI/security:** invariants, typecheck, lint, harness, CodeQL, Semgrep, Gitleaks, OSV and vertical checks passed at tested HEAD. Standard unit jobs remain red on baseline-shared failures; do not weaken tests or fix unrelated CRM failures.
-4. **Tool audit:** Git, `gh`, `rg`, ast-grep, dependency-cruiser and pnpm are installed. Knip/GitButler are absent and not required for the current Git/Actions validation; do not install GitButler.
+## Verified progress on current HEAD
 
-## Completed closeout work
+1. Direct parity run `36445124677` completed on the same runner with Node `22.23.3` and pnpm `9.15.9`: candidate build/lint/toolchain/typecheck passed; unit failures were main `88` vs candidate `7`, with `0` regressions, `5` shared failures, and `47` resolved. No timeouts or worker errors.
+2. Candidate CI `36444929702` and GCP CI `36444929947` passed, including their unit/build verification jobs.
+3. E2E candidate run `36444930221` failed at application queries with permission denied for `fn_user_org_ids`. Relevant application code and function grants match `origin/main`.
+4. Updated E2E workflow to copy only the candidate's non-secret identity seed and exact visual spec into the disposable `main` test worktree, enabling a same-fixture baseline run without changing product code.
 
-1. Refreshed inventory: 61 `origin` branches, 25 `source-local` branches, 4 archived PR refs, and 3 local branches (95 refs total, including two symbolic remote `HEAD` refs).
-2. Classified all 15 no-PR origin branches. Added evidence-based dispositions for `mover-pro-nexus`, `v2.1`, and `v2.2`; their plan commits are present in candidate history, without claiming the planned product work is implemented.
-3. Reconciled the report and this tracker with the latest direct GitHub Actions parity, current E2E setup failure, and exact PR #75 head/base.
-4. Pushed the inventory/report refresh as `81fc25e56ef68940ef41ee302a14114187b37e69`. All 61 origin branch names are represented in the report; all 15 no-PR branches have dispositions.
-5. Created checkpoint bundle `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\repository-branch-consolidation-2026-09-28-81fc25e5.bundle`; `git bundle verify` passed and all 95 live ref names+SHAs match, with 3 extra advertised validation HEADs. Size 81,425,379 bytes; SHA-256 `84EAAAD820DC012C084BDD948C6ED84CEE5A92BA5E558572E2FDF6AAFADD170C`.
-6. Actions for `81fc25e5`: lint, typecheck, invariants, vertical, CodeQL, Gitleaks, OSV and Semgrep passed. `verify` and `verify-and-build` failed only in unit tests (CRM: 5 failed, 5,128 passed, 1 skipped, across 9 files); the `verify-and-build` job stopped before its build step. The pinned same-runner parity [36405174959](https://github.com/trydavidqix/Lumenva/actions/runs/36405174959) remains canonical for regression classification: 0 candidate-only failures, 15 shared IDs. Do not fix baseline failures here.
+## Remaining useful work
 
-## Remaining work
+1. Commit/push the test-harness parity change and report updates to the PR branch; dispatch the same E2E visual spec against `main` and collect its result.
+2. Update the reports with that result and current PR checks; push the final documentation-only closeout update.
+3. Create a new, uniquely named final Git bundle after the last report commit; verify it and compare every live ref name/SHA. Preserve all existing bundles and refs.
+4. Verify final PR head/base, remote synchronization, archive evidence, and clean worktree. Leave PR #75 open/unmerged for the owner.
 
-1. Commit and push the approved baseline-failure repairs plus refreshed report/plan to PR #75. Keep the PR open and do not merge or delete refs.
-2. Wait for GitHub Actions to validate the new HEAD (tests only in Actions); classify any remaining failures against the pinned main baseline. Do not invent Firebase credentials for E2E.
-3. Refresh remote refs without pruning; create a uniquely named final bundle under `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\`. Preserve all earlier bundles. Run `git bundle verify`; compare all live ref names and SHAs; record bundle size and SHA-256.
-4. Recheck Actions and synchronize final evidence in both reports. Keep any genuine Firebase configuration need as the final human-dependent E2E blocker.
+## Constraints and stop condition
 
-## Stop conditions
-
-- Keep `main`, the source Lumenva checkout, recovery branches/worktrees, and all existing bundles unchanged.
-- Do not fix the 15 baseline-shared test failures or alter product auth to mask the E2E configuration issue.
-- Conclude only after the final branch/archive proof and reports are synchronized. If Firebase configuration is still absent, report it as a shared baseline blocker, not a candidate regression.
+- Do not merge PR #75, modify `main` or the source checkout, delete/prune refs, or remove/overwrite existing bundles.
+- Do not run heavy tests locally or fix unrelated CRM/product issues.
+- Stop after final report and archive proof; no new phase or implementation work.
