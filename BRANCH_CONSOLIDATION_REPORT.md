@@ -1,6 +1,19 @@
 # Branch Consolidation Report
 
-Status: DIRECT ACTIONS PARITY COMPLETE WITH ZERO NEW TEST REGRESSIONS; final branch/archive closeout remains. The E2E runs on `main` and candidate both fail during Playwright web-server startup with Firebase `auth/invalid-api-key`; no test specs execute. No branch refs have been deleted. No changes have been made to the source checkout or `main`.
+Status: BASELINE FAILURE REMEDIATION IN PROGRESS; candidate-only parity remains zero. User approved narrowly fixing existing baseline failures that block required PR checks. All validation remains GitHub Actions only. E2E on `main` and candidate still cannot start Playwright because Firebase reports `auth/invalid-api-key`; no credential will be fabricated. No branch refs have been deleted. The source checkout and `main` remain untouched.
+
+## Approved baseline remediation — pending Actions proof
+
+At candidate HEAD `2cb8542b610860a53dd0a35d831f08886f286d91`, Actions reported 5,128 unit tests passing, 5 failing assertions, and setup errors across 9 files. The narrowly scoped remediation now prepared for the next CI run:
+
+- Anchor Node test fixtures to the repository root because Vitest transforms `import.meta.url` into a non-file URL in this runner.
+- Read `git ls-files -z` as NUL-delimited paths so Git's quoting of the Unicode PsycheOS filename does not create a phantom quoted path.
+- Mock the admin Supabase client actually called by the media route test.
+- Restore three omitted/malformed migration manifest records for existing SQL files.
+- Respect Vercel's deployment environment when setting Next standalone output.
+- Replace obsolete Supabase password-login/rate-limit assertions with the implemented Firebase-client handoff contract; production auth behavior is unchanged.
+
+These changes are not validated until fresh GitHub Actions runs complete. Do not treat local `git diff --check` as test evidence. E2E Firebase configuration remains a separate external blocker.
 
 ## Current checkpoint — 2026-09-28 11:41 Europe/Lisbon
 

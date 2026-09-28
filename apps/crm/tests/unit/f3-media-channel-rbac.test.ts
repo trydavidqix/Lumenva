@@ -100,7 +100,7 @@ describe("F3 Task 3 - Mutation Gates RBAC", () => {
         eq: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValueOnce({ data: { id: "123" }, error: null }),
       };
-      (createClient as unknown as Mock).mockResolvedValue(mockSupabase);
+      (createAdminClient as unknown as Mock).mockReturnValue(mockSupabase);
 
       const ctx = { params: Promise.resolve({ id: "123" }) };
       const res = await mediaPost(req, ctx);

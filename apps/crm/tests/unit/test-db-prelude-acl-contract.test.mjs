@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 
-const script = await readFile(new URL("../../scripts/test-db.sh", import.meta.url), "utf8");
+const script = await readFile(path.resolve(process.cwd(), "apps/crm/scripts/test-db.sh"), "utf8");
 const selfhostPrelude = await readFile(
-  new URL("../../scripts/selfhost-prelude.sql", import.meta.url),
+  path.resolve(process.cwd(), "apps/crm/scripts/selfhost-prelude.sql"),
   "utf8",
 );
 

@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 const baseline = await readFile(
-  new URL("../../../../infra/supabase/baseline.sql", import.meta.url),
+  path.resolve(process.cwd(), "infra/supabase/baseline.sql"),
   "utf8",
 );
 

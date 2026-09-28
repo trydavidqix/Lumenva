@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 
-const scriptPath = new URL("../../scripts/test-db.sh", import.meta.url);
+const scriptPath = path.resolve(process.cwd(), "apps/crm/scripts/test-db.sh");
 
 const script = await readFile(scriptPath, "utf8");
 const guard = script.indexOf("command -v vitest");

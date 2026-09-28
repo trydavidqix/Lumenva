@@ -1,6 +1,6 @@
 # Consolidation Closeout Plan — PR #75
 
-Status: IN PROGRESS. Direct parity is complete with zero new regressions. Branch classification and a 95-ref archive checkpoint are complete. A final report commit, refreshed archive, and closeout of the human-dependent E2E decision remain. PR #75 is open and unmerged; no branch cleanup occurred.
+Status: IN PROGRESS. Direct parity is complete with zero new candidate-only regressions. User approved a narrow remediation of baseline unit failures so required PR checks can pass; the changes are awaiting GitHub Actions validation. Branch classification and a 95-ref archive checkpoint are complete. PR #75 remains open and unmerged; no branch cleanup occurred.
 
 ## Scope and evidence
 
@@ -27,10 +27,10 @@ Status: IN PROGRESS. Direct parity is complete with zero new regressions. Branch
 
 ## Remaining work
 
-1. Commit and push this final report/plan-only update to PR #75. Keep the PR open and do not merge or delete refs.
-2. After the push, refresh remote refs without pruning; create a uniquely named final bundle under `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\`. Preserve all earlier bundles. Run `git bundle verify`; compare all live ref names and SHAs; record bundle size and SHA-256.
-3. Recheck GitHub Actions for the final docs commit. All tests remain remote; do not run the heavy suite locally. Treat failures shared with main as baseline and do not weaken gates.
-4. Last human-dependent item, only if full Playwright execution is required: provide/use the genuine Firebase app configuration through GitHub Actions. It does not block completing ref inventory, documentation, or archive. Do not fabricate credentials or alter auth behavior.
+1. Commit and push the approved baseline-failure repairs plus refreshed report/plan to PR #75. Keep the PR open and do not merge or delete refs.
+2. Wait for GitHub Actions to validate the new HEAD (tests only in Actions); classify any remaining failures against the pinned main baseline. Do not invent Firebase credentials for E2E.
+3. Refresh remote refs without pruning; create a uniquely named final bundle under `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\`. Preserve all earlier bundles. Run `git bundle verify`; compare all live ref names and SHAs; record bundle size and SHA-256.
+4. Recheck Actions and synchronize final evidence in both reports. Keep any genuine Firebase configuration need as the final human-dependent E2E blocker.
 
 ## Stop conditions
 

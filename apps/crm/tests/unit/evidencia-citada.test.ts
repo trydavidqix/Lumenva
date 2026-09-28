@@ -33,8 +33,11 @@ const SUBPASTAS = new Set(
 
 /** Tudo que o git ENTREGA — não o que o disco tem. */
 function versionados(padrao: string): string[] {
-  return execFileSync("git", ["ls-files", padrao], { cwd: RAIZ, encoding: "utf8" })
-    .split("\n")
+  return execFileSync("git", ["ls-files", "-z", padrao], {
+    cwd: RAIZ,
+    encoding: "utf8",
+  })
+    .split("\0")
     .filter(Boolean);
 }
 
