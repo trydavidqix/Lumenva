@@ -22,26 +22,33 @@ const consultas: { platformAdmins: unknown; memberships: unknown } = {
   memberships: { data: [], error: null },
 };
 
-vi.mock("next/headers", () => ({ cookies: async () => ({ getAll: () => [], set: () => {} }) }));
+vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined, getAll: () => [], set: () => {} }) }));
 vi.mock("next/navigation", () => ({ redirect: () => { throw new Error("redirect"); } }));
+vi.mock("@/lib/auth/firebase-identity", () => ({
+  resolveFirebaseIdentity: async () => ({
+    firebaseUid: "firebase-u1",
+    userId: "u1",
+    email: "a@b.c",
+    fullName: null,
+    avatarUrl: null,
+    userMetadata: {},
+    appMetadata: {},
+  }),
+}));
 
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: async () => ({
-    auth: {
-      getUser: async () => ({
-        data: { user: { id: "u1", email: "a@b.c", user_metadata: {} } },
-        error: null,
-      }),
-    },
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => ({
     from: (tabela: string) => {
       const alvo = tabela === "platform_admins" ? "platformAdmins" : "memberships";
       const resultado = () => consultas[alvo as keyof typeof consultas];
       const chain = {
         select: () => chain,
         eq: () => chain,
-        is: () => (alvo === "platformAdmins" ? { maybeSingle: async () => resultado() } : resultado()),
+        is: () => chain,
+        not: () => chain,
         maybeSingle: async () => resultado(),
-        then: (r: (v: unknown) => unknown) => Promise.resolve(resultado()).then(r),
+        then: (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
+          Promise.resolve(resultado()).then(resolve, reject),
       };
       return chain;
     },

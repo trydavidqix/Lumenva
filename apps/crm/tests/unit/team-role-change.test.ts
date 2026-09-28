@@ -14,6 +14,7 @@ import { NextRequest } from "next/server";
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import { audit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { AuthUser } from "@/lib/auth/types";
 
 vi.mock("@/lib/auth/server", () => ({
@@ -21,6 +22,7 @@ vi.mock("@/lib/auth/server", () => ({
   resolveActiveOrg: vi.fn(),
 }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
 vi.mock("@/lib/audit", () => ({
   audit: vi.fn(async () => undefined),
   isServiceRoleConfigured: () => false,
@@ -86,6 +88,15 @@ function adminSession(state: StubState) {
   vi.mocked(resolveActiveOrg).mockResolvedValue({ orgId: ORG_ID, name: "Org", role: "admin" });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(state) as any);
+  const membershipQuery = {
+    select: () => membershipQuery,
+    eq: () => membershipQuery,
+    is: () => membershipQuery,
+    not: () => membershipQuery,
+    maybeSingle: async () => ({ data: { role: "admin" }, error: null }),
+  };
+  // requireRole uses the admin client for the Firebase-mapped membership lookup.
+  vi.mocked(createAdminClient).mockReturnValue({ from: () => membershipQuery } as any);
 }
 
 function patchReq(role: string) {

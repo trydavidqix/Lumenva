@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { invokeLumenvaCommand } from "@/lib/cli/lumenva";
 import { getToolByName } from "@/lib/mcp/tools";
+
+vi.mock("@/lib/mcp/audit", () => ({ auditMcpToolCall: vi.fn().mockResolvedValue(undefined) }));
 
 const moduleContract = {
   id: "inbox", version: "1.0.0", dependencies: [], conflicts: [], requiredCapabilities: [],

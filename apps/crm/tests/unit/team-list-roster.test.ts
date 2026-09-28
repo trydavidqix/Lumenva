@@ -14,6 +14,7 @@ import { NextRequest } from "next/server";
 
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { AuthUser } from "@/lib/auth/types";
 
 vi.mock("@/lib/auth/server", () => ({
@@ -87,6 +88,15 @@ function managerSession(rows: Array<Record<string, unknown>>, spy: QuerySpy) {
   vi.mocked(resolveActiveOrg).mockResolvedValue({ orgId: ORG_ID, name: "Org", role: "manager" });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(rows, spy) as any);
+  const membershipQuery = {
+    select: () => membershipQuery,
+    eq: () => membershipQuery,
+    is: () => membershipQuery,
+    not: () => membershipQuery,
+    maybeSingle: async () => ({ data: { role: "manager" }, error: null }),
+  };
+  // requireRole uses the admin client for the Firebase-mapped membership lookup.
+  vi.mocked(createAdminClient).mockReturnValue({ from: () => membershipQuery } as any);
 }
 
 beforeEach(() => {

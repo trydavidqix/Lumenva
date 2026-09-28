@@ -4,10 +4,12 @@ import { NextRequest } from "next/server";
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import { audit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { AuthUser } from "@/lib/auth/types";
 
 vi.mock("@/lib/auth/server", () => ({ loadAuthUser: vi.fn(), resolveActiveOrg: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
 vi.mock("@/lib/audit", () => ({ audit: vi.fn(async () => undefined) }));
 
 const ADMIN_ID = "11111111-1111-4111-8111-111111111111";
@@ -38,6 +40,14 @@ function setup(target: { id: string; user_id: string; role: string; revoked_at: 
     }),
     rpc: async () => ({ data: "admin", error: null }),
   } as never);
+  const membershipQuery = {
+    select: () => membershipQuery,
+    eq: () => membershipQuery,
+    is: () => membershipQuery,
+    not: () => membershipQuery,
+    maybeSingle: async () => ({ data: { role: "admin" }, error: null }),
+  };
+  vi.mocked(createAdminClient).mockReturnValue({ from: () => membershipQuery } as any);
   return updates;
 }
 

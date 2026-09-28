@@ -22,6 +22,11 @@ vi.mock("@/lib/audit", () => ({
   isServiceRoleConfigured: () => false,
 }));
 
+const { mockGetFirebaseUser } = vi.hoisted(() => ({ mockGetFirebaseUser: vi.fn() }));
+vi.mock("@lumenva/db/gcp/firebase-auth", () => ({
+  initFirebaseAuth: () => ({ getUser: mockGetFirebaseUser }),
+}));
+
 import {
   crmListConversations,
   crmGetConversation,
@@ -35,6 +40,7 @@ const USER_B = "33333333-3333-4333-8333-333333333333"; // Bob
 const STAGE_1 = "55555555-5555-4555-8555-555555555551";
 
 const USER_NAMES: Record<string, string> = { [USER_A]: "Alice", [USER_B]: "Bob" };
+mockGetFirebaseUser.mockImplementation(async (id: string) => ({ displayName: USER_NAMES[id] ?? null }));
 
 // Fila: 3 conversas com tempos de espera conhecidos (oldest = pos 1).
 const CONV_OLD = "aaaaaaaa-0000-4000-8000-000000000001";

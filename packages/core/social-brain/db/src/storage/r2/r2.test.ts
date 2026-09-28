@@ -50,7 +50,10 @@ describe('R2 object store', () => {
   it('rejects pathological references and prefixes without regex backtracking', async () => {
     const { store } = makeStore()
     const pathological = `${'a'.repeat(200_000)}!`
-    await expect(store.get({ workspaceId: pathological, objectId: 'asset-1' }, authorization)).rejects.toMatchObject({ code: 'invalid_reference' })
+    await expect(store.get(
+      { workspaceId: pathological, objectId: 'asset-1' },
+      { ...authorization, workspaceId: pathological },
+    )).rejects.toMatchObject({ code: 'invalid_reference' })
     expect(() => createR2ObjectStore(makeBucket(), {
       bucketName: 'private-media',
       maxBytes: 10,

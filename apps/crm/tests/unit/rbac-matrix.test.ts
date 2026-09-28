@@ -17,6 +17,7 @@ import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import { resolvePlatformAdmin } from "@/lib/auth/requirePlatformAdmin";
 import { audit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { AuthUser, Role } from "@/lib/auth/types";
 
 vi.mock("@/lib/auth/server", () => ({
@@ -91,6 +92,16 @@ function session(role: Role | null, tables: Record<string, unknown> = {}) {
   vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: false, reason: "forbidden" });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(role, tables) as any);
+  const membershipQuery = {
+    select: () => membershipQuery,
+    eq: () => membershipQuery,
+    is: () => membershipQuery,
+    not: () => membershipQuery,
+    maybeSingle: async () => ({ data: role ? { role } : null, error: null }),
+  };
+  // requireRole resolves the effective Firebase-mapped membership through the
+  // service-role client, not the user-scoped client mocked above.
+  vi.mocked(createAdminClient).mockReturnValue({ from: () => membershipQuery } as any);
 }
 
 async function errorCode(res: Response): Promise<string> {
