@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { afterEach } from "node:test";
-import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import {
@@ -244,4 +245,20 @@ test("allows explicit negative references to obsolete commands", async () => {
   );
   const findings = await checkHarnessConsistency(root);
   assert.equal(findings.some((f) => f.code === "stale-command"), false);
+});
+
+
+test("tests that create OS temp directories declare cleanup guards", async () => {
+  const top = spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).stdout.trim();
+  const listed = spawnSync("git", ["ls-files", "*.test.ts", "*.test.tsx", "*.test.js", "*.test.mjs"], { cwd: top, encoding: "utf8" });
+  assert.equal(listed.status, 0, listed.stderr);
+  const offenders = [];
+  for (const file of listed.stdout.split(/\r?\n/).filter(Boolean)) {
+    const source = await readFile(join(top, file), "utf8");
+    if (!/\bmkdtemp(?:Sync)?\s*\(/.test(source)) continue;
+    const removes = /\b(?:rm|rmSync)\s*\(/.test(source);
+    const hasLifecycleGuard = /\b(?:afterEach|afterAll|finally)\b/.test(source);
+    if (!(removes && hasLifecycleGuard)) offenders.push(file);
+  }
+  assert.deepEqual(offenders, []);
 });
