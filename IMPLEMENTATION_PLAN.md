@@ -1,12 +1,13 @@
 # Consolidation Closeout — PR #75
 
-## Current checkpoint — 2026-09-28 19:31 Europe/Lisbon
+## Current checkpoint — 2026-09-28 19:46 Europe/Lisbon
 
-- Candidate `b397c3a59b6fd193d002aa5ddcd97e6d3a194aa7`, branch `consolidation/lumenva-main-2026-09-27`; PR #75 OPEN/unmerged; base `main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
+- Candidate `5b5e062d85f7b9ef833ee1a36b1d0041a5cb35fd`, branch `consolidation/lumenva-main-2026-09-27`; PR #75 OPEN/unmerged; base `main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
 - Decision on commit `082baf95`: its 92-path removal was not requested. Keep the changes unless proven duplicate. All 92 paths are present in the candidate; the targeted audit found no duplicate implementation in the reviewed areas. Keep the baseline/migration schema mirror because both installation paths are deliberately maintained.
 - This decision is resolved. No more owner choice is needed for the 92 paths. The prior paired E2E runs were cancelled before completion, so final main-vs-candidate E2E parity is still outstanding.
+- Checks on `5b5e062d` at 19:43: `verify`, `verify-and-build`, invariants, vertical, and Semgrep pending; Gitleaks and OSV passed; CodeQL skipped. Rerun on the next PR head before treating them as current evidence.
 
-## Current checkpoint — 2026-09-28 18:28 Europe/Lisbon
+## Historical checkpoint — 2026-09-28 18:28 Europe/Lisbon (superseded)
 
 - Candidate: `f1acf2a41b2475e024504a03ac0fa7242f7c19e7`; branch `consolidation/lumenva-main-2026-09-27`; PR [#75](https://github.com/trydavidqix/Lumenva/pull/75) OPEN/unmerged; base `main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
 - The latest workflow change makes the remaining Playwright parts run after the visual E2E step fails; it keeps the job failed. Paired main/candidate runs [36456011711](https://github.com/trydavidqix/Lumenva/actions/runs/36456011711) and [36456014775](https://github.com/trydavidqix/Lumenva/actions/runs/36456014775) are still executing part 2. Both previously failed the same visual gate and part 1. Final E2E comparison is not available yet.
@@ -14,13 +15,9 @@
 - Historical note (superseded): the 18:28 checkpoint incorrectly treated the 92-path removal as a pending owner decision. David clarified that it was not intended; retain the non-duplicated work as recorded in the current checkpoint.
 - Archive proof is stale after `f1acf2a4`; preserve old bundles and regenerate a uniquely named final bundle after final docs, then verify all live refs by exact name/SHA.
 
-## Current state
+## Current state — superseded by the checkpoint above
 
-- Branch: `consolidation/lumenva-main-2026-09-27`
-- Candidate HEAD at the latest documented checkpoint: `f1acf2a41b2475e024504a03ac0fa7242f7c19e7`
-- Base `main`: `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`
-- PR #75 is open and unmerged. Main and the original Lumenva checkout remain untouched.
-- Heavy validation runs only in GitHub Actions. No local test suite is evidence.
+- This older snapshot is retained as historical context; use the current checkpoint above and `ACTIVE_PIPELINE.md` for live status.
 
 ## Previously completed evidence (older candidate checkpoint)
 
@@ -38,11 +35,11 @@
 
 ## Remaining closeout
 
-1. Wait for the paired main/candidate E2E runs to finish; record exact tests/failures/artifact links and distinguish shared failures from candidate-only failures.
-2. Obtain David's decision on the 92 paths removed by `082baf95`; apply only the chosen disposition, without touching `main` or the source checkout.
+1. Complete paired main/candidate E2E on comparable inputs, then record exact outcomes and artifacts. Previous paired runs were cancelled before completion.
+2. (Completed) Keep the 92 paths removed by `082baf95` when not duplicated; targeted audit found no duplicate implementation in the reviewed areas.
 3. Finish content review of the useful voice integration gaps without importing the legacy branch wholesale; retain production security guards and test only any scoped port.
-4. Refresh this report and plan with final CI and branch classifications; create a uniquely named Git bundle, verify it, and compare every live ref name/SHA. Preserve all earlier bundles and refs.
-5. Push the documentation update to the PR branch, confirm local/remote HEAD equality and clean status, then verify the resulting PR checks and exact base/head. Leave PR #75 open/unmerged for David.
+4. After all content/report changes, create a uniquely named Git bundle, verify it, and compare every preserved live ref name/SHA. Keep all earlier bundles.
+5. Publish final closeout evidence, confirm local/remote head equality and clean status, and leave PR #75 open/unmerged. Do not continue to another task.
 
 ## Constraints and stop condition
 

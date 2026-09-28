@@ -1,28 +1,29 @@
 # Branch Consolidation Report
 
-## Current checkpoint — 2026-09-28 19:31 Europe/Lisbon
+## Current checkpoint — 2026-09-28 19:46 Europe/Lisbon
 
-- Candidate `consolidation/lumenva-main-2026-09-27` was at `b397c3a59b6fd193d002aa5ddcd97e6d3a194aa7` at audit start; PR [#75](https://github.com/trydavidqix/Lumenva/pull/75) remains OPEN/unmerged against `main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`. The local worktree was clean at audit start; these documentation edits are now pending.
+- Candidate `consolidation/lumenva-main-2026-09-27` is at `5b5e062d85f7b9ef833ee1a36b1d0041a5cb35fd`; PR [#75](https://github.com/trydavidqix/Lumenva/pull/75) remains OPEN/unmerged against `main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`. `origin` matched the candidate at this checkpoint. No merge or main modification occurred.
 - David clarified that commit `082baf95` was not an instruction to remove the content. The instruction is to retain useful work unless it is genuinely duplicated. The candidate contains all 92 affected paths (0 absent); this audit found no duplicate implementation in the reviewed notification, outbound voice, branch-parity, webhook-security, or shared-toolchain responsibilities. No path was removed.
 - Duplicate-looking schema in `infra/supabase/baseline.sql` and migrations `0204/0205` is intentional: the baseline is the supported full install/update snapshot, while migrations preserve versioned history; CI and the migration doctrine require both. It is not two runtime notification systems.
 - Notification reminders/acknowledgement/escalation are separate from the existing email-notification route. The governed outbound voice service is consumed by the reminder escalation flow and the manager API route; the SIP worker is a downstream call executor, not a competing scheduler/router. Branch-parity jobs compare main and candidate on the same runner, while ordinary CI validates one ref; their roles are complementary.
 - No evidence in this audit justifies dropping any of the 92 paths. Keep them in the candidate. This resolves the prior content-choice question; it does not declare PR #75 complete or authorize merge.
-- The paired manual E2E runs `36456011711` (main) and `36456014775` (candidate) were cancelled before finishing part 2; their E2E comparison remains inconclusive. Heavy checks stay GitHub Actions-only. Refresh archive proof only after final documentation/checkpoint changes; preserve existing bundles and refs.
+- At this checkpoint, `verify`, `verify-and-build`, both invariant runs, vertical, and Semgrep were pending for candidate `5b5e062d`; Gitleaks and OSV passed, and CodeQL reported skipped. These checks must be refreshed after the next documentation commit.
+- The paired manual E2E runs `36456011711` (main) and `36456014775` (candidate) were cancelled before finishing part 2; they do not establish E2E parity. Heavy checks stay GitHub Actions-only. Refresh archive proof only after final documentation/checkpoint changes; preserve existing bundles and refs.
 
-## Current checkpoint — 2026-09-28 18:28 Europe/Lisbon
+## Historical checkpoint — 2026-09-28 18:28 Europe/Lisbon (superseded)
 
 - Candidate branch `consolidation/lumenva-main-2026-09-27` is at `f1acf2a41b2475e024504a03ac0fa7242f7c19e7`; PR [#75](https://github.com/trydavidqix/Lumenva/pull/75) is OPEN and unmerged against `main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`. The local worktree is clean and its HEAD equals `origin/consolidation/lumenva-main-2026-09-27` at this checkpoint.
 - The only commit after the prior report checkpoint changes `.github/workflows/e2e.yml`: after the visual E2E step fails, Playwright parts 1 and 2 still run. Failures remain failures; this does not mask or convert the job result.
 - Paired E2E runs use the same workflow revision and setup, targeting main [36456011711](https://github.com/trydavidqix/Lumenva/actions/runs/36456011711) and the candidate [36456014775](https://github.com/trydavidqix/Lumenva/actions/runs/36456014775). At the timestamp above, both completed setup/build/seed steps, both failed the visual AI-page check and E2E part 1, and both were still running E2E part 2. Therefore the remaining-spec comparison and final artifacts are **pending**; do not report a completed E2E parity result yet.
 - Current PR checks queried at 18:28: `verify`, `verify-and-build`, invariants, vertical, CodeQL, Semgrep, Gitleaks, and OSV checks passed. The two manually dispatched paired E2E runs above are still in progress and are tracked separately from PR-required checks.
 - Branch inventory analysis found no useful missing work in archived PR #5. PR #13 (`voz`) remains an open draft targeting the legacy Command Center branch. Its useful voice notification/schema changes are already represented in the candidate; three potentially useful, absent integration pieces were identified (SIP call creation, voice-event reconciliation, and end-to-end call/tenant correlation). Do not port them blindly: the source branch also removes production safety checks. Any selective port requires a scoped, tested implementation that preserves the current guards.
-- Human decision remains pending on owner commit `082baf95`: it removed 92 paths from `implementation/unified`, while PR #75 includes that content. No rationale was found in linked PR discussion. Do not resolve the conflict by assumption; the owner must choose whether to respect the removal or retain the consolidated content.
+- At that time, the 92-path decision was unresolved. David later clarified that the removal was not intended; see the current checkpoint above.
 - The prior final archive bundle predates `f1acf2a4` and this report update. Preserve it; create a new uniquely named bundle only after the final documentation commit, verify it, and compare every live ref name/SHA. No branch cleanup, merge, main update, or source-checkout modification has occurred.
 - Next: wait for both paired E2E runs to finish and record exact outcomes/artifacts; resolve the owner-content decision; update this report and `IMPLEMENTATION_PLAN.md`; create and verify the refreshed archive; push the docs update to this PR branch and recheck its head/base/checks. Heavy tests remain GitHub Actions-only.
 
 Historical checkpoint (superseded by the current checkpoint above): candidate `9dbfd276e20748501d9960d249b2f444d1cd325d`; same-runner parity [36445124677](https://github.com/trydavidqix/Lumenva/actions/runs/36445124677) reported zero candidate-only unit failures, 5 shared failures and 47 resolved failures, with build/lint/toolchain/typecheck passing on the candidate. Its E2E pair did not establish runtime parity for the AI-page permission failure. These figures are retained as historical evidence only and are not the latest candidate status.
 
-## Current checkpoint — 2026-09-28 17:22 Europe/Lisbon
+## Historical checkpoint — 2026-09-28 17:22 Europe/Lisbon (superseded)
 
 - Candidate branch `consolidation/lumenva-main-2026-09-27`, HEAD `8d2962808a89656a106ccd6e3d729536b300d93d`; PR [#75](https://github.com/trydavidqix/Lumenva/pull/75) is open and unmerged against main `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`. The working tree has only the two closeout reports modified; no local tests were run.
 - Direct parity [36445124677](https://github.com/trydavidqix/Lumenva/actions/runs/36445124677) completed successfully using the same runner and Node `22.23.3` / pnpm `9.15.9`. Build: main FAIL (17 signatures), candidate PASS (0); lint/toolchain/typecheck PASS on both. Unit: main `5,487/88/10`, candidate `5,611/7/11`; failure IDs `52/5`, timeouts `0/0`, worker errors `0/0`, duration `918,383ms/863,298ms`. Classification: `5 PREEXISTING`, `0 REGRESSION`, `47 RESOLVED`. Artifact reports were uploaded by the workflow (`branch-parity-unit`, `branch-parity-comparison`, `branch-parity-toolchain`, `branch-parity-lint`, `branch-parity-typecheck`, `branch-parity-build`).
@@ -46,7 +47,7 @@ At candidate HEAD `2cb8542b610860a53dd0a35d831f08886f286d91`, Actions reported 5
 
 These changes are not validated until fresh GitHub Actions runs complete. Do not treat local `git diff --check` as test evidence. E2E Firebase configuration remains a separate external blocker.
 
-## Current checkpoint — 2026-09-28 11:41 Europe/Lisbon
+## Historical checkpoint — 2026-09-28 11:41 Europe/Lisbon (superseded)
 
 - Scope: finish PR #75 consolidation readiness only. Heavy tests run exclusively in GitHub Actions; no local tests are considered evidence. Do not merge, delete refs, or modify the source Lumenva checkout.
 - Candidate: `consolidation/lumenva-main-2026-09-27`, HEAD `d02d002abdfe5c64282bf27c61c40aec3deff089`, pushed and clean at last check. PR [#75](https://github.com/trydavidqix/Lumenva/pull/75) remains open against `main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
