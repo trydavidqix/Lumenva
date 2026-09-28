@@ -35,6 +35,11 @@ jobs:
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: Verify Windows Supabase compatibility link handling
+        run: node --test tooling/scripts/branch-validation-windows.test.mjs
       - name: Resolve immutable comparison refs
         id: refs
         shell: pwsh

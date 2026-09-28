@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 import { performance } from 'node:perf_hooks'
 import { countTimeouts, extractFailureSignatures, spawnSpec, summarizeVitestOutput } from './branch-validation-parser.mjs'
+import { ensureCrmSupabaseLink } from './branch-validation-windows.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const artifacts = join(root, 'parity-artifacts')
@@ -65,6 +66,7 @@ function packageInfo(cwd) {
 
 async function runTarget(target) {
   const stem = `${target.name}-${suite}`
+  if (process.platform === 'win32') ensureCrmSupabaseLink(target.path)
   const info = packageInfo(target.path)
   const nodeOk = process.version === 'v22.23.3'
   const pmMatch = /^pnpm@9\.15\.9\+sha512\.[a-f0-9]+$/.test(info.packageManager ?? '')
