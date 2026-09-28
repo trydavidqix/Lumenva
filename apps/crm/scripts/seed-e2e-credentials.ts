@@ -93,6 +93,7 @@ async function ensureUser(email: string, full_name: string): Promise<string> {
     // garantir senha conhecida
     await admin.auth.admin.updateUserById(existing.id, { password: PASSWORD });
     await ensureFirebaseUser(existing.id, email, full_name);
+    await ensureIdentityMapping(existing.id);
     return existing.id;
   }
   const { data, error } = await admin.auth.admin.createUser({
@@ -103,8 +104,17 @@ async function ensureUser(email: string, full_name: string): Promise<string> {
   });
   if (error || !data?.user) throw new Error(`create user ${email}: ${error?.message}`);
   await ensureFirebaseUser(data.user.id, email, full_name);
+  await ensureIdentityMapping(data.user.id);
   console.log(`[seed] user created ${email}: ${data.user.id}`);
   return data.user.id;
+}
+
+async function ensureIdentityMapping(userId: string): Promise<void> {
+  const { error } = await admin.from("identity_user_mappings").upsert(
+    { firebase_uid: userId, user_id: userId, active: true, retired_at: null } as never,
+    { onConflict: "firebase_uid" },
+  );
+  if (error) throw new Error(`identity mapping upsert: ${error.message}`);
 }
 
 async function ensureFirebaseUser(uid: string, email: string, displayName: string): Promise<void> {

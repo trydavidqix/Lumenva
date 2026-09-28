@@ -94,6 +94,7 @@ test.describe("as telas do épico abrem para uma pessoa", () => {
       await page.waitForTimeout(800);
 
       const status = resp?.status() ?? 0;
+      const finalPath = new URL(page.url()).pathname;
       const texto = (await page.locator("body").innerText().catch(() => ""))
         .replace(/\s+/g, " ")
         .trim();
@@ -107,6 +108,9 @@ test.describe("as telas do épico abrem para uma pessoa", () => {
       // erro de runtime. 120 chars é baixo de propósito — uma tela vazia de
       // verdade tem só o menu; qualquer conteúdo real passa disso com folga.
       if (status >= 400) quebradas.push(`${tela.rota} [${tela.dono}]: HTTP ${status}`);
+      else if (!finalPath.startsWith("/app/")) {
+        quebradas.push(`${tela.rota} [${tela.dono}]: terminou em ${finalPath}, sessão não persistiu`);
+      }
       else if (texto.length < 120) {
         quebradas.push(`${tela.rota} [${tela.dono}]: só ${texto.length} chars — tela em branco`);
       }
