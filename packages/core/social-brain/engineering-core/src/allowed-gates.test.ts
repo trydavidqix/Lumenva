@@ -19,7 +19,7 @@ describe('gate allowlist', () => {
     expect(resolveCanonicalGateCommand('production.deploy', undefined, definitions)).toMatchObject({ allowed: false })
   })
 
-  it('does not expose a security alias for the environment preflight', async () => {
+  it('denies a security alias that is absent from the gate policy', async () => {
     const root = mkdtempSync(join(tmpdir(), 'lumenva-engineering-gates-'))
     try {
       const definitionsPath = join(root, 'engineering', 'policy.json')
@@ -35,8 +35,9 @@ describe('gate allowlist', () => {
       const preflight = loadedDefinitions.preflight
 
       expect(loadedDefinitions.security).toBeUndefined()
-      if (preflight === undefined) throw new Error('preflight must remain in the canonical catalog')
+      if (preflight === undefined) throw new Error('preflight must remain in the fixture policy')
       expect(preflight).toEqual(['pnpm', 'engineering', '--', 'preflight'])
+      expect(resolveCanonicalGateCommand('security', undefined, loadedDefinitions)).toMatchObject({ allowed: false })
       expect(Object.entries(loadedDefinitions).filter(([name, command]) => name !== 'preflight' && command.join('\u0000') === preflight.join('\u0000'))).toEqual([])
     } finally {
       rmSync(root, { recursive: true, force: true })
