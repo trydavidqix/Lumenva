@@ -365,6 +365,7 @@ jobs:
       # pela própria suíte, não a saúde das telas. Isolá-lo aqui preserva os
       # limites de produção e mantém a evidência útil.
       - name: E2E — telas de IA antes da carga acumulada
+        id: e2e-visual
         run: pnpm --filter lumenva-crm exec playwright test --workers=1 olhar-telas-do-epico.spec.ts
         env:
           AUTH_RATE_LIMIT_LOGIN_IP: "1000"
@@ -401,6 +402,7 @@ jobs:
       # fazem o segundo ser recusado como replay. Foi o que derrubava a
       # `reset-password-mfa` (issue #80): ela passa sozinha e falha em paralelo.
       - name: E2E — parte 1 de 2
+        if: ${{ always() && !cancelled() && steps.e2e-visual.outcome != 'skipped' }}
         run: |
           pnpm --filter lumenva-crm exec playwright test --workers=1 \
             smoke.spec.ts auth.spec.ts error-pages.spec.ts \
@@ -417,6 +419,7 @@ jobs:
           AUTH_RATE_LIMIT_LOGIN_IP: "1000"
 
       - name: E2E — parte 2 de 2 (processo novo, contador de login zerado)
+        if: ${{ always() && !cancelled() && steps.e2e-visual.outcome != 'skipped' }}
         run: |
           pnpm --filter lumenva-crm exec playwright test --workers=1 \
             agente-novo-e-uso.spec.ts agente-organiza-operacao.spec.ts \
