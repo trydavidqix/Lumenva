@@ -1,5 +1,14 @@
 # Branch Consolidation Report
 
+## Current checkpoint — 2026-09-28 19:31 Europe/Lisbon
+
+- Candidate `consolidation/lumenva-main-2026-09-27` was at `b397c3a59b6fd193d002aa5ddcd97e6d3a194aa7` at audit start; PR [#75](https://github.com/trydavidqix/Lumenva/pull/75) remains OPEN/unmerged against `main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`. The local worktree was clean at audit start; these documentation edits are now pending.
+- David clarified that commit `082baf95` was not an instruction to remove the content. The instruction is to retain useful work unless it is genuinely duplicated. The candidate contains all 92 affected paths (0 absent); this audit found no duplicate implementation in the reviewed notification, outbound voice, branch-parity, webhook-security, or shared-toolchain responsibilities. No path was removed.
+- Duplicate-looking schema in `infra/supabase/baseline.sql` and migrations `0204/0205` is intentional: the baseline is the supported full install/update snapshot, while migrations preserve versioned history; CI and the migration doctrine require both. It is not two runtime notification systems.
+- Notification reminders/acknowledgement/escalation are separate from the existing email-notification route. The governed outbound voice service is consumed by the reminder escalation flow and the manager API route; the SIP worker is a downstream call executor, not a competing scheduler/router. Branch-parity jobs compare main and candidate on the same runner, while ordinary CI validates one ref; their roles are complementary.
+- No evidence in this audit justifies dropping any of the 92 paths. Keep them in the candidate. This resolves the prior content-choice question; it does not declare PR #75 complete or authorize merge.
+- The paired manual E2E runs `36456011711` (main) and `36456014775` (candidate) were cancelled before finishing part 2; their E2E comparison remains inconclusive. Heavy checks stay GitHub Actions-only. Refresh archive proof only after final documentation/checkpoint changes; preserve existing bundles and refs.
+
 ## Current checkpoint — 2026-09-28 18:28 Europe/Lisbon
 
 - Candidate branch `consolidation/lumenva-main-2026-09-27` is at `f1acf2a41b2475e024504a03ac0fa7242f7c19e7`; PR [#75](https://github.com/trydavidqix/Lumenva/pull/75) is OPEN and unmerged against `main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`. The local worktree is clean and its HEAD equals `origin/consolidation/lumenva-main-2026-09-27` at this checkpoint.

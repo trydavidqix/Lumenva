@@ -1,11 +1,17 @@
 # Consolidation Closeout — PR #75
 
+## Current checkpoint — 2026-09-28 19:31 Europe/Lisbon
+
+- Candidate `b397c3a59b6fd193d002aa5ddcd97e6d3a194aa7`, branch `consolidation/lumenva-main-2026-09-27`; PR #75 OPEN/unmerged; base `main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
+- Decision on commit `082baf95`: its 92-path removal was not requested. Keep the changes unless proven duplicate. All 92 paths are present in the candidate; the targeted audit found no duplicate implementation in the reviewed areas. Keep the baseline/migration schema mirror because both installation paths are deliberately maintained.
+- This decision is resolved. No more owner choice is needed for the 92 paths. The prior paired E2E runs were cancelled before completion, so final main-vs-candidate E2E parity is still outstanding.
+
 ## Current checkpoint — 2026-09-28 18:28 Europe/Lisbon
 
 - Candidate: `f1acf2a41b2475e024504a03ac0fa7242f7c19e7`; branch `consolidation/lumenva-main-2026-09-27`; PR [#75](https://github.com/trydavidqix/Lumenva/pull/75) OPEN/unmerged; base `main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
 - The latest workflow change makes the remaining Playwright parts run after the visual E2E step fails; it keeps the job failed. Paired main/candidate runs [36456011711](https://github.com/trydavidqix/Lumenva/actions/runs/36456011711) and [36456014775](https://github.com/trydavidqix/Lumenva/actions/runs/36456014775) are still executing part 2. Both previously failed the same visual gate and part 1. Final E2E comparison is not available yet.
 - PR checks observed at 18:28 passed for `verify`, `verify-and-build`, invariants, vertical, CodeQL, Semgrep, Gitleaks, and OSV.
-- Required human decision: owner commit `082baf95` removed 92 paths from `implementation/unified`; this PR retains them. Keep the decision unresolved until David says whether to honor that removal or keep the consolidated content. No branch-wide merge is to be used as a substitute.
+- Historical note (superseded): the 18:28 checkpoint incorrectly treated the 92-path removal as a pending owner decision. David clarified that it was not intended; retain the non-duplicated work as recorded in the current checkpoint.
 - Archive proof is stale after `f1acf2a4`; preserve old bundles and regenerate a uniquely named final bundle after final docs, then verify all live refs by exact name/SHA.
 
 ## Current state
