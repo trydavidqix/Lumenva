@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { afterEach } from "node:test";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
@@ -12,6 +13,16 @@ import {
   SCOPED_RULES,
 } from "./check-harness-consistency.mjs";
 
+const temporaryRoots = new Set();
+
+afterEach(async () => {
+  const roots = [...temporaryRoots];
+  temporaryRoots.clear();
+  await Promise.all(
+    roots.map((root) => rm(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })),
+  );
+});
+
 async function put(root, path, content) {
   const target = join(root, path);
   await mkdir(dirname(target), { recursive: true });
@@ -20,6 +31,7 @@ async function put(root, path, content) {
 
 async function healthyFixture() {
   const root = await mkdtemp(join(tmpdir(), "harness-check-"));
+  temporaryRoots.add(root);
   await put(
     root,
     ".gitignore",
