@@ -55,6 +55,8 @@ jobs:
           - 3998:80
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v6
         with:
@@ -65,10 +67,16 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ inputs.target_ref }}
-          path: .target
+      - name: Create isolated test worktree
+        # The workflow source stays at the candidate checkout so the runtime
+        # and repo:check contract remain canonical even when testing main.
+        env:
+          TARGET_REF: ${{ inputs.target_ref }}
+        run: |
+          git fetch origin "$TARGET_REF"
+          git worktree add --detach "$RUNNER_TEMP/e2e-target" FETCH_HEAD
+          ln -s "$RUNNER_TEMP/e2e-target" .target
+        working-directory: .
 
       - run: pnpm install --frozen-lockfile
 
@@ -341,6 +349,6 @@ jobs:
         with:
           name: playwright-report
           path: |
-            .target/playwright-report/
-            .target/test-results/
+            ${{ runner.temp }}/e2e-target/playwright-report/
+            ${{ runner.temp }}/e2e-target/test-results/
           retention-days: 7
