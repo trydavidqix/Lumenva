@@ -164,7 +164,7 @@ jobs:
       # mesmo — mas o contrato é único, e um workflow que contorna o gate seria
       # o começo de ele não valer para ninguém.
       - name: Gerar o .env.e2e (ambiente da suíte)
-        run: pnpm e2e:env
+        run: pnpm --filter lumenva-crm e2e:env
 
       # E publica o arquivo no ambiente do JOB, para que servidor e testes leiam
       # literalmente a mesma fonte.
@@ -192,12 +192,12 @@ jobs:
       # deixaria a URL errada dentro do JavaScript que roda no browser — servidor
       # falando com um banco e cliente com outro, no mesmo teste.
       - name: Build de produção (com o ambiente do E2E)
-        run: pnpm e2e:build
+        run: pnpm --filter lumenva-crm e2e:build
         env:
           NEXT_TELEMETRY_DISABLED: "1"
 
       - name: Instalar o browser
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm --filter lumenva-crm exec playwright install --with-deps chromium
 
       # `.env.local` é CÓPIA do `.env.e2e`, não uma terceira redação dele.
       #
@@ -216,7 +216,7 @@ jobs:
       - name: Semear credenciais de teste
         run: |
           cp .env.e2e .env.local
-          pnpm exec tsx apps/crm/scripts/seed-e2e-credentials.ts
+          pnpm --filter lumenva-crm exec tsx scripts/seed-e2e-credentials.ts
 
       # `SUPABASE_DB_URL` no `.env.local` (e não só no `env:` do passo de teste):
       # `seed-e2e-escalacao.ts` abre um `pg.Pool` direto, e o `.env.local` é a
@@ -242,9 +242,9 @@ jobs:
       # Sem a flag o de capacidades morre na validação Zod das 3 vars do Supabase.
       - name: Semear as fixtures que as specs não semeiam sozinhas
         run: |
-          pnpm exec tsx apps/crm/scripts/seed-e2e-escalacao.ts
-          pnpm exec tsx --env-file=.env.local apps/crm/scripts/seed-e2e-capacidades-ausentes.ts
-          pnpm exec tsx apps/crm/scripts/seed-e2e-followup-agent.ts
+          pnpm --filter lumenva-crm exec tsx scripts/seed-e2e-escalacao.ts
+          pnpm --filter lumenva-crm exec tsx --env-file=.env.local scripts/seed-e2e-capacidades-ausentes.ts
+          pnpm --filter lumenva-crm exec tsx scripts/seed-e2e-followup-agent.ts
 
       # Verificação visual antes da carga acumulada: estas telas fazem chamadas
       # de dados ao abrir e o spec converte qualquer 429 em falha visual. Quando
@@ -252,7 +252,7 @@ jobs:
       # pela própria suíte, não a saúde das telas. Isolá-lo aqui preserva os
       # limites de produção e mantém a evidência útil.
       - name: E2E — telas de IA antes da carga acumulada
-        run: pnpm exec playwright test --workers=1 olhar-telas-do-epico.spec.ts
+        run: pnpm --filter lumenva-crm exec playwright test --workers=1 olhar-telas-do-epico.spec.ts
         env:
           AUTH_RATE_LIMIT_LOGIN_IP: "1000"
 
@@ -289,7 +289,7 @@ jobs:
       # `reset-password-mfa` (issue #80): ela passa sozinha e falha em paralelo.
       - name: E2E — parte 1 de 2
         run: |
-          pnpm exec playwright test --workers=1 \
+          pnpm --filter lumenva-crm exec playwright test --workers=1 \
             smoke.spec.ts auth.spec.ts error-pages.spec.ts \
             password-recovery.spec.ts signup-journey.spec.ts \
             rbac-roles.spec.ts inbox-scope.spec.ts reset-password-mfa.spec.ts \
@@ -305,7 +305,7 @@ jobs:
 
       - name: E2E — parte 2 de 2 (processo novo, contador de login zerado)
         run: |
-          pnpm exec playwright test --workers=1 \
+          pnpm --filter lumenva-crm exec playwright test --workers=1 \
             agente-novo-e-uso.spec.ts agente-organiza-operacao.spec.ts \
             central-de-avisos-capacidades.spec.ts escalacao-ciclo.spec.ts \
             navegacao.spec.ts pipelines-gestao.spec.ts \
