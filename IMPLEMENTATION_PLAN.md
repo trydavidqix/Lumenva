@@ -24,7 +24,7 @@
 
 ## Remaining useful work
 
-1. Commit/push the test-harness parity change and report updates to the PR branch; dispatch the same E2E visual spec against `main` and collect its result.
+1. Push the test-harness parity change including `firebase.e2e.json` into the disposable baseline worktree; retry E2E against `main` and collect the spec result. First attempt `36449705889` stopped before tests because that test-only config was absent from `main`.
 2. Update the reports with that result and current PR checks; push the final documentation-only closeout update.
 3. Create a new, uniquely named final Git bundle after the last report commit; verify it and compare every live ref name/SHA. Preserve all existing bundles and refs.
 4. Verify final PR head/base, remote synchronization, archive evidence, and clean worktree. Leave PR #75 open/unmerged for the owner.

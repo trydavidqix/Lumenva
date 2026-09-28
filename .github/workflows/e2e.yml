@@ -77,9 +77,10 @@ jobs:
           git worktree add --detach "$RUNNER_TEMP/e2e-target" FETCH_HEAD
           ln -s "$RUNNER_TEMP/e2e-target" .target
           cp apps/crm/scripts/gerar-env-e2e.sh "$RUNNER_TEMP/e2e-target/apps/crm/scripts/gerar-env-e2e.sh"
-          # Reuse the candidate's non-secret identity fixtures and the exact
-          # visual spec when target_ref=main, so baseline and candidate exercise
-          # the same test setup without changing product code on either side.
+          # Reuse the candidate's non-secret test config, identity fixtures and
+          # exact visual spec when target_ref=main, so baseline and candidate
+          # exercise identical test setup without changing product code.
+          cp apps/crm/firebase.e2e.json "$RUNNER_TEMP/e2e-target/apps/crm/firebase.e2e.json"
           cp apps/crm/scripts/seed-e2e-credentials.ts "$RUNNER_TEMP/e2e-target/apps/crm/scripts/seed-e2e-credentials.ts"
           cp apps/crm/tests/e2e/olhar-telas-do-epico.spec.ts "$RUNNER_TEMP/e2e-target/apps/crm/tests/e2e/olhar-telas-do-epico.spec.ts"
           # The relative CRM compatibility link resolves as missing in this
