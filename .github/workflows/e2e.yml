@@ -82,6 +82,14 @@ jobs:
           # checkout to the canonical Supabase directory before Next builds.
           ln -sfn "$RUNNER_TEMP/e2e-target/infra/supabase" "$RUNNER_TEMP/e2e-target/apps/crm/supabase"
           test -d "$RUNNER_TEMP/e2e-target/apps/crm/supabase"
+          # The CLI resolves email-template content paths under the project
+          # root and forbids following the Supabase-directory symlink outside
+          # that root. Stage these fixtures inside the disposable CRM checkout.
+          mkdir -p "$RUNNER_TEMP/e2e-target/apps/crm/templates"
+          cp "$RUNNER_TEMP/e2e-target/infra/supabase/templates/confirmation.html" \
+            "$RUNNER_TEMP/e2e-target/apps/crm/templates/confirmation.html"
+          cp "$RUNNER_TEMP/e2e-target/infra/supabase/templates/recovery.html" \
+            "$RUNNER_TEMP/e2e-target/apps/crm/templates/recovery.html"
         # Apply the same E2E workdir fix to the temporary main checkout so this
         # compares CRM code, not a pre-existing test-helper path mismatch.
         working-directory: .
