@@ -51,11 +51,17 @@ test.describe("as telas do épico abrem para uma pessoa", () => {
 
   test("cada tela abre, tem conteúdo e não cospe erro no console", async ({ page }) => {
     const erros: string[] = [];
+    const respostas429: string[] = [];
     let trocaDeSessao = "não observada";
     page.on("console", (m) => {
       if (m.type() === "error") erros.push(m.text().slice(0, 200));
     });
     page.on("pageerror", (e) => erros.push(`PAGEERROR: ${String(e).slice(0, 200)}`));
+    page.on("response", (response) => {
+      if (response.status() === 429) {
+        respostas429.push(new URL(response.url()).pathname);
+      }
+    });
     page.on("response", async (response) => {
       if (new URL(response.url()).pathname !== "/api/auth/session") return;
       const body = await response.json().catch(() => ({}));
@@ -83,6 +89,7 @@ test.describe("as telas do épico abrem para uma pessoa", () => {
 
     for (const tela of TELAS) {
       erros.length = 0;
+      respostas429.length = 0;
       const resp = await page.goto(tela.rota, { waitUntil: "networkidle" });
       await page.waitForTimeout(800);
 
@@ -104,7 +111,9 @@ test.describe("as telas do épico abrem para uma pessoa", () => {
         quebradas.push(`${tela.rota} [${tela.dono}]: só ${texto.length} chars — tela em branco`);
       }
       if (erros.length > 0) {
-        quebradas.push(`${tela.rota} [${tela.dono}]: console → ${erros.slice(0, 2).join(" | ")}`);
+        const rotas429 = [...new Set(respostas429)];
+        const detalhe429 = rotas429.length ? `; HTTP 429 em ${rotas429.join(", ")}` : "";
+        quebradas.push(`${tela.rota} [${tela.dono}]: console → ${erros.slice(0, 2).join(" | ")}${detalhe429}`);
       }
     }
 
