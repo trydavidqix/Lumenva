@@ -114,7 +114,10 @@ jobs:
 
       - uses: supabase/setup-cli@v3
         with:
-          version: latest
+          version: 2.118.0
+
+      - name: Confirmar versão fixada do Supabase CLI
+        run: supabase --version
 
       # Sobe Postgres + Auth (GoTrue) + PostgREST + Storage. Auth de verdade é
       # requisito: os specs de login exercitam o GoTrue, não um mock.
@@ -128,7 +131,11 @@ jobs:
         run: |
           mv infra/supabase/migrations /tmp/migrations-off
           mkdir -p infra/supabase/migrations
-          supabase --workdir "$RUNNER_TEMP/e2e-target/infra/supabase" start
+          # O --workdir precisa ser a raiz do projeto que contém `supabase/`.
+          # Em apps/crm, esse diretório é o link de compatibilidade para
+          # infra/supabase; apontar diretamente para infra/supabase faz o CLI
+          # ignorar config.toml e iniciar Auth com os defaults.
+          supabase --workdir "$RUNNER_TEMP/e2e-target/apps/crm" start
 
       - name: Verificar MFA TOTP efetivo no Auth local
         run: |
