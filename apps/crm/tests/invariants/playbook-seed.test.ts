@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -89,18 +89,22 @@ describe("seedPlatformPlaybook (boot do worker, self-host)", () => {
     expect(before.pointerVersionId).not.toBeNull();
 
     const dir = mkdtempSync(path.join(tmpdir(), "playbook-seed-"));
-    const divergente = path.join(dir, "platform.md");
-    writeFileSync(divergente, "## Divergente\n\nConteúdo que NUNCA pode entrar sozinho no banco.\n");
+    try {
+      const divergente = path.join(dir, "platform.md");
+      writeFileSync(divergente, "## Divergente\n\nConteúdo que NUNCA pode entrar sozinho no banco.\n");
 
-    await expect(seedPlatformPlaybook(pool, { filePath: divergente })).resolves.toBe("kept");
+      await expect(seedPlatformPlaybook(pool, { filePath: divergente })).resolves.toBe("kept");
 
-    const after = await platformState();
-    expect(after.versions).toBe(before.versions);
-    expect(after.pointerVersionId).toBe(before.pointerVersionId);
-    const { rows } = await pool.query(
-      `select 1 from playbook_versions where content like '%NUNCA pode entrar sozinho%'`,
-    );
-    expect(rows.length).toBe(0);
+      const after = await platformState();
+      expect(after.versions).toBe(before.versions);
+      expect(after.pointerVersionId).toBe(before.pointerVersionId);
+      const { rows } = await pool.query(
+        `select 1 from playbook_versions where content like '%NUNCA pode entrar sozinho%'`,
+      );
+      expect(rows.length).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("concorrência: 2 workers subindo ao mesmo tempo = exatamente 1 seed", async () => {
