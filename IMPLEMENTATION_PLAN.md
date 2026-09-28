@@ -1,6 +1,6 @@
 # Consolidation Closeout Plan — PR #75
 
-Status: IN PROGRESS. Direct parity is complete with zero new regressions. Final ref/archive proof remains. PR #75 is open and unmerged; no branch cleanup occurred.
+Status: IN PROGRESS. Direct parity is complete with zero new regressions. Branch classification and a 95-ref archive checkpoint are complete. A final report commit, refreshed archive, and closeout of the human-dependent E2E decision remain. PR #75 is open and unmerged; no branch cleanup occurred.
 
 ## Scope and evidence
 
@@ -21,13 +21,16 @@ Status: IN PROGRESS. Direct parity is complete with zero new regressions. Final 
 1. Refreshed inventory: 61 `origin` branches, 25 `source-local` branches, 4 archived PR refs, and 3 local branches (95 refs total, including two symbolic remote `HEAD` refs).
 2. Classified all 15 no-PR origin branches. Added evidence-based dispositions for `mover-pro-nexus`, `v2.1`, and `v2.2`; their plan commits are present in candidate history, without claiming the planned product work is implemented.
 3. Reconciled the report and this tracker with the latest direct GitHub Actions parity, current E2E setup failure, and exact PR #75 head/base.
+4. Pushed the inventory/report refresh as `81fc25e56ef68940ef41ee302a14114187b37e69`. All 61 origin branch names are represented in the report; all 15 no-PR branches have dispositions.
+5. Created checkpoint bundle `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\repository-branch-consolidation-2026-09-28-81fc25e5.bundle`; `git bundle verify` passed and all 95 live ref names+SHAs match, with 3 extra advertised validation HEADs. Size 81,425,379 bytes; SHA-256 `84EAAAD820DC012C084BDD948C6ED84CEE5A92BA5E558572E2FDF6AAFADD170C`.
+6. Actions for `81fc25e5`: lint, typecheck, invariants, vertical, CodeQL, Gitleaks, OSV and Semgrep passed. `verify` and `verify-and-build` failed only in unit tests (CRM: 5 failed, 5,128 passed, 1 skipped, across 9 files); the `verify-and-build` job stopped before its build step. The pinned same-runner parity [36405174959](https://github.com/trydavidqix/Lumenva/actions/runs/36405174959) remains canonical for regression classification: 0 candidate-only failures, 15 shared IDs. Do not fix baseline failures here.
 
 ## Remaining work
 
-1. Commit and push the report/plan-only update to PR #75. Keep the PR open and do not merge or delete refs.
-2. After the push, refresh remote refs without pruning; create a new uniquely named bundle under `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\`. Preserve all earlier bundles. Run `git bundle verify`; compare all live ref names and SHAs; record bundle size and SHA-256.
-3. Recheck GitHub Actions for the pushed documentation commit and PR #75 head. All tests remain remote; do not run the heavy suite locally.
-4. Last human-dependent item, only if full Playwright execution is required: provide/use the genuine Firebase app configuration through GitHub Actions. This is not needed to complete branch inventory or archive; do not fabricate credentials or alter auth behavior.
+1. Commit and push this final report/plan-only update to PR #75. Keep the PR open and do not merge or delete refs.
+2. After the push, refresh remote refs without pruning; create a uniquely named final bundle under `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\`. Preserve all earlier bundles. Run `git bundle verify`; compare all live ref names and SHAs; record bundle size and SHA-256.
+3. Recheck GitHub Actions for the final docs commit. All tests remain remote; do not run the heavy suite locally. Treat failures shared with main as baseline and do not weaken gates.
+4. Last human-dependent item, only if full Playwright execution is required: provide/use the genuine Firebase app configuration through GitHub Actions. It does not block completing ref inventory, documentation, or archive. Do not fabricate credentials or alter auth behavior.
 
 ## Stop conditions
 
