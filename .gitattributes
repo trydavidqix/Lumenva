@@ -3,3 +3,8 @@
 # real ao montar infra/docker/mem0/init-db.sh num container Postgres a partir de um
 # checkout Windows. Força LF no working tree independente de core.autocrlf.
 *.sh text eol=lf
+
+/.agents/skills/accessibility/** text eol=lf
+/.agents/skills/find-skills/** text eol=lf
+/.agents/skills/web-design-guidelines/** text eol=lf
+skills-lock.json text eol=lf
