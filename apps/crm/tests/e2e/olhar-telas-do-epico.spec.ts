@@ -18,7 +18,6 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
-import { generateTotp, msUntilNextTotpWindow } from "./utils/totp";
 
 const CREDS_PATH = path.join(process.cwd(), ".e2e-creds.json");
 const EVIDENCIA = path.join(process.cwd(), "evidence", "ia-360-w5");
@@ -26,7 +25,6 @@ const EVIDENCIA = path.join(process.cwd(), "evidence", "ia-360-w5");
 interface Creds {
   password: string;
   users: { admin?: { email: string } };
-  admin_totp?: { secret: string };
 }
 
 /** Telas do épico que estavam SEM cobertura alguma na medição de `dffa823a`. */
@@ -53,28 +51,33 @@ test.describe("as telas do épico abrem para uma pessoa", () => {
 
   test("cada tela abre, tem conteúdo e não cospe erro no console", async ({ page }) => {
     const erros: string[] = [];
+    let trocaDeSessao = "não observada";
     page.on("console", (m) => {
       if (m.type() === "error") erros.push(m.text().slice(0, 200));
     });
     page.on("pageerror", (e) => erros.push(`PAGEERROR: ${String(e).slice(0, 200)}`));
+    page.on("response", async (response) => {
+      if (new URL(response.url()).pathname !== "/api/auth/session") return;
+      const body = await response.json().catch(() => ({}));
+      const code = typeof body?.error?.code === "string" ? body.error.code : "none";
+      trocaDeSessao = `HTTP ${response.status()}; code=${code}`;
+    });
 
-    // Login REAL pela tela, com MFA — não injeção de sessão.
+    // Login real pela tela — sem injeção de sessão. F4 desativou o challenge MFA.
     await page.goto("/login");
     await page.locator("#email").fill(creds.users.admin!.email);
     await page.locator("#password").fill(creds.password);
     await page.getByRole("button", { name: /entrar/i }).click();
     try {
-      await page.waitForURL(/\/login\/mfa/, { timeout: 30_000 });
+      await page.waitForURL(/\/app\//, { timeout: 30_000 });
     } catch (error) {
-      const alert = await page.getByRole("alert").innerText().catch(() => "sem mensagem visível");
-      throw new Error(`Login não chegou ao MFA; URL atual=${page.url()}; alerta=${alert}`, { cause: error });
+      const alert = await page.locator("form [role=alert]").innerText().catch(() => "sem mensagem visível");
+      const cookie = (await page.context().cookies()).some((item) => item.name === "fb-session-auth");
+      throw new Error(
+        `Login não chegou ao app; URL=${page.url()}; troca de sessão=${trocaDeSessao}; cookie=${cookie}; alerta=${alert}`,
+        { cause: error },
+      );
     }
-    // Espera a janela virar: um código gerado no fim da janela expira durante a
-    // digitação e o sintoma é "MFA falhou", que não parece o que é.
-    await page.waitForTimeout(msUntilNextTotpWindow() + 200);
-    await page.locator('input[aria-label="Dígito 1"]').click();
-    await page.keyboard.type(generateTotp(creds.admin_totp!.secret), { delay: 60 });
-    await page.waitForURL(/\/app\//, { timeout: 30_000 });
 
     const quebradas: string[] = [];
 
