@@ -35,9 +35,10 @@ cd "$(dirname "$0")/.."
 # dependência deste projeto.
 SUPABASE="supabase"
 command -v supabase >/dev/null 2>&1 || SUPABASE="npx supabase"
+SUPABASE_WORKDIR="${SUPABASE_WORKDIR:-../../infra/supabase}"
 
-if ! $SUPABASE status >/dev/null 2>&1; then
-  echo "==> O Supabase local não está de pé. Rode 'npx supabase start' antes." >&2
+if ! $SUPABASE --workdir "$SUPABASE_WORKDIR" status >/dev/null 2>&1; then
+  echo "==> O Supabase local não está de pé. Rode 'supabase --workdir ../../infra/supabase start' antes." >&2
   exit 1
 fi
 
@@ -53,7 +54,7 @@ fi
 [ "${#CHAVE_WAHA}" -ge 44 ] || CHAVE_WAHA="$(openssl rand -base64 32)"
 [ "${#CHAVE_AI}" -ge 44 ] || CHAVE_AI="$(openssl rand -base64 32)"
 
-ENVOUT="$($SUPABASE status -o env 2>/dev/null)"
+ENVOUT="$($SUPABASE --workdir "$SUPABASE_WORKDIR" status -o env 2>/dev/null)"
 ler() { printf '%s\n' "$ENVOUT" | grep "^$1=" | cut -d= -f2- | tr -d '"'; }
 
 API_URL="$(ler API_URL)"

@@ -76,6 +76,9 @@ jobs:
           git fetch origin "$TARGET_REF"
           git worktree add --detach "$RUNNER_TEMP/e2e-target" FETCH_HEAD
           ln -s "$RUNNER_TEMP/e2e-target" .target
+          cp apps/crm/scripts/gerar-env-e2e.sh "$RUNNER_TEMP/e2e-target/apps/crm/scripts/gerar-env-e2e.sh"
+        # Apply the same E2E workdir fix to the temporary main checkout so this
+        # compares CRM code, not a pre-existing test-helper path mismatch.
         working-directory: .
 
       - run: pnpm install --frozen-lockfile
