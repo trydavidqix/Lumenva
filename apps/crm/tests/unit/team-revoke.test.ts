@@ -47,7 +47,7 @@ function setup(target: { id: string; user_id: string; role: string; revoked_at: 
     not: () => membershipQuery,
     maybeSingle: async () => ({ data: { role: "admin" }, error: null }),
   };
-  vi.mocked(createAdminClient).mockReturnValue({ from: () => membershipQuery } as any);
+  vi.mocked(createAdminClient).mockReturnValue({ from: () => membershipQuery } as unknown as ReturnType<typeof createAdminClient>);
   return updates;
 }
 

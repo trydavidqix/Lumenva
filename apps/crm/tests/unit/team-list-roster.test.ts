@@ -96,7 +96,7 @@ function managerSession(rows: Array<Record<string, unknown>>, spy: QuerySpy) {
     maybeSingle: async () => ({ data: { role: "manager" }, error: null }),
   };
   // requireRole uses the admin client for the Firebase-mapped membership lookup.
-  vi.mocked(createAdminClient).mockReturnValue({ from: () => membershipQuery } as any);
+  vi.mocked(createAdminClient).mockReturnValue({ from: () => membershipQuery } as unknown as ReturnType<typeof createAdminClient>);
 }
 
 beforeEach(() => {

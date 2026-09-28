@@ -101,7 +101,7 @@ function session(role: Role | null, tables: Record<string, unknown> = {}) {
   };
   // requireRole resolves the effective Firebase-mapped membership through the
   // service-role client, not the user-scoped client mocked above.
-  vi.mocked(createAdminClient).mockReturnValue({ from: () => membershipQuery } as any);
+  vi.mocked(createAdminClient).mockReturnValue({ from: () => membershipQuery } as unknown as ReturnType<typeof createAdminClient>);
 }
 
 async function errorCode(res: Response): Promise<string> {
