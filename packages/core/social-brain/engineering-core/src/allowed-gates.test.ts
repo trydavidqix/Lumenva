@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { resolve } from 'node:path'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { isAuthorizedGate, loadGateDefinitions, resolveCanonicalGateCommand } from './allowed-gates.ts'
 
 describe('gate allowlist', () => {
@@ -18,12 +20,26 @@ describe('gate allowlist', () => {
   })
 
   it('does not expose a security alias for the environment preflight', async () => {
-    const definitions = await loadGateDefinitions(resolve(process.cwd(), '../..'))
-    const preflight = definitions.preflight
+    const root = mkdtempSync(join(tmpdir(), 'lumenva-engineering-gates-'))
+    try {
+      const definitionsPath = join(root, 'engineering', 'policy.json')
+      const definitions = {
+        gates: {
+          preflight: ['pnpm', 'engineering', '--', 'preflight'],
+          unit: [process.execPath, '-e', 'process.exit(0)'],
+        },
+      }
+      mkdirSync(join(root, 'engineering'))
+      writeFileSync(definitionsPath, `${JSON.stringify(definitions, null, 2)}\n`)
+      const loadedDefinitions = await loadGateDefinitions(root)
+      const preflight = loadedDefinitions.preflight
 
-    expect(definitions.security).toBeUndefined()
-    if (preflight === undefined) throw new Error('preflight must remain in the canonical catalog')
-    expect(preflight).toEqual(['pnpm', 'engineering', '--', 'preflight'])
-    expect(Object.entries(definitions).filter(([name, command]) => name !== 'preflight' && command.join('\u0000') === preflight.join('\u0000'))).toEqual([])
+      expect(loadedDefinitions.security).toBeUndefined()
+      if (preflight === undefined) throw new Error('preflight must remain in the canonical catalog')
+      expect(preflight).toEqual(['pnpm', 'engineering', '--', 'preflight'])
+      expect(Object.entries(loadedDefinitions).filter(([name, command]) => name !== 'preflight' && command.join('\u0000') === preflight.join('\u0000'))).toEqual([])
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
   })
 })

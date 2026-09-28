@@ -304,14 +304,16 @@ jobs:
       # anterior; o CI, fresco, reprovou. Rodar aqui torna a precondição
       # explícita em vez de depender da ordem dos arquivos.
       #
-      # `--env-file` só na segunda, e a diferença não é capricho: o seed de
-      # capacidades importa `lib/env.ts` (via lib/ai/embed.ts), que lê
-      # `process.env`; o de escalação parseia o `.env.local` por conta própria.
-      # Sem a flag o de capacidades morre na validação Zod das 3 vars do Supabase.
+      # O seed de escalação parseia `.env.local` por conta própria; os outros
+      # seeds leem primeiro as variáveis já publicadas no ambiente do job.
+      # A execução anterior falhou porque Node não resolveu o caminho relativo
+      # passado por `--env-file=.env.local` no contexto do comando. O ambiente
+      # do job já contém as credenciais locais de teste, então não é necessário
+      # pedir ao Node para carregar esse arquivo novamente.
       - name: Semear as fixtures que as specs não semeiam sozinhas
         run: |
           pnpm --filter lumenva-crm exec tsx scripts/seed-e2e-escalacao.ts
-          pnpm --filter lumenva-crm exec tsx --env-file=.env.local scripts/seed-e2e-capacidades-ausentes.ts
+          pnpm --filter lumenva-crm exec tsx scripts/seed-e2e-capacidades-ausentes.ts
           pnpm --filter lumenva-crm exec tsx scripts/seed-e2e-followup-agent.ts
 
       # Verificação visual antes da carga acumulada: estas telas fazem chamadas

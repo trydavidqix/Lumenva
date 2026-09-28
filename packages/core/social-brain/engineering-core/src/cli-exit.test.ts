@@ -1,12 +1,17 @@
 import { execFileSync, spawnSync } from 'node:child_process'
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 
 const cli = resolve(process.cwd(), 'src/cli.ts')
-const repositoryRoot = resolve(process.cwd(), '../..')
 const temporaryRoots: string[] = []
+const fixturePolicy = {
+  gates: {
+    preflight: ['pnpm', 'engineering', '--', 'preflight'],
+    unit: [process.execPath, '-e', 'process.exit(0)'],
+  },
+}
 
 function runCli(args: readonly string[], envOverrides: Record<string, string | undefined> = {}) {
   const env = { ...process.env }
@@ -25,7 +30,7 @@ function createIsolatedRepository(): string {
   const root = mkdtempSync(join(tmpdir(), 'lumenva-engineering-cli-'))
   temporaryRoots.push(root)
   mkdirSync(join(root, 'engineering'), { recursive: true })
-  copyFileSync(join(repositoryRoot, 'engineering', 'policy.json'), join(root, 'engineering', 'policy.json'))
+  writeFileSync(join(root, 'engineering', 'policy.json'), `${JSON.stringify(fixturePolicy, null, 2)}\n`)
   writeFileSync(join(root, '.gitignore'), '.lumenva/\n')
   writeFileSync(join(root, 'README.md'), 'isolated core fixture\n')
   writeFileSync(join(root, 'package.json'), JSON.stringify({ private: true, scripts: { test: 'node -e ""' } }) + '\n')
