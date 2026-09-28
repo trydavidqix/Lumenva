@@ -255,6 +255,15 @@ jobs:
       - name: Publicar o .env.e2e no ambiente do job
         run: grep -vE '^[[:space:]]*(#|$)' apps/crm/.env.e2e >> "$GITHUB_ENV"
 
+      # O schema global exige este campo também com o MCP relay desativado.
+      # O E2E não usa a aprovação OAuth: gere um valor descartável por job,
+      # masque-o nos logs e mantenha-o apenas no ambiente deste runner.
+      - name: Gerar segredo efêmero para validação do ambiente E2E
+        run: |
+          segredo="$(openssl rand -hex 32)"
+          printf '::add-mask::%s\n' "$segredo"
+          printf 'MCP_RELAY_OAUTH_APPROVAL_SECRET=%s\n' "$segredo" >> "$GITHUB_ENV"
+
       # `pnpm e2e:build`, não `pnpm build`: as três `NEXT_PUBLIC_*` são embutidas
       # no BUNDLE durante o build. Buildar com um env e trocar só no `next start`
       # deixaria a URL errada dentro do JavaScript que roda no browser — servidor
