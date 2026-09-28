@@ -241,7 +241,7 @@ jobs:
       # era a maior parte da suíte.
       - name: Semear credenciais de teste
         run: |
-          cp .env.e2e .env.local
+          cp apps/crm/.env.e2e apps/crm/.env.local
           pnpm --filter lumenva-crm exec tsx scripts/seed-e2e-credentials.ts
 
       # `SUPABASE_DB_URL` no `.env.local` (e não só no `env:` do passo de teste):
