@@ -173,13 +173,15 @@ jobs:
       - name: Diagnosticar o link de compatibilidade do Supabase
         run: |
           printf 'PWD=%s\n' "$PWD"
-          ls -ld apps/crm/supabase infra/supabase
-          printf 'CRM_SUPABASE_LINK='
-          readlink apps/crm/supabase || true
-          printf 'CRM_SUPABASE_REALPATH='
-          realpath apps/crm/supabase || true
-          test -d apps/crm/supabase
-          test -f infra/supabase/config.toml
+          for path in apps/crm/supabase infra/supabase infra/supabase/config.toml; do
+            printf '\nPATH=%s\n' "$path"
+            ls -ld "$path" 2>&1 || true
+            if [ -L "$path" ]; then readlink "$path"; fi
+            stat -L "$path" 2>&1 || true
+            realpath -e "$path" 2>&1 || true
+            if [ -d "$path" ]; then echo IS_DIRECTORY=true; else echo IS_DIRECTORY=false; fi
+            if [ -f "$path" ]; then echo IS_FILE=true; else echo IS_FILE=false; fi
+          done
 
       # E publica o arquivo no ambiente do JOB, para que servidor e testes leiam
       # literalmente a mesma fonte.
