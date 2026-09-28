@@ -128,7 +128,7 @@ jobs:
         run: |
           mv infra/supabase/migrations /tmp/migrations-off
           mkdir -p infra/supabase/migrations
-          supabase --workdir infra/supabase start
+          supabase --workdir "$RUNNER_TEMP/e2e-target/infra/supabase" start
 
       - name: Verificar MFA TOTP efetivo no Auth local
         run: |
@@ -141,11 +141,12 @@ jobs:
             awk -F= '
               $1 == "GOTRUE_MFA_TOTP_ENROLL_ENABLED" || $1 == "GOTRUE_MFA_TOTP_VERIFY_ENABLED" {
                 print $1 "=" $2
+                if ($2 != "true") invalid++
                 found++
               }
               END {
-                if (found != 2) {
-                  print "::error::Não foi possível confirmar as duas flags MFA TOTP efetivas."
+                if (found != 2 || invalid > 0) {
+                  print "::error::O Auth local não iniciou com TOTP de enrollment e verificação habilitados."
                   exit 1
                 }
               }
