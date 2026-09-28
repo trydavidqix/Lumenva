@@ -7,10 +7,6 @@ import { registerContentTools } from './tools/content'
 import { registerPublishingTools } from './tools/publishing'
 import { registerStatusTools } from './tools/status'
 import { registerVideoTools } from './tools/video'
-import { registerMaestriTools } from './tools/maestri'
-import { registerKnowledgeTools } from './tools/knowledge'
-import { registerMemoryTools } from './tools/memory'
-import { registerGraphTools } from './tools/graph'
 export { RemoteMcpServer } from './remote-mcp'
 
 export const MCP_TOOL_NAMES = [
@@ -26,15 +22,6 @@ export const MCP_TOOL_NAMES = [
   'social.publish.schedule',
   'social.publish.now',
   'social.jobs.retry',
-  'maestri.status',
-  'maestri.agents.list',
-  'maestri.jobs.create',
-  'maestri.context.get',
-  'maestri.tasks.dispatch',
-  'knowledge.search',
-  'memory.search',
-  'memory.write_candidate',
-  'code.graph.path',
 ] as const
 
 export function createSocialBrainMcpServer(context: McpApplicationContext): McpServer {
@@ -56,10 +43,6 @@ export function createSocialBrainMcpServer(context: McpApplicationContext): McpS
   registerContentTools(server, context)
   registerVideoTools(server, context)
   registerPublishingTools(server, context)
-  registerMaestriTools(server, context)
-  registerKnowledgeTools(server, context)
-  registerMemoryTools(server, context)
-  registerGraphTools(server, context)
 
   return server
 }
