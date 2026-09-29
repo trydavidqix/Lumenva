@@ -5,13 +5,13 @@
 **Project:** `trydavidqix/Lumenva`  
 **Branch:** `consolidation/lumenva-main-2026-09-27`  
 **Base:** `main` at `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`  
-**Checkpoint evidence:** PR head `5d013d57a8bc430f8a8a946e5c654fe25c02a8a2`; all applicable PR checks passed. `gcp-auth` was skipped by workflow conditions.
+**Checkpoint evidence:** code-validation head `5d013d57a8bc430f8a8a946e5c654fe25c02a8a2` passed applicable checks; final documentation-only tip is `127aecccb476c4c1d8bde64835a6eeb23e3f4ef5`, whose Actions checks are running. `gcp-auth` was skipped by workflow conditions.
 **Updated:** 2026-09-29 05:52 Europe/Lisbon
 
 ## Progress
 
 - **Completed:** 8/8 — **100%**
-- **Current:** closeout evidence published at `5d013d57a8bc430f8a8a946e5c654fe25c02a8a2`; branch equals origin, working tree is clean, and PR checks passed.
+- **Current:** closeout evidence published; code checks passed on `5d013d57`; final docs-only tip `127aeccc` is pushed and its Actions checks are pending. Branch equals origin and working tree is clean.
 - **Next:** none. PR #75 remains open and unmerged; E2E is explicitly documented as failed on both sides with zero candidate-only failures.
 
 ## Checklist
@@ -27,7 +27,7 @@
 
 ## Current state
 
-- Candidate `5d013d57a8bc430f8a8a946e5c654fe25c02a8a2` is the current remote PR head. `verify`, `verify-and-build`, both invariants jobs, vertical, CodeQL, Gitleaks, OSV-Scanner, and Semgrep passed; `gcp-auth` was skipped by workflow conditions.
+- Code-validation candidate `5d013d57a8bc430f8a8a946e5c654fe25c02a8a2` passed `verify`, `verify-and-build`, both invariants jobs, vertical, CodeQL, Gitleaks, OSV-Scanner, and Semgrep; `gcp-auth` was skipped by workflow conditions. The later `127aeccc` tip changes documentation only; its checks are tracked in Actions and were pending at this report update.
 - Full parity run `36510745289` on `5569ba97` completed: build, lint, toolchain, and typecheck passed; unit comparison found 0 candidate-only failed IDs, 5 preexisting IDs, and 47 resolved IDs. The comparator labels the unit suite `REGRESSION` because unified skipped one additional test (11 vs 10); no new failing test ID was found.
 - Current-HEAD parity run `36514960201` completed successfully as a workflow on runner `windows-2025`, Node `22.23.3`, pnpm `9.15.9`, with frozen installs. Lint/toolchain/typecheck passed on both. Main build failed with 17 signatures; candidate build passed with 0. Unit: main `5,487/88/10`, candidate `5,623/7/11` (passed/failed/skipped); 5 shared failures, 0 candidate-only, 47 resolved; timeouts and worker errors 0/0. The unit row says `REGRESSION` only for one additional candidate skip (11 vs 10); no new failing test ID.
 - The earlier paired E2E runs `36510323802` (main) and `36510703918` (candidate) both reached test failures and were stopped at the 30-minute workflow limit. Their artifacts show shared and non-shared failures, but the runs are incomplete and cannot establish full parity.
