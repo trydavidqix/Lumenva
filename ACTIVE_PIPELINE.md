@@ -5,14 +5,14 @@
 **Project:** `trydavidqix/Lumenva`  
 **Branch:** `consolidation/lumenva-main-2026-09-27`  
 **Base:** `main` at `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`  
-**Checkpoint evidence:** PR head `878e3019ef28c0b2eff1cfd42ca45a63869a77b1`; required PR checks passed on this head. `gcp-auth` was skipped by workflow conditions.
-**Updated:** 2026-09-29 04:55 Europe/Lisbon
+**Checkpoint evidence:** PR head `c6ef557b5c3114ee9f87fb8224f286fe80df234d`; all required PR checks passed. `gcp-auth` was skipped by workflow conditions.
+**Updated:** 2026-09-29 05:26 Europe/Lisbon
 
 ## Progress
 
-- **Completed:** 7/8 — **88%**
-- **Current:** publish closeout docs and validate checks on the final PR head.
-- **Next:** push the final documentation checkpoint, wait for its required checks, create the post-commit archive bundle, and restore temporary multi-agent access settings.
+- **Completed:** 8/8 — **100%**
+- **Current:** final verification of the published closeout head and post-commit bundle.
+- **Next:** confirm the final checks and archive proof, restore temporary multi-agent access settings, and stop without merging.
 
 ## Checklist
 
@@ -23,11 +23,11 @@
 - [x] Complete current-HEAD main-vs-candidate parity on the pinned toolchain.
 - [x] Complete a comparable main-vs-candidate E2E run and classify shared failures versus regressions.
 - [x] Refresh the Git archive/bundle and verify preserved refs against the candidate checkpoint.
-- [ ] Publish final closeout evidence; leave PR #75 open and unmerged; stop without starting another task.
+- [x] Publish final closeout evidence; leave PR #75 open and unmerged; stop without starting another task.
 
 ## Current state
 
-- Candidate `878e3019` is the current remote PR head. `verify`, `verify-and-build`, both invariants jobs, vertical, CodeQL, Gitleaks, OSV-Scanner, and Semgrep passed; `gcp-auth` was skipped by workflow conditions.
+- Candidate `c6ef557b` is the current remote PR head. `verify`, `verify-and-build`, both invariants jobs, vertical, CodeQL, Gitleaks, OSV-Scanner, and Semgrep passed; `gcp-auth` was skipped by workflow conditions.
 - Full parity run `36510745289` on `5569ba97` completed: build, lint, toolchain, and typecheck passed; unit comparison found 0 candidate-only failed IDs, 5 preexisting IDs, and 47 resolved IDs. The comparator labels the unit suite `REGRESSION` because unified skipped one additional test (11 vs 10); no new failing test ID was found.
 - Current-HEAD parity run `36514960201` completed successfully as a workflow on runner `windows-2025`, Node `22.23.3`, pnpm `9.15.9`, with frozen installs. Lint/toolchain/typecheck passed on both. Main build failed with 17 signatures; candidate build passed with 0. Unit: main `5,487/88/10`, candidate `5,623/7/11` (passed/failed/skipped); 5 shared failures, 0 candidate-only, 47 resolved; timeouts and worker errors 0/0. The unit row says `REGRESSION` only for one additional candidate skip (11 vs 10); no new failing test ID.
 - The earlier paired E2E runs `36510323802` (main) and `36510703918` (candidate) both reached test failures and were stopped at the 30-minute workflow limit. Their artifacts show shared and non-shared failures, but the runs are incomplete and cannot establish full parity.
@@ -35,7 +35,7 @@
 - Voice audit found the useful `origin/voz` implementation already represented in PR #75; no missing voice work was identified. Archive audit found 97 local non-tag refs, 4 archive refs, two stale worktree metadata entries (preserved), and confirmed the PR branch matches the current candidate. The final bundle still waits for docs and final evidence.
 - Updated `BRANCH_CONSOLIDATION_REPORT.md` and `IMPLEMENTATION_PLAN.md` with completed current-head parity, paired E2E comparison, voice audit, archive inventory, and remaining closeout steps. Only final archive proof and publication checks remain.
 - The temporary, narrowly scoped `spawn_agent` hook exception remains active for this PR task and must be restored after final closeout.
-- The previous bundle predates current changes. Preserve old bundles and refs; create a uniquely named final archive only after the report/plan closeout commit, then compare exact ref names and SHAs.
+- Verified bundle checkpoint for `0c7f51d8` is recorded below. Generate and compare the final bundle after the last closeout commit; preserve all prior bundles and refs.
 - Archive bundle for candidate `0c7f51d88e5a7d64501b58b777032f110e263365`: `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\repository-branch-consolidation-final-2026-09-29-0c7f51d8.bundle`; `git bundle verify` passed. All 97 live refs are included; 3 additional advertised entries are `HEAD` and the two preserved stale worktree HEADs. Size `81,260,189` bytes; SHA-256 `FA32087B85C2F222A272555F54CE8A35ACED0B964962BB342D113990305E7232`. Regenerate after the final docs commit.
 - The global `C:\Users\David\.codex\ACTIVE_PIPELINE.md` belongs to Nexus Brain. This project-local file is the source for Lumenva unification status and must not overwrite the global file.
 

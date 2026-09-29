@@ -1,13 +1,13 @@
 # Branch Consolidation Report
 
-## Current checkpoint — 2026-09-29 04:55 Europe/Lisbon
+## Current checkpoint — 2026-09-29 05:26 Europe/Lisbon
 
-- PR #75 remains OPEN/unmerged at candidate `0c7f51d88e5a7d64501b58b777032f110e263365`, against main `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`. This commit only updates the pipeline, consolidation report, and implementation plan. No product changes, main edits, or merges occurred.
+- PR #75 remains OPEN/unmerged at candidate `c6ef557b5c3114ee9f87fb8224f286fe80df234d`, against main `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`. The last two commits only update the pipeline, consolidation report, and implementation plan. No product changes, main edits, or merges occurred.
 - Current-head parity [36514960201](https://github.com/trydavidqix/Lumenva/actions/runs/36514960201) completed successfully as a comparison workflow on `windows-2025`, Node `22.23.3`, pnpm `9.15.9`, frozen installs. Lint/toolchain/typecheck passed on both branches. Build: main had 17 failure signatures; unified had 0. Unit: main `5,487 passed / 88 failed / 10 skipped`; unified `5,623 / 7 / 11`; failure IDs `52/5`, with 5 shared, 0 candidate-only, and 47 resolved. Both sides had 0 timeouts and 0 worker errors. The unit row is labeled `REGRESSION` solely due to one extra skipped test on unified; the shared receipt-store Postgres test remains unverified on this Windows runner because Docker lacks the matching Windows image.
 - Comparable E2E runs [main 36513998219](https://github.com/trydavidqix/Lumenva/actions/runs/36513998219) and [candidate 36513998388](https://github.com/trydavidqix/Lumenva/actions/runs/36513998388) completed using the same workflow revision. Both E2E jobs failed. Downloaded Playwright result contexts: main 50, candidate 42, shared 42, main-only 8, candidate-only 0. No candidate-only E2E failure was observed; this is not a green suite. Artifacts are retained under `%TEMP%\pr75-e2e-main-36513998219` and `%TEMP%\pr75-e2e-candidate-36513998388`.
-- Required PR checks on `878e3019` were green, with `gcp-auth` skipped by workflow conditions; checks for documentation head `0c7f51d8` are pending. Voice audit found no useful missing `origin/voz` integration.
+- Required PR checks on documentation head `c6ef557b` passed: `verify`, `verify-and-build`, both invariants, vertical, CodeQL, Gitleaks, OSV-Scanner, and Semgrep. `gcp-auth` was skipped by workflow conditions. Voice audit found no useful missing `origin/voz` integration.
 - Archive bundle `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\repository-branch-consolidation-final-2026-09-29-0c7f51d8.bundle` was created after commit `0c7f51d8`. `git bundle verify` passed; all 97 live refs matched, with 3 expected additional advertised entries (`HEAD` and the two preserved stale worktree HEADs), 0 missing, 0 unexpected. Size `81,260,189` bytes; SHA-256 `FA32087B85C2F222A272555F54CE8A35ACED0B964962BB342D113990305E7232`. Preserve this and all older bundles.
-- Remaining: publish this archive checkpoint, wait for checks on the final documentation head, create a post-final-commit bundle, and restore temporary subagent access. Keep all refs; do not merge PR #75.
+- Final remaining operations: create/verify the post-closeout bundle after the last docs commit, compare every live ref name/SHA, confirm the branch clean and PR still open/unmerged, then restore temporary subagent access. Keep all refs; do not merge PR #75.
 
 ## Current checkpoint — 2026-09-29 04:44 Europe/Lisbon
 
