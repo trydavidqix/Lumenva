@@ -1,5 +1,15 @@
 # Branch Consolidation Report
 
+## Remote branch cleanup — 2026-09-29
+
+- **Result:** 62/62 frozen source branches deleted after checking each live GitHub SHA against its immutable row in `BRANCH_RECONCILIATION_MANIFEST.md` and the verified final bundle. Deletion used an exact-SHA lease, so a branch moving after inspection would reject the deletion. No mismatch occurred.
+- **Only remote heads remaining:** `main` at `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99` and `integration/lumenva-complete` at `c17910c63361440da91c2944d8c8ce859ec89d79`. GitHub query returned exactly these two refs; local integration matches remote. Main was not modified.
+- **Preservation proof:** bundle `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\lumenva-total-consolidation-final-2026-09-29-c17910c6.bundle`, 81,333,992 bytes, SHA-256 `A0280C0162E7F5EB1CBC69194B48D4E87E9CA32259E4428D1D09A8B7CF80E481`; `git bundle verify` passed and it contains all 63 frozen manifest SHAs, including main. The bundle and recovery directory were not modified or removed.
+- **PRs closed with preservation references:** #11, #13, #25, #40, #50, #66, #69, #71, #74, #75. Each comment cites `integration/lumenva-complete`, its frozen manifest row/SHA, and the archive bundle. No open PRs were returned by GitHub at final check.
+- **Git integrity:** `git fsck --full --no-reflogs` exited 0. It reported dangling objects corresponding to removed refs; these are retained in the verified external bundle. Five worktree registrations remain untouched; two TEMP registrations already report missing gitdir targets and were not pruned or removed.
+- **CRM isolation:** separate `C:\Users\David\Desktop\Projetos\Lumenva` remains on `chore/orchestration-gate`, HEAD `cec5d7656fd341d29dfdf9de911cd2bb5564c6fd`, with the same 27 pre-existing dirty entries at read-only verification. No files in that checkout were changed. :codex-annotation{index="1"}
+- **Security history:** the 12 historical Gitleaks detections remain documented in the existing audit evidence; no findings or history were erased.
+
 ## Consolidation closeout — 2026-09-29 10:20 Europe/Lisbon
 
 - **Status:** consolidation and preservation gates COMPLETE. Cleanup is separate and still requires Owner authorization.
