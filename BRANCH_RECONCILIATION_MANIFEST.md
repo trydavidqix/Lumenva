@@ -8,6 +8,19 @@
 
 This is the immutable audit baseline. If a remote branch moves later, preserve this original SHA and record its new SHA separately; do not silently replace the baseline. Per-branch classification/evidence fields remain pending until audited.
 
+## Preliminary cross-branch archaeology — 2026-09-29
+
+Not final branch classifications; four branch auditors still need to reconcile these leads commit by commit.
+
+| Frozen source | Preliminary finding against integration start `f46cdd4` | Evidence / status |
+|---|---|---|
+| `voz` (`c40cc4e`), `vps` (`d04568d`), `vps-17455632840955604138` (`b43a5e0`) | Voice core is represented; candidate operational voice configs remain absent. The vps-174 branch includes vps content. | Core paths `apps/crm/lib/voice/**` and evidence doc exist in target. Candidate absent paths: `ops/voice-asterisk/**`. Core = likely DUPLICATE; ops config = candidate PARTIAL. Pending auditors/security review. |
+| `TOKENS` (`3de6694`), `lumenva-local-runtime` (`339a19b`) | Same MCG workflow delta appears in both; workflow absent in target. | Candidate `.github/workflows/mcg.yml`; shared change identified as commit `2d801c66`. Candidate PARTIAL pending purpose/ownership check. |
+| `lumenva-command-center` (`ec8b4e5`), `lumenva-command-center-blueprint-v2` (`eb56dcf`) | Dashboard/blueprint work has not been proven wholly integrated; do not infer from similar file paths. | Exact integration evidence pending branch auditors; retain unresolved until compared. |
+| `feat/maestri-engineering-council` (`bb84cd0`) | Frozen object was unavailable in the archaeology checkout. | Preserve as unresolved; no equivalence inferred from `-clean`. |
+
+No content from these preliminary leads has been ported. Do not use this table as archival/deletion authorization.
+
 ## Initial recovery bundle
 
 - Bundle: `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\repository-branch-consolidation-final-2026-09-29-f46cdd4d.bundle`

@@ -51,3 +51,15 @@ No agent may create child agents, delete branches, merge a whole branch blindly,
 - No source branch has been integrated or deleted yet.
 - PR #75 remains open. Its latest checks were green before this task.
 - Temporary spawn permission is task-scoped and will be restored after spawning the assigned auditors.
+
+## Preliminary cross-branch archaeology (not a final disposition)
+
+Independent read-only review compared the frozen trees with the integration starting tree `f46cdd4` and production `main` `3fbe74a`:
+
+- Voice core paths (`apps/crm/lib/voice/**`) and the real-call evidence are already represented; do not port the whole `voz` or `vps` branch on that basis alone.
+- Candidate useful partial content is absent: `ops/voice-asterisk/**` from frozen `voz` `c40cc4e` and `vps` `d04568d`, plus `.github/workflows/mcg.yml` from `TOKENS` `3de6694` / `lumenva-local-runtime` `339a19b`. Inspect each artifact for credentials, activation defaults, consumers and compatibility before deciding or porting.
+- `vps-17455632840955604138` includes the `vps` content; it is not an independent voice implementation.
+- Command Center branches include planning/runtime changes whose standalone ownership and integration are not established by path presence. Keep them unresolved until the branch auditors supply commit-level evidence.
+- The frozen object for `feat/maestri-engineering-council` was unavailable to this checkout during archaeology. Preserve as unresolved; do not infer from its `-clean` sibling.
+
+These are leads only. Branch rows remain pending until the four auditors reconcile the full commit/path evidence. No implementation has been ported from these leads.
