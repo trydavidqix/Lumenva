@@ -48,10 +48,35 @@ describe("WahaTransportAdapter (TDD Fakes)", () => {
 
     expect((options.headers as Record<string, string>)["X-Api-Key"]).toBe("fake-api-key");
     expect((options.headers as Record<string, string>)["Authorization"]).toBeUndefined();
+    expect(options.redirect).toBe("error");
 
     expect(url).not.toContain("fake-api-key");
 
     expect(result.externalId).toBe("waha-msg-id-123");
+  });
+
+  it("should omit upstream response content from returned errors", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      text: async () => "private phone +351912345678 and api-key=upstream-secret"
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const ctx: ExternalOperationContext = { organizationId: "org-1", requestId: "req-1" };
+    const command: ChannelTransportCommand = {
+      type: "send_message",
+      sessionRef: "session-1",
+      to: "5511999999999",
+      body: "Hello"
+    };
+
+    const result = await adapter.execute(ctx, command);
+
+    expect(result.error).toEqual({ code: "send_failed", message: "waha_sendMessage_500" });
+    expect(result.error?.message).not.toContain("+351912345678");
+    expect(result.error?.message).not.toContain("upstream-secret");
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ redirect: "error" });
   });
 
   it("should handle 23505 deduplication appropriately", async () => {

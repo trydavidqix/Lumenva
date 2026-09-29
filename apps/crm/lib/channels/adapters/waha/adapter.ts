@@ -104,12 +104,12 @@ export class WahaTransportAdapter implements ChannelTransportPort {
       method: init.method,
       headers,
       body: init.body ? JSON.stringify(init.body) : undefined,
+      redirect: "error",
     });
   }
 
   private async buildError(res: Response, prefix: string) {
-    const body = await res.text().catch(() => "");
-    return new Error(`waha_${prefix}_${res.status}: ${body.slice(0, 200)}`);
+    return new Error(`waha_${prefix}_${res.status}`);
   }
 
   private verifyWebhook(command: Extract<ChannelTransportCommand, { type: "verify_webhook" }>): ChannelTransportResult {
