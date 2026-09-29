@@ -25,10 +25,10 @@
     "@sentry/types": "catalog:",
     "@types/node": "catalog:",
     "cross-env": "^10.1.0",
-    "typescript": "catalog:",
-    "vitest": "catalog:",
-    "syncpack": "catalog:",
+    "knip": "catalog:",
     "sherif": "catalog:",
-    "knip": "catalog:"
+    "syncpack": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }
