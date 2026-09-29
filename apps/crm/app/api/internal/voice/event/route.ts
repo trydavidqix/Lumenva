@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { ok, fail } from "@/lib/api/wrappers";
 import { getRequestPool } from "@/lib/agent-engine/db/request-pool";
+import { scheduleCronJob } from "@/lib/agent-engine/cron/scheduler";
 import { env } from "@/lib/env";
 import { normalizePatterMetrics } from "@/lib/voice/patter/telemetry";
 
@@ -136,6 +137,145 @@ function authorize(req: NextRequest): boolean {
   return timingSafeEq(req.headers.get("x-internal-secret") ?? "", expected);
 }
 
+interface NotificationForVoiceCall {
+  id: string;
+  organization_id: string;
+  contact_id: string;
+  status: string;
+}
+
+async function reconcileNotificationLifecycle(
+  db: pg.Pool,
+  call: BoundCall,
+  voiceCallId: string,
+  state: z.infer<typeof stateSchema>,
+  occurredAt: string,
+): Promise<void> {
+  const { rows } = await db.query<NotificationForVoiceCall>(
+    `select id, organization_id, contact_id, status
+       from notification_requests
+      where organization_id = $1
+        and voice_call_id = $2
+      limit 1`,
+    [call.organization_id, voiceCallId],
+  );
+  const notification = rows[0];
+  if (!notification || ["acknowledged", "completed", "canceled"].includes(notification.status)) return;
+
+  if (state === "active") {
+    await db.query(
+      `update notification_delivery_attempts
+          set status = 'delivered',
+              delivered_at = coalesce(delivered_at, $3::timestamptz),
+              occurred_at = $3::timestamptz
+        where notification_id = $1
+          and channel = 'voice'
+          and external_id = $2
+          and status in ('queued','sent')`,
+      [notification.id, voiceCallId, occurredAt],
+    );
+    return;
+  }
+
+  if (!["completed", "failed", "canceled"].includes(state)) return;
+
+  if (state === "completed") {
+    await db.query(
+      `update notification_delivery_attempts
+          set status = 'delivered',
+              delivered_at = coalesce(delivered_at, $3::timestamptz),
+              occurred_at = $3::timestamptz
+        where notification_id = $1
+          and channel = 'voice'
+          and external_id = $2
+          and status in ('queued','sent','delivered')`,
+      [notification.id, voiceCallId, occurredAt],
+    );
+    await db.query(
+      `update notification_requests
+          set status = 'completed', completed_at = coalesce(completed_at, $3::timestamptz),
+              last_error_code = null, updated_at = now()
+        where id = $1 and organization_id = $2 and acknowledged_at is null`,
+      [notification.id, notification.organization_id, occurredAt],
+    );
+    return;
+  }
+
+  const errorCode = state === "failed" ? "voice_call_failed" : "voice_call_canceled";
+  await db.query(
+    `update notification_delivery_attempts
+        set status = 'failed', error_code = $3,
+            failed_at = coalesce(failed_at, $4::timestamptz),
+            occurred_at = $4::timestamptz
+      where notification_id = $1
+        and channel = 'voice'
+        and external_id = $2
+        and status in ('queued','sent','delivered')`,
+    [notification.id, voiceCallId, errorCode, occurredAt],
+  );
+
+  const policy = await db.query<{ voice_max_attempts: number; voice_cooldown_seconds: number }>(
+    `select voice_max_attempts, voice_cooldown_seconds
+       from notification_delivery_policies
+      where organization_id = $1
+      limit 1`,
+    [notification.organization_id],
+  );
+  const maxAttempts = policy.rows[0]?.voice_max_attempts ?? 1;
+  const cooldownSeconds = policy.rows[0]?.voice_cooldown_seconds ?? 600;
+  const attemptCount = await db.query<{ count: number }>(
+    `select count(*)::int as count
+       from notification_delivery_attempts
+      where notification_id = $1
+        and channel = 'voice'
+        and status <> 'skipped'`,
+    [notification.id],
+  );
+
+  if ((attemptCount.rows[0]?.count ?? 0) >= maxAttempts) {
+    await db.query(
+      `update notification_requests
+          set status = 'failed', last_error_code = $3, updated_at = now()
+        where id = $1 and organization_id = $2 and acknowledged_at is null`,
+      [notification.id, notification.organization_id, errorCode],
+    );
+    return;
+  }
+
+  await db.query(
+    `update notification_requests
+        set status = 'voice_pending', last_error_code = $3, updated_at = now()
+      where id = $1 and organization_id = $2 and acknowledged_at is null`,
+    [notification.id, notification.organization_id, errorCode],
+  );
+
+  const existing = await db.query<{ id: string }>(
+    `select id
+       from cron_jobs
+      where organization_id = $1
+        and contact_id = $2
+        and job_kind = 'notification_delivery'
+        and payload->>'notification_id' = $3
+        and payload->>'phase' = 'voice'
+        and enabled = true
+      limit 1`,
+    [notification.organization_id, notification.contact_id, notification.id],
+  );
+  if (existing.rows[0]) return;
+
+  await scheduleCronJob(db, notification.organization_id, {
+    leadId: notification.contact_id,
+    spec: {
+      kind: "at",
+      at: new Date(new Date(occurredAt).getTime() + cooldownSeconds * 1000),
+    },
+    jobKind: "notification_delivery",
+    payload: { notification_id: notification.id, phase: "voice" },
+    staggerWindowMs: 0,
+    maxAttempts: 5,
+  });
+}
+
 export async function POST(req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
   if (!authorize(req)) return fail("unauthenticated", "Internal secret missing or invalid.", 401, { requestId });
@@ -215,6 +355,14 @@ export async function POST(req: NextRequest): Promise<Response> {
       occurredAt,
       provider,
     ],
+  );
+
+  await reconcileNotificationLifecycle(
+    db,
+    call,
+    parsed.data.voice_call_id,
+    parsed.data.state,
+    occurredAt,
   );
 
   return ok({ recorded: true }, { requestId });
