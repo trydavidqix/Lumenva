@@ -159,8 +159,8 @@ describe("POST /api/internal/voice/event — SIP/BYOC binding (Fase 3)", () => {
         spec: expect.objectContaining({ kind: "at", at: expect.any(Date) }),
       }),
     );
-    const scheduledAt = vi.mocked(scheduleCronJob).mock.calls[0][2].spec;
-    expect(scheduledAt.kind === "at" && scheduledAt.at.toISOString()).toBe("2026-09-29T00:02:00.000Z");
+    const scheduledAt = vi.mocked(scheduleCronJob).mock.calls[0]?.[2].spec;
+    expect(scheduledAt).toMatchObject({ kind: "at", at: new Date("2026-09-29T00:02:00.000Z") });
   });
 
   it("binds by connection_id + phone_e164 and records the event, same as the Telnyx path", async () => {
