@@ -24,6 +24,7 @@ jobs:
         run: |
           pnpm install --no-frozen-lockfile
           pnpm add -Dw --save-exact syncpack@latest sherif@latest knip@latest
+          node tooling/scripts/canonicalize-toolchain.mjs
           pnpm install --no-frozen-lockfile
       - name: Validate core gates
         run: |
