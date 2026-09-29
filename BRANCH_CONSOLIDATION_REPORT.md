@@ -1,6 +1,6 @@
 # Branch Consolidation Report
 
-## Current active consolidation — 2026-09-29 09:37 Europe/Lisbon
+## Current active consolidation — 2026-09-29 09:46 Europe/Lisbon
 
 - **Candidate:** `integration/lumenva-complete` at `db52970416dbc0118c51d8964e6c0ca9a93d8b43`; `origin/main` remains `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`. This is separate from the older PR #75 branch; no merge to main has occurred.
 - **Branch audit:** independent final audit confirms all 63 frozen refs have evidence-based dispositions and 0 unique useful work is missing. The exact source SHAs remain present. The final archive bundle for this candidate is still required.
@@ -8,6 +8,7 @@
 - **Validation on code SHA `db529704`:** standard CI `36541103963` passed, including unit tests and invariants. Branch parity `36541107625` has lint/typecheck/build/toolchain passed; unit comparison remains in progress. Main/candidate E2E `36541111186`/`36541115754` show failures in the same two initial stages, while the second halves still run; normalized logs are unavailable until completion, so these are not yet classified as shared baseline failures. Report-only security `36541133755` completed: Semgrep/OSV passed; Gitleaks reported 12 detections in older commits/test fixtures, none introduced by `db529704`. The WAHA fixture correction was test-only. No local heavy tests were run.
 - **Original CRM checkout:** read-only verification shows `C:\Users\David\Desktop\Projetos\Lumenva`, remote `trydavidqix/Lumenva`, branch `chore/orchestration-gate`, HEAD `cec5d765`; it currently has 27 dirty entries. This consolidation did not edit that checkout; no dirty paths were enumerated or touched.
 - **Archive baseline:** the existing pre-unification bundle reverified successfully; it contains all 63 frozen refs at exact SHAs (0 missing/mismatch) among 100 preserved refs. A separate final bundle for the completed integration tip remains required.
+- **Candidate checkpoint bundle:** `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\repository-branch-consolidation-final-2026-09-29-6633bb47.bundle`, created from HEAD `6633bb47d04d94fd7b0a680637932bbd61117535`. `git bundle verify` passed; 105 refs are present, all 63 frozen branches match their exact SHAs, and the integration head is included. Size `81,324,654` bytes; SHA-256 `52B973C9EE57862EA32C612775EE0DE4CFD5619560FA97D314C6588F3FA8FEA6`. Keep this checkpoint; make another uniquely named bundle if the final documentation commit changes HEAD.
 - **Cleanup gate:** no branches or worktrees have been deleted. Stop after bundle verification, exact remote ref checks, clean sync, and final report; ask David before any branch cleanup.
 
 The older checkpoints below are historical and superseded by this section and `ACTIVE_PIPELINE.md`.

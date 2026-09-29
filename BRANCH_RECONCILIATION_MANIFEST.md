@@ -28,6 +28,14 @@ This was a lead list captured against the initial tree, not a final decision. La
 - Size: `81,262,385` bytes. SHA-256: `866652FD4D6BFDDAEEF6E7E5ADC27F6B96E3F98F75A6A63EDAFCF43BF783B447`.
 - This is the pre-integration-content recovery checkpoint. A new final bundle must be made after all approved work is integrated; retain this baseline bundle.
 
+## Candidate checkpoint bundle — 2026-09-29
+
+- Bundle: `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\repository-branch-consolidation-final-2026-09-29-6633bb47.bundle`
+- Candidate HEAD: `6633bb47d04d94fd7b0a680637932bbd61117535` (`integration/lumenva-complete`).
+- `git bundle verify`: passed; complete history; 105 refs. All 63 frozen remote branch names resolve in the bundle at the exact manifest SHAs (0 missing/mismatch), and the candidate ref is included.
+- Size: `81,324,654` bytes. SHA-256: `52B973C9EE57862EA32C612775EE0DE4CFD5619560FA97D314C6588F3FA8FEA6`.
+- This is a verified checkpoint while current-SHA Actions finish. Preserve it; create a new unique bundle after final evidence/documentation is committed.
+
 | # | Remote branch | Frozen SHA | Decision / preservation destination |
 |---:|---|---|---|
 | 1 | `TOKENS` | `3de66946d3d3555ef18f00abdf6c59ad1a16851d` | NEXUS_OUT_OF_SCOPE — frozen ref + baseline bundle; no Lumenva CRM delta confirmed. |
