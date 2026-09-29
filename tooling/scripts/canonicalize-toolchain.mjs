@@ -1,0 +1,20 @@
+import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, rmSync } from 'node:fs'
+import { join } from 'node:path'
+const root=process.cwd(), NODE='24.21.0', PNPM='12.7.0'
+const skip=new Set(['.git','node_modules','.next','dist','build','coverage'])
+function walk(dir='.'){const out=[];for(const name of readdirSync(join(root,dir))){if(skip.has(name))continue;const rel=join(dir,name),abs=join(root,rel),st=statSync(abs);if(st.isDirectory())out.push(...walk(rel));else out.push(rel.replaceAll('\\\\','/'))}return out}
+const read=p=>readFileSync(join(root,p),'utf8'), write=(p,s)=>writeFileSync(join(root,p),s)
+const files=walk()
+for(const p of files.filter(p=>p==='package.json'||p.endsWith('/package.json'))){const m=JSON.parse(read(p));if(m.engines?.node)m.engines.node=NODE;if(p==='package.json'){m.engines={...(m.engines||{}),node:NODE,pnpm:PNPM};m.packageManager='pnpm@'+PNPM;m.scripts={...(m.scripts||{}),'check:versions':'syncpack lint','check:monorepo':'sherif','check:dead-code':'knip','check:all':'pnpm check:versions && pnpm check:monorepo && pnpm repo:check && pnpm typecheck && pnpm lint && pnpm test:unit'}}write(p,JSON.stringify(m,null,2)+'\n')}
+write('.nvmrc',NODE+'\n');if(existsSync(join(root,'apps/social-web/.node-version')))write('apps/social-web/.node-version',NODE+'\n')
+const vers=new Map([["'@playwright/test'",'1.63.0'],["'@types/react'",'19.3.0'],["'@types/react-dom'",'19.3.0'],['eslint','10.11.0'],['eslint-config-next','16.3.6'],['next','16.3.6'],['react','19.3.0'],['react-dom','19.3.0'],['typescript','6.0.3'],['vitest','5.0.2'],["'@vitest/coverage-v8'",'5.0.2']])
+let ws=read('pnpm-workspace.yaml').split(/\r?\n/).map(line=>{const t=line.trimStart();for(const [k,v] of vers){if(t.startsWith(k+':'))return '  '+k+': '+v}return line}).join('\n')
+if(!/^saveExact:/m.test(ws))ws+='\nsaveExact: true\n';write('pnpm-workspace.yaml',ws)
+for(const p of ['tooling/scripts/voice-sip-test/pnpm-lock.yaml','tooling/scripts/voice-sip-test/pnpm-workspace.yaml'])if(existsSync(join(root,p)))rmSync(join(root,p))
+let rc=read('tooling/scripts/repo-check.mjs')
+const reps=[["const expectedNode = 'v22.23.3'","const expectedNode = 'v24.21.0'"],["const expectedPnpm = '9.15.9'","const expectedPnpm = '12.7.0'"],["if (packageManagerMatch?.[1] !== expectedPnpm || !packageManagerMatch?.[2]) {","if (packageManagerMatch?.[1] !== expectedPnpm) {"],["pin pnpm 9.15.9 and retain its integrity hash suffix","pin pnpm 12.7.0"],["rootManifest.engines?.node !== '22.23.3'","rootManifest.engines?.node !== '24.21.0'"],["Root engines must pin Node 22.23.3 and pnpm 9.15.9","Root engines must pin Node 24.21.0 and pnpm 12.7.0"],["manifest.engines.node !== '22.23.3'","manifest.engines.node !== '24.21.0'"],["engines.node must be 22.23.3","engines.node must be 24.21.0"],[".nvmrc must contain exactly 22.23.3",".nvmrc must contain exactly 24.21.0"],["image !== 'node:22.23.3'","image !== 'node:24.21.0'"],["deploymentManifest.engines?.node !== '22.23.3'","deploymentManifest.engines?.node !== '24.21.0'"],["Vercel app package.json must declare Node 22.23.3","Vercel app package.json must declare Node 24.21.0"],["Node 22.23.3","Node 24.21.0"]]
+for(const [a,b] of reps)rc=rc.split(a).join(b)
+rc=rc.replace('/^22\\.23\\.3\\s*$/','/^24\\.21\\.0\\s*$/').replace('(?!22\\.23\\.3\\b)','(?!24\\.21\\.0\\b)').replace('/^node:22\\.23\\.3(?:-|$)/','/^node:24\\.21\\.0(?:-|$)/')
+write('tooling/scripts/repo-check.mjs',rc)
+for(const p of files.filter(p=>p.startsWith('.github/workflows/')&&/\.ya?ml$/.test(p))){let s=read(p).replace(/version:\s*9\.15\.9/g,'version: 12.7.0');write(p,s)}
+if(existsSync(join(root,'cloudbuild.yaml')))write('cloudbuild.yaml',read('cloudbuild.yaml').split('node:22.23.3').join('node:24.21.0'))
