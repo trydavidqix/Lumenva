@@ -2,7 +2,7 @@ import { link, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { SafeCommandRunner, redactRuntimeText } from "./command-runner.js";
+import { CommandPolicyError, SafeCommandRunner, redactRuntimeText } from "./command-runner.js";
 import type { RuntimeCommand } from "./contracts.js";
 
 async function fixture() {
@@ -41,7 +41,7 @@ describe("SafeCommandRunner", () => {
   it("fails closed for executables outside the allowlist", async () => {
     const { root, command } = await fixture();
     const runner = new SafeCommandRunner({ workspaceRoots: [root], allowedExecutables: [] });
-    await expect(runner.run(command)).rejects.toMatchObject({ code: "executable_denied" });
+    await expect(runner.run(command)).rejects.toMatchObject<Partial<CommandPolicyError>>({ code: "executable_denied" });
   });
 
   it("rejects a different executable path with an allowlisted basename", async () => {
@@ -50,7 +50,7 @@ describe("SafeCommandRunner", () => {
     await link(process.execPath, alternateExecutable);
     try {
       await expect(runner.run({ ...command, executable: alternateExecutable }))
-        .rejects.toMatchObject({ code: "executable_denied" });
+        .rejects.toMatchObject<Partial<CommandPolicyError>>({ code: "executable_denied" });
     } finally {
       await rm(alternateExecutable, { force: true });
     }
@@ -59,7 +59,7 @@ describe("SafeCommandRunner", () => {
   it("rejects a bare relative executable name", async () => {
     const { runner, command } = await fixture();
     await expect(runner.run({ ...command, executable: basenameForNode(process.execPath) }))
-      .rejects.toMatchObject({ code: "executable_denied" });
+      .rejects.toMatchObject<Partial<CommandPolicyError>>({ code: "executable_denied" });
   });
 
   it("enforces the output cap", async () => {
