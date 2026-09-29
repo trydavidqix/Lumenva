@@ -192,6 +192,7 @@ describe("Asterisk/ARI SIP gateway (Fase 2)", () => {
 
     await expect(
       gateway.initiateOutboundCall({
+        voiceCallId: "11111111-1111-4111-8111-111111111111",
         organizationId: "org-1",
         connectionId: "sip-conn-abc",
         contactId: "contact-1",
@@ -212,6 +213,7 @@ describe("Asterisk/ARI SIP gateway (Fase 2)", () => {
 
     await expect(
       gateway.initiateOutboundCall({
+        voiceCallId: "11111111-1111-4111-8111-111111111111",
         organizationId: "org-1",
         connectionId: "sip-conn-abc",
         contactId: "contact-1",
@@ -230,6 +232,7 @@ describe("Asterisk/ARI SIP gateway (Fase 2)", () => {
       outboundContext: "lumenva-voice",
     });
     const base = {
+      voiceCallId: "11111111-1111-4111-8111-111111111111",
       organizationId: "org-1",
       connectionId: "sip-conn-abc",
       fromE164: "+351211234567",
