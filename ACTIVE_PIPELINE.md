@@ -2,7 +2,7 @@
 
 ## Tarefa atual do Owner — sincronização final local/GitHub — 2026-09-29
 
-**Status:** IN_PROGRESS. Primeiro publique e valide hashes das evidências; depois restaure/remova apenas os paths locais auditados. `main` permanece intocada. A conclusão exige integração local = remoto, zero trabalho útil local-only, 21 worktrees Recovery reconciliadas, archives válidos e exatamente duas branches remotas.
+**Status:** COMPLETE — 2026-09-29. Evidências úteis estão publicadas; `main` permaneceu intocada; as 21 worktrees Recovery estão limpas; bundles verificados; remoto com exatamente duas branches.
 
 - [x] Capturar os 37 paths do CRM (25 arquivos de conteúdo/config, `AGENTS.md` modificado e 11 arquivos de cache Jules); snapshots e patch estão no archive da integração.
 - [x] Capturar as 15 worktrees Recovery sujas: 11 patches de alterações tracked e 4 com somente artefatos gerados/cache. Preservar as 6 que já estavam limpas.
@@ -10,8 +10,10 @@
 - [x] Publicar patches finais, `AGENTS.md` exato, adendo da branch vps e este relatório.
 - [x] Revalidar snapshots e reconciliar somente os paths CRM/worktree auditados; manter as 21 worktrees registradas.
 - [x] Preservar e remover a branch remota `vps-17455632840955604138`; provar que restam apenas `main` e `integration/lumenva-complete`.
-- [ ] Rodar GitHub Actions aplicável no HEAD final; manter explícito o resultado E2E falho.
-- [ ] Prova final: árvores relevantes limpas, sem trabalho útil local-only, bundles válidos, SHA da integração local/remoto igual e `main` intacta.
+- [x] Rodar GitHub Actions aplicável no HEAD final; manter explícito o resultado E2E falho.
+- [x] Prova final: árvores relevantes limpas, sem trabalho útil local-only, bundles válidos, SHA da integração local/remoto igual e `main` intacta.
+
+**Prova terminal:** CI `36599165338` passou no HEAD `076faaf3709a4e562ac87bb79fc4a1f7519a5c5d` (`verify` e `invariants`). E2E `36599007496` terminou vermelho: telas de IA e parte 1 falharam; parte 2 reportou 42 falhas e 8 aprovações, incluindo timeouts e seletores ambíguos. As rotas de IA registraram HTTP 500 por permissão negada em `fn_user_org_ids`. As falhas estão preservadas e não foram mascaradas. A comparação pareada anterior registrou zero falhas exclusivas do candidate nos SHAs então testados. Segurança report-only `36596747973` passou como workflow; OSV/Semgrep passaram e os 8 fingerprints históricos do Gitleaks permanecem registrados.
 
 Nenhum cache, artefato de build ou patch conflitante está aprovado como código de produto. Propostas ambíguas/de segurança permanecem arquivadas e inativas.
 

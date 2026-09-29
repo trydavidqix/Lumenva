@@ -2,11 +2,11 @@
 
 ## Fechamento final de sincronização solicitado pelo Owner — 2026-09-29
 
-**Status:** IN_PROGRESS. É preservação/sincronização, sem implementação de produto. `main` fica somente leitura. Ordem: (1) publicar e validar hashes das evidências; (2) reconciliar os 37 itens do CRM e 15 worktrees Recovery sujas sem descartar dados sem snapshot; (3) preservar a ponta atual da branch vps em bundle verificado e remover a branch só depois de publicar o manifesto; (4) rodar GitHub Actions no HEAD final; (5) provar apenas duas branches remotas e worktrees sincronizadas/limpas.
+**Status:** COMPLETE — 2026-09-29. Preservação/sincronização concluída sem implementação de produto; `main` ficou somente leitura.
 
-Estado atual: evidências publicadas, 37 paths CRM reconciliados, 21/21 Recovery worktrees limpas, 65 arquivos locais movidos para holding recuperável, `vps-17455632840955604138` arquivada e removida do remoto, exatamente duas branches remotas, integration local=remote e main inalterada. Gitleaks report-only registrou 8 matches históricos em fixtures/testes e numa constante de alfabeto; OSV e Semgrep passaram. CI encontrou uma regressão nossa de coleta de teste arquivado; a exclusão mínima `docs/archive/**` foi adicionada em `a720df6d`, cujo CI está rodando. E2E segue em execução com falhas já registradas; não marque a task completa até os resultados terminais e a última prova de sincronização.
+Estado final: evidências publicadas; 37 paths CRM reconciliados; 21/21 Recovery worktrees limpas; 65 arquivos locais movidos para holding recuperável; `vps-17455632840955604138` arquivada e removida; exatamente duas branches remotas; integration local=remote; main inalterada. CI no HEAD sincronizado `076faaf3709a4e562ac87bb79fc4a1f7519a5c5d` passou (`36599165338`, verify + invariants). A correção mínima para impedir que snapshots em `docs/archive/**` fossem descobertos como testes passou CI (`36596747535`). Segurança report-only `36596747973` passou como workflow, OSV/Semgrep passaram e oito fingerprints históricos do Gitleaks continuam registrados. E2E `36599007496` terminou vermelho (AI checks/parte 1 falharam; parte 2: 42 falhas, 8 aprovações; HTTP 500 por permissão negada em `fn_user_org_ids`, timeouts e seletor ambíguo). Esse resultado está preservado, sem enfraquecer testes; comparação pareada anterior não encontrou falhas exclusivas do candidate nos SHAs então testados.
 
-O E2E pareado já falhou no baseline e na candidata, sem IDs exclusivos de falha na candidata no SHA de código testado. Preserve esse resultado; não enfraqueça testes nem chame E2E de verde. Suítes pesadas rodam somente no GitHub Actions.
+E2E não está verde; falhas permanecem registradas para trabalho de produto separado. Suítes pesadas rodam somente no GitHub Actions.
 
 ## Follow-up: publish useful local work — 2026-09-29
 
