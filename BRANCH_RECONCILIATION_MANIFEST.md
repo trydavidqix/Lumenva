@@ -6,7 +6,7 @@
 **Integration branch created after capture:** `integration/lumenva-complete` at `f46cdd4ddd2c4edc6ec57f266e97e8cb9f6a83ac`  
 **Production main at capture:** `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`
 
-This is the immutable audit baseline. If a remote branch moves later, preserve this original SHA and record its new SHA separately; do not silently replace the baseline. The frozen SHAs below remain unchanged. Final classifications and destinations are being reconciled against integration HEAD `c1f9c2dbfbdfc3ef166c9b8e2de3030b41095bef`; `PENDING` does not authorize deletion.
+This is the immutable audit baseline. If a remote branch moves later, preserve this original SHA and record its new SHA separately; do not silently replace the baseline. The frozen SHAs below remain unchanged. All 63 rows have dispositions independently audited against integration HEAD `db52970416dbc0118c51d8964e6c0ca9a93d8b43`; `PENDING` does not authorize deletion.
 
 ## Historical preliminary cross-branch archaeology — 2026-09-29 (superseded by current matrix)
 
@@ -79,7 +79,7 @@ This was a lead list captured against the initial tree, not a final decision. La
 | 47 | `fix/temp-test-cleanup` | `a2f0fd1f520c33447d94c568d0322e3345764491` | DUPLICATE for cleanup; one gate test is coupled to unintegrated experimental governance; source/bundle retained. |
 | 48 | `implementation/unified` | `d6f36b074b94d10238d106ed26591b54212178b3` | DUPLICATE / OBSOLETE — helper `withTempDir` and cleanup tests are already represented with matching blobs (`test-temp.ts` `1c54425b92d7`, `test-temp.test.ts` `40efa570871f`). Harness cleanup guard is superseded by the candidate's broader `t.after(...)` support (source `c5a319925404`, candidate `8be887cbdf84`). Commit `082baf95` is a broad 99-path reversal, not additive useful work; do not replay it. Source SHA preserved in bundle. |
 | 49 | `jules-auth-firebase-client-4940827573783815306` | `a2705fac048ee7bc05b287fee2202c651c19231a` | DUPLICATE — Firebase client/components/tests represented in main; PR #28 merged. |
-| 50 | `jules-f7-waha-adapter-7831325555235237843` | `7dd0a9f87420784dced2c1a40ded5133c6ac168c` | EXPERIMENTAL/PARTIAL — represented by commits `3154e781`/`eb532b8f` at `apps/crm/lib/channels/adapters/waha/`; standalone, not enabled as default. CI `36538511186` found six unit failures caused by test setup attempting to assign read-only getters; a test-only env mock fix is queued for remote validation. Not production-ready until corrected-head Actions pass. |
+| 50 | `jules-f7-waha-adapter-7831325555235237843` | `7dd0a9f87420784dced2c1a40ded5133c6ac168c` | EXPERIMENTAL/PARTIAL — represented by commits `3154e781`/`eb532b8f` at `apps/crm/lib/channels/adapters/waha/`; standalone, not enabled as default. CI `36538511186` found six fixture failures; test-only env mock fix at `db529704` passed corrected-head CI `36541103963`. Comparative unit parity is still running. Not production-ready. |
 | 51 | `lumenva-command-center` | `ec8b4e5e886c06af9d6fd6fa764e57089ea61963` | PARTIAL / DUPLICATE / NEXUS_OUT_OF_SCOPE — CRM overview is represented at `apps/crm/lib/command-center/overview-state*`; Agent OS/MCG runtime is Nexus-owned; Meta webhook alias is duplicate. Source SHA preserved in bundle. |
 | 52 | `lumenva-command-center-blueprint-v2` | `eb56dcf0a96203cb5d3e567ccdddcca5d69e2b05` | NEXUS_OUT_OF_SCOPE — standalone Agent OS blueprint; source/bundle retained. |
 | 53 | `lumenva-local-runtime` | `339a19b49d1346bfb40fe09c8880b7b19513d04b` | NEXUS_OUT_OF_SCOPE — Maestri/MCG runtime; source/bundle retained. |
@@ -101,9 +101,9 @@ This was a lead list captured against the initial tree, not a final decision. La
 - Remote verification on 2026-09-29: all 63 frozen branch names still exist at their exact frozen SHAs (0 missing, 0 mismatches). `origin` currently has 64 heads because it also contains `integration/lumenva-complete`; production `main` remains `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
 - Final bundle and per-branch preservation proof will be appended after integration and before any cleanup request.
 
-## Current selected content — provisional, as of integration HEAD `c1f9c2dbfbdfc3ef166c9b8e2de3030b41095bef`
+## Current selected content — independently reviewed at integration HEAD `db52970416dbc0118c51d8964e6c0ca9a93d8b43`
 
-**Status:** WAHA adapter is present but remains isolated and not enabled by default; Command Center/Local Runtime prototype has been reverted as Nexus-owned. Current-SHA CI/parity/E2E runs are in progress. These are content decisions, not final branch dispositions.
+**Status:** WAHA adapter is present but remains isolated and not enabled by default. Corrected-head CI passed. Parity lint/typecheck/build/toolchain passed, with unit comparison in progress. Paired main/candidate E2E runs have matching failures in two initial stages and their final second halves/log comparisons remain in progress. Two disabled Twilio outbound templates and their historical plan/runbook are preserved as experimental. Command Center/Local Runtime prototype has been reverted as Nexus-owned. The independent audit found 63/63 refs reconciled and 0 useful work missing; archive and final synchronization proof remain.
 
 | Frozen source(s) | Selected content in `integration/lumenva-complete` | Evidence | Boundary/status |
 |---|---|---|---|

@@ -2,7 +2,7 @@
 
 **Status:** IN_PROGRESS — this plan supersedes the historical PR #75 closeout below.
 **Canonical candidate:** `integration/lumenva-complete`
-**Current HEAD:** `c1f9c2dbfbdfc3ef166c9b8e2de3030b41095bef`
+**Current HEAD:** `db52970416dbc0118c51d8964e6c0ca9a93d8b43`
 **Base:** `origin/main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`
 **Source baseline:** the 63 frozen remote refs in `BRANCH_RECONCILIATION_MANIFEST.md` and the verified pre-unification bundle.
 
@@ -15,21 +15,21 @@ The independent CRM checkout at `C:\Users\David\Desktop\Projetos\Lumenva` is not
 ## Live pipeline (8 gates)
 
 1. **Freeze source refs and baseline archive — DONE.** 63 names/SHAs frozen; original bundle verified.
-2. **Classify all 63 refs with evidence — FINAL INDEPENDENT AUDIT IN PROGRESS.** Every frozen row now has a disposition with source SHA and evidence. The independent auditor is checking the full set; one targeted question remains on whether `voz` contains useful CRM-owned Asterisk operations config.
-3. **Integrate useful partial/experimental content — IN PROGRESS.** WAHA is represented as isolated `EXPERIMENTAL/PARTIAL`, not default-enabled. Meta OAuth/account-sync work remains `PARTIAL` and is not activated because its source has tenant-RLS and token-storage contract defects. No other feature is to be added without evidence of unique useful behavior.
-4. **Run current-head remote validation — IN PROGRESS.** GitHub Actions only; current SHA `c1f9c2d` has CI, branch parity, paired main/candidate E2E, and report-only security workflows running. Results from older SHAs are not current evidence.
-5. **Independent zero-missing-work audit — TODO.** Reconcile the independent auditor’s findings against every frozen ref and the full candidate tree.
+2. **Classify all 63 refs with evidence — DONE.** Every frozen row has a disposition with source SHA/path/blob evidence. Independent final audit confirmed 63/63 rows and no useful work missing at `db529704`.
+3. **Integrate useful partial/experimental content — IN PROGRESS.** WAHA is isolated and `EXPERIMENTAL/PARTIAL`, not default-enabled. Unique disabled Twilio outbound templates and the useful `voz` plan/runbook are preserved in explicit experimental/archive paths. Meta OAuth/account-sync remains preserved as `PARTIAL` in the frozen source/archive, not activated because of tenant-RLS and token-storage defects.
+4. **Run current-head remote validation — IN PROGRESS.** GitHub Actions only; standard CI `36541103963` passed on `db529704`; parity `36541107625` has lint/typecheck/build/toolchain passed while unit comparison runs. Paired main/candidate E2E `36541111186`/`36541115754` have matching failures in two initial stages, with their second halves and log comparison still running. Report-only security `36541133755` completed with Semgrep/OSV passed and historical Gitleaks detections. Results from older SHAs are not current evidence.
+5. **Independent zero-missing-work audit — DONE.** Auditor confirmed all 63 frozen SHAs exist, all 63 rows have dispositions, and no unique useful content is missing from the candidate/archive; it verified the voice and `implementation/unified` reconciliations.
 6. **Create final archive — TODO.** Create a uniquely named final bundle containing all 63 frozen source refs plus final candidate; verify it; record size and SHA-256. Keep prior bundles untouched.
 7. **Prove preservation and synchronization — TODO.** Confirm all 63 frozen refs still resolve to their exact SHAs, no ref was deleted or moved, integration local equals remote, `main` is unchanged, and the working tree is clean.
 8. **Owner handoff — TODO.** Deliver 63/63 matrix, 0 useful work missing, archive proof, and Actions outcomes; stop and ask David before any branch cleanup. No branch deletion is authorized before that separate approval.
 
 ## Current evidence and known limits
 
-- Current remote candidate equals local HEAD `c1f9c2dbfbdfc3ef166c9b8e2de3030b41095bef`; `origin/main` remains `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
+- Current remote candidate equals local HEAD `db52970416dbc0118c51d8964e6c0ca9a93d8b43`; `origin/main` remains `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
 - Frozen source refs were unchanged at the last audit; no source branch has been deleted. Latest local documentation delta is the F7 classification update, not yet committed.
 - Independent F7 audit: Resend is represented; old Nuvemshop adapter is superseded by stricter URL/redirect checks; Meta adapter source weakens fail-closed token handling and is obsolete; webhook missing-secret fail-closed behavior is represented in current handlers and test. Commit/path/blob evidence is in the manifest.
-- Current-head CI `36538511186` failed only in six WAHA adapter unit cases: the test used `Object.assign` on read-only getters `baseUrl`/`apiKey`. The adapter behavior was not reached. The test now mocks `@/lib/env` instead; this correction is not yet validated and must be pushed before claiming success.
-- Current-head parity `36538541868` has lint, build, typecheck, and toolchain jobs green; its unit comparison is still running. Paired E2E runs `36538546376` (main) and `36538550013` (candidate) are still running. Security report-only `36538517821` succeeded. CI rerun, parity rerun, and paired E2E on the corrected final head remain required.
+- Previous current-head CI `36538511186` at `c1f9c2d` failed six WAHA adapter unit cases because the test used `Object.assign` on read-only getters `baseUrl`/`apiKey`; the adapter behavior was not exercised. Test-only env mock fix is pushed at `db529704`.
+- Corrected-head standard CI `36541103963` passed. Parity `36541107625` has lint/typecheck/build/toolchain passed and unit comparison still running. Main E2E `36541111186` and candidate E2E `36541115754` show the same two initial-stage failures on both sides; their second halves and logs are not complete, so no final baseline/regression classification is made yet. Report-only security run `36541133755` completed: Semgrep and OSV passed; Gitleaks reported 12 detections in older commits across test fixtures/token alphabet, none introduced by `db529704`. Workflow conclusion is success because this scan is report-only; finding locations are recorded without exposing values. Older `c1f9c2d` parity/E2E runs are obsolete and were asked to cancel.
 - Independent `implementation/unified` audit: `withTempDir` and cleanup tests have matching blobs in the candidate; the candidate harness guard is broader; source commit `082baf95` is a 99-path reversal and must not be replayed. Evidence is in the manifest.
 - Previous parity/E2E evidence applies to earlier candidates only. E2E previously failed on both sides with shared failures and zero candidate-only failures; do not label E2E green based on that.
 - No local heavy tests are permitted. Use `git diff --check` and static Git/reference inspection locally; all test, build, lint, typecheck, security, and E2E gates run through GitHub Actions.

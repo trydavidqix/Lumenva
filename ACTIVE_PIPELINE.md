@@ -7,23 +7,23 @@
 **Project:** `trydavidqix/Lumenva`
 **Branch:** `integration/lumenva-complete`
 **Base:** PR #75/consolidation head `f46cdd4ddd2c4edc6ec57f266e97e8cb9f6a83ac`; `origin/main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99` is an ancestor.
-**Updated:** 2026-09-29 08:49 Europe/Lisbon
+**Updated:** 2026-09-29 09:37 Europe/Lisbon
 
 ## Progress
 
-- **Completed:** 1/8 — **13%** (frozen inventory + verified baseline bundle).
-- **Current:** all 63 refs have dispositions; independent final audit is in progress. Reviews resolved refs 37, 41, 44, and 48. One targeted question remains on CRM-owned Asterisk config. CI `36538511186` failed six WAHA unit cases because its test setup tried to assign read-only getters; the test now mocks `@/lib/env` and awaits corrected-head Actions validation. Branch parity has lint/build/typecheck/toolchain green while unit comparison runs; paired E2E is still running. Candidate HEAD remains `c1f9c2dbfbdfc3ef166c9b8e2de3030b41095bef`; evidence docs and the test fix are uncommitted. No branches deleted.
-- **Next:** close the Asterisk review, publish the evidence + test correction, rerun validation on that exact SHA in GitHub Actions, then prove all 63 destinations and create/verify a final bundle.
+- **Completed:** 3/8 — **38%** (frozen inventory/archive; 63-ref evidence matrix; independent zero-missing-work audit).
+- **Current:** final auditor confirmed 63/63 refs reconciled and no useful work missing at `db529704`. Two disabled outbound Twilio templates and the historical plan/runbook are preserved as experimental/archive content. Corrected-head CI `36541103963` passed, including unit tests and invariants. Parity `36541107625` has lint, typecheck, build, and toolchain passed; unit comparison remains in progress. Paired E2E `36541111186`/`36541115754` both failed the same two initial stages on main and candidate; their second halves are still running, so final parity classification awaits the completed logs. Security report-only `36541133755` completed: Semgrep/OSV passed; Gitleaks reported 12 detections in older history/test fixtures, none from the `db529704` commit; workflow is report-only. Local and remote integration point to `db529704`; no branches deleted.
+- **Next:** finish unit/E2E Actions and compare paired failure evidence, then verify frozen ref SHAs and create/verify the final bundle.
 - **Preservation:** zero source branches deleted; baseline bundle SHA-256 `866652FD4D6BFDDAEEF6E7E5ADC27F6B96E3F98F75A6A63EDAFCF43BF783B447`.
-- **Validation:** current candidate-SHA runs: CI `36538511186`, branch parity `36538541868`, main E2E `36538546376`, candidate E2E `36538550013` are in progress; report-only security `36538517821` passed. Results on old SHAs are stale. No heavy tests were run locally.
+- **Validation:** corrected-head CI `36541103963` passed. Parity `36541107625` has four jobs passed; unit comparison remains in progress. E2E `36541111186` and `36541115754` have matching initial-stage failures on main/candidate; second half/log comparison is pending. Report-only security `36541133755` completed with Semgrep/OSV passed and historical Gitleaks findings. No heavy tests were run locally.
 
 ## Current checklist
 
 - [x] Freeze 63 remote branch names/SHAs and verify the baseline Git bundle.
-- [ ] Complete independent second-pass audit of all 63 dispositions and close the Asterisk operations question.
+- [x] Complete independent second-pass audit of all 63 dispositions and close the Asterisk operations question.
 - [ ] Port useful partial/experimental/documentation work into the integration branch by isolated scopes.
 - [ ] Validate waves with GitHub Actions; separate preexisting failures from new regressions.
-- [ ] Independently re-audit all 63 frozen SHAs; prove zero useful work is missing.
+- [x] Independently re-audit all 63 frozen SHAs; prove zero useful work is missing.
 - [ ] Create and verify a final archive bundle plus destination manifest for all frozen refs.
 - [ ] Confirm local/remote integration sync and no source-ref movement/loss.
 - [ ] Deliver final evidence report; stop and request Owner approval before branch cleanup.
@@ -33,7 +33,7 @@
 - Keep `main` unchanged; no blind branch merges, force-pushes, or branch/worktree deletion.
 - Preserve `PRODUCTION_READY`, `EXPERIMENTAL`, `PARTIAL`, `DUPLICATE`, `OBSOLETE`, and `NEXUS_OUT_OF_SCOPE` distinctions. Unresolved evidence stays preserved.
 - The baseline bundle is outside Git because it contains historical repository data; commit its manifest and checksum, not the binary.
-- Authorized agents 1–5 completed first-pass audits. Integrators 6–8 completed a WAHA CRM adapter wave; the earlier Command Center/Local Runtime port was reverted after ownership review. Agent 10 completed F1–F5/F7 comparison; agent 9 is reconciling remaining refs and Actions/archive.
+- Authorized branch auditors and independent final auditor completed the 63/63 source reconciliation. Integrators ported the isolated WAHA adapter and selected experimental voice assets. The earlier Command Center/Local Runtime port was reverted as Nexus-owned. Actions remains the validation gate for the latest HEAD.
 - Temporary multi-agent permission was restored to the original hook policy after delegation; no temporary permit is active.
 
 ---
