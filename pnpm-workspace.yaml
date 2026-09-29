@@ -1,14 +1,20 @@
 packages:
   - 'apps/*'
-  - 'packages/*'
+  - '!apps/video-composer'
   - 'packages/core/*'
+  - '!packages/core/social-brain'
   - 'packages/core/social-brain/*'
+  - '!packages/core/social-brain/agents'
+  - '!packages/core/social-brain/providers'
   - 'packages/core/social-brain/providers/*'
   - 'packages/integrations/*'
   - 'packages/observability/*'
   - 'packages/platform/*'
+  - '!packages/platform/gcp'
   - 'packages/platform/gcp/*'
+  - '!packages/platform/gcp/secrets'
   - 'tooling/scripts/*'
+  - '!tooling/scripts/gcp'
 
 catalogMode: manual
 catalog:
