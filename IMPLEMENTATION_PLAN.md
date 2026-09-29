@@ -1,5 +1,16 @@
 # Consolidation Closeout — PR #75
 
+## Current implementation plan — 2026-09-29 04:51 Europe/Lisbon
+
+The branch-content review is complete. No useful voice integration remains missing. Required PR checks pass on HEAD `878e3019`; PR #75 stays open and unmerged. This plan now tracks only closeout work:
+
+1. **Current-head parity — complete:** run `36514960201` pinned main/candidate on `windows-2025`, Node `22.23.3`, pnpm `9.15.9`, frozen installs. Lint/toolchain/typecheck passed both; main build had 17 failure signatures, candidate 0; unit main `5,487/88/10`, candidate `5,623/7/11` (pass/fail/skip), 5 shared failures, 0 candidate-only, 47 resolved, zero timeouts/worker errors. Comparator unit row labels `REGRESSION` only for one extra skipped test on candidate.
+2. **Comparable E2E — complete, suite red on both:** paired runs `36513998219` (main) and `36513998388` (candidate) used the same workflow revision `878e3019`. Both E2E jobs failed. Artifact comparison found 42 shared failing contexts, 8 main-only, and 0 candidate-only. This rules out a candidate-only E2E regression in the pair but does not make E2E green. Do not change product authorization, test assertions, or seeds to force green.
+3. **Prove final archive:** after documentation commit/push, create a uniquely named bundle without overwriting older bundles. Verify the bundle and compare every live ref name/SHA. Preserve the four `refs/archive/pr-*` and report two existing stale worktree metadata entries; do not prune or remove them.
+4. **Publish and stop:** update `BRANCH_CONSOLIDATION_REPORT.md`, this plan, and `ACTIVE_PIPELINE.md`; commit/push only the consolidation branch; wait for checks on the final docs head; verify local/remote branch equality, clean working tree, PR open/unmerged, and main unchanged. Restore the temporary Codex subagent hook/permit and disable the temporary feature. Stop without merging or beginning another task.
+
+Completed and not part of the remaining plan: 92-path content audit, voice integration audit, required PR checks on `878e3019`, current-head parity, and comparable E2E failure classification. The current unit comparison has 0 candidate-only failed IDs; one additional skip causes its row label to read `REGRESSION`. The Windows runner cannot provide PostgreSQL Docker image coverage for the shared receipt-store integration test. E2E has shared baseline failures in both runs and zero candidate-only failing contexts; it is not green.
+
 ## Current checkpoint — 2026-09-28 19:46 Europe/Lisbon
 
 - Candidate `5b5e062d85f7b9ef833ee1a36b1d0041a5cb35fd`, branch `consolidation/lumenva-main-2026-09-27`; PR #75 OPEN/unmerged; base `main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
