@@ -41,7 +41,7 @@ async function main(): Promise<void> {
     return
   }
   if (command === 'preflight') {
-    const nodeContract = checkNodeContract({ expected: '22.x', current: process.version.slice(1), vercel: process.env.VERCEL_NODE ?? null })
+    const nodeContract = checkNodeContract({ expected: '24.x', current: process.version.slice(1), vercel: process.env.VERCEL_NODE ?? null })
     console.log(JSON.stringify({ repository_node: nodeContract.repository_node, current_node: nodeContract.current_node, vercel_node: nodeContract.vercel_node, node_result: nodeContract.result, node_reason: nodeContract.reason, pnpm: process.env.npm_config_user_agent?.split(' ')[0] ?? 'unknown', root, branch: branch(), commit_sha: sha(), status: nodeContract.result }, null, 2))
     if (nodeContract.result !== 'PASS') process.exitCode = 1
     return
