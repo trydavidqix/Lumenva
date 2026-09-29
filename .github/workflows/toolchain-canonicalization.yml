@@ -2,6 +2,9 @@ name: toolchain-canonicalization
 on:
   push:
     branches: [chore/lumenva-toolchain-canonicalization]
+concurrency:
+  group: toolchain-canonicalization
+  cancel-in-progress: true
 permissions:
   contents: write
 jobs:
