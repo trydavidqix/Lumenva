@@ -7,20 +7,20 @@
 **Project:** `trydavidqix/Lumenva`
 **Branch:** `integration/lumenva-complete`
 **Base:** PR #75/consolidation head `f46cdd4ddd2c4edc6ec57f266e97e8cb9f6a83ac`; `origin/main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99` is an ancestor.
-**Updated:** 2026-09-29 08:33 Europe/Lisbon
+**Updated:** 2026-09-29 08:49 Europe/Lisbon
 
 ## Progress
 
 - **Completed:** 1/8 — **13%** (frozen inventory + verified baseline bundle).
-- **Current:** first-pass evidence is in for all 63 refs; 58 matrix rows now have provisional decisions and five remain under exact source review. Backup CRM OAuth/social-account code is useful but not production-safe: the source migration has tenant-RLS and token-column defects, so it stays preserved, not activated. Voice routes/migrations are superseded by stronger current equivalents. Command Center/Local Runtime remains `NEXUS_OUT_OF_SCOPE`; WAHA CRM adapter remains experimental. Local HEAD `675a2a005e4fe7a63b7b1519a8a4264b780f6816`; four revert commits plus report/matrix edits are pending publication. No branches deleted.
-- **Next:** close the five source reviews, publish the audited checkpoint, run CI/parity/E2E through GitHub Actions, then independently prove all 63 destinations and produce/verify a final bundle.
+- **Current:** all 63 refs have dispositions; independent final audit is in progress. Reviews resolved refs 37, 41, 44, and 48. One targeted question remains on CRM-owned Asterisk config. CI `36538511186` failed six WAHA unit cases because its test setup tried to assign read-only getters; the test now mocks `@/lib/env` and awaits corrected-head Actions validation. Branch parity has lint/build/typecheck/toolchain green while unit comparison runs; paired E2E is still running. Candidate HEAD remains `c1f9c2dbfbdfc3ef166c9b8e2de3030b41095bef`; evidence docs and the test fix are uncommitted. No branches deleted.
+- **Next:** close the Asterisk review, publish the evidence + test correction, rerun validation on that exact SHA in GitHub Actions, then prove all 63 destinations and create/verify a final bundle.
 - **Preservation:** zero source branches deleted; baseline bundle SHA-256 `866652FD4D6BFDDAEEF6E7E5ADC27F6B96E3F98F75A6A63EDAFCF43BF783B447`.
-- **Validation:** baseline Actions run `36529426649` at `f75d0121` passed `verify` and `invariants`; this is not candidate validation. Runs `36531873618`, `36531873998`, `36531873900`, `36531874301` inspected obsolete candidate `ab5234aa`; its runtime prototype produced three TS2558 errors, now removed from the Lumenva candidate as Nexus-owned. Those runs are stale for current HEAD; paired E2E had not completed at last report. No tests were run locally.
+- **Validation:** current candidate-SHA runs: CI `36538511186`, branch parity `36538541868`, main E2E `36538546376`, candidate E2E `36538550013` are in progress; report-only security `36538517821` passed. Results on old SHAs are stale. No heavy tests were run locally.
 
 ## Current checklist
 
 - [x] Freeze 63 remote branch names/SHAs and verify the baseline Git bundle.
-- [ ] Reconcile 63 branch reports against exact trees, commits, paths, PRs, and shared ancestry.
+- [ ] Complete independent second-pass audit of all 63 dispositions and close the Asterisk operations question.
 - [ ] Port useful partial/experimental/documentation work into the integration branch by isolated scopes.
 - [ ] Validate waves with GitHub Actions; separate preexisting failures from new regressions.
 - [ ] Independently re-audit all 63 frozen SHAs; prove zero useful work is missing.

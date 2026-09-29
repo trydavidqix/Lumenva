@@ -1,8 +1,8 @@
 # Frozen branch audit — first-pass reconciliation
 
-Captured 2026-09-29. Every branch name and frozen SHA is in `BRANCH_RECONCILIATION_MANIFEST.md`. This report consolidates first-pass read-only auditor returns. Findings are provisional until root verifies exact commits/trees against integration and production. A `PRESERVE/UNRESOLVED` decision is not permission to discard. Update at current HEAD `675a2a005e4fe7a63b7b1519a8a4264b780f6816`: the CRM-owned WAHA adapter was selectively ported (`3154e781`, `eb532b8f`); an earlier Nexus-owned Command Center/Local Runtime port was reversed in `675a2a00`. No whole source branch was merged. The table below remains historical/provisional until the final reconciliation matrix is completed.
+Captured 2026-09-29. Every branch name and frozen SHA is in `BRANCH_RECONCILIATION_MANIFEST.md`. Findings below combine first-pass read-only audits and the current root verification. A `PRESERVE/UNRESOLVED` decision is not permission to discard. Current integration HEAD: `c1f9c2dbfbdfc3ef166c9b8e2de3030b41095bef`; the CRM-owned WAHA adapter was selectively ported (`3154e781`, `eb532b8f`); an earlier Nexus-owned Command Center/Local Runtime port was reversed in `675a2a00`. No whole source branch was merged. Final independent 63-ref audit is in progress.
 
-## Root verification checkpoint — current candidate `675a2a00`
+## Root verification checkpoint — current candidate `c1f9c2db`
 
 - **`backup/lumenva-command-center-pre-cleanup-2026-09-22` — PARTIAL, preserve; do not port whole commit.** Source commit `437a0f53` adds Meta OAuth start/callback/disconnect/reconnect routes, social-account data/sync, and Content OS accounts UI. Example source blobs: Facebook callback `db377ff9`, workspace binding `3f85db26`, accounts data `060a6682`, sync `1dc8182e`, UI `5a5e4f01`. Current HEAD lacks those files and schema. The frozen branch plus verified baseline bundle preserve the source for later recovery. The separate MFA deletions/rewrites in the same commit are not approved for porting.
   - **Security/schema blockers:** `supabase/migrations/20260920212000_social_connections.sql` (`436a5a9c`) creates `access_token_ciphertext`/`refresh_token_ciphertext`; `packages/social-brain/db/src/social/account-repository.ts` writes `access_token`/`refresh_token`. The encryption helper exists at `packages/social-brain/db/src/social/encryption.ts`, but this upsert path does not call it. The table policy compares a row's workspace ID to itself instead of binding it to the authenticated user's tenant. OAuth callbacks trust the workspace cookie after state validation and do not revalidate current membership. Migration files also use the legacy `supabase/migrations/` path rather than `infra/supabase/migrations/`. Do not expose these routes or run the migration until corrected and reviewed.
@@ -12,6 +12,30 @@ Captured 2026-09-29. Every branch name and frozen SHA is in `BRANCH_RECONCILIATI
 - **`f8-j3-publish-workflow` — DUPLICATE/OBSOLETE for the relevant workflow.** Current E2E/publish workflow is more complete; source image helper is simulated and does not prove a live publish path. **`f8-j4-gcp-logging` — DUPLICATE:** current `packages/observability/gcp-logging` supersedes the weaker `any`-typed logger/redaction implementation.
 
 These decisions are source/path reconciliations, not production approval. GitHub Actions runs from `ab5234aa` are stale for current candidate `675a2a00`.
+
+## Additional F7 independent review — 2026-09-29
+
+The independent Git comparison for frozen refs 37, 41, and 44 used exact source SHAs against current candidate paths and blobs:
+
+- **Ref 37, `feat/f7-j4-nuvemshop-resend-adapters` (`f056c0f3`) — DUPLICATE/OBSOLETE.** Resend source and candidate blob match at `packages/integrations/resend/src/index.ts` (`d68928c26bf2`). Nuvemshop source adapter is superseded at the same path by the candidate's stricter URL/redirect checks (`97d8f9ffa53a` source vs `9af39bc67d32` candidate); its test also differs. No useful source-only behavior is missing.
+- **Ref 41, `feature/f7-j3-meta-adapter` (`4beaf078`) — OBSOLETE/DUPLICATE.** Port and DI contracts are represented; the old `adapter.ts` and test weaken fail-closed token behavior and are not imported (`8c25844541e8` vs `8c46d726460b`; test `599d49dcc1ad` vs `5cc905dfc4a7`).
+- **Ref 44, `fix/f7-nuvemshop-webhook-fail-closed` (`f21d50f8`, PR #66) — DUPLICATE/REPRESENTED.** All four current webhook handlers reject a missing tenant secret before RPC/effects; absent tenant is rejected. The test blob matches (`393d89efba21`). On decryption failure, candidate returns HTTP 500 rather than source HTTP 401 but still fails closed; this is not a lost security behavior.
+- **Validation note:** these are static commit/tree/blob comparisons, not runtime claims. Current-SHA GitHub Actions remain the validation gate; no local heavy tests were run.
+
+## `implementation/unified` independent review — 2026-09-29
+
+Frozen source SHA `d6f36b074b94d10238d106ed26591b54212178b3` was compared with candidate `c1f9c2dbfbdfc3ef166c9b8e2de3030b41095bef`. The branch is three commits ahead of merge-base `f0965af5454fde3ec08f321e6de510d5f9f71263`, but it contributes no useful unique implementation missing from the candidate:
+
+- `packages/core/social-brain/engineering-core/src/test-temp.ts` and `test-temp.test.ts` match candidate blobs `1c54425b92d7` and `40efa570871f`.
+- The harness cleanup test differs (`c5a319925404` in source; `8be887cbdf84` in candidate); candidate additionally handles `t.after(...)` and is broader.
+- Commit `082baf95eb9c587e2c969d70c98cd93675500510` reverses 99 paths (merge-base-to-tip: 2,831 insertions / 5,216 deletions), including workflows, notifications, voice, migrations and report docs. This is historical reversal, not additive work; do not replay it.
+- Useful plan documents removed by that reversal remain in the candidate: `docs/plans/mover-pro-nexus/MOVER_PRO_NEXUS.md`, `docs/plans/v2.1/MASTER_BLUEPRINT_V2.1.md`, and `docs/plans/v2.2/MASTER_PLAN_V2.2.md`.
+
+This is a static Git comparison; no tests were run. Source SHA remains preserved in the frozen refs and archive.
+
+## Current-head CI finding — candidate `c1f9c2d`
+
+GitHub Actions CI run `36538511186` failed six WAHA adapter unit cases. The shared cause was test setup attempting `Object.assign` to `baseUrl` and `apiKey`, which are read-only getters; no adapter behavior was exercised. The test fixture was corrected to mock `@/lib/env` without changing production code or assertions. This test-only correction is pending remote validation on the next pushed candidate SHA. Do not classify WAHA as validated or production-ready until that corrected-head Actions run passes.
 
 Abbreviations: `I` = `integration/lumenva-complete` at initial tree `f46cdd4`; `M` = `main` at `3fbe74a`. “Candidate” means review/port only the listed useful slice, never merge the source branch wholesale.
 

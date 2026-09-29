@@ -6,9 +6,9 @@
 **Integration branch created after capture:** `integration/lumenva-complete` at `f46cdd4ddd2c4edc6ec57f266e97e8cb9f6a83ac`  
 **Production main at capture:** `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`
 
-This is the immutable audit baseline. If a remote branch moves later, preserve this original SHA and record its new SHA separately; do not silently replace the baseline. The frozen SHAs below remain unchanged. Final classifications and destinations are still being reconciled against integration HEAD `675a2a005e4fe7a63b7b1519a8a4264b780f6816`; `PENDING` does not authorize deletion.
+This is the immutable audit baseline. If a remote branch moves later, preserve this original SHA and record its new SHA separately; do not silently replace the baseline. The frozen SHAs below remain unchanged. Final classifications and destinations are being reconciled against integration HEAD `c1f9c2dbfbdfc3ef166c9b8e2de3030b41095bef`; `PENDING` does not authorize deletion.
 
-## Preliminary cross-branch archaeology — 2026-09-29
+## Historical preliminary cross-branch archaeology — 2026-09-29 (superseded by current matrix)
 
 Not final branch classifications; four branch auditors still need to reconcile these leads commit by commit.
 
@@ -19,7 +19,7 @@ Not final branch classifications; four branch auditors still need to reconcile t
 | `lumenva-command-center` (`ec8b4e5`), `lumenva-command-center-blueprint-v2` (`eb56dcf`) | Dashboard/blueprint work has not been proven wholly integrated; do not infer from similar file paths. | Exact integration evidence pending branch auditors; retain unresolved until compared. |
 | `feat/maestri-engineering-council` (`bb84cd0`) | Frozen object was unavailable in the archaeology checkout. | Preserve as unresolved; no equivalence inferred from `-clean`. |
 
-No content from these preliminary leads has been ported. Do not use this table as archival/deletion authorization.
+This was a lead list captured against the initial tree, not a final decision. Later root review determined that the voice core has stronger equivalents, Maestri/MCG runtime and workflow material is Nexus-owned, and Command Center runtime content is out of scope. The separate Asterisk review found two outbound templates and two useful planning docs not yet represented; they are now preserved as experimental templates and archived historical docs. See the numbered frozen-ref matrix below for current dispositions. Do not use this historical table as archival/deletion authorization.
 
 ## Initial recovery bundle
 
@@ -66,21 +66,21 @@ No content from these preliminary leads has been ported. Do not use this table a
 | 34 | `feat/f5-task4-sse-8705358404323605379` | `6799470d1cdb44ca09a0d45cae5f18be66e7debe` | DUPLICATE/SUPERSEDED — tenant-scoped realtime route is represented with stronger current auth argument handling. |
 | 35 | `feat/f5-task5-realtime-client-14073667979986859526` | `195f689722ab5a52a6c50e2cc1e0e3f862a827b3` | DUPLICATE — realtime client and tests represented; source mock-type delta is not a confirmed behavior fix. |
 | 36 | `feat/f5-task-3-aux-storage-15945593050366616123` | `5cc7250a272c4aae2a3f2fc2c9e8bab61590b31b` | DUPLICATE — auxiliary storage/AI/LGPD/MCP shared changes are represented in main. |
-| 37 | `feat/f7-j4-nuvemshop-resend-adapters-17233514225075684717` | `f056c0f332ae571e4414a78347404cf7cf23f473` | PENDING |
+| 37 | `feat/f7-j4-nuvemshop-resend-adapters-17233514225075684717` | `f056c0f332ae571e4414a78347404cf7cf23f473` | DUPLICATE / OBSOLETE — Resend adapter + tests represented (`packages/integrations/resend/src/index.ts`, blob `d68928c26bf2`); Nuvemshop source adapter is superseded by stricter current URL/redirect validation (`packages/integrations/nuvemshop/src/index.ts`, source/current blobs `97d8f9ffa53a` / `9af39bc67d32`). No missing useful behavior identified. Source SHA preserved in bundle. |
 | 38 | `feat/maestri-engineering-council` | `bb84cd0d3cb2d2b52c11371412354b8fed2e2c94` | NEXUS_OUT_OF_SCOPE — Maestri council governance, not CRM; source/bundle retained. |
 | 39 | `feat/maestri-engineering-council-clean` | `00b44055a87e99a36ee1a5809ee8e9fda4361ff7` | NEXUS_OUT_OF_SCOPE/DUPLICATE VARIANT — alternate council wording; source/bundle retained. |
 | 40 | `feat/meta-direct-social-login` | `8bf5797f7c8f4b650011aa22c8bce9efa7e6b945` | DUPLICATE — tip is ancestor of integration/main; no unique tree delta. |
-| 41 | `feature/f7-j3-meta-adapter-368541147442802420` | `4beaf078a0621aa5e570e51ecf2213f5e1a414dd` | PENDING |
+| 41 | `feature/f7-j3-meta-adapter-368541147442802420` | `4beaf078a0621aa5e570e51ecf2213f5e1a414dd` | OBSOLETE / DUPLICATE — Meta adapter and tests are represented at the same paths, but the source weakens fail-closed token handling (`adapter.ts`, source/current blobs `8c25844541e8` / `8c46d726460b`; test blobs `599d49dcc1ad` / `5cc905dfc4a7`). Port/DI contracts are represented with matching blobs. No source change imported. Source SHA preserved in bundle. |
 | 42 | `fix/f4-j1-lint` | `2c52eb5e7fb988b5126cb7ff1a611e7e9db3b514` | DUPLICATE — Firebase component/auth fixes and mock behavior represented; source/bundle retained. |
 | 43 | `fix/f5-task5-lint` | `1dc7a3e9a804aec18d1198ce30e270369ed02538` | DUPLICATE — realtime mock safety change not confirmed as missing behavior; F5 implementation represented. |
-| 44 | `fix/f7-nuvemshop-webhook-fail-closed` | `f21d50f84928e18a0f30eded4ab4d4ed1491cd27` | PENDING |
+| 44 | `fix/f7-nuvemshop-webhook-fail-closed` | `f21d50f84928e18a0f30eded4ab4d4ed1491cd27` | DUPLICATE / REPRESENTED — missing-secret rejection before RPC/side effects and absent-tenant rejection are present in all four current Nuvemshop webhook handlers; PR #66 test blob matches source (`393d89efba21`). Current decryption failure returns 500 rather than source 401 but still rejects. Paths: `apps/crm/app/api/webhooks/nuvemshop/[event]/route.ts`, `customer-data-request`, `customer-redact`, `store-redact`. Source SHA preserved in bundle. |
 | 45 | `fix/meta-provider-contracts` | `82278f5da24f452419b10dfa5cbfde530554aced` | DUPLICATE — Meta provider contracts/routing represented in current packages. |
 | 46 | `fix/orphan-packages-workspace-11502432029800832518` | `0ca445d5110c174bd20713959f8d58d9d2d3000c` | EXPERIMENTAL/OBSOLETE — workspace cleanup comes with skipped known-failing tests; preserve source/bundle, do not accept test suppression. |
 | 47 | `fix/temp-test-cleanup` | `a2f0fd1f520c33447d94c568d0322e3345764491` | DUPLICATE for cleanup; one gate test is coupled to unintegrated experimental governance; source/bundle retained. |
-| 48 | `implementation/unified` | `d6f36b074b94d10238d106ed26591b54212178b3` | PENDING |
+| 48 | `implementation/unified` | `d6f36b074b94d10238d106ed26591b54212178b3` | DUPLICATE / OBSOLETE — helper `withTempDir` and cleanup tests are already represented with matching blobs (`test-temp.ts` `1c54425b92d7`, `test-temp.test.ts` `40efa570871f`). Harness cleanup guard is superseded by the candidate's broader `t.after(...)` support (source `c5a319925404`, candidate `8be887cbdf84`). Commit `082baf95` is a broad 99-path reversal, not additive useful work; do not replay it. Source SHA preserved in bundle. |
 | 49 | `jules-auth-firebase-client-4940827573783815306` | `a2705fac048ee7bc05b287fee2202c651c19231a` | DUPLICATE — Firebase client/components/tests represented in main; PR #28 merged. |
-| 50 | `jules-f7-waha-adapter-7831325555235237843` | `7dd0a9f87420784dced2c1a40ded5133c6ac168c` | PENDING |
-| 51 | `lumenva-command-center` | `ec8b4e5e886c06af9d6fd6fa764e57089ea61963` | MISTO — CRM overview is represented at `apps/crm/lib/command-center/overview-state*`; Agent OS/MCG is NEXUS_OUT_OF_SCOPE; Meta webhook alias duplicate. Source/bundle retained. |
+| 50 | `jules-f7-waha-adapter-7831325555235237843` | `7dd0a9f87420784dced2c1a40ded5133c6ac168c` | EXPERIMENTAL/PARTIAL — represented by commits `3154e781`/`eb532b8f` at `apps/crm/lib/channels/adapters/waha/`; standalone, not enabled as default. CI `36538511186` found six unit failures caused by test setup attempting to assign read-only getters; a test-only env mock fix is queued for remote validation. Not production-ready until corrected-head Actions pass. |
+| 51 | `lumenva-command-center` | `ec8b4e5e886c06af9d6fd6fa764e57089ea61963` | PARTIAL / DUPLICATE / NEXUS_OUT_OF_SCOPE — CRM overview is represented at `apps/crm/lib/command-center/overview-state*`; Agent OS/MCG runtime is Nexus-owned; Meta webhook alias is duplicate. Source SHA preserved in bundle. |
 | 52 | `lumenva-command-center-blueprint-v2` | `eb56dcf0a96203cb5d3e567ccdddcca5d69e2b05` | NEXUS_OUT_OF_SCOPE — standalone Agent OS blueprint; source/bundle retained. |
 | 53 | `lumenva-local-runtime` | `339a19b49d1346bfb40fe09c8880b7b19513d04b` | NEXUS_OUT_OF_SCOPE — Maestri/MCG runtime; source/bundle retained. |
 | 54 | `main` | `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99` | PRODUCTION_READY — canonical base; `origin/main` is ancestor of integration. |
@@ -90,7 +90,7 @@ No content from these preliminary leads has been ported. Do not use this table a
 | 58 | `security/mcp-auth-rate-limit` | `35a9436285ee17100c6d842ae08206f3a0ed8cc8` | DUPLICATE/PRODUCTION_READY — auth rate-limit module and tests inherited from main; PR #17 merged. |
 | 59 | `v2.1` | `2e27b35db851c5e3d178e10d3e969d78d017a570` | DUPLICATE — ancestor of integration; no unique tree delta. |
 | 60 | `v2.2` | `6e186096a2e2530bb1aa33f6f5a31b83a1dda899` | DUPLICATE — ancestor of integration; no unique tree delta. |
-| 61 | `voz` | `c40cc4eca955384d504bcc710eec9cae7f77f76a` | DUPLICATE/SUPERSEDED — route behavior represented; current migrations add tenant FK/grants; source/bundle retained. |
+| 61 | `voz` | `c40cc4eca955384d504bcc710eec9cae7f77f76a` | PARTIAL / EXPERIMENTAL / DUPLICATE — voice core and 18 Asterisk deployment blobs are represented; two inbound templates are superseded. Two outbound disabled templates are preserved under `infra/deployment/voice-asterisk/experimental/`; the source plan and runbook are preserved under `docs/archive/voice/voz/` with historical/no-deploy warnings. Nothing is live-enabled or production-validated. Source commits `b929b5b6`, `19b7f74d`, `5473f97e`, and `245f937b`; source ref retained. |
 | 62 | `vps` | `d04568d6db764dd60bb60bd6fefa6491997c2205` | NEXUS_OUT_OF_SCOPE — Maestri/MCG runtime; source/bundle retained. |
 | 63 | `vps-17455632840955604138` | `b43a5e0fc50f3a07645e80304c4174bd9f4d18fa` | NEXUS_OUT_OF_SCOPE — vps execution variant; source/bundle retained. |
 
@@ -101,13 +101,14 @@ No content from these preliminary leads has been ported. Do not use this table a
 - Remote verification on 2026-09-29: all 63 frozen branch names still exist at their exact frozen SHAs (0 missing, 0 mismatches). `origin` currently has 64 heads because it also contains `integration/lumenva-complete`; production `main` remains `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
 - Final bundle and per-branch preservation proof will be appended after integration and before any cleanup request.
 
-## Current selected content — provisional, as of integration HEAD `675a2a005e4fe7a63b7b1519a8a4264b780f6816`
+## Current selected content — provisional, as of integration HEAD `c1f9c2dbfbdfc3ef166c9b8e2de3030b41095bef`
 
-**Status:** WAHA adapter is present; Command Center/Local Runtime prototype has been reverted as Nexus-owned. Actions evidence is stale or absent for the current tree. These are content decisions, not final branch dispositions.
+**Status:** WAHA adapter is present but remains isolated and not enabled by default; Command Center/Local Runtime prototype has been reverted as Nexus-owned. Current-SHA CI/parity/E2E runs are in progress. These are content decisions, not final branch dispositions.
 
 | Frozen source(s) | Selected content in `integration/lumenva-complete` | Evidence | Boundary/status |
 |---|---|---|---|
 | `lumenva-command-center` (`ec8b4e5e…`), `lumenva-command-center-blueprint-v2` (`eb56dcf0…`), `lumenva-local-runtime` (`339a19b4…`), `TOKENS` (`3de66946…`) | No prototype/runtime code retained in Lumenva integration. Source refs and baseline bundle preserve it. | Source plan `docs/LUMENVA_COMMAND_CENTER_PLAN.md` identifies Agent OS, MCG context kernel, Claude CEO, Codex CTO, Antigravity CIO; reversal commit `675a2a00` removes the candidate port. | `NEXUS_OUT_OF_SCOPE`; no migration into Nexus is performed by this Lumenva task. |
-| `jules-f7-waha-adapter-7831325555235237843` (`7dd0a9f8…`) | Standalone WAHA adapter, types, README and fake-based tests | Commits `3154e781` and `eb532b8f`; current paths `apps/crm/lib/channels/adapters/waha/{adapter.ts,types.ts,adapter.test.ts,README.md}` | `EXPERIMENTAL / PARTIAL`; not wired as default; does not enable telephony. Requires current-HEAD GitHub Actions validation before production classification. |
+| `jules-f7-waha-adapter-7831325555235237843` (`7dd0a9f8…`) | Standalone WAHA adapter, types, README and fake-based tests | Commits `3154e781` and `eb532b8f`; current paths `apps/crm/lib/channels/adapters/waha/{adapter.ts,types.ts,adapter.test.ts,README.md}`. CI found a test fixture bug; test now mocks env instead of assigning readonly getters. | `EXPERIMENTAL / PARTIAL`; not wired as default; does not enable telephony. Corrected-head GitHub Actions validation is still required before production classification. |
+| `voz` (`c40cc4ec…`) | 18 Asterisk deployment blobs duplicate canonical files; two disabled outbound examples plus plan/runbook have unique useful content | Outbound config source commits `b929b5b6`, `19b7f74d`; docs `5473f97e`, `245f937b`; preserved under `infra/deployment/voice-asterisk/experimental/` and `docs/archive/voice/voz/` | `PARTIAL / EXPERIMENTAL`; templates remain disabled; archived docs are explicitly non-canonical. No live call validation or production activation. |
 
 Baseline evidence: GitHub Actions run `36529426649` for starting candidate `f75d01210047a84f3da6f562cd9f8b5602dab504` completed with `verify=success` and `invariants=success`. It does not validate current HEAD. No source refs were moved or deleted.

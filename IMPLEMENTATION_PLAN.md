@@ -1,4 +1,48 @@
-# Consolidation Closeout — PR #75
+# Lumenva Total Consolidation — Active Implementation Plan
+
+**Status:** IN_PROGRESS — this plan supersedes the historical PR #75 closeout below.
+**Canonical candidate:** `integration/lumenva-complete`
+**Current HEAD:** `c1f9c2dbfbdfc3ef166c9b8e2de3030b41095bef`
+**Base:** `origin/main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`
+**Source baseline:** the 63 frozen remote refs in `BRANCH_RECONCILIATION_MANIFEST.md` and the verified pre-unification bundle.
+
+## Goal and safety boundary
+
+Reconcile every useful implementation, partial/experimental feature, and useful documentation item from the frozen 63 refs into this candidate or explicitly record why it is preserved elsewhere. Retain the distinctions `PRODUCTION_READY`, `EXPERIMENTAL`, `PARTIAL`, `DUPLICATE`, `OBSOLETE`, and `NEXUS_OUT_OF_SCOPE`, each supported by source commit/path/diff evidence. Keep `main` unchanged. Do not delete source branches, worktrees, or recovery snapshots in this task. Stop after final preservation proof and request Owner authorization before cleanup.
+
+The independent CRM checkout at `C:\Users\David\Desktop\Projetos\Lumenva` is not being edited; work is confined to this isolated unification checkout. Nexus-owned Maestri/MCG/Command Center runtime work is out of scope for Lumenva and remains preserved by frozen refs/archive.
+
+## Live pipeline (8 gates)
+
+1. **Freeze source refs and baseline archive — DONE.** 63 names/SHAs frozen; original bundle verified.
+2. **Classify all 63 refs with evidence — FINAL INDEPENDENT AUDIT IN PROGRESS.** Every frozen row now has a disposition with source SHA and evidence. The independent auditor is checking the full set; one targeted question remains on whether `voz` contains useful CRM-owned Asterisk operations config.
+3. **Integrate useful partial/experimental content — IN PROGRESS.** WAHA is represented as isolated `EXPERIMENTAL/PARTIAL`, not default-enabled. Meta OAuth/account-sync work remains `PARTIAL` and is not activated because its source has tenant-RLS and token-storage contract defects. No other feature is to be added without evidence of unique useful behavior.
+4. **Run current-head remote validation — IN PROGRESS.** GitHub Actions only; current SHA `c1f9c2d` has CI, branch parity, paired main/candidate E2E, and report-only security workflows running. Results from older SHAs are not current evidence.
+5. **Independent zero-missing-work audit — TODO.** Reconcile the independent auditor’s findings against every frozen ref and the full candidate tree.
+6. **Create final archive — TODO.** Create a uniquely named final bundle containing all 63 frozen source refs plus final candidate; verify it; record size and SHA-256. Keep prior bundles untouched.
+7. **Prove preservation and synchronization — TODO.** Confirm all 63 frozen refs still resolve to their exact SHAs, no ref was deleted or moved, integration local equals remote, `main` is unchanged, and the working tree is clean.
+8. **Owner handoff — TODO.** Deliver 63/63 matrix, 0 useful work missing, archive proof, and Actions outcomes; stop and ask David before any branch cleanup. No branch deletion is authorized before that separate approval.
+
+## Current evidence and known limits
+
+- Current remote candidate equals local HEAD `c1f9c2dbfbdfc3ef166c9b8e2de3030b41095bef`; `origin/main` remains `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
+- Frozen source refs were unchanged at the last audit; no source branch has been deleted. Latest local documentation delta is the F7 classification update, not yet committed.
+- Independent F7 audit: Resend is represented; old Nuvemshop adapter is superseded by stricter URL/redirect checks; Meta adapter source weakens fail-closed token handling and is obsolete; webhook missing-secret fail-closed behavior is represented in current handlers and test. Commit/path/blob evidence is in the manifest.
+- Current-head CI `36538511186` failed only in six WAHA adapter unit cases: the test used `Object.assign` on read-only getters `baseUrl`/`apiKey`. The adapter behavior was not reached. The test now mocks `@/lib/env` instead; this correction is not yet validated and must be pushed before claiming success.
+- Current-head parity `36538541868` has lint, build, typecheck, and toolchain jobs green; its unit comparison is still running. Paired E2E runs `36538546376` (main) and `36538550013` (candidate) are still running. Security report-only `36538517821` succeeded. CI rerun, parity rerun, and paired E2E on the corrected final head remain required.
+- Independent `implementation/unified` audit: `withTempDir` and cleanup tests have matching blobs in the candidate; the candidate harness guard is broader; source commit `082baf95` is a 99-path reversal and must not be replayed. Evidence is in the manifest.
+- Previous parity/E2E evidence applies to earlier candidates only. E2E previously failed on both sides with shared failures and zero candidate-only failures; do not label E2E green based on that.
+- No local heavy tests are permitted. Use `git diff --check` and static Git/reference inspection locally; all test, build, lint, typecheck, security, and E2E gates run through GitHub Actions.
+
+## Scope exclusions
+
+- Do not merge to `main`, merge source branches blindly, force-push, delete/prune source refs, remove recovery work, modify the original CRM checkout, or touch Nexus.
+- Do not fix pre-existing CRM failures merely to make the candidate green. Correct only regressions introduced by this consolidation and supported by same-environment GitHub Actions evidence.
+- Do not activate partial/experimental integrations just to claim completeness. Keep useful unfinished work explicitly represented and preserved.
+
+---
+
+# Historical PR #75 Closeout — Superseded
 
 ## Current implementation plan — 2026-09-29 05:52 Europe/Lisbon
 

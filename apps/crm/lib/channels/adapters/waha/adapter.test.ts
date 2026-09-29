@@ -2,6 +2,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { ExternalOperationContext, ChannelTransportCommand } from "./types";
 import { WahaTransportAdapter } from "./adapter";
 
+vi.mock("@/lib/env", () => ({
+  env: {
+    WAHA_API_BASE_URL: "http://fake-waha",
+    WAHA_API_KEY: "fake-api-key",
+    WAHA_HMAC_SECRET: "",
+    WAHA_WEBHOOK_REQUIRE_SIGNATURE: "false",
+  },
+}));
+
 // Extract original fetch to not modify global across suites that might run in the same worker pool without proper scoping
 const originalFetch = global.fetch;
 
@@ -9,13 +18,7 @@ describe("WahaTransportAdapter (TDD Fakes)", () => {
   let adapter: WahaTransportAdapter;
 
   beforeEach(() => {
-    // Isolated adapter creation without touching any singletons or environment
-    // variables via stubbing that might leak into the shared runner cache.
-    // Also, not using vi.stubEnv here or vi.unstubAllGlobals as it can impact the globally shared node worker pool.
     adapter = new WahaTransportAdapter();
-
-    // Explicitly update the instance variables to bypass env check and prevent side-effects globally
-    Object.assign(adapter, { baseUrl: "http://fake-waha", apiKey: "fake-api-key" });
   });
 
   afterEach(() => {
