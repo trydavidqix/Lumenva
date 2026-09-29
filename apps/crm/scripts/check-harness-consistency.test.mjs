@@ -257,7 +257,7 @@ test("tests that create OS temp directories declare cleanup guards", async () =>
     const source = await readFile(join(top, file), "utf8");
     if (!/\bmkdtemp(?:Sync)?\s*\(/.test(source)) continue;
     const removes = /\b(?:rm|rmSync)\s*\(/.test(source);
-    const hasLifecycleGuard = /\b(?:afterEach|afterAll|finally)\b/.test(source);
+    const hasLifecycleGuard = /\b(?:afterEach|afterAll|finally)\b|\bt\.after\s*\(/.test(source);
     if (!(removes && hasLifecycleGuard)) offenders.push(file);
   }
   assert.deepEqual(offenders, []);

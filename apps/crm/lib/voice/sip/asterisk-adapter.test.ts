@@ -17,6 +17,38 @@ const ARI_STASIS_START = JSON.stringify({
 });
 
 describe("Asterisk/ARI SIP gateway (Fase 2)", () => {
+  it("binds governed outbound events by the technical caller and preserves call identity", async () => {
+    const directory = directoryResolving("org-1");
+    const gateway = createAsteriskSipGateway({
+      directory,
+      ariClient: { originate: vi.fn() },
+      outboundContext: "lumenva-voice",
+    });
+    const result = await gateway.parseInboundEvent(JSON.stringify({
+      type: "StasisStart",
+      timestamp: "2026-09-22T12:00:00.000Z",
+      channel: {
+        id: "channel-out-1",
+        caller: { number: "+37255501234" },
+        connected: { number: "+351912345678" },
+        channelvars: {
+          SIP_CONNECTION_ID: "sip-conn-abc",
+          VOICE_DIRECTION: "outbound",
+          VOICE_CALL_ID: "11111111-1111-4111-8111-111111111111",
+        },
+      },
+    }));
+
+    expect(result).toMatchObject({
+      organizationId: "org-1",
+      direction: "outbound",
+      callerE164: "+37255501234",
+      calledE164: "+351912345678",
+      attributes: { voiceCallId: "11111111-1111-4111-8111-111111111111" },
+    });
+    expect(directory.resolveOrganizationByConnection).toHaveBeenCalledWith("sip-conn-abc", "+37255501234");
+  });
+
   it("parses a StasisStart event into a normalized SIP call event", async () => {
     const directory = directoryResolving("org-1");
     const gateway = createAsteriskSipGateway({
@@ -124,8 +156,8 @@ describe("Asterisk/ARI SIP gateway (Fase 2)", () => {
       outboundContext: "lumenva-voice",
     });
 
-    await expect(
-      gateway.initiateOutboundCall({
+    const outboundRequest = {
+      voiceCallId: "11111111-1111-4111-8111-111111111111",
         organizationId: "org-1",
         connectionId: "sip-conn-abc",
         contactId: "contact-1",
@@ -133,7 +165,9 @@ describe("Asterisk/ARI SIP gateway (Fase 2)", () => {
         goal: "confirmar consulta",
         fromE164: "+351211234567",
         toE164: "+351911234567",
-      }),
+    };
+    await expect(
+      gateway.initiateOutboundCall(outboundRequest as never),
     ).resolves.toEqual({ providerCallId: "channel-2" });
 
     expect(directory.resolveOrganizationByConnection).toHaveBeenCalledWith("sip-conn-abc", "+351211234567");
@@ -141,6 +175,11 @@ describe("Asterisk/ARI SIP gateway (Fase 2)", () => {
       endpoint: "PJSIP/+351911234567@sip-conn-abc",
       callerId: "+351211234567",
       context: "lumenva-voice",
+      variables: {
+        SIP_CONNECTION_ID: "sip-conn-abc",
+        VOICE_DIRECTION: "outbound",
+        VOICE_CALL_ID: "11111111-1111-4111-8111-111111111111",
+      },
     });
   });
 

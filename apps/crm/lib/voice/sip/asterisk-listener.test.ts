@@ -2,7 +2,7 @@
 // Same reason as asterisk-ari-client.test.ts: this exercises a real
 // WebSocket connection, which needs Node's real globals, not jsdom's.
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createAsteriskAriConnection } from "./asterisk-ari-client";
+import { createAsteriskAriConnection, type AriConnection } from "./asterisk-ari-client";
 import { createAsteriskSipGateway } from "./asterisk-adapter";
 import { createAsteriskAriListener } from "./asterisk-listener";
 import { createVoiceOrganizationResolver, type VoiceOrganizationQueryable } from "../identity/resolve-organization";
@@ -79,6 +79,57 @@ describe("Asterisk ARI listener (Fase 3, tenant-resolved real events)", () => {
       outboundContext: "lumenva-voice",
     });
   }
+
+  it("hydrates optional outbound identity when ARI omits channel variables", async () => {
+    let releaseStream: (() => void) | undefined;
+    const stream = {
+      async *events() {
+        yield {
+          type: "StasisStart",
+          timestamp: "2026-09-22T12:00:00.000Z",
+          channel: {
+            id: "channel-out-1",
+            caller: { number: "+351211234567" },
+            connected: { number: "+351912345678" },
+          },
+        };
+        await new Promise<void>((resolve) => { releaseStream = resolve; });
+      },
+      async close() { releaseStream?.(); },
+    };
+    const variables: Record<string, string> = {
+      SIP_CONNECTION_ID: "sip-conn-abc",
+      VOICE_DIRECTION: "outbound",
+      VOICE_CALL_ID: "11111111-1111-4111-8111-111111111111",
+    };
+    const connection = {
+      connectEvents: vi.fn().mockResolvedValue(stream),
+      getChannelVariable: vi.fn(async (_channelId: string, variable: string) => variables[variable] ?? null),
+    } as unknown as AriConnection;
+    const directory = { resolveOrganizationByConnection: vi.fn().mockResolvedValue("org-1") };
+    const gateway = createAsteriskSipGateway({
+      directory,
+      ariClient: { originate: vi.fn() },
+      outboundContext: "lumenva-voice",
+    });
+    const listener = await createAsteriskAriListener({ connection, gateway, appName: "voicecore-test" });
+    const iterator = listener.events()[Symbol.asyncIterator]();
+
+    try {
+      const result = await iterator.next();
+      expect(result.value).toMatchObject({
+        status: "normalized",
+        event: {
+          direction: "outbound",
+          attributes: { voiceCallId: "11111111-1111-4111-8111-111111111111" },
+        },
+      });
+      expect(directory.resolveOrganizationByConnection).toHaveBeenCalledWith("sip-conn-abc", "+351211234567");
+      expect(connection.getChannelVariable).toHaveBeenCalledWith("channel-out-1", "VOICE_CALL_ID");
+    } finally {
+      await listener.close();
+    }
+  });
 
   it("normalizes a real StasisStart event with real tenant resolution", async () => {
     fakeAri = await startFakeAriServer();
