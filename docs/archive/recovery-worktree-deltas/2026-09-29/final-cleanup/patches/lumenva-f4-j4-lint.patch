@@ -1,0 +1,75 @@
+diff --git a/apps/crm/tests/unit/f4-firebase-auth/task4-api-routes.test.ts b/apps/crm/tests/unit/f4-firebase-auth/task4-api-routes.test.ts
+index 3b1c9e43..9c9b3ea5 100644
+--- a/apps/crm/tests/unit/f4-firebase-auth/task4-api-routes.test.ts
++++ b/apps/crm/tests/unit/f4-firebase-auth/task4-api-routes.test.ts
+@@ -6,9 +6,8 @@ import { GET as getContactsList } from "@/app/api/v1/contacts/route";
+ import { GET as getConversationsCounts } from "@/app/api/v1/conversations/counts/route";
+ import { POST as anonymizePrivacy } from "@/app/api/v1/privacy/anonymize/route";
+ import { loadAuthUser } from "@/lib/auth/server";
+-import { requireRole, type RoleCheck } from "@/lib/auth/require-role";
++import { requireRole } from "@/lib/auth/require-role";
+ import { getServerSession } from "@/lib/firebase/server";
+-import type { AuthUser } from "@/lib/auth/types";
+ 
+ // Mock getServerSession
+ vi.mock("@/lib/firebase/server", () => ({
+@@ -16,8 +15,10 @@ vi.mock("@/lib/firebase/server", () => ({
+ }));
+ 
+ // Mock loadAuthUser
+-vi.mock("@/lib/auth/server", async () => {
++vi.mock("@/lib/auth/server", async (importOriginal) => {
++  const actual = await importOriginal<typeof import("@/lib/auth/server")>();
+   return {
++    ...actual,
+     loadAuthUser: vi.fn(),
+     resolveActiveOrg: vi.fn().mockResolvedValue({ orgId: "org-1", role: "admin" })
+   };
+@@ -58,8 +59,9 @@ describe("Task 4: API Routes Firebase Auth Migration", () => {
+ 
+   describe("GET /api/v1/auth/realtime-token", () => {
+     it("should return 501 blocker since Firebase cannot issue Supabase tokens", async () => {
+-      // Pass a minimal valid structure expected by typescript but fake the implementation runtime check
+-      vi.mocked(getServerSession).mockResolvedValue({ uid: "user-1", email: "test@test.com" } as unknown as Record<string, unknown> as never);
++      vi.mocked(getServerSession).mockResolvedValue(
++        { uid: "user-1", email: "test@test.com" } as unknown as Awaited<ReturnType<typeof getServerSession>>,
++      );
+       const req = new NextRequest("http://localhost/api/v1/auth/realtime-token");
+       const res = await getRealtimeToken(req);
+ 
+@@ -80,7 +82,9 @@ describe("Task 4: API Routes Firebase Auth Migration", () => {
+     });
+ 
+     it("should return 200 with summary data if authenticated", async () => {
+-      vi.mocked(loadAuthUser).mockResolvedValue({ id: "user-1", email: "test@example.com", is_platform_admin: false, organizations: [] } as unknown as AuthUser);
++      vi.mocked(loadAuthUser).mockResolvedValue(
++        { id: "user-1", email: "test@example.com", is_platform_admin: false, organizations: [] } as unknown as Awaited<ReturnType<typeof loadAuthUser>>,
++      );
+       const req = new NextRequest("http://localhost/api/v1/contacts/123/crm-summary");
+       const res = await getCrmSummary(req, { params: Promise.resolve({ id: "123" }) });
+       expect(res.status).toBe(200);
+@@ -99,6 +103,7 @@ describe("Task 4: API Routes Firebase Auth Migration", () => {
+   describe("GET /api/v1/conversations/counts", () => {
+     it("should return 401 if loadAuthUser returns null", async () => {
+       vi.mocked(loadAuthUser).mockResolvedValue(null);
++      const req = new NextRequest("http://localhost/api/v1/conversations/counts");
+       const res = await getConversationsCounts();
+       expect(res.status).toBe(401);
+     });
+@@ -109,7 +114,7 @@ describe("Task 4: API Routes Firebase Auth Migration", () => {
+       vi.mocked(requireRole).mockResolvedValue({
+         ok: false,
+         response: Response.json({ error: { code: "unauthenticated" } }, { status: 401 })
+-      } as unknown as RoleCheck);
++      } as unknown as Awaited<ReturnType<typeof requireRole>>);
+ 
+       const req = new NextRequest("http://localhost/api/v1/privacy/anonymize", {
+         method: "POST",
+diff --git a/fix_test.sh b/fix_test.sh
+deleted file mode 100755
+index 13b69b77..00000000
+--- a/fix_test.sh
++++ /dev/null
+@@ -1,2 +0,0 @@
+-#!/bin/bash
+-cat apps/crm/tests/unit/f4-firebase-auth/task4-api-routes.test.ts

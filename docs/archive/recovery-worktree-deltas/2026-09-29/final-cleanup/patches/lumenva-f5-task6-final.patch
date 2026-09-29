@@ -1,0 +1,361 @@
+diff --git a/apps/crm/app/api/v1/content-os/assets/route.ts b/apps/crm/app/api/v1/content-os/assets/route.ts
+index a0b8ce11..233025a3 100644
+--- a/apps/crm/app/api/v1/content-os/assets/route.ts
++++ b/apps/crm/app/api/v1/content-os/assets/route.ts
+@@ -7,7 +7,7 @@ import { audit } from "@/lib/audit";
+ import { requireRole } from "@/lib/auth/require-role";
+ import { registerContentAsset, ContentAssetValidationError } from "@/lib/content-os/creative/asset-service";
+ import { assetProvenanceSchema } from "@/lib/content-os/creative/asset-provenance";
+-import { createClient } from "@/lib/supabase/server";
++import { createAdminClient } from "@/lib/supabase/admin";
+ 
+ import { getGcsBucket } from "@lumenva/db/gcp/cloud-storage";
+ import { createGcsObjectStore } from "@lumenva/db/storage/gcs";
+@@ -17,7 +17,7 @@ const schema = z.object({ asset_type: z.string().trim().min(1).max(80), mime_typ
+ 
+ export async function GET(): Promise<Response> {
+   const requestId = randomUUID(); const authz = await requireRole("manager", { requestId, resource: "content_os_assets" }); if (!authz.ok) return authz.response;
+-  const db = await createClient(); const { data, error } = await db.from("content_assets").select("id,organization_id,content_item_id,asset_type,storage_bucket,storage_path,mime_type,byte_size,checksum,origin_provider,license,provenance,metadata,created_at,updated_at").eq("organization_id", authz.org.orgId).order("created_at", { ascending: false }).limit(100);
++  const db = createAdminClient(); const { data, error } = await db.from("content_assets").select("id,organization_id,content_item_id,asset_type,storage_bucket,storage_path,mime_type,byte_size,checksum,origin_provider,license,provenance,metadata,created_at,updated_at").eq("organization_id", authz.org.orgId).order("created_at", { ascending: false }).limit(100);
+   if (error) return fail("internal_error", "Não foi possível listar os assets.", 500, { requestId }); return ok(data ?? [], { requestId });
+ }
+ 
+@@ -26,7 +26,7 @@ export async function POST(request: NextRequest): Promise<Response> {
+   let raw: unknown; try { raw = await request.json(); } catch { return fail("invalid_request", "JSON inválido.", 400, { requestId }); }
+   const parsed = schema.safeParse(raw); if (!parsed.success) return fail("invalid_request", "Dados inválidos.", 400, { requestId, details: parsed.error.flatten() });
+   try {
+-    const bytes = Uint8Array.from(Buffer.from(parsed.data.data_base64, "base64")); const db = await createClient();
++    const bytes = Uint8Array.from(Buffer.from(parsed.data.data_base64, "base64")); const db = createAdminClient();
+     const asset = await registerContentAsset({ async create(input) {
+       const store = createGcsObjectStore(getGcsBucket());
+       await store.put({ provider: "gcs", bucket: "content-assets", key: String(input.storage_path) }, bytes, String(input.mime_type));
+diff --git a/apps/crm/app/api/v1/conversations/[id]/media/route.ts b/apps/crm/app/api/v1/conversations/[id]/media/route.ts
+index 6c88f83b..17ca6daa 100644
+--- a/apps/crm/app/api/v1/conversations/[id]/media/route.ts
++++ b/apps/crm/app/api/v1/conversations/[id]/media/route.ts
+@@ -24,13 +24,14 @@ interface RouteCtx {
+ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<Response> {
+   const requestId = randomUUID();
+   const { id: conversationId } = await ctx.params;
+-  const admin = createAdminClient();
+ 
+   const authz = await requireRole("agent", { requestId });
+   if (!authz.ok) return authz.response;
+   const { org: activeOrg } = authz;
++  const admin = createAdminClient();
+ 
+-  // RLS + filtro explícito: a conversa precisa ser da org ativa.
++  // Firebase session authenticates caller. Admin client bypasses legacy Supabase
++  // Auth RLS, so this trusted organization filter is mandatory.
+   const { data: conv, error: convErr } = await admin
+     .from("conversations")
+     .select("id")
+diff --git a/apps/crm/app/api/v1/messages/[id]/media/route.ts b/apps/crm/app/api/v1/messages/[id]/media/route.ts
+index 0e3a2316..74fed386 100644
+--- a/apps/crm/app/api/v1/messages/[id]/media/route.ts
++++ b/apps/crm/app/api/v1/messages/[id]/media/route.ts
+@@ -28,7 +28,6 @@ interface RouteCtx {
+ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
+   const requestId = randomUUID();
+   const { id: messageId } = await ctx.params;
+-  const admin = createAdminClient();
+ 
+   const authUser = await loadAuthUser();
+   if (!authUser) {
+@@ -38,9 +37,10 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
+   if (!activeOrg) {
+     return fail("no_active_org", "No active organization.", 403, { requestId });
+   }
++  const admin = createAdminClient();
+ 
+-  // Client de sessão: RLS garante que a mensagem pertence a uma org do usuário.
+-  // Filtro explícito de organization_id por doutrina (defense-in-depth).
++  // Firebase session authenticates caller. Admin client bypasses legacy Supabase
++  // Auth RLS, so tenant and resource filters stay explicit here.
+   const { data: msg, error } = await admin
+     .from("messages")
+     .select("id, media_url, media_mime, media_storage_path")
+diff --git a/apps/crm/lib/realtime/event-visibility.test.ts b/apps/crm/lib/realtime/event-visibility.test.ts
+new file mode 100644
+index 00000000..57d2ce4e
+--- /dev/null
++++ b/apps/crm/lib/realtime/event-visibility.test.ts
+@@ -0,0 +1,62 @@
++import { describe, expect, it } from "vitest";
++
++import type { EventRow } from "@/lib/event-log/dispatcher";
++import { filterEventsForVisibility } from "./event-visibility";
++
++const event = (id: string, conversationId?: string) => ({
++  id,
++  organization_id: "org-a",
++  event_type: "message.received",
++  entity_kind: "message",
++  entity_id: `message-${id}`,
++  payload: conversationId ? { conversation_id: conversationId } : {},
++  metadata: {},
++  consumed_by: [],
++  attempts: 0,
++  created_at: new Date().toISOString(),
++}) as EventRow & { created_at: string };
++
++describe("realtime conversation visibility", () => {
++  it("hides another agent conversation while keeping own and unassigned rows", () => {
++    const events = [event("own", "conv-own"), event("other", "conv-other"), event("queue", "conv-queue"), event("org")];
++    const visible = filterEventsForVisibility(
++      events,
++      new Map([
++        ["own", "conv-own"],
++        ["other", "conv-other"],
++        ["queue", "conv-queue"],
++      ]),
++      [
++        { id: "conv-own", assigned_to_user_id: "user-a" },
++        { id: "conv-other", assigned_to_user_id: "user-b" },
++        { id: "conv-queue", assigned_to_user_id: null },
++      ],
++      { userId: "user-a", role: "agent", visibilityMode: "own_and_unassigned" },
++    );
++
++    expect(visible.map((row) => row.id)).toEqual(["own", "queue", "org"]);
++  });
++
++  it("fails closed when agent event conversation cannot be resolved", () => {
++    const visible = filterEventsForVisibility(
++      [event("unknown", "conv-missing")],
++      new Map([["unknown", "conv-missing"]]),
++      [],
++      { userId: "user-a", role: "agent", visibilityMode: "all" },
++    );
++
++    expect(visible).toEqual([]);
++  });
++
++  it("keeps tenant-wide events and org-wide roles unchanged", () => {
++    const events = [event("org"), event("other", "conv-other")];
++    const visible = filterEventsForVisibility(
++      events,
++      new Map([["other", "conv-other"]]),
++      [{ id: "conv-other", assigned_to_user_id: "user-b" }],
++      { userId: "user-a", role: "manager", visibilityMode: "own" },
++    );
++
++    expect(visible.map((row) => row.id)).toEqual(["org", "other"]);
++  });
++});
+diff --git a/apps/crm/lib/realtime/event-visibility.ts b/apps/crm/lib/realtime/event-visibility.ts
+new file mode 100644
+index 00000000..179dd009
+--- /dev/null
++++ b/apps/crm/lib/realtime/event-visibility.ts
+@@ -0,0 +1,55 @@
++import type { EventRow } from "@/lib/event-log/dispatcher";
++
++export type ConversationVisibilityMode = "all" | "own_and_unassigned" | "own";
++export type RealtimeHumanRole = "viewer" | "agent" | "manager" | "admin";
++
++export interface ConversationVisibilityRow {
++  id: string;
++  assigned_to_user_id: string | null;
++}
++
++export interface RealtimeAccessContext {
++  userId: string;
++  role: RealtimeHumanRole;
++  visibilityMode: ConversationVisibilityMode;
++}
++
++/**
++ * Return conversation id carried directly by an event.
++ * Message events normally carry payload.conversation_id; conversation events
++ * carry entity_id. Events without conversation scope remain tenant-wide.
++ */
++export function conversationIdFromEvent(event: Pick<EventRow, "entity_kind" | "entity_id" | "payload">): string | null {
++  const payloadConversationId = event.payload?.conversation_id;
++  if (typeof payloadConversationId === "string" && payloadConversationId.length > 0) {
++    return payloadConversationId;
++  }
++  if (event.entity_kind === "conversation" && event.entity_id) return event.entity_id;
++  return null;
++}
++
++/**
++ * Apply conversation visibility to already tenant-filtered events.
++ * Only agent role uses visibility_mode. Unknown conversation mapping fails
++ * closed; events with no conversation scope remain tenant-wide.
++ */
++export function filterEventsForVisibility(
++  events: readonly (EventRow & { created_at: string })[],
++  conversationIdByEventId: ReadonlyMap<string, string>,
++  conversations: readonly ConversationVisibilityRow[],
++  access: RealtimeAccessContext,
++): (EventRow & { created_at: string })[] {
++  if (access.role !== "agent") return [...events];
++
++  const rowsById = new Map(conversations.map((row) => [row.id, row]));
++  return events.filter((event) => {
++    const conversationId = conversationIdByEventId.get(event.id);
++    if (!conversationId) return true;
++
++    const conversation = rowsById.get(conversationId);
++    if (!conversation) return false;
++    if (conversation.assigned_to_user_id === access.userId) return true;
++    if (access.visibilityMode === "all") return true;
++    return access.visibilityMode === "own_and_unassigned" && conversation.assigned_to_user_id === null;
++  });
++}
+diff --git a/apps/crm/tests/unit/f5-task6-security-contract.test.mjs b/apps/crm/tests/unit/f5-task6-security-contract.test.mjs
+new file mode 100644
+index 00000000..7af6e411
+--- /dev/null
++++ b/apps/crm/tests/unit/f5-task6-security-contract.test.mjs
+@@ -0,0 +1,56 @@
++import assert from "node:assert/strict";
++import { readFileSync } from "node:fs";
++import { dirname, join } from "node:path";
++import { fileURLToPath } from "node:url";
++import test from "node:test";
++
++const crmRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
++const read = (relativePath) => readFileSync(join(crmRoot, relativePath), "utf8");
++
++test("Firebase-authenticated F5 routes use the server admin boundary", () => {
++  const routes = [
++    "app/api/v1/conversations/[id]/media/route.ts",
++    "app/api/v1/messages/[id]/media/route.ts",
++    "app/api/v1/content-os/assets/route.ts",
++  ];
++
++  for (const route of routes) {
++    const source = read(route);
++    assert.match(source, /createAdminClient/,
++      `${route} must query through the Firebase-compatible admin boundary`);
++    assert.doesNotMatch(source, /@\/lib\/supabase\/server/,
++      `${route} must not depend on the legacy Supabase Auth cookie`);
++  }
++
++  assert.match(read(routes[0]), /\.eq\("organization_id", activeOrg\.orgId\)/u);
++  assert.match(read(routes[1]), /\.eq\("organization_id", activeOrg\.orgId\)/u);
++  assert.match(read(routes[2]), /\.eq\("organization_id", authz\.org\.orgId\)/u);
++});
++
++test("SSE applies conversation visibility before emitting tenant events", () => {
++  const eventBus = read("lib/realtime/event-bus.ts");
++  const sse = read("lib/realtime/sse.ts");
++
++  assert.match(eventBus, /visibility_mode/u);
++  assert.match(eventBus, /assigned_to_user_id/u);
++  assert.match(eventBus, /conversation_id/u);
++  assert.match(eventBus, /role/u);
++  assert.match(sse, /userId/u);
++});
++
++test("F5 storage callers use private GCS object storage", () => {
++  const callers = [
++    "workers/media-persist-worker.ts",
++    "workers/media-derive-worker.ts",
++    "workers/lgpd-export-worker.ts",
++    "app/api/v1/privacy/requests/[id]/route.ts",
++  ];
++
++  for (const caller of callers) {
++    const source = read(caller);
++    assert.match(source, /createGcsObjectStore/u, `${caller} must use the GCS adapter`);
++    assert.match(source, /getGcsBucket/u, `${caller} must resolve the configured GCS bucket`);
++    assert.doesNotMatch(source, /\.storage\s*\.from\s*\(/u,
++      `${caller} must not use the legacy Supabase Storage path`);
++  }
++});
+diff --git a/apps/crm/tests/unit/lgpd-export-download.test.ts b/apps/crm/tests/unit/lgpd-export-download.test.ts
+index d98a9902..c4605e05 100644
+--- a/apps/crm/tests/unit/lgpd-export-download.test.ts
++++ b/apps/crm/tests/unit/lgpd-export-download.test.ts
+@@ -5,13 +5,13 @@ const read = (path: string) => readFileSync(path, "utf8");
+ 
+ describe("LGPD export package download contract", () => {
+   it("authorizes administrators and scopes requests to the active tenant", () => {
+-    const source = read("app/api/v1/lgpd/requests/[id]/export/route.ts");
++    const source = read("apps/crm/app/api/v1/lgpd/requests/[id]/export/route.ts");
+     expect(source).toMatch(/requireRole\("admin"/);
+     expect(source).toMatch(/\.eq\("organization_id", authz\.org\.orgId\)/);
+   });
+ 
+   it("returns a private ZIP download with cache and request headers", () => {
+-    const source = read("app/api/v1/lgpd/requests/[id]/export/route.ts");
++    const source = read("apps/crm/app/api/v1/lgpd/requests/[id]/export/route.ts");
+     expect(source).toMatch(/"content-type": "application\/zip"/);
+     expect(source).toMatch(/"content-disposition": `attachment;/);
+     expect(source).toMatch(/"cache-control": "private, no-store/);
+diff --git a/apps/crm/tests/unit/media-routes.test.ts b/apps/crm/tests/unit/media-routes.test.ts
+deleted file mode 100644
+index b4666cb6..00000000
+--- a/apps/crm/tests/unit/media-routes.test.ts
++++ /dev/null
+@@ -1,20 +0,0 @@
+-import { describe, expect, it } from "vitest";
+-import { readFileSync } from "node:fs";
+-
+-const read = (path: string) => readFileSync(path, "utf8");
+-
+-describe("Media routes auth client", () => {
+-  it("uses admin client in GET messages/[id]/media to avoid Supabase Auth dependency", () => {
+-    const source = read("app/api/v1/messages/[id]/media/route.ts");
+-    expect(source).not.toMatch(/const supabase = await createClient\(\);/);
+-    expect(source).toMatch(/const admin = createAdminClient\(\);/);
+-    expect(source).toMatch(/\.eq\("organization_id", activeOrg\.orgId\)/);
+-  });
+-
+-  it("uses admin client in POST conversations/[id]/media to avoid Supabase Auth dependency", () => {
+-    const source = read("app/api/v1/conversations/[id]/media/route.ts");
+-    expect(source).not.toMatch(/const supabase = await createClient\(\);/);
+-    expect(source).toMatch(/const admin = createAdminClient\(\);/);
+-    expect(source).toMatch(/\.eq\("organization_id", activeOrg\.orgId\)/);
+-  });
+-});
+diff --git a/apps/crm/tests/unit/team-list-roster.test.ts b/apps/crm/tests/unit/team-list-roster.test.ts
+index 96106914..12c7871e 100644
+--- a/apps/crm/tests/unit/team-list-roster.test.ts
++++ b/apps/crm/tests/unit/team-list-roster.test.ts
+@@ -1,7 +1,3 @@
+-vi.mock("@/lib/supabase/admin", async (importOriginal) => ({
+-  ...await importOriginal<typeof import("@/lib/supabase/admin")>(),
+-  createAdminClient: vi.fn(() => { const chain = { from: () => chain, select: () => chain, eq: () => chain, is: () => chain, not: () => chain, maybeSingle: async () => ({ data: { role: "admin" }, error: null }) }; return chain; })
+-}));
+ /**
+  * G6-06 (INB-14) — GET /api/v1/team volta a listar o roster COMPLETO pro manager.
+  *
+@@ -27,9 +23,7 @@ vi.mock("@/lib/auth/server", () => ({
+ vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
+ // admin.ts valida env no load; a rota só o chama quando isServiceRoleConfigured()
+ // (mockado false) — mock evita a validação de env no import.
+-vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn(() => ({
+-    from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ is: () => ({ not: () => ({ maybeSingle: async () => ({ data: { role: "admin" }, error: null }) }) }) }) }) }) })
+-  })) }));
++vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
+ vi.mock("@/lib/audit", () => ({
+   audit: vi.fn(async () => undefined),
+   isServiceRoleConfigured: () => false,
+diff --git a/apps/crm/tests/unit/team-revoke.test.ts b/apps/crm/tests/unit/team-revoke.test.ts
+index 5ae313ab..51f95dda 100644
+--- a/apps/crm/tests/unit/team-revoke.test.ts
++++ b/apps/crm/tests/unit/team-revoke.test.ts
+@@ -1,7 +1,3 @@
+-vi.mock("@/lib/supabase/admin", async (importOriginal) => ({
+-  ...await importOriginal<typeof import("@/lib/supabase/admin")>(),
+-  createAdminClient: vi.fn(() => { const chain = { from: () => chain, select: () => chain, eq: () => chain, is: () => chain, not: () => chain, maybeSingle: async () => ({ data: { role: "admin" }, error: null }) }; return chain; })
+-}));
+ import { beforeEach, describe, expect, it, vi } from "vitest";
+ import { NextRequest } from "next/server";
+ 
+diff --git a/apps/crm/tests/unit/team-role-change.test.ts b/apps/crm/tests/unit/team-role-change.test.ts
+index 62c46b0f..0cef6117 100644
+--- a/apps/crm/tests/unit/team-role-change.test.ts
++++ b/apps/crm/tests/unit/team-role-change.test.ts
+@@ -1,7 +1,3 @@
+-vi.mock("@/lib/supabase/admin", async (importOriginal) => ({
+-  ...await importOriginal<typeof import("@/lib/supabase/admin")>(),
+-  createAdminClient: vi.fn(() => { const chain = { from: () => chain, select: () => chain, eq: () => chain, is: () => chain, not: () => chain, maybeSingle: async () => ({ data: { role: "admin" }, error: null }) }; return chain; })
+-}));
+ /**
+  * G2-02 — PATCH /api/v1/team/[user_id] (role change).
+  *

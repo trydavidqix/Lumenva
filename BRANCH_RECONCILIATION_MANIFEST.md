@@ -102,6 +102,10 @@ This was a lead list captured against the initial tree, not a final decision. La
 | 62 | `vps` | `d04568d6db764dd60bb60bd6fefa6491997c2205` | NEXUS_OUT_OF_SCOPE — Maestri/MCG runtime; source/bundle retained. |
 | 63 | `vps-17455632840955604138` | `b43a5e0fc50f3a07645e80304c4174bd9f4d18fa` | NEXUS_OUT_OF_SCOPE — vps execution variant; source/bundle retained. |
 
+## Post-freeze tip addendum — `vps-17455632840955604138` (2026-09-29)
+
+The frozen row above is intentionally unchanged: it records the original inventory SHA. A later remote observation found the branch tip at `c50375bdb0f633142f0136b3a3fe1aa3f7f74fb0`, which differs from the frozen SHA and therefore required a supplemental archive before deletion. The supplemental bundle is `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\vps-17455632840955604138-c50375bd-2026-09-29.bundle`; its SHA-256 is `3D19E48C29D77E901AF45B47381F904CC4ECA37FBA3D5CA3BB07C95FEA753005`. `git bundle verify` succeeded and `git bundle list-heads` confirmed the exact c503 SHA. Content review classified this later tip as `NEXUS_OUT_OF_SCOPE / UNSAFE STUBS`: it replaces Meta integration behavior with stubs/`any`, conflicts with the current package naming, and adds test-only session behavior. No Lumenva product feature is ported from it. Delete only after this addendum is pushed, the remote SHA is rechecked unchanged, and the bundle is verified again.
+
 ## Snapshot controls
 
 - All 63 rows are source refs that existed before creating the integration branch.

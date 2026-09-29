@@ -1,0 +1,13 @@
+diff --git a/apps/crm/app/auth/confirm/route.ts b/apps/crm/app/auth/confirm/route.ts
+index 76ac9740..d25a2f69 100644
+--- a/apps/crm/app/auth/confirm/route.ts
++++ b/apps/crm/app/auth/confirm/route.ts
+@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
+   }
+ 
+   try {
+-    // We mock the Supabase User object enough to satisfy ensureTenantForUser
++    // Keep only the compatibility fields required by ensureTenantForUser.
+     const stubUser = { id: user.id, email: user.email, app_metadata: {}, user_metadata: {} };
+     await ensureTenantForUser(stubUser);
+   } catch (e) {

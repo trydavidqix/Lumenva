@@ -1,5 +1,11 @@
 # Lumenva Total Consolidation — Active Implementation Plan
 
+## Fechamento final de sincronização solicitado pelo Owner — 2026-09-29
+
+**Status:** IN_PROGRESS. É preservação/sincronização, sem implementação de produto. `main` fica somente leitura. Ordem: (1) publicar e validar hashes das evidências; (2) reconciliar os 37 itens do CRM e 15 worktrees Recovery sujas sem descartar dados sem snapshot; (3) preservar a ponta atual da branch vps em bundle verificado e remover a branch só depois de publicar o manifesto; (4) rodar GitHub Actions no HEAD final; (5) provar apenas duas branches remotas e worktrees sincronizadas/limpas.
+
+O E2E pareado já falhou no baseline e na candidata, sem IDs exclusivos de falha na candidata no SHA de código testado. Preserve esse resultado; não enfraqueça testes nem chame E2E de verde. Suítes pesadas rodam somente no GitHub Actions.
+
 ## Follow-up: publish useful local work — 2026-09-29
 
 **Status:** COMPLETE — synchronization closeout published to `integration/lumenva-complete`; `main` untouched. This was documentation/configuration preservation, not a new product implementation phase.

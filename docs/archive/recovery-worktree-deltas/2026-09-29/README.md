@@ -1,5 +1,9 @@
 # Deltas locais de worktrees preservados — 2026-09-29
 
+## Captura final de sincronização — 2026-09-29
+
+`final-cleanup/patches/` contém 11 patches adicionais dos deltas tracked das 15 worktrees Recovery sujas. Quatro outras worktrees sujas tinham apenas cache/build gerado. `final-cleanup/tracked-working-tree/Lumenva/AGENTS.md` preserva o arquivo tracked modificado no checkout CRM. Os 25 arquivos CRM não rastreados estão no snapshot bruto abaixo. Esses artefatos são evidência, não autorização para aplicar diffs inteiros. O patch de revisão F4 remove testes/arquivos de identidade e permanece não aplicado; o teste de segurança F5 conflita com a alteração de rota da própria proposta, então ambos ficam preservados, sem aprovação de integração. Caches estão fora do Git em `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\local-cache-snapshot-2026-09-29`.
+
 Snapshot não executável das alterações não commitadas encontradas na auditoria. Nada daqui foi aplicado ao código do produto.
 
 - `patches/`: 12 diffs binários, cada um identifica paths e conteúdo anterior/posterior; inclui 11 worktrees de Recovery e o `AGENTS.md` modificado do checkout CRM.

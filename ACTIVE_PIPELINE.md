@@ -1,5 +1,20 @@
 # ACTIVE PIPELINE — Lumenva Total Consolidation
 
+## Tarefa atual do Owner — sincronização final local/GitHub — 2026-09-29
+
+**Status:** IN_PROGRESS. Primeiro publique e valide hashes das evidências; depois restaure/remova apenas os paths locais auditados. `main` permanece intocada. A conclusão exige integração local = remoto, zero trabalho útil local-only, 21 worktrees Recovery reconciliadas, archives válidos e exatamente duas branches remotas.
+
+- [x] Capturar os 37 paths do CRM (25 arquivos de conteúdo/config, `AGENTS.md` modificado e 11 arquivos de cache Jules); snapshots e patch estão no archive da integração.
+- [x] Capturar as 15 worktrees Recovery sujas: 11 patches de alterações tracked e 4 com somente artefatos gerados/cache. Preservar as 6 que já estavam limpas.
+- [x] Copiar os caches CRM/F3 para fora do repositório e validar inventários/hashes; não publicar caches.
+- [ ] Publicar patches finais, `AGENTS.md` exato, adendo da branch vps e este relatório.
+- [ ] Revalidar snapshots e limpar somente os paths CRM/worktree auditados; manter as 21 worktrees registradas.
+- [ ] Preservar e remover a branch remota `vps-17455632840955604138`; provar que restam apenas `main` e `integration/lumenva-complete`.
+- [ ] Rodar GitHub Actions aplicável no HEAD final; manter explícito o resultado E2E falho.
+- [ ] Prova final: árvores relevantes limpas, sem trabalho útil local-only, bundles válidos, SHA da integração local/remoto igual e `main` intacta.
+
+Nenhum cache, artefato de build ou patch conflitante está aprovado como código de produto. Propostas ambíguas/de segurança permanecem arquivadas e inativas.
+
 ## GitHub sync closeout — 2026-09-29
 
 **Pipeline:** COMPLETE — reviewed useful local Lumenva work is committed and pushed to `integration/lumenva-complete`; `main` remains unchanged.
