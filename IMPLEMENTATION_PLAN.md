@@ -2,7 +2,7 @@
 
 **Status:** IN_PROGRESS — this plan supersedes the historical PR #75 closeout below.
 **Canonical candidate:** `integration/lumenva-complete`
-**Current HEAD:** `db52970416dbc0118c51d8964e6c0ca9a93d8b43`
+**Current HEAD:** `506e290af22f358c1d1a6fb7611a506598baf5b4` (documentation-only commits after tested code SHA `db52970416dbc0118c51d8964e6c0ca9a93d8b43`)
 **Base:** `origin/main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`
 **Source baseline:** the 63 frozen remote refs in `BRANCH_RECONCILIATION_MANIFEST.md` and the verified pre-unification bundle.
 
@@ -17,7 +17,7 @@ The independent CRM checkout at `C:\Users\David\Desktop\Projetos\Lumenva` is not
 1. **Freeze source refs and baseline archive — DONE.** 63 names/SHAs frozen; original bundle verified.
 2. **Classify all 63 refs with evidence — DONE.** Every frozen row has a disposition with source SHA/path/blob evidence. Independent final audit confirmed 63/63 rows and no useful work missing at `db529704`.
 3. **Integrate useful partial/experimental content — DONE.** WAHA is isolated and `EXPERIMENTAL/PARTIAL`, not default-enabled. Unique disabled Twilio outbound templates and the useful `voz` plan/runbook are preserved in explicit experimental/archive paths. Meta OAuth/account-sync remains preserved as `PARTIAL` in the frozen source/archive, not activated because of tenant-RLS and token-storage defects. Independent audit found no additional useful content to port.
-4. **Run current-head remote validation — IN PROGRESS.** GitHub Actions only; standard CI `36541103963` passed on `db529704`; parity `36541107625` has lint/typecheck/build/toolchain passed while unit comparison runs. Paired main/candidate E2E `36541111186`/`36541115754` have matching failures in two initial stages, with their second halves and log comparison still running. Report-only security `36541133755` completed with Semgrep/OSV passed and historical Gitleaks detections. Results from older SHAs are not current evidence.
+4. **Run current-head remote validation — IN PROGRESS.** GitHub Actions only; standard CI `36541103963` passed on code SHA `db529704`. Branch parity `36541107625` passed lint/typecheck/build/toolchain and compared unit tests: 5 shared failed IDs, 0 candidate-only, 47 resolved, 0 timeouts/worker errors, with one extra candidate skip. Candidate E2E `36541115754` completed with 42 failures/8 passes in part 2; main E2E `36541111186` is still running part 2. Both have the same two failed initial stages; compare artifacts after main completes before classification. Report-only security `36541133755` completed with Semgrep/OSV passed and historical Gitleaks detections. Results from older SHAs are not current evidence.
 5. **Independent zero-missing-work audit — DONE.** Auditor confirmed all 63 frozen SHAs exist, all 63 rows have dispositions, and no unique useful content is missing from the candidate/archive; it verified the voice and `implementation/unified` reconciliations.
 6. **Create final archive — IN PROGRESS.** A checkpoint bundle for candidate `6633bb47` verifies with 105 refs, all 63 frozen refs at exact SHAs, and the candidate ref present; SHA-256 and size are recorded in the manifest. After final Actions evidence/docs are committed, create a distinct final bundle for that resulting HEAD. Keep all prior bundles untouched.
 7. **Prove preservation and synchronization — TODO.** Confirm all 63 frozen refs still resolve to their exact SHAs, no ref was deleted or moved, integration local equals remote, `main` is unchanged, and the working tree is clean.
