@@ -1,0 +1,92 @@
+diff --git a/apps/crm/tests/unit/f5-realtime-client.test.ts b/apps/crm/tests/unit/f5-realtime-client.test.ts
+index ce07526b..8139c035 100644
+--- a/apps/crm/tests/unit/f5-realtime-client.test.ts
++++ b/apps/crm/tests/unit/f5-realtime-client.test.ts
+@@ -7,32 +7,28 @@ vi.mock("@/hooks/auth/AuthProvider", () => ({
+   useActiveOrg: vi.fn(),
+ }));
+ 
+-type MockEvent = { data: string };
+-type MockEventListener = (event: MockEvent) => void;
+-type MockEventSourceOptions = { withCredentials?: boolean };
+-
+ class MockEventSource {
+   static instances: MockEventSource[] = [];
+   url: string;
+   withCredentials: boolean;
+-  listeners: Record<string, MockEventListener[]> = {};
++  listeners: Record<string, ((event: unknown) => void)[]> = {};
+ 
+-  constructor(url: string, opts?: MockEventSourceOptions) {
++  constructor(url: string, opts: { withCredentials?: boolean }) {
+     this.url = url;
+-    this.withCredentials = opts?.withCredentials ?? false;
++    this.withCredentials = !!opts?.withCredentials;
+     MockEventSource.instances.push(this);
+   }
+ 
+-  addEventListener(type: string, listener: MockEventListener) {
++  addEventListener(type: string, listener: (event: unknown) => void) {
+     if (!this.listeners[type]) this.listeners[type] = [];
+     this.listeners[type].push(listener);
+   }
+ 
+-  removeEventListener(_type: string, _listener: MockEventListener) {}
++  removeEventListener(_type: string, _listener: (event: unknown) => void) {}
+ 
+   close() {}
+ 
+-  emit(type: string, event: MockEvent) {
++  emit(type: string, event: unknown) {
+     if (this.listeners[type]) {
+       this.listeners[type].forEach(l => l(event));
+     }
+@@ -44,9 +40,7 @@ describe("F5 Task 5 - useRealtimeChannel SSE Migration", () => {
+     MockEventSource.instances = [];
+     vi.stubGlobal("EventSource", MockEventSource);
+ 
+-    vi.spyOn(AuthProvider, "useActiveOrg").mockReturnValue(
+-      { orgId: "o-1", name: "Org", role: "viewer" } as ReturnType<typeof AuthProvider.useActiveOrg>,
+-    );
++    vi.spyOn(AuthProvider, "useActiveOrg").mockReturnValue({ orgId: "o-1", name: "Org", role: "viewer" } as unknown as ReturnType<typeof AuthProvider.useActiveOrg>);
+   });
+ 
+   afterEach(() => {
+@@ -54,13 +48,15 @@ describe("F5 Task 5 - useRealtimeChannel SSE Migration", () => {
+     vi.clearAllMocks();
+   });
+ 
+-  it("should connect using SSE to /api/v1/realtime/events when enabled", async () => {
++  it("should connect using SSE to /api/v1/realtime/events when enabled", () => {
+     const onChange = vi.fn();
+ 
+     renderHook(() => useRealtimeChannel({ name: "test", onChange }));
+ 
+     expect(MockEventSource.instances).toHaveLength(1);
+-    const url = new URL(MockEventSource.instances[0].url, "http://localhost");
++    const instance = MockEventSource.instances[0];
++    if (!instance) throw new Error("instance not found");
++    const url = new URL(instance.url, "http://localhost");
+     expect(url.pathname).toBe("/api/v1/realtime/events");
+     expect(url.searchParams.get("organization_id")).toBe("o-1");
+   });
+@@ -81,6 +77,7 @@ describe("F5 Task 5 - useRealtimeChannel SSE Migration", () => {
+ 
+     expect(MockEventSource.instances).toHaveLength(1);
+     const instance = MockEventSource.instances[0];
++    if (!instance) throw new Error("instance not found");
+ 
+     const mockRow = { entity_kind: "my_table", payload: { id: "123" } };
+     instance.emit("message", { data: JSON.stringify(mockRow) });
+diff --git a/apps/crm/tests/unit/sidebar-grupos.test.tsx b/apps/crm/tests/unit/sidebar-grupos.test.tsx
+index a7e873d4..af76fd3c 100644
+--- a/apps/crm/tests/unit/sidebar-grupos.test.tsx
++++ b/apps/crm/tests/unit/sidebar-grupos.test.tsx
+@@ -23,6 +23,7 @@ const authRef: { user: Pick<AuthUser, "is_platform_admin">; activeOrg: ActiveOrg
+ 
+ vi.mock("@/hooks/auth/AuthProvider", () => ({
+   useAuth: () => authRef,
++  useActiveOrg: () => null,
+   usePermission: () => false,
+ }));
+ vi.mock("next/navigation", () => ({

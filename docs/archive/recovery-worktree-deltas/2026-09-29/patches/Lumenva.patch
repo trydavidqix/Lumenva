@@ -1,0 +1,28 @@
+diff --git a/AGENTS.md b/AGENTS.md
+index 557f79ff..16d619a8 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -6,7 +6,7 @@
+ ## Governança compartilhada
+ 
+ - A política canônica de autoridade entre Owner, Claude CEO, CTOs, Jules e GitHub Actions está em [`docs/engineering/AGENT_GOVERNANCE.md`](docs/engineering/AGENT_GOVERNANCE.md). Este arquivo não concede autoridade executiva aos adapters.
+-- Skills compartilhadas e lazy ficam em `.agents/skills/`. Regras operacionais por superfície permanecem em `.claude/rules/` e `.agents/rules/`.
++- Skills compartilhadas e lazy ficam em `.agents/skills/`. No Codex, as regras equivalentes ficam em `.agents/rules/`; Claude Code mantém sua cópia nativa em `.claude/rules/`.
+ - Para tarefas relevantes, siga o gate em `tooling/agent-governance/README.md`; estado é local a `.git/agent-governance/`.
+ 
+ ## 1. Identidade e Papel
+@@ -40,7 +40,7 @@ Você nunca aprova seu próprio código criticamente. O fluxo é:
+ ## 4. MCP e Hooks
+ Toda ação crítica (como ler segredos, deletar bancos de dados ou alterar produção) passará pelos **Hooks (Automation Police)**. O MCP da Lumenva decidirá ALLOW/DENY com base nas suas permissões (geralmente restritas a DEV). Não force operações bloqueadas.
+ 
+-- References: CLAUDE.md and .claude/rules/
++- References: AGENTS.md and .agents/rules/
+ 
+ ## TDD obrigatório
+ 
+@@ -53,4 +53,4 @@ Toda ação crítica (como ler segredos, deletar bancos de dados ou alterar prod
+ - Não importe por caminho relativo atravessando pacote nem crie alias manual em config compartilhada para contornar resolução; declare a dependency de workspace.
+ - Respeite a allowlist definida para a tarefa.
+ - Reporte validação somente com a saída exata dos comandos executados.
+-- Esta seção complementa a hierarquia de autoridade: `CLAUDE.md` e `.claude/rules/` prevalecem conforme suas regras.
++- Esta seção complementa a hierarquia de autoridade: no Codex, `AGENTS.md` e `.agents/rules/` governam a execução; o Claude Code continua usando `CLAUDE.md` e `.claude/rules/`.

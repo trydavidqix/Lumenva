@@ -1,5 +1,39 @@
 # ACTIVE PIPELINE — Lumenva Total Consolidation
 
+## GitHub sync closeout — 2026-09-29
+
+**Pipeline:** IN_PROGRESS — auditing and publishing useful local Lumenva work to `integration/lumenva-complete`; `main` must remain unchanged.
+**Current checkout:** `C:\Users\David\Desktop\Projetos\Lumenva-Unification`, branch `integration/lumenva-complete`, starting HEAD `043ee47f2f7d3d9c2f789d84328bbcb88f3c21db`, equal to its origin tracking ref at audit start.
+**CRM isolation:** original `C:\Users\David\Desktop\Projetos\Lumenva` remains untouched on `chore/orchestration-gate`, HEAD `cec5d7656fd341d29dfdf9de911cd2bb5564c6fd`; current expanded status is 37 paths: one modified `AGENTS.md`, 25 non-cache untracked files, and 11 `.jules/cache` files. The earlier “27 alterations” count does not match this expanded file-level inventory. The 25 source files have a verified raw snapshot and the tracked diff is archived. Never clean or reset it.
+**Main:** `origin/main` remains `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`; no merge or main update is authorized.
+
+### Progress
+
+- **Completed:** 6/8 — **75%** of this sync-closeout checklist. Audited checkouts/worktrees; classified five CRM-root commits; selectively copied useful guidance; preserved inactive proposals and Recovery deltas; SHA-256 matched 25 CRM files and all six Recovery additions; targeted Gitleaks found no leaks in added/modified folders; JSON/TOML and `git diff --check` passed.
+- **Now:** review staged content, commit/push only to `integration/lumenva-complete`, then verify remote equality and GitHub Actions for the new tip.
+- **Not yet proven:** current post-push branch equality and applicable GitHub Actions result for the new tip.
+- **Do not claim complete** until all checklist items below pass.
+
+### Checklist
+
+- [x] Read-only audit both main checkouts, branch/HEAD/status/upstream and registered worktrees; keep CRM and Recovery originals unchanged.
+- [x] Classify the five CRM-root commits and distinguish safe useful material from incomplete/unsafe governance or already-represented work.
+- [x] Selectively add useful CRM guidance/configuration to the isolated integration checkout; keep unready hook/governance proposals inert in archive.
+- [x] Verify all 25 CRM source snapshots and six Recovery additions against their source hashes; confirm patch archive excludes caches/temp files.
+- [x] Run targeted Gitleaks on changed/new skills, rules, agents, and archive; validate TOML/JSON, focused path references, and `git diff --check`.
+- [x] Update this pipeline, `BRANCH_CONSOLIDATION_REPORT.md`, and `IMPLEMENTATION_PLAN.md` with current decisions and remaining local/remote evidence.
+- [ ] Review staged diff; commit and push only to `integration/lumenva-complete`.
+- [ ] Verify clean working tree, no local-only useful commit/untracked file, branch equals origin, `main` unchanged, then record GitHub Actions status.
+
+### Scope and preservation
+
+- No CRM source checkout, PR #72, Nexus, Recovery source, or `main` was edited. Existing recovery worktrees and bundles remain in place; stale worktree registrations are preserved, not pruned.
+- No heavy local test suite is permitted; use GitHub Actions as the canonical test/build/security gate.
+- The 12 historical Gitleaks findings remain part of the existing audit record and are not being deleted. The verified recovery bundle remains external by design; publish its manifest/checksum, not the binary.
+- Do not push `vps-17455632840955604138`; it is Nexus-owned/out of Lumenva scope.
+
+---
+
 ## Branch cleanup closeout — 2026-09-29
 
 **Pipeline:** COMPLETE — frozen branch cleanup authorized and completed.

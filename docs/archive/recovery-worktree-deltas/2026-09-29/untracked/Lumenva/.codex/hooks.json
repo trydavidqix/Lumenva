@@ -1,0 +1,38 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node tooling/agent-governance/gate.mjs session codex",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|Bash|PowerShell|NotebookEdit|shell|exec_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node tooling/agent-governance/gate.mjs hook codex",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node tooling/agent-governance/gate.mjs hook codex",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

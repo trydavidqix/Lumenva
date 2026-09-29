@@ -1,0 +1,16 @@
+diff --git a/apps/crm/tests/unit/f4-firebase-auth/task4-api-routes.test.ts b/apps/crm/tests/unit/f4-firebase-auth/task4-api-routes.test.ts
+index 3b1c9e43..691adec7 100644
+--- a/apps/crm/tests/unit/f4-firebase-auth/task4-api-routes.test.ts
++++ b/apps/crm/tests/unit/f4-firebase-auth/task4-api-routes.test.ts
+@@ -58,8 +58,9 @@ describe("Task 4: API Routes Firebase Auth Migration", () => {
+ 
+   describe("GET /api/v1/auth/realtime-token", () => {
+     it("should return 501 blocker since Firebase cannot issue Supabase tokens", async () => {
+-      // Pass a minimal valid structure expected by typescript but fake the implementation runtime check
+-      vi.mocked(getServerSession).mockResolvedValue({ uid: "user-1", email: "test@test.com" } as unknown as Record<string, unknown> as never);
++      vi.mocked(getServerSession).mockResolvedValue(
++        { uid: "user-1", email: "test@test.com" } as unknown as Awaited<ReturnType<typeof getServerSession>>,
++      );
+       const req = new NextRequest("http://localhost/api/v1/auth/realtime-token");
+       const res = await getRealtimeToken(req);
+ 

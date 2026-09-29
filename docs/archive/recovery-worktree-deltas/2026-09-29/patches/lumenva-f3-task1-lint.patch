@@ -1,0 +1,819 @@
+diff --git a/apps/crm/app/api/v1/system/update/route.ts b/apps/crm/app/api/v1/system/update/route.ts
+index 082de54f..681eec82 100644
+--- a/apps/crm/app/api/v1/system/update/route.ts
++++ b/apps/crm/app/api/v1/system/update/route.ts
+@@ -9,7 +9,7 @@ import type { NextRequest } from "next/server";
+ 
+ import { fail, ok } from "@/lib/api/wrappers";
+ import { audit } from "@/lib/audit";
+-import { loadAuthUser } from "@/lib/auth/server";
++import { requirePlatformAdminApi } from "@/lib/auth/require-platform-admin-api";
+ import { logger } from "@/lib/logger";
+ import { createAdminClient } from "@/lib/supabase/admin";
+ import { isRunStale } from "@/lib/system/update-run";
+@@ -19,13 +19,9 @@ export const dynamic = "force-dynamic";
+ const RUN_IN_PROGRESS_MESSAGE = "Já existe uma atualização em andamento.";
+ 
+ export async function POST(_req: NextRequest): Promise<Response> {
+-  const user = await loadAuthUser();
+-  // `unauthenticated` (não `unauthorized`): esse último é reservado ao segredo
+-  // interno das rotas host↔app (lib/api/errors.ts) — aqui falta é sessão.
+-  if (!user) return fail("unauthenticated", "Faça login para continuar.", 401);
+-  if (!user.is_platform_admin) {
+-    return fail("forbidden", "Só o dono do servidor pode atualizar o sistema.", 403);
+-  }
++  const authz = await requirePlatformAdminApi();
++  if (!authz.ok) return authz.response;
++  const user = authz.context.user;
+ 
+   const db = createAdminClient();
+   const { data: version, error: versionError } = await db
+diff --git a/apps/crm/app/api/v1/system/version/route.test.ts b/apps/crm/app/api/v1/system/version/route.test.ts
+index 060173a2..d501cbcd 100644
+--- a/apps/crm/app/api/v1/system/version/route.test.ts
++++ b/apps/crm/app/api/v1/system/version/route.test.ts
+@@ -4,37 +4,36 @@ import { NextRequest } from "next/server";
+ import { loadAuthUser } from "@/lib/auth/server";
+ import { createAdminClient } from "@/lib/supabase/admin";
+ import { audit } from "@/lib/audit";
++import { resolvePlatformAdmin, type PlatformAdminContext } from "@/lib/auth/requirePlatformAdmin";
++import { requirePlatformAdminApi } from "@/lib/auth/require-platform-admin-api";
++import { fail } from "@/lib/api/wrappers";
+ 
+ vi.mock("@/lib/auth/server", () => ({ loadAuthUser: vi.fn() }));
+ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
+ vi.mock("@/lib/audit", () => ({ audit: vi.fn(async () => undefined) }));
++vi.mock("@/lib/auth/requirePlatformAdmin", () => ({ resolvePlatformAdmin: vi.fn() }));
++vi.mock("@/lib/auth/require-platform-admin-api", () => ({ requirePlatformAdminApi: vi.fn() }));
+ 
+ const OWNER = { id: "11111111-1111-4111-8111-111111111111", email: "dono@x.com", is_platform_admin: true };
+ const MEMBRO = { ...OWNER, id: "22222222-2222-4222-8222-222222222222", is_platform_admin: false };
++const OWNER_CONTEXT: PlatformAdminContext = {
++  user: {
++    id: OWNER.id,
++    app_metadata: {},
++    user_metadata: {},
++    aud: "authenticated",
++    created_at: "2026-09-22T00:00:00.000Z",
++  },
++  platformAdmin: { user_id: OWNER.id, scope: "*", mfa_required: true },
++};
+ 
+ let versionRow: Record<string, unknown>;
+ let runRow: Record<string, unknown> | null;
+ let inserted: Record<string, unknown> | null;
+-/**
+- * Patch aplicado por um `.update(...)` em `system_update_runs` — usado para
+- * provar que um run "dispatched" vencido (agente morto no meio) é fechado
+- * como `failed` pelo PRÓPRIO POST, em vez de travar o botão pra sempre.
+- */
+ let runUpdatePatch: Record<string, unknown> | null;
+-/**
+- * Patch aplicado por um `.update(...)` em `system_version` — usado para provar
+- * que o POST NÃO mantém um segundo estado de "alguém pediu" fora do run.
+- */
+ let versionUpdatePatch: Record<string, unknown> | null;
+-/**
+- * Erro que o INSERT em `system_update_runs` deve devolver neste caso — usado
+- * para simular a corrida entre dois cliques quase simultâneos batendo no
+- * índice único parcial `uniq_system_update_runs_dispatched` (migration 0090).
+- */
+ let insertError: { code: string; message: string } | null;
+-/** Erro que a leitura (`maybeSingle`) de `system_version` deve devolver neste caso. */
+ let versionSelectError: { message: string } | null;
+-/** Erro que a leitura (`maybeSingle`) de `system_update_runs` deve devolver neste caso. */
+ let runSelectError: { message: string } | null;
+ 
+ beforeEach(() => {
+@@ -57,17 +56,11 @@ beforeEach(() => {
+     update_requested_at: null,
+   };
+ 
++  vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: true, context: OWNER_CONTEXT });
++  vi.mocked(requirePlatformAdminApi).mockResolvedValue({ ok: true, context: OWNER_CONTEXT });
++
+   vi.mocked(createAdminClient).mockReturnValue({
+     from: (table: string) => {
+-      // O double espelha o banco: `system_version` é sempre buscado por
+-      // `.eq("id", 1)`; `system_update_runs` é buscado tanto por
+-      // `.order().limit().maybeSingle()` (GET, pega o run mais recente,
+-      // qualquer status) quanto por `.eq("status","dispatched").order()
+-      // .limit().maybeSingle()` (POST, checa run em andamento). O `eq()`
+-      // do double PRECISA encadear para `order()` — se ele só devolvesse
+-      // `maybeSingle` direto, a chamada real do POST (`eq().order()...`)
+-      // quebraria com TypeError, e o teste "melhoraria" o mock em vez do
+-      // double refletir a query de verdade.
+       const maybeSingle = async () => ({
+         data: table === "system_version" ? versionRow : runRow,
+         error: table === "system_version" ? versionSelectError : runSelectError,
+@@ -89,10 +82,6 @@ beforeEach(() => {
+             },
+           }),
+         }),
+-        // Encadeável (`.update(patch).eq(...).eq(...)`, quantas vezes for) e
+-        // "thenable" só no fim — reflete a query real de expirar um run
+-        // ("...eq('id', x).eq('status','dispatched')") sem exigir um double
+-        // por chamada.
+         update: (patch: Record<string, unknown>) => {
+           const chain: { eq: () => typeof chain; then: Promise<{ error: null }>["then"] } = {
+             eq: () => chain,
+@@ -118,15 +107,10 @@ function post() {
+ 
+ describe("GET /api/v1/system/version", () => {
+   it("exige sessão", async () => {
+-    vi.mocked(loadAuthUser).mockResolvedValue(null as never);
+-    const { GET } = await import("../version/route");
++    vi.mocked(loadAuthUser).mockResolvedValue(null);
++    const { GET } = await import("./route");
+     const res = await GET(get());
+     expect(res.status).toBe(401);
+-    // `unauthenticated`, não `unauthorized`: o catálogo (lib/api/errors.ts)
+-    // reserva `unauthorized` ao segredo interno das rotas host↔app. Um
+-    // frontend que decide por `error.code` (ex.: redirecionar pro login só em
+-    // `unauthenticated`) não reagiria a um código trocado — a asserção é o
+-    // que teria pego essa troca antes da revisão.
+     const body = await res.json();
+     expect(body.error.code).toBe("unauthenticated");
+   });
+@@ -134,20 +118,21 @@ describe("GET /api/v1/system/version", () => {
+   it("quando a leitura de system_version falha, devolve 500", async () => {
+     vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+     versionSelectError = { message: "conexão caiu" };
+-    const { GET } = await import("../version/route");
++    const { GET } = await import("./route");
+     expect((await GET(get())).status).toBe(500);
+   });
+ 
+   it("quando a leitura do run mais recente falha, devolve 500", async () => {
+     vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+     runSelectError = { message: "conexão caiu" };
+-    const { GET } = await import("../version/route");
++    const { GET } = await import("./route");
+     expect((await GET(get())).status).toBe(500);
+   });
+ 
+   it("entrega só a versão para quem não é dono do servidor", async () => {
+     vi.mocked(loadAuthUser).mockResolvedValue(MEMBRO as never);
+-    const { GET } = await import("../version/route");
++    vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: false, reason: "forbidden" });
++    const { GET } = await import("./route");
+     const body = await (await GET(get())).json();
+     expect(body.data.current_version).toBe("1.0.0");
+     expect(body.data.is_owner).toBe(false);
+@@ -157,7 +142,7 @@ describe("GET /api/v1/system/version", () => {
+ 
+   it("entrega o estado completo e a seção do CHANGELOG para o dono", async () => {
+     vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+-    const { GET } = await import("../version/route");
++    const { GET } = await import("./route");
+     const body = await (await GET(get())).json();
+     expect(body.data.update_available).toBe(true);
+     expect(body.data.notes.body).toContain("botão");
+@@ -168,10 +153,9 @@ describe("GET /api/v1/system/version", () => {
+     versionRow.latest_version = "";
+     versionRow.compare_failed = true;
+     vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+-    const { GET } = await import("../version/route");
++    const { GET } = await import("./route");
+     const body = await (await GET(get())).json();
+     expect(body.data.compare_failed).toBe(true);
+-    // E não pode virar "há atualização": não sabemos que há.
+     expect(body.data.update_available).toBe(false);
+   });
+ 
+@@ -180,7 +164,7 @@ describe("GET /api/v1/system/version", () => {
+     versionRow.off_release = true;
+     versionRow.has_known_release = false;
+     vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+-    const { GET } = await import("../version/route");
++    const { GET } = await import("./route");
+     const body = await (await GET(get())).json();
+     expect(body.data.has_known_release).toBe(false);
+   });
+@@ -188,7 +172,7 @@ describe("GET /api/v1/system/version", () => {
+   it("has_known_release default true quando a coluna nunca foi tocada por um heartbeat", async () => {
+     delete versionRow.has_known_release;
+     vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+-    const { GET } = await import("../version/route");
++    const { GET } = await import("./route");
+     const body = await (await GET(get())).json();
+     expect(body.data.has_known_release).toBe(true);
+   });
+@@ -196,16 +180,12 @@ describe("GET /api/v1/system/version", () => {
+   it("marca o agente como offline quando o heartbeat é velho", async () => {
+     versionRow.agent_last_seen_at = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
+     vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+-    const { GET } = await import("../version/route");
++    const { GET } = await import("./route");
+     const body = await (await GET(get())).json();
+     expect(body.data.agent_online).toBe(false);
+   });
+ 
+   it("entrega as versões do run e o log da tentativa (o diagnóstico da falha)", async () => {
+-    // `current_version` é o `git describe` do HOST e, numa falha, já aponta
+-    // para a versão que QUEBROU (o checkout acontece antes de o app subir).
+-    // Quem sabe de onde saiu e para onde tentou ir é o run — e o log é o
+-    // único diagnóstico que o dono tem sem abrir um terminal.
+     versionRow.current_version = "1.1.0";
+     runRow = {
+       id: "55555555-5555-4555-8555-555555555555",
+@@ -217,13 +197,11 @@ describe("GET /api/v1/system/version", () => {
+       log_tail: "✖ o app não respondeu ok",
+     };
+     vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+-    const { GET } = await import("../version/route");
++    const { GET } = await import("./route");
+     const body = await (await GET(get())).json();
+     expect(body.data.run.from_version).toBe("1.0.0");
+     expect(body.data.run.to_version).toBe("1.1.0");
+     expect(body.data.run.log_tail).toContain("não respondeu ok");
+-    // A versão exibida é a do APP que está no ar (a que voltou), não o
+-    // checkout do host — que aponta para a que acabou de quebrar.
+     expect(body.data.current_version).toBe("1.0.0");
+     expect(body.data.update_available).toBe(true);
+   });
+@@ -240,11 +218,9 @@ describe("GET /api/v1/system/version", () => {
+       log_tail: "",
+     };
+     vi.mocked(loadAuthUser).mockResolvedValue(MEMBRO as never);
+-    const { GET } = await import("../version/route");
++    vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: false, reason: "forbidden" });
++    const { GET } = await import("./route");
+     const body = await (await GET(get())).json();
+-    // O rodapé da sidebar é o mesmo componente para todo mundo: se as duas
+-    // respostas divergissem, dois usuários da mesma instalação leriam versões
+-    // diferentes na mesma tela.
+     expect(body.data.current_version).toBe("1.0.0");
+   });
+ 
+@@ -256,7 +232,7 @@ describe("GET /api/v1/system/version", () => {
+       dispatched_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+     };
+     vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+-    const { GET } = await import("../version/route");
++    const { GET } = await import("./route");
+     const body = await (await GET(get())).json();
+     expect(body.data.run.status).toBe("unknown");
+   });
+@@ -264,7 +240,7 @@ describe("GET /api/v1/system/version", () => {
+ 
+ describe("POST /api/v1/system/update", () => {
+   it("exige sessão", async () => {
+-    vi.mocked(loadAuthUser).mockResolvedValue(null as never);
++    vi.mocked(requirePlatformAdminApi).mockResolvedValue({ ok: false, response: fail("unauthenticated", "Faça login", 401) });
+     const { POST } = await import("../update/route");
+     const res = await POST(post());
+     expect(res.status).toBe(401);
+@@ -273,17 +249,13 @@ describe("POST /api/v1/system/update", () => {
+   });
+ 
+   it("nega para quem não é dono do servidor", async () => {
+-    vi.mocked(loadAuthUser).mockResolvedValue(MEMBRO as never);
++    vi.mocked(requirePlatformAdminApi).mockResolvedValue({ ok: false, response: fail("forbidden", "Proibido", 403) });
+     const { POST } = await import("../update/route");
+     expect((await POST(post())).status).toBe(403);
+     expect(inserted).toBeNull();
+   });
+ 
+   it("quando a leitura de system_version falha, devolve 500 e não 409", async () => {
+-    // Sem checar o erro do select, `current`/`latest` viram "" e o fluxo cai
+-    // no 409 otimista de "você já está em dia" — a pior mensagem possível
+-    // bem na hora de uma falha de infraestrutura real.
+-    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+     versionSelectError = { message: "conexão caiu" };
+     const { POST } = await import("../update/route");
+     const res = await POST(post());
+@@ -292,11 +264,6 @@ describe("POST /api/v1/system/update", () => {
+   });
+ 
+   it("cria o run como ÚNICA ordem — sem um segundo estado em system_version", async () => {
+-    // O run insere e o flag `update_requested_at` marcava a mesma coisa em
+-    // outra tabela, sem transação e sem checar erro: falhando o segundo write,
+-    // a rota respondia 200, a tela mostrava a barra de passos e o agente nunca
+-    // pegava o pedido. Quem pediu e quando vive no run e no audit log.
+-    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+     const { POST } = await import("../update/route");
+     expect((await POST(post())).status).toBe(200);
+     expect(inserted).toMatchObject({
+@@ -315,24 +282,17 @@ describe("POST /api/v1/system/update", () => {
+       status: "dispatched",
+       dispatched_at: new Date().toISOString(),
+     };
+-    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+     const { POST } = await import("../update/route");
+     expect((await POST(post())).status).toBe(409);
+-    // Run recente: não é expirado — nenhum UPDATE de expiração deve rolar.
+     expect(runUpdatePatch).toBeNull();
+   });
+ 
+   it("expira um run 'dispatched' abandonado (agente morto há mais de 15min) e aceita o pedido novo", async () => {
+-    // Sem isto, o botão travaria PRA SEMPRE: o índice único parcial (migration
+-    // 0090) recusa qualquer novo run enquanto existir um "dispatched", e nada
+-    // nunca expirava um sozinho — só o agente reportando (que é justamente
+-    // quem morreu) fechava o run.
+     runRow = {
+       id: "55555555-5555-4555-8555-555555555555",
+       status: "dispatched",
+-      dispatched_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(), // 1h atrás > 15min (RUN_STALE_AFTER_MS)
++      dispatched_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+     };
+-    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+     const { POST } = await import("../update/route");
+     const res = await POST(post());
+     expect(res.status).toBe(200);
+@@ -342,19 +302,11 @@ describe("POST /api/v1/system/update", () => {
+ 
+   it("recusa quando já está na última versão", async () => {
+     versionRow.latest_version = "1.0.0";
+-    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+     const { POST } = await import("../update/route");
+     expect((await POST(post())).status).toBe(409);
+   });
+ 
+   it("converte a violação do índice único (corrida de dois cliques) em 409, não 500", async () => {
+-    // O check "já existe run em andamento" é só otimização — não é exclusão
+-    // mútua. Sob corrida, os dois requests passam por ele (runRow === null
+-    // pros dois) e só o segundo INSERT bate no índice único parcial
+-    // `uniq_system_update_runs_dispatched`. O Postgres devolve 23505; a rota
+-    // precisa tratar isso como o MESMO estado de negócio do check acima, não
+-    // deixar vazar como 500.
+-    vi.mocked(loadAuthUser).mockResolvedValue(OWNER as never);
+     insertError = { code: "23505", message: 'duplicate key value violates unique constraint "uniq_system_update_runs_dispatched"' };
+     const { POST } = await import("../update/route");
+     const res = await POST(post());
+diff --git a/apps/crm/app/api/v1/system/version/route.ts b/apps/crm/app/api/v1/system/version/route.ts
+index e7ad2769..ac25d47e 100644
+--- a/apps/crm/app/api/v1/system/version/route.ts
++++ b/apps/crm/app/api/v1/system/version/route.ts
+@@ -9,6 +9,7 @@ import type { NextRequest } from "next/server";
+ 
+ import { fail, ok } from "@/lib/api/wrappers";
+ import { loadAuthUser } from "@/lib/auth/server";
++import { resolvePlatformAdmin } from "@/lib/auth/requirePlatformAdmin";
+ import { logger } from "@/lib/logger";
+ import { createAdminClient } from "@/lib/supabase/admin";
+ import { extractChangelogSection } from "@/lib/system/changelog";
+@@ -75,7 +76,11 @@ export async function GET(_req: NextRequest): Promise<Response> {
+   const running =
+     run?.status === "failed_rolled_back" && run.from_version ? run.from_version : current;
+ 
+-  if (!user.is_platform_admin) {
++  // Resolve active, non-revoked platform admin logic strictly for owner visibility.
++  // If resolution returns anything other than "ok" (forbidden, mfa_required, internal_error),
++  // they are treated as non-owner without exposing errors or failing the GET request entirely.
++  const paCheck = await resolvePlatformAdmin();
++  if (!paCheck.ok) {
+     return ok({ current_version: running, is_owner: false });
+   }
+ 
+diff --git a/apps/crm/lib/auth/require-platform-admin-api.ts b/apps/crm/lib/auth/require-platform-admin-api.ts
+new file mode 100644
+index 00000000..630ed952
+--- /dev/null
++++ b/apps/crm/lib/auth/require-platform-admin-api.ts
+@@ -0,0 +1,58 @@
++import type { NextResponse } from "next/server";
++import { fail, type ApiError } from "@/lib/api/wrappers";
++import { resolvePlatformAdmin, type PlatformAdminContext } from "./requirePlatformAdmin";
++
++export type PlatformAdminApiCheck =
++  | { ok: true; context: PlatformAdminContext }
++  | { ok: false; response: NextResponse<ApiError> };
++
++interface RequirePlatformAdminApiOpts {
++  /** Correlaciona a resposta com o X-Request-Id da rota. */
++  requestId?: string;
++}
++
++/**
++ * API gate for /api/v1/system/* routes.
++ * Uses the shared resolvePlatformAdmin logic but responds with
++ * standard JSON errors (fail) instead of Next.js redirects.
++ */
++export async function requirePlatformAdminApi(
++  opts: RequirePlatformAdminApiOpts = {}
++): Promise<PlatformAdminApiCheck> {
++  const result = await resolvePlatformAdmin();
++
++  if (!result.ok) {
++    switch (result.reason) {
++      case "unauthenticated":
++        return {
++          ok: false,
++          response: fail("unauthenticated", "Faça login para continuar.", 401, {
++            requestId: opts.requestId,
++          }),
++        };
++      case "forbidden":
++      case "mfa_required":
++        return {
++          ok: false,
++          response: fail(
++            "forbidden",
++            "Só o dono do servidor pode realizar esta ação.",
++            403,
++            { requestId: opts.requestId }
++          ),
++        };
++      case "internal_error":
++        return {
++          ok: false,
++          response: fail(
++            "internal_error",
++            "Erro ao validar permissões de administrador.",
++            500,
++            { requestId: opts.requestId }
++          ),
++        };
++    }
++  }
++
++  return { ok: true, context: result.context };
++}
+diff --git a/apps/crm/lib/auth/requirePlatformAdmin.ts b/apps/crm/lib/auth/requirePlatformAdmin.ts
+index 6a27d271..9fcf4afa 100644
+--- a/apps/crm/lib/auth/requirePlatformAdmin.ts
++++ b/apps/crm/lib/auth/requirePlatformAdmin.ts
+@@ -1,24 +1,20 @@
+ /**
+- * Server guard for /admin/* (Super-Admin Platform sub-product).
++ * Server guards for Super-Admin Platform sub-product (both layout and API).
+  *
+  * Flow:
+  *  1. Validate JWT via getUser() (NEVER getSession on backend per CLAUDE.md).
+  *  2. Confirm row in platform_admins (active = no revoked_at).
+  *  3. Enforce MFA AAL2 if `mfa_required` (default true for platform admins).
+  *
+- * Redirects:
++ * Redirects (for layout):
+  *  - no user        → /login?next=/admin
+  *  - no row         → /admin/forbidden
+  *  - aal1 + required → /login/mfa?next=/admin
+- *
+- * The middleware already does an early `fn_is_platform_admin` RPC check;
+- * this helper performs the authoritative server-side validation inside the
+- * /admin layout (where redirects are cheap, DB calls are allowed in Node
+- * runtime, and we have access to AAL state).
+  */
+ import { redirect } from "next/navigation";
+ import type { User } from "@supabase/supabase-js";
+ import { createClient } from "@/lib/supabase/server";
++import { logger } from "@/lib/logger";
+ 
+ export interface PlatformAdminInfo {
+   user_id: string;
+@@ -31,41 +27,76 @@ export interface PlatformAdminContext {
+   platformAdmin: PlatformAdminInfo;
+ }
+ 
+-export async function requirePlatformAdmin(): Promise<PlatformAdminContext> {
++type ResolveResult =
++  | { ok: true; context: PlatformAdminContext }
++  | { ok: false; reason: "unauthenticated" | "forbidden" | "mfa_required" | "internal_error" };
++
++export async function resolvePlatformAdmin(): Promise<ResolveResult> {
+   const supabase = await createClient();
+ 
+   const {
+     data: { user },
+   } = await supabase.auth.getUser();
+   if (!user) {
+-    redirect("/login?next=/admin");
++    return { ok: false, reason: "unauthenticated" };
+   }
+ 
+   // platform_admins RLS: only platform admins read; non-admins get null → forbid.
+-  const { data: paRow } = await supabase
++  const { data: paRow, error } = await supabase
+     .from("platform_admins")
+     .select("user_id, scope, mfa_required, revoked_at")
+     .eq("user_id", user.id)
+     .is("revoked_at", null)
+     .maybeSingle();
+ 
++  if (error) {
++    logger.error("[auth] platform_admins query failed", { error: error.message });
++    return { ok: false, reason: "internal_error" };
++  }
++
+   if (!paRow) {
+-    redirect("/admin/forbidden");
++    return { ok: false, reason: "forbidden" };
+   }
+ 
+   if (paRow.mfa_required) {
+-    const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
++    const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
++    if (aalError) {
++      logger.error("[auth] mfa aal query failed", { error: aalError.message });
++      return { ok: false, reason: "internal_error" };
++    }
+     if (aalData?.currentLevel !== "aal2") {
+-      redirect("/login/mfa?next=/admin");
++      return { ok: false, reason: "mfa_required" };
+     }
+   }
+ 
+   return {
+-    user,
+-    platformAdmin: {
+-      user_id: paRow.user_id,
+-      scope: paRow.scope,
+-      mfa_required: paRow.mfa_required,
+-    },
++    ok: true,
++    context: {
++      user,
++      platformAdmin: {
++        user_id: paRow.user_id,
++        scope: paRow.scope,
++        mfa_required: paRow.mfa_required,
++      },
++    }
+   };
+ }
++
++export async function requirePlatformAdmin(): Promise<PlatformAdminContext> {
++  const result = await resolvePlatformAdmin();
++
++  if (!result.ok) {
++    switch (result.reason) {
++      case "unauthenticated":
++        redirect("/login?next=/admin");
++      case "forbidden":
++        redirect("/admin/forbidden");
++      case "mfa_required":
++        redirect("/login/mfa?next=/admin");
++      case "internal_error":
++        throw new Error("Erro interno ao validar permissões de administrador.");
++    }
++  }
++
++  return result.context;
++}
+diff --git a/apps/crm/tests/unit/require-platform-admin-api.test.ts b/apps/crm/tests/unit/require-platform-admin-api.test.ts
+new file mode 100644
+index 00000000..17170bd4
+--- /dev/null
++++ b/apps/crm/tests/unit/require-platform-admin-api.test.ts
+@@ -0,0 +1,93 @@
++import { describe, expect, it, vi, beforeEach } from "vitest";
++
++import { requirePlatformAdminApi } from "../../lib/auth/require-platform-admin-api";
++import { resolvePlatformAdmin, type PlatformAdminContext } from "../../lib/auth/requirePlatformAdmin";
++
++vi.mock("../../lib/auth/requirePlatformAdmin", () => ({
++  resolvePlatformAdmin: vi.fn(),
++}));
++
++describe("requirePlatformAdminApi", () => {
++  const requestId = "req-123";
++
++  beforeEach(() => {
++    vi.clearAllMocks();
++  });
++
++  it("returns unauthenticated 401 when result is unauthenticated", async () => {
++    vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: false, reason: "unauthenticated" });
++
++    const result = await requirePlatformAdminApi({ requestId });
++
++    expect(result.ok).toBe(false);
++    if (!result.ok) {
++      expect(result.response.status).toBe(401);
++      const data = await result.response.json();
++      expect(data.error.code).toBe("unauthenticated");
++      expect(data.error.message).toBe("Faça login para continuar.");
++    }
++  });
++
++  it("returns forbidden 403 when result is forbidden", async () => {
++    vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: false, reason: "forbidden" });
++
++    const result = await requirePlatformAdminApi({ requestId });
++
++    expect(result.ok).toBe(false);
++    if (!result.ok) {
++      expect(result.response.status).toBe(403);
++      const data = await result.response.json();
++      expect(data.error.code).toBe("forbidden");
++      expect(data.error.message).toBe("Só o dono do servidor pode realizar esta ação.");
++    }
++  });
++
++  it("returns forbidden 403 when result is mfa_required", async () => {
++    vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: false, reason: "mfa_required" });
++
++    const result = await requirePlatformAdminApi({ requestId });
++
++    expect(result.ok).toBe(false);
++    if (!result.ok) {
++      expect(result.response.status).toBe(403);
++      const data = await result.response.json();
++      expect(data.error.code).toBe("forbidden");
++      expect(data.error.message).toBe("Só o dono do servidor pode realizar esta ação.");
++    }
++  });
++
++  it("returns internal_error 500 when result is internal_error", async () => {
++    vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: false, reason: "internal_error" });
++
++    const result = await requirePlatformAdminApi({ requestId });
++
++    expect(result.ok).toBe(false);
++    if (!result.ok) {
++      expect(result.response.status).toBe(500);
++      const data = await result.response.json();
++      expect(data.error.code).toBe("internal_error");
++      expect(data.error.message).toBe("Erro ao validar permissões de administrador.");
++    }
++  });
++
++  it("returns ok true and context when result is ok", async () => {
++    const mockContext: PlatformAdminContext = {
++      user: {
++        id: "u-1",
++        app_metadata: {},
++        user_metadata: {},
++        aud: "authenticated",
++        created_at: "2026-09-22T00:00:00.000Z",
++      },
++      platformAdmin: { user_id: "u-1", scope: "*", mfa_required: true },
++    };
++    vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: true, context: mockContext });
++
++    const result = await requirePlatformAdminApi({ requestId });
++
++    expect(result.ok).toBe(true);
++    if (result.ok) {
++      expect(result.context).toEqual(mockContext);
++    }
++  });
++});
+diff --git a/docs/superpowers/plans/2026-09-22-f3-rbac.md b/docs/superpowers/plans/2026-09-22-f3-rbac.md
+new file mode 100644
+index 00000000..ec6e859c
+--- /dev/null
++++ b/docs/superpowers/plans/2026-09-22-f3-rbac.md
+@@ -0,0 +1,161 @@
++# F3 RBAC Implementation Plan
++
++> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
++
++**Goal:** Fechar o enforcement server-side de RBAC no produto usando somente `viewer < agent < manager < admin` por organização e `platform_admins` como única exceção cross-tenant, com testes que provem negação antes do side effect.
++
++**Architecture:** Manter `user_organizations.role` como fonte canônica dos quatro papéis humanos e `platform_admins` como fonte canônica do papel cross-tenant. Centralizar decisões em helpers de autorização server-side; RLS continua defesa em profundidade e `createAdminClient()` nunca substitui o gate de negócio. `ai_operator` permanece um ator interno de automação, fora de `user_organizations`, e não será introduzido no CHECK de roles humanos.
++
++**Tech Stack:** Next.js route handlers/server actions, TypeScript, Supabase Auth `getUser()`, Postgres RLS/SECURITY DEFINER, Vitest, invariants/test-db, `pnpm typecheck`.
++
++**Spec:** `docs/specs/01-spec-platform-base.md` §5; `docs/specs/13-spec-governanca-atendimento.md` §4; `.claude/rules/security.md` §RBAC/MFA/platform admin; `.claude/rules/multi-tenancy.md` §Platform admin/Auth e RBAC.
++
++## Global Constraints
++
++- Roles tenant canônicas: `viewer < agent < manager < admin`.
++- `platform_admins` é a autoridade; não criar/usar coluna normativa `auth.users.is_platform_admin`.
++- Toda autorização server-side usa `getUser()`, membership ativo e organização confiável.
++- UI escondida não conta como enforcement.
++- Service role exige filtro explícito de `organization_id`, preserva RBAC/ownership e audita mutações relevantes.
++- Toda mudança de schema/RLS/ACL sai em migration versionada + apêndice idempotente em `supabase/baseline.sql` + linha em `supabase/migrations/MANIFEST.md`.
++- Platform admin só atravessa tenant por caminho explícito, auditado com acting-as/bypass; alterações em `platform_admins` continuam DBA-only.
++- Não alterar F1/F2 como fonte de identidade/tenant; `user_organizations` continua a membership efetiva.
++
++## Review Focus
++
++1. Viewer/agent não podem executar mutações de integração, mídia, settings, tokens ou equipe antes de qualquer upload/insert/side effect; cobrir rotas/actions com mocks que falham se o client externo for chamado.
++2. Agent não pode escrever config de pipeline/settings nem ler/escrever recurso de outro agente fora do escopo definido; cobrir `own_and_unassigned` e `manager+`.
++3. Manager pode operar o que a matriz permite, mas não pode alterar role, tokens, settings gerais ou billing; cobrir positivo e negativo.
++4. Platform admin passa somente por `platform_admins` ativo + MFA quando exigido, com audit explícito; um DTO/cookie/flag fabricado não basta.
++5. Membership revogada, role desconhecida, ausência de org e erro de RPC falham fechado; resposta não expõe mensagem de banco.
++
++## Auditoria atual — estado antes do F3
++
++- **Base correta:** `apps/crm/lib/auth/require-role.ts` já resolve usuário via `loadAuthUser`, org ativa, `fn_user_role_in_org`, rank e `forbidden_role`; `allowPlatformAdmin` é opt-in. `apps/crm/lib/auth/requirePlatformAdmin.ts` consulta `platform_admins`, `revoked_at` e MFA AAL2, mas é redirect-oriented e não serve diretamente como guard JSON de API.
++- **Cobertura existente:** `apps/crm/tests/unit/rbac-matrix.test.ts`, `apps/crm/tests/invariants/gov-1-rbac.test.ts`, `apps/crm/tests/invariants/gov-1-rbac-config-write.test.ts` e `apps/crm/tests/e2e/rbac-roles.spec.ts` cobrem a matriz central, porém não inventariam todas as rotas nem todos os Server Actions.
++- **Gaps confirmados por leitura:** `conversations/[id]/media` aceita sessão + org e usa admin storage sem `requireRole`; `onboarding/whatsapp/session` aceita sessão + org e permite POST que cria/reativa sessão sem gate de admin; `system/version` e `system/update` usam `user.is_platform_admin` diretamente e o POST não exige MFA AAL2; `channels/templates` e `channels/official` duplicam `ROLE_RANK` localmente; `contacts/_handler.ts`, `message-templates`, notas de conversa e alguns actions também duplicam rank/role fora do helper único.
++- **Gaps de consistência:** `apps/crm/lib/auth/types.ts` inclui `ai_operator` no tipo/rank, embora o banco aceite apenas quatro roles humanos; isso é um ator interno intencional, mas precisa ficar tipado/separado para não virar caminho de membership ou role de rota.
++- **SQL já parcialmente endurecido:** `fn_is_platform_admin`, `fn_user_org_ids`, `fn_user_role_in_org` e `fn_role_at_least` têm revoke/re-grant em migration `0108`; a varredura genérica `hardening-definer-varredura.test.ts` vigia funções SECURITY DEFINER. A ACL do objeto `platform_admins` ainda aparece ampla no dump (`GRANT ALL` para `anon`/`authenticated`) e deve ser medida no Postgres real antes de decidir forward-fix; RLS atualmente é a barreira efetiva.
++- **Fora do F3:** `/readyz`, webhooks assinados, cron com segredo interno e MCP Bearer têm autenticação própria; serão classificados e testados como boundaries não-humanos, não receberão `requireRole` artificial.
++
++### Task 1: Guard API canônico de platform admin e contrato de erro
++
++**Files:**
++- Create: `apps/crm/lib/auth/require-platform-admin-api.ts`
++- Modify: `apps/crm/lib/auth/requirePlatformAdmin.ts` para compartilhar a resolução de `platform_admins`/MFA sem duplicar regra
++- Test: `apps/crm/tests/unit/require-platform-admin-api.test.ts`
++- Test: `apps/crm/app/api/v1/system/version/route.test.ts`
++- Test: `apps/crm/app/api/v1/system/update/route.test.ts`
++
++**Interface:**
++
++```ts
++type PlatformAdminApiCheck =
++  | { ok: true; user: AuthUser; platformAdmin: PlatformAdminInfo }
++  | { ok: false; response: NextResponse };
++
++async function requirePlatformAdminApi(options?: {
++  requestId?: string;
++}): Promise<PlatformAdminApiCheck>;
++```
++
++- [ ] Escrever RED: usuário autenticado sem linha ativa em `platform_admins` recebe `403`; linha revogada recebe `403`; AAL1 quando `mfa_required=true` recebe `403 mfa_required`; usuário válido recebe contexto.
++- [ ] Escrever RED: `system/update` não chama `system_version` para usuário não autorizado; erro de consulta não devolve `error.message` bruto.
++- [ ] Rodar `pnpm vitest run apps/crm/tests/unit/require-platform-admin-api.test.ts apps/crm/app/api/v1/system/version/route.test.ts apps/crm/app/api/v1/system/update/route.test.ts`; confirmar RED no novo contrato.
++- [ ] Implementar o guard API com `getUser()`, consulta de linha ativa, AAL2 quando exigido e resposta JSON padronizada; reutilizar a mesma resolução do guard de layout.
++- [ ] Substituir checks diretos em `system/version`/`system/update`; manter `system/version` read-only para sessão comum somente se o contrato atual explicitamente permitir, sem expor dados operacionais privilegiados.
++- [ ] Rodar os testes novamente; confirmar GREEN e ausência de mensagens do banco no payload.
++- [ ] Rodar `pnpm typecheck`; commit isolado `fix(auth): centralize platform-admin API authorization`.
++
++### Task 2: Remover gates duplicados das rotas/actions existentes
++
++**Files:**
++- Modify: `apps/crm/app/api/v1/channels/templates/route.ts`
++- Modify: `apps/crm/app/api/v1/channels/official/route.ts`
++- Modify: `apps/crm/app/api/v1/contacts/_handler.ts`
++- Modify: `apps/crm/app/api/v1/message-templates/route.ts`
++- Modify: `apps/crm/app/api/v1/conversations/[id]/notes/[noteId]/route.ts`
++- Modify: `apps/crm/app/api/v1/attendants/availability/[user_id]/route.ts`
++- Modify: `apps/crm/app/actions/settings/updateTenant.ts`
++- Modify: `apps/crm/app/actions/settings/updatePipelineConfig.ts`
++- Modify: `apps/crm/app/actions/integrations/connectNuvemshop.ts`
++- Modify: `apps/crm/app/actions/integrations/disconnectNuvemshop.ts`
++- Test: testes unitários correspondentes e `apps/crm/tests/unit/rbac-matrix.test.ts`
++
++- [ ] Escrever RED estático/runtime: cada arquivo acima deixa de aceitar decisão baseada em `ROLE_RANK[...]`/`activeOrg.role` local e passa pelo helper canônico ou por uma autorização derivada de contexto já validado; CPF decrypt preserva manager+, template compartilhado preserva manager+, integrações preservam admin+.
++- [ ] Rodar o conjunto unitário e confirmar RED apenas nas novas expectativas de centralização/erro.
++- [ ] Implementar o menor refactor: `requireRole(min)` para boundary de rota/action; handlers internos recebem contexto já autorizado, sem nova query de membership via admin client; manter ownership como segunda condição quando a matriz exigir.
++- [ ] Testar matriz `viewer/agent/manager/admin/platform_admin` para positivo/negativo e provar que nenhuma chamada Meta/Nuvemshop/DB privilegiada ocorre antes do 403.
++- [ ] Rodar `pnpm vitest run apps/crm/tests/unit/rbac-matrix.test.ts apps/crm/tests/unit/*role*.test.ts`; depois `pnpm typecheck`.
++- [ ] Commit isolado `fix(rbac): route all server role checks through canonical authorization`.
++
++### Task 3: Fechar mutações autenticadas sem role explícito
++
++**Files:**
++- Modify: `apps/crm/app/api/v1/conversations/[id]/media/route.ts`
++- Modify: `apps/crm/app/api/v1/onboarding/whatsapp/session/route.ts`
++- Modify: `apps/crm/app/api/v1/onboarding/whatsapp/qr/route.ts` conforme a ação do método
++- Test: `apps/crm/tests/unit/conversation-media-rbac.test.ts`
++- Test: `apps/crm/tests/unit/onboarding-whatsapp-rbac.test.ts`
++
++- [ ] Escrever RED para media: viewer recebe `403 forbidden_role`; agent só passa quando a conversa é visível pelo escopo RLS/ownership; manager/admin passam; storage não é chamado no caminho negado.
++- [ ] Escrever RED para onboarding: POST de viewer/agent/manager é negado antes de criar/reativar `channel_sessions` ou chamar WAHA; admin passa; GET de status mantém somente a leitura autorizada pelo contrato sem devolver segredo.
++- [ ] Rodar os dois testes e confirmar RED.
++- [ ] Aplicar `requireRole("agent")` + filtro/ownership de conversa para media; aplicar `requireRole("admin", { allowPlatformAdmin: true })` ao mutante de integração; manter webhooks externos fora deste guard.
++- [ ] Rodar GREEN e testar respostas 404/403 sem vazar existência cross-tenant; verificar side effects mockados.
++- [ ] Rodar `pnpm typecheck`; commit isolado `fix(rbac): gate media and channel mutations by role`.
++
++### Task 4: Separar role humano de ator interno `ai_operator`
++
++**Files:**
++- Modify: `apps/crm/lib/auth/types.ts`
++- Modify: `apps/crm/lib/mcp/auth.ts`
++- Modify: `apps/crm/lib/auth/require-role.ts` somente se a assinatura precisar restringir roles de membership
++- Test: `apps/crm/tests/unit/role-types-and-mcp-auth.test.ts`
++- Test: `apps/crm/tests/invariants/gov-1-rbac.test.ts`
++
++- [ ] Escrever RED: `user_organizations`/guards humanos aceitam somente quatro roles; token/actor MCP `ai_operator` continua válido apenas no caminho de ator interno; role desconhecida e `role:platform_admin` falham fechado.
++- [ ] Rodar RED.
++- [ ] Introduzir tipos explícitos `HumanRole` e `ActorRole` sem mudar o CHECK do banco; preservar compatibilidade dos handlers MCP que já usam `ai_operator`.
++- [ ] Rodar GREEN, typecheck e testes MCP/RBAC; confirmar que nenhum `ai_operator` pode ser gravado como membership nem ganhar bypass cross-tenant.
++- [ ] Commit isolado `fix(auth): separate human membership roles from internal actors`.
++
++### Task 5: Auditoria de SECURITY DEFINER e ACL de `platform_admins`
++
++**Files:**
++- Test: `apps/crm/tests/invariants/f3-rbac-function-acl.test.ts`
++- Test: `apps/crm/tests/invariants/f3-rbac-platform-admin-acl.test.ts`
++- Conditional modify: `supabase/migrations/<timestamp>_<NNNN>_f3_rbac_acl.sql`
++- Conditional modify: `supabase/baseline.sql`
++- Conditional modify: `supabase/migrations/MANIFEST.md`
++
++- [ ] Escrever RED contra Postgres real: inventariar funções SECURITY DEFINER públicas e provar que cada grant é mínimo; confirmar `anon` não executa helper/commanding RPC; confirmar `platform_admins` não aceita INSERT/UPDATE/DELETE por app roles.
++- [ ] Rodar `pnpm test:db -- ...f3-rbac-function-acl.test.ts ...f3-rbac-platform-admin-acl.test.ts`; registrar o ACL real antes de alterar.
++- [ ] Se o teste confirmar excesso, criar forward-fix idempotente com `REVOKE` explícito e grants mínimos, acrescentando o mesmo SQL ao baseline e ao MANIFEST; se não confirmar, manter SQL intocado e registrar a evidência.
++- [ ] Rodar baseline fresh + reaplicação, `pnpm test:db` e invariantes F2; nenhum ajuste de schema novo sem a tripla.
++- [ ] Commit isolado `fix(db): tighten RBAC function and platform-admin ACL` somente se houver falha RED real.
++
++### Task 6: Matriz final e revisão de segurança
++
++**Files:**
++- Modify: `apps/crm/tests/invariants/gov-1-rbac.test.ts`
++- Modify: `apps/crm/tests/invariants/gov-1-rbac-config-write.test.ts`
++- Create: `apps/crm/tests/invariants/f3-rbac-route-matrix.test.ts`
++- Create: `docs/security/f3-rbac-verification.md`
++
++- [ ] Adicionar matriz de 4 roles em endpoints representativos: team, tokens, conversations/messages/media, contacts, leads, pipelines/stages, settings/integrations, audit/LGPD.
++- [ ] Adicionar casos: role por org diferente, membership revogada, org ausente, ID de recurso de outra org retorna not-found, platform admin somente caminho explícito + audit, e side effect não executado após negação.
++- [ ] Rodar `pnpm test:unit`, `pnpm typecheck`, `pnpm test:db`, `pnpm test:invariants` e o job relevante de CI.
++- [ ] Fazer revisão crítica contra os cinco Review Focus e contra os anti-padrões já encontrados (teste enfraquecido, rank duplicado, flag platform, admin client sem gate, mensagem de banco em 500).
++- [ ] Commit final `test(rbac): prove F3 role matrix and platform-admin boundaries`.
++
++## Critério de conclusão
++
++F3 só fica pronto quando todos os gates server-side classificados como tenant-aware têm guard explícito ou autenticação não-humana documentada, a matriz de 4 roles e platform admin passa no Postgres real, nenhuma migration/ACL foi alterada fora da tripla, typecheck/unit/invariants/test:db ficam verdes, e a revisão independente não encontra bypass ou vazamento de existência.
++
++## Auto-revisão do plano
++
++- Cobertura: contempla rotas/actions sem guard, duplicação de rank, `ai_operator`, platform admin/MFA, RLS/SECURITY DEFINER/ACL e testes reais.
++- Schema: não presume migration nova; Task 5 só cria a tripla após RED real de ACL.
++- Segurança: prioriza falha fechada e ausência de side effect, separa webhooks/cron/MCP de RBAC humano e preserva F1/F2.
++- Risco pendente: confirmar no Postgres real a ACL efetiva de `platform_admins` e definir se `system/version` continua parcialmente público para sessão comum; ambos estão explicitamente cobertos antes de qualquer mudança irreversível.

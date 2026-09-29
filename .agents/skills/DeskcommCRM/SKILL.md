@@ -11,11 +11,13 @@ description: Ponte para a doutrina viva do DeskcommCRM. Use ao escrever, revisar
 
 1. Leia `CLAUDE.md` antes de tocar código.
 2. Leia `AGENTS.md` quando precisar do contrato portátil/visão rápida do harness.
-3. Carregue as rules aplicáveis em `.claude/rules/` quando a plataforma puder lê-las; caso contrário, siga a doutrina equivalente via `CLAUDE.md`/`AGENTS.md`.
+3. Carregue as rules aplicáveis: Claude Code usa `.claude/rules/`; Codex usa `.agents/rules/`. Consulte o índice de roteamento da plataforma.
 4. Consulte a spec/PRD/business-rule/doc canônico do domínio antes de inventar comportamento.
 5. Se estiver reconciliando regra antiga, consulte `docs/harness-doctrine-matrix.md`.
 
 ## Rules por domínio
+
+Os nomes listados abaixo correspondem às duas superfícies: para Codex, use o mesmo nome de arquivo em `.agents/rules/`; para Claude Code, use `.claude/rules/`.
 
 - Git/branches/worktrees: `.claude/rules/git-workflow.md`
 - Segurança/segredos/auth/RBAC: `.claude/rules/security.md`
