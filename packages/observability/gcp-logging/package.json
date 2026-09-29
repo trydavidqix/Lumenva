@@ -7,10 +7,9 @@
     "typecheck": "tsc --noEmit",
     "test:unit": "npx vitest run"
   },
-  "dependencies": {},
   "devDependencies": {
+    "@types/node": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "@types/node": "catalog:"
+    "vitest": "catalog:"
   }
 }
