@@ -7,9 +7,6 @@ concurrency:
   cancel-in-progress: true
 permissions:
   contents: write
-  pull-requests: write
-  issues: write
-  actions: read
 jobs:
   migrate:
     if: ${{ !contains(github.event.head_commit.message, '[canonicalized]') }}
@@ -27,9 +24,7 @@ jobs:
           node-version-file: .nvmrc
       - uses: pnpm/action-setup@v6
       - name: Regenerate lockfile and add audit tools
-        run: |
-          pnpm install --no-frozen-lockfile
-          pnpm install --no-frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
       - name: Validate core gates
         run: |
           pnpm install --frozen-lockfile
@@ -37,24 +32,6 @@ jobs:
           pnpm typecheck
           pnpm lint
           pnpm test:unit
-      - name: Autonomous repair on gate failure
-        if: failure()
-        uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          prompt: |
-            You are the autonomous repair engineer for PR #76 in trydavidqix/Lumenva.
-            Work ONLY on branch chore/lumenva-toolchain-canonicalization. Never touch main or integration/lumenva-complete.
-            Read CLAUDE.md and applicable repository rules first.
-            The toolchain canonicalization job failed. Reproduce the failing gate locally, inspect the actual error, fix the root cause, and rerun the affected gates.
-            Continue until the affected gates pass. Do not hide failures with skip, || true, --force, disabled rules, or weakened tests.
-            Do not use real production secrets. Use safe placeholders/mocks where a test supports them.
-            Do not force-push, merge, deploy, delete branches, or change production infrastructure.
-            When the repair is validated, commit all intended changes with a descriptive message ending in [autofix] and push this same branch so the workflow starts again.
-          claude_args: |
-            --model claude-sonnet-5
-            --max-turns 40
-            --allowedTools "Read,Write,Edit,Glob,Grep,Bash(pnpm:*),Bash(node:*),Bash(git status:*),Bash(git diff:*),Bash(git add:*),Bash(git commit:*),Bash(git push origin HEAD:chore/lumenva-toolchain-canonicalization)"
       - name: Commit validated wave
         if: success()
         run: |
