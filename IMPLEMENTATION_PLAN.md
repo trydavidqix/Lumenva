@@ -1,8 +1,8 @@
 # Lumenva Total Consolidation — Active Implementation Plan
 
-**Status:** IN_PROGRESS — this plan supersedes the historical PR #75 closeout below.
+**Status:** COMPLETE — consolidation/preservation gates complete; source-branch cleanup awaits separate Owner authorization.
 **Canonical candidate:** `integration/lumenva-complete`
-**Current HEAD:** `c2023b3bbeaa6ca287ac5581c1c8afd60c1c6730` (documentation-only commits after tested code SHA `db52970416dbc0118c51d8964e6c0ca9a93d8b43`)
+**Tested code SHA:** `db52970416dbc0118c51d8964e6c0ca9a93d8b43` (later closeout commits update evidence documentation only)
 **Base:** `origin/main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`
 **Source baseline:** the 63 frozen remote refs in `BRANCH_RECONCILIATION_MANIFEST.md` and the verified pre-unification bundle.
 
@@ -19,14 +19,14 @@ The independent CRM checkout at `C:\Users\David\Desktop\Projetos\Lumenva` is not
 3. **Integrate useful partial/experimental content — DONE.** WAHA is isolated and `EXPERIMENTAL/PARTIAL`, not default-enabled. Unique disabled Twilio outbound templates and the useful `voz` plan/runbook are preserved in explicit experimental/archive paths. Meta OAuth/account-sync remains preserved as `PARTIAL` in the frozen source/archive, not activated because of tenant-RLS and token-storage defects. Independent audit found no additional useful content to port.
 4. **Run current-head remote validation — DONE WITH BASELINE FAILURES.** GitHub Actions only; standard CI `36541103963` passed on tested code SHA `db529704`. Branch parity `36541107625` passed lint/typecheck/build/toolchain. Unit comparison: 5 shared failed IDs, 0 candidate-only, 47 resolved, 0 timeouts/worker errors; candidate has one extra skipped test. Paired E2E [main `36541111186`](https://github.com/trydavidqix/Lumenva/actions/runs/36541111186) and [candidate `36541115754`](https://github.com/trydavidqix/Lumenva/actions/runs/36541115754) both failed. Normalized failure IDs: main 51, candidate 43; 8 main-only, 0 candidate-only. E2E is not green. Report-only security `36541133755`: Semgrep/OSV passed; Gitleaks reported 12 historical detections. No local heavy tests were run.
 5. **Independent zero-missing-work audit — DONE.** Auditor confirmed all 63 frozen SHAs exist, all 63 rows have dispositions, and no unique useful content is missing from the candidate/archive; it verified the voice and `implementation/unified` reconciliations.
-6. **Create final archive — IN PROGRESS.** Checkpoint bundle for `6633bb47` verifies with 105 refs and exact frozen SHAs. After final evidence/docs are committed, create a distinct bundle for the final HEAD, verify it, and compare each frozen ref. Keep prior bundles untouched.
-7. **Prove preservation and synchronization — TODO.** Confirm all 63 frozen refs still resolve to their exact SHAs, no ref was deleted or moved, integration local equals remote, `main` is unchanged, and the working tree is clean.
-8. **Owner handoff — TODO.** Deliver 63/63 matrix, 0 useful work missing, archive proof, and Actions outcomes; stop and ask David before any branch cleanup. No branch deletion is authorized before that separate approval.
+6. **Create final archive — DONE.** Verified checkpoint bundle `lumenva-total-consolidation-final-2026-09-29-29f6c28c.bundle`; 105 refs, all 63 frozen SHAs exact, 0 missing/mismatch. A post-publication bundle for the final docs tip is verified and its checksum is in the handoff.
+7. **Prove preservation and synchronization — DONE.** All 63 frozen refs remain exact; post-publication local and remote integration match; production `main` is unchanged; worktree is clean. No ref or worktree was deleted.
+8. **Owner handoff — DONE.** Final evidence delivered. Any branch cleanup is a separate destructive step and remains pending explicit Owner authorization.
 
 ## Current evidence and known limits
 
-- Current tested code SHA is `db52970416dbc0118c51d8964e6c0ca9a93d8b43`; docs-only tip at this update is `c2023b3bbeaa6ca287ac5581c1c8afd60c1c6730`. `origin/main` remains `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
-- Frozen source refs were unchanged at the last audit; no source branch has been deleted. This checkpoint updates only status/evidence documentation; no CRM product code changes.
+- Tested code SHA is `db52970416dbc0118c51d8964e6c0ca9a93d8b43`; later closeout commits update evidence documentation only. `origin/main` remains `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
+- Frozen source refs remain unchanged at final verification; no source branch was deleted. This closeout updates status/evidence documentation only; no CRM product code changes.
 - Independent F7 audit: Resend is represented; old Nuvemshop adapter is superseded by stricter URL/redirect checks; Meta adapter source weakens fail-closed token handling and is obsolete; webhook missing-secret fail-closed behavior is represented in current handlers and test. Commit/path/blob evidence is in the manifest.
 - Previous current-head CI `36538511186` at `c1f9c2d` failed six WAHA adapter unit cases because the test used `Object.assign` on read-only getters `baseUrl`/`apiKey`; the adapter behavior was not exercised. Test-only env mock fix is pushed at `db529704`.
 - Current validation details are recorded above. Historical run details here are retained as audit history and do not override the completed paired comparison or later documentation checkpoint.

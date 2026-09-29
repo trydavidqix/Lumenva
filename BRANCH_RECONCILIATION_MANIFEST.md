@@ -107,7 +107,7 @@ This was a lead list captured against the initial tree, not a final decision. La
 - All 63 rows are source refs that existed before creating the integration branch.
 - No source ref has been deleted or rewritten.
 - Remote verification on 2026-09-29: all 63 frozen branch names still exist at their exact frozen SHAs (0 missing, 0 mismatches). `origin` currently has 64 heads because it also contains `integration/lumenva-complete`; production `main` remains `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
-- Final bundle and per-branch preservation proof will be appended after integration and before any cleanup request.
+- Verified preservation checkpoint: bundle `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\lumenva-total-consolidation-final-2026-09-29-29f6c28c.bundle` passed `git bundle verify`; all 63 frozen remote branch refs match exact SHAs, 0 missing/mismatch. Bundle size `81,329,525` bytes; SHA-256 `ADF517A1FA318B2ABD709054086108CF761CD79C74315B03CEB7341638C3C4B1`. At that checkpoint integration local/remote was `29f6c28ceba93e3e19b25d4b892903d3302cfa46` and main was unchanged at `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`. Final post-publication bundle checksum is in the handoff. No branch cleanup is authorized by this evidence.
 
 ## Current selected content — independently reviewed at tested integration code `db52970416dbc0118c51d8964e6c0ca9a93d8b43`
 

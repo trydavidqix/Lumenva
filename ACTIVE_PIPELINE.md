@@ -2,18 +2,19 @@
 
 > Esta execução substitui como estado ativo o encerramento histórico do PR #75 registrado abaixo. A seção antiga foi mantida como evidência histórica.
 
-**Pipeline:** IN_PROGRESS — preservation gates complete; owner cleanup authorization pending
+**Pipeline:** COMPLETE — consolidation gates met; branch cleanup still requires Owner authorization
 **Scope:** auditar as 63 refs remotas congeladas; fazer `integration/lumenva-complete` preservar todo trabalho útil; validar/archive; parar antes de apagar branches e pedir autorização do Owner.
 **Project:** `trydavidqix/Lumenva`
 **Branch:** `integration/lumenva-complete`
 **Base:** PR #75/consolidation head `f46cdd4ddd2c4edc6ec57f266e97e8cb9f6a83ac`; `origin/main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99` is an ancestor.
-**Updated:** 2026-09-29 10:16 Europe/Lisbon
+**Updated:** 2026-09-29 10:20 Europe/Lisbon
 
 ## Progress
 
-- **Completed:** 5/8 — **63%** (frozen inventory/archive; 63-ref evidence matrix; selected useful partial/experimental content preserved; independent zero-missing-work audit; current Actions comparison and failure classification).
-- **Current:** 63/63 refs reconciled and independent audit found no useful work missing at code SHA `db529704`. Current documentation HEAD is `c2023b3bbeaa6ca287ac5581c1c8afd60c1c6730`. Corrected-head CI `36541103963` passed. Parity `36541107625`: lint/typecheck/build/toolchain passed; unit failures: 5 shared, 0 candidate-only, 47 resolved; 0 timeouts/worker errors; candidate has one extra skip. E2E runs both ended failed: main `36541111186` had 51 failed IDs, candidate `36541115754` had 43; 8 main-only, 0 candidate-only. E2E is NOT green. Security report-only `36541133755`: Semgrep/OSV passed; Gitleaks found 12 historical detections, none introduced by `db529704`. No branches deleted; `main` unchanged.
-- **Next:** publish corrected status docs, create/verify final bundle for resulting HEAD, then prove exact ref preservation and stop for Owner cleanup authorization.
+- **Completed:** 8/8 — **100%** of consolidation and preservation gates. The separate branch-cleanup action is not included and has not been authorized.
+- **Final state:** 63/63 frozen refs reconciled; independent audit found 0 useful work missing at tested code SHA `db529704`. Standard CI passed. Parity lint/typecheck/build/toolchain passed; unit comparison had 5 shared failures, 0 candidate-only, 47 resolved, 0 timeouts/worker errors, plus one extra candidate skip. Both E2E runs failed: main `36541111186` had 51 failed IDs, candidate `36541115754` had 43; 8 main-only, 0 candidate-only. E2E is NOT green. Report-only security: Semgrep/OSV passed; Gitleaks found 12 historical detections. No branches deleted; `main` unchanged. Current docs commit is `29f6c28ceba93e3e19b25d4b892903d3302cfa46`.
+- **Archive/sync:** final bundle verification and exact frozen-ref comparison passed for commit `29f6c28c`; 105 refs, 63/63 exact frozen SHAs, 0 missing/mismatch. Local and remote candidate match; working tree clean.
+- **Next:** report completion and request Owner authorization before any branch cleanup. No cleanup performed.
 - **Preservation:** zero source branches deleted; baseline bundle SHA-256 `866652FD4D6BFDDAEEF6E7E5ADC27F6B96E3F98F75A6A63EDAFCF43BF783B447`.
 - **Validation:** CI passed; parity found 0 new unit failure IDs. Paired E2E is red on both sides with 0 candidate-only failure IDs; never describe it as green. No heavy tests were run locally.
 
@@ -24,9 +25,9 @@
 - [x] Port useful partial/experimental/documentation work into the integration branch by isolated scopes; preserve unsafe or non-production pieces without activating them.
 - [x] Validate waves with GitHub Actions; separate preexisting failures from new regressions (E2E remains failing on both sides, with 0 candidate-only failure IDs).
 - [x] Independently re-audit all 63 frozen SHAs; prove zero useful work is missing.
-- [ ] Create and verify a final archive bundle plus destination manifest for all frozen refs.
-- [ ] Confirm local/remote integration sync and no source-ref movement/loss.
-- [ ] Deliver final evidence report; stop and request Owner approval before branch cleanup.
+- [x] Create and verify a final archive bundle plus destination manifest for all frozen refs.
+- [x] Confirm local/remote integration sync and no source-ref movement/loss.
+- [x] Deliver final evidence report; stop and request Owner approval before branch cleanup.
 
 ## Guardrails for this execution
 
