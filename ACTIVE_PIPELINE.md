@@ -7,15 +7,15 @@
 **Project:** `trydavidqix/Lumenva`
 **Branch:** `integration/lumenva-complete`
 **Base:** PR #75/consolidation head `f46cdd4ddd2c4edc6ec57f266e97e8cb9f6a83ac`; `origin/main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99` is an ancestor.
-**Updated:** 2026-09-29 07:31 Europe/Lisbon
+**Updated:** 2026-09-29 08:33 Europe/Lisbon
 
 ## Progress
 
 - **Completed:** 1/8 — **13%** (frozen inventory + verified baseline bundle).
-- **Current:** first-pass reports received for 63/63 refs; root reconciliation is in progress. A selected experimental runtime/Command Center slice and standalone WAHA adapter are now locally integrated (5 commits) with explicit non-production boundaries. Integration candidate HEAD: `eb532b8f` plus an uncommitted exact-source documentation archive copy.
-- **Next:** finish branch-by-branch evidence reconciliation, push the reviewed wave/docs, then run candidate validation in GitHub Actions.
+- **Current:** first-pass evidence is in for all 63 refs; 58 matrix rows now have provisional decisions and five remain under exact source review. Backup CRM OAuth/social-account code is useful but not production-safe: the source migration has tenant-RLS and token-column defects, so it stays preserved, not activated. Voice routes/migrations are superseded by stronger current equivalents. Command Center/Local Runtime remains `NEXUS_OUT_OF_SCOPE`; WAHA CRM adapter remains experimental. Local HEAD `675a2a005e4fe7a63b7b1519a8a4264b780f6816`; four revert commits plus report/matrix edits are pending publication. No branches deleted.
+- **Next:** close the five source reviews, publish the audited checkpoint, run CI/parity/E2E through GitHub Actions, then independently prove all 63 destinations and produce/verify a final bundle.
 - **Preservation:** zero source branches deleted; baseline bundle SHA-256 `866652FD4D6BFDDAEEF6E7E5ADC27F6B96E3F98F75A6A63EDAFCF43BF783B447`.
-- **Validation:** baseline Actions run `36529426649` at `f75d0121` passed `verify` and `invariants`; it does not validate the newer candidate. No tests were run locally.
+- **Validation:** baseline Actions run `36529426649` at `f75d0121` passed `verify` and `invariants`; this is not candidate validation. Runs `36531873618`, `36531873998`, `36531873900`, `36531874301` inspected obsolete candidate `ab5234aa`; its runtime prototype produced three TS2558 errors, now removed from the Lumenva candidate as Nexus-owned. Those runs are stale for current HEAD; paired E2E had not completed at last report. No tests were run locally.
 
 ## Current checklist
 
@@ -33,7 +33,7 @@
 - Keep `main` unchanged; no blind branch merges, force-pushes, or branch/worktree deletion.
 - Preserve `PRODUCTION_READY`, `EXPERIMENTAL`, `PARTIAL`, `DUPLICATE`, `OBSOLETE`, and `NEXUS_OUT_OF_SCOPE` distinctions. Unresolved evidence stays preserved.
 - The baseline bundle is outside Git because it contains historical repository data; commit its manifest and checksum, not the binary.
-- Authorized agents 1–5 completed first-pass audits. Integrators 6–8 completed a selected experimental/WAHA wave; root is reviewing and integrating. Agents 9–10 remain for validation/final independent audit.
+- Authorized agents 1–5 completed first-pass audits. Integrators 6–8 completed a WAHA CRM adapter wave; the earlier Command Center/Local Runtime port was reverted after ownership review. Agent 10 completed F1–F5/F7 comparison; agent 9 is reconciling remaining refs and Actions/archive.
 - Temporary multi-agent permission was restored to the original hook policy after delegation; no temporary permit is active.
 
 ---

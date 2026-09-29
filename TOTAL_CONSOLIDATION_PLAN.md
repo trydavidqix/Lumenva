@@ -28,8 +28,8 @@ Each branch may contain multiple classes. Record decisions at commit/path or cap
 1. **Freeze and archive baseline — COMPLETE:** 63 exact refs/SHAs captured. Verified bundle covers all 63 frozen branch tips (0 missing, 0 mismatched); path/hash are in the manifest.
 2. **Parallel branch audit — FIRST PASS COMPLETE:** four auditors returned disjoint reports covering 16, 16, 16, and 15 refs; independent archaeology reviewed cross-branch capability coverage. The consolidated provisional findings are in [BRANCH_AUDIT_SUMMARY.md](BRANCH_AUDIT_SUMMARY.md). Root reconciliation remains in progress; no branch disposition is final until its target evidence is checked.
 3. **Build reconciliation matrix — IN PROGRESS:** four branch auditors and code archaeology returned first-pass reports. Root is reconciling overlapping claims, tree moves, PR evidence, and source-only deltas; every final decision must cite commit and path/diff evidence.
-4. **Port approved work — IN PROGRESS:** Agents 6–8 reviewed backend/security, Command Center/runtime, and voice/infra in isolated worktrees. Root integrated only the selected experimental runtime/Command Center files and non-wired WAHA adapter (five commits, current local candidate `eb532b8f`). The backend review found no clearly missing permitted slice. More candidate documentation/config deltas remain under review.
-5. **Wave validation — IN PROGRESS:** baseline run `36529426649` on starting candidate `f75d0121` passed `verify` and `invariants`. This does not validate the newer wave. After pushing the reviewed candidate, run repo:check, lint, typecheck, build, unit/invariants/security and E2E parity through GitHub Actions only; classify preexisting versus candidate-only failures.
+4. **Port approved work — IN PROGRESS:** the CRM-owned WAHA adapter was ported selectively. An earlier Command Center/Local Runtime prototype port was identified as Nexus-owned from `docs/LUMENVA_COMMAND_CENTER_PLAN.md` and reverted in four commits; current candidate is `675a2a005e4fe7a63b7b1519a8a4264b780f6816`. No whole source branch was merged. Remaining deltas are being classified against current ownership and target contents.
+5. **Wave validation — IN PROGRESS:** baseline run `36529426649` on starting candidate `f75d0121` passed `verify` and `invariants`; this does not validate current HEAD. Once the reviewed candidate and reconciliation docs are pushed, run repo:check, lint, typecheck, build, unit/invariants/security and E2E parity through GitHub Actions only; classify preexisting versus candidate-only failures.
 6. **Independent final audit — TODO:** re-check all 63 frozen tips against final integration. Require 63/63 dispositions and zero useful work missing.
 7. **Preservation gate — TODO:** final bundle verified; manifest includes original SHA, class, decision, preserved destination commit/path; integration remote sync verified.
 8. **Owner review — WAITING FOR FINAL REPORT:** present complete report and request explicit authorization before deleting any branch. No branch deletion is authorized before that approval.
@@ -39,19 +39,19 @@ Each branch may contain multiple classes. Record decisions at commit/path or cap
 - **Agent 0 — Orchestrator:** root session; owns inventory, matrix, conflicts, integration branch, validation coordination, final report.
 - **Agents 1–4 — Branch auditors:** disjoint frozen inventory groups, read-only.
 - **Agent 5 — Code archaeology:** cross-branch capability gaps, read-only.
-- **Agents 6–8 — Integrators:** completed the first selected wave in three isolated worktrees; only Root integrated their scoped commits. Backend found no missing slice; Command Center/runtime remains experimental and awaits Actions; WAHA remains experimental, unconfigured and awaits Actions.
-- **Agent 9 — Validation:** pending candidate push; runs remote Actions after integration wave.
-- **Agent 10 — Final audit:** pending after all approved work is ported; independently verifies 63/63 destinations and zero useful work missing.
+- **Agents 6–8 — Integrators:** reviewed isolated scopes. Only the CRM-owned WAHA adapter remains selected from their wave; Nexus-owned Command Center/Local Runtime port was reverted. Backend review found no clearly missing permitted slice.
+- **Agent 9 — Validation / remaining audit:** auditing the still-unreconciled branch families and checking whether any CRM-owned useful deltas remain; Actions results are not a substitute for source reconciliation.
+- **Agent 10 — Final audit:** first F1–F5/F7 pass completed against the earlier candidate; final independent audit must be refreshed against final HEAD after all dispositions are recorded.
 
 No agent may create child agents, delete branches, merge a whole branch blindly, or push to `main`. Only the Orchestrator integrates into `integration/lumenva-complete`.
 
 ## Current checkpoint
 
 - New integration branch was created and pushed at the exact PR #75 head, without changing `main` or merging PR #75.
-- No source branch has been integrated or deleted yet.
+- No source branch has been merged wholesale or deleted. The WAHA adapter was selectively ported; four revert commits removed the Nexus-owned runtime/Command Center prototype. All original source refs remain preserved.
 - PR #75 remains open. Its latest checks were green before this task.
 - The temporary spawn permission has been restored to the original hook policy; the permit marker is absent and the configured hook hash matches its pre-task backup. `config.toml` was not changed.
-- First-pass findings identify candidate CRM voice/notification, WAHA, runtime, MCG workflow, and governance slices; no code has been ported.
+- First-pass findings: CRM voice core is represented; WAHA is selectively present; Local Runtime/Command Center and MCG belong to Nexus; governance and remaining docs/config deltas require commit/path-level disposition. Current integration has four local commits not yet pushed.
 
 ## Preliminary cross-branch archaeology (not a final disposition)
 
