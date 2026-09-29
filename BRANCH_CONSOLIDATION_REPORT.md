@@ -1,6 +1,6 @@
 # Branch Consolidation Report
 
-## Local-work synchronization audit — 2026-09-29 (in progress)
+## Local-work synchronization audit — 2026-09-29 (complete)
 
 - **Scope:** preserve and publish Lumenva-related useful local work to `integration/lumenva-complete`; do not merge or change `main`.
 - **Isolated target:** `C:\Users\David\Desktop\Projetos\Lumenva-Unification`; origin is `https://github.com/trydavidqix/Lumenva.git`; branch `integration/lumenva-complete`; audit-start HEAD and `origin/integration/lumenva-complete` both `043ee47f2f7d3d9c2f789d84328bbcb88f3c21db`.
@@ -11,8 +11,12 @@
 - **Safety review:** recovered RBAC/Firebase/media patches with incomplete authorization changes, unsafe URL construction, or admin-client/RLS concerns remain unapplied and preserved. No code from them is treated as integrated.
 - **Local worktree inventory:** the CRM root and its registered worktrees were inspected read-only; reported existing dirty Recovery worktrees remain untouched. The isolated checkout also retains its pre-existing stale TEMP worktree metadata; no prune/removal was run.
 - **Remote snapshot at audit start:** `main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`, integration `043ee47f2f7d3d9c2f789d84328bbcb88f3c21db`, and `vps-17455632840955604138` `c50375bdb0f633142f0136b3a3fe1aa3f7f74fb0`. The VPS branch is Nexus-owned/out of scope and was not changed. PR #75 is closed/unmerged. These are audit-start facts; final post-push refs must be recorded separately.
-- **Validation so far:** targeted Gitleaks scans of added/modified skills, rules, agent configs, and recovery/archive directories reported no leaks; selected JSON/TOML parsing, focused reference checks, SHA-256 snapshot checks (25 CRM + six Recovery files), and `git diff --check` passed. No heavy tests were run locally. Existing Actions evidence for code SHA `db529704` does not validate this new sync tip.
-- **Status:** IN PROGRESS. Do not treat this audit section as final synchronization proof until local/remote equality, clean status, and current Actions status are recorded below.
+- **Validation:** targeted Gitleaks scans and `gitleaks protect --staged` found no leaks in new/changed content; JSON and all five TOML files parsed; focused references passed; 25 CRM snapshots and six Recovery additions matched by SHA-256. `git diff --cached --check` passed excluding raw `.patch` evidence, whose original whitespace is intentionally preserved. No heavy tests ran locally.
+- **Publication:** commit `9a118a62657581278d4e21b3b286d880fde4baf0` pushed to `origin/integration/lumenva-complete`; it contains 79 files (6,418 insertions, 10 deletions). Local/remote SHA matched; zero ahead/behind commits and zero untracked entries after publication. A following docs-only commit finalizes this report.
+- **Remote snapshot after content push:** `main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`; integration `9a118a62657581278d4e21b3b286d880fde4baf0`; `vps-17455632840955604138` `c50375bdb0f633142f0136b3a3fe1aa3f7f74fb0` (Nexus-owned, untouched). Integration is 152 commits ahead of main. No open PRs were returned; PR #75 is closed/unmerged. Main did not change.
+- **Worktrees:** 31 registrations across both repositories, 29 existing paths and two missing TEMP validation registrations; none were pruned/removed. All 21 Recovery worktrees exist; 15 contain preserved dirty deltas and six are clean.
+- **Actions:** GitHub returned no check runs/status for `9a118a62`; do not describe it as CI-passing. Canonical code Actions evidence for `db529704` is recorded below: standard CI/parity and report-only security succeeded; paired E2E failed on both sides with zero candidate-only failures.
+- **Status:** COMPLETE for the synchronization request. Useful selected local work and explicit source snapshots/patches are published to integration; caches/temp/generated files remain excluded with reasons. CRM/Recovery originals remain untouched.
 
 ## Remote branch cleanup — 2026-09-29
 

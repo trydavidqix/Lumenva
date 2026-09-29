@@ -2,13 +2,13 @@
 
 ## Follow-up: publish useful local work — 2026-09-29
 
-**Status:** IN_PROGRESS. This is a documentation/configuration-preservation closeout, not a new product implementation phase.
+**Status:** COMPLETE — synchronization closeout published to `integration/lumenva-complete`; `main` untouched. This was documentation/configuration preservation, not a new product implementation phase.
 
 1. Audit local CRM and recovery worktrees without editing their originals — **complete**. The CRM source remains dirty and untouched; 25 non-cache untracked files match their raw snapshot by SHA-256. Existing worktree deltas remain preserved.
 2. Classify CRM-only commits and files — **complete**. One narrow skill-reference change is useful and selected; temporary-test cleanup is already represented; incomplete governance/hook work stays archived/inert.
-3. Validate and publish the selected guidance, skills, agents, source-change archive, and tracker updates — **complete locally**. Fourteen rules/four skills/three triage agents are selected. Governance hook/agents are retained as inactive proposals because the hook target is missing and configs/evidence are incomplete.
-4. Hash-check the six newly captured Recovery files, run targeted Gitleaks and static config/reference checks, then commit/push only to `integration/lumenva-complete` — **validation complete; publish pending**. All 25 CRM raw snapshots and six Recovery additions SHA-256 match their sources; targeted Gitleaks reports no leaks on the exact new/changed directories.
-5. Prove clean/synchronized integration, no useful local-only files/commits, `main` unchanged, and report current GitHub Actions — **pending**.
+3. Validate and publish the selected guidance, skills, agents, source-change archive, and tracker updates — **complete**. Fourteen rules/four skills/three triage agents are selected. Governance hook/agents are retained as inactive proposals because the hook target is missing and configs/evidence are incomplete.
+4. Hash-check the six newly captured Recovery files, run targeted Gitleaks and static config/reference checks, then commit/push only to `integration/lumenva-complete` — **complete**. All 25 CRM raw snapshots and six Recovery additions SHA-256 match their sources; targeted Gitleaks and staged scan reported no leaks on the exact changed content.
+5. Prove clean/synchronized integration, no useful local-only files/commits, `main` unchanged, and report current GitHub Actions — **complete for synchronization**. Content commit `9a118a62657581278d4e21b3b286d880fde4baf0` was pushed and matched origin with clean status. GitHub did not create a check run/status for that commit; prior canonical code checks are recorded in the consolidation report, and paired E2E remained failed on both sides with zero candidate-only failures.
 
 The original CRM checkout’s local changes are not being force-integrated merely to make its worktree clean. Useful selected material is copied to the isolated candidate; unsafe/incomplete or generated data is preserved in the archive or excluded with a recorded reason. The external recovery bundle stays outside Git; its existing verified manifest/checksum remain the GitHub record.
 
