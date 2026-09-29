@@ -1,24 +1,8 @@
 import type { SocialProviderPort, SocialPublishingPort, ProviderHealth } from './ports'
 import type { AccountAnalyticsRequest, AnalyticsSnapshotInput, PostAnalyticsRequest } from '../analytics/types'
 import type { SocialAccount } from '../social/types'
-import { MetaProvider } from '@lumenva/provider-meta'
-import { BrightBeanProvider } from '@lumenva/provider-brightbean'
 
 export type SocialProvider = SocialProviderPort & SocialPublishingPort
-
-export function resolveProvider(providerName: string): SocialProvider {
-  switch (providerName) {
-    case 'meta':
-      return new MetaProvider({ userToken: process.env.META_USER_TOKEN || process.env.META_ACCESS_TOKEN || '' })
-    case 'brightbean':
-      return new BrightBeanProvider({
-        baseUrl: process.env.BRIGHTBEAN_BASE_URL || 'https://api.brightbean.io',
-        apiKey: process.env.BRIGHTBEAN_API_KEY || ''
-      })
-    default:
-      throw new Error(`Unknown social provider: ${providerName}`)
-  }
-}
 
 export class ProviderRouter implements SocialProviderPort {
   readonly provider = 'router'
