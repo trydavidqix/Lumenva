@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { realpath } from "node:fs/promises";
-import { basename, isAbsolute, relative, resolve } from "node:path";
+import { isAbsolute, relative, resolve } from "node:path";
 import type { RuntimeCommand, RuntimeCommandResult } from "./contracts.js";
 import { assertRuntimeCommand } from "./contracts.js";
 
@@ -39,16 +39,27 @@ export class SafeCommandRunner {
   private readonly allowedEnv: Set<string>;
 
   constructor(private readonly policy: CommandRunnerPolicy) {
-    this.allowedExecutables = new Set(policy.allowedExecutables.map((value) => value.toLowerCase()));
+    this.allowedExecutables = new Set(policy.allowedExecutables);
     this.allowedEnv = new Set(policy.allowedEnv ?? []);
   }
 
   async run(command: RuntimeCommand, env: Readonly<Record<string, string | undefined>> = {}): Promise<RuntimeCommandResult> {
     assertRuntimeCommand(command);
-    const executable = basename(command.executable).toLowerCase();
-    if (!this.allowedExecutables.has(executable)) {
-      throw new CommandPolicyError("executable_denied", "runtime_executable_denied");
+    const executableDenied = () => new CommandPolicyError("executable_denied", "runtime_executable_denied");
+    if (!isAbsolute(command.executable)) throw executableDenied();
+
+    let executablePath: string;
+    let allowedExecutablePaths: string[];
+    try {
+      executablePath = await realpath(command.executable);
+      allowedExecutablePaths = await Promise.all([...this.allowedExecutables].map((path) => {
+        if (!isAbsolute(path)) throw executableDenied();
+        return realpath(path);
+      }));
+    } catch {
+      throw executableDenied();
     }
+    if (!allowedExecutablePaths.includes(executablePath)) throw executableDenied();
 
     const cwd = await canonicalExistingPath(command.cwd);
     const roots = await Promise.all(this.policy.workspaceRoots.map(canonicalExistingPath));
@@ -66,7 +77,7 @@ export class SafeCommandRunner {
 
     const started = Date.now();
     return new Promise<RuntimeCommandResult>((resolveResult, reject) => {
-      const child = spawn(command.executable, [...command.args], {
+      const child = spawn(executablePath, [...command.args], {
         cwd,
         env: childEnv,
         shell: false,
