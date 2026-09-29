@@ -35,6 +35,9 @@ export default defineConfig({
       "apps/crm/tests/e2e/**",
       "apps/crm/tests/invariants/**",
       "apps/crm/tests/journeys/**",
+      // Raw recovery snapshots may contain historical test files; they are
+      // evidence only and must never enter the active unit-test suite.
+      "docs/archive/**",
       // Worktrees vivem dentro da própria árvore (.worktrees/, .claude/worktrees/) e cada um
       // é um checkout completo com sua própria tests/e2e/** (Playwright). Sem o prefixo `**/`,
       // os padrões acima só casam a partir da raiz e não alcançam esses checkouts aninhados —
