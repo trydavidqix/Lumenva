@@ -1,8 +1,8 @@
-import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, rmSync } from 'node:fs'
+import { readFileSync, writeFileSync, readdirSync, lstatSync, existsSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 const root=process.cwd(), NODE='24.21.0', PNPM='12.7.0'
 const skip=new Set(['.git','node_modules','.next','dist','build','coverage'])
-function walk(dir='.'){const out=[];for(const name of readdirSync(join(root,dir))){if(skip.has(name))continue;const rel=join(dir,name),abs=join(root,rel),st=statSync(abs);if(st.isDirectory())out.push(...walk(rel));else out.push(rel.replaceAll('\\\\','/'))}return out}
+function walk(dir='.'){const out=[];for(const name of readdirSync(join(root,dir))){if(skip.has(name))continue;const rel=join(dir,name),abs=join(root,rel),st=lstatSync(abs);if(st.isSymbolicLink())continue;if(st.isDirectory())out.push(...walk(rel));else out.push(rel.replaceAll('\\\\','/'))}return out}
 const read=p=>readFileSync(join(root,p),'utf8'), write=(p,s)=>writeFileSync(join(root,p),s)
 const files=walk()
 for(const p of files.filter(p=>p==='package.json'||p.endsWith('/package.json'))){const m=JSON.parse(read(p));if(m.engines?.node)m.engines.node=NODE;if(p==='package.json'){m.engines={...(m.engines||{}),node:NODE,pnpm:PNPM};m.packageManager='pnpm@'+PNPM;m.scripts={...(m.scripts||{}),'check:versions':'syncpack lint','check:monorepo':'sherif','check:dead-code':'knip','check:all':'pnpm check:versions && pnpm check:monorepo && pnpm repo:check && pnpm typecheck && pnpm lint && pnpm test:unit'}}write(p,JSON.stringify(m,null,2)+'\n')}
