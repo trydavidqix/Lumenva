@@ -3,7 +3,7 @@
 ## Branch cleanup closeout — 2026-09-29
 
 **Pipeline:** COMPLETE — frozen branch cleanup authorized and completed.
-**Remote branches:** exactly `main` (`3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`) and `integration/lumenva-complete` (`c17910c63361440da91c2944d8c8ce859ec89d79`). 62/62 source branches were revalidated against the frozen manifest and verified bundle immediately before deletion; 0 SHA mismatches.
+**Remote branches:** at the deletion gate, exactly `main` (`3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`) and `integration/lumenva-complete` (`c17910c63361440da91c2944d8c8ce859ec89d79`) remained. The cleanup receipt was subsequently pushed on integration as `cf8643e6`; main was not changed. 62/62 source branches were revalidated against the frozen manifest and verified bundle immediately before deletion; 0 SHA mismatches.
 **Archive:** `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\lumenva-total-consolidation-final-2026-09-29-c17910c6.bundle`; SHA-256 `A0280C0162E7F5EB1CBC69194B48D4E87E9CA32259E4428D1D09A8B7CF80E481`; `git bundle verify` passed before and after cleanup. Bundle retained.
 **PRs:** #11, #13, #25, #40, #50, #66, #69, #71, #74, #75 closed with references to the canonical integration branch, manifest rows, frozen SHAs, and archive.
 **Integrity:** `git fsck --full --no-reflogs` exited 0; it reports dangling objects from removed refs, preserved by the verified bundle. Main unchanged. Original CRM checkout remains untouched with 27 pre-existing dirty entries. Historical Gitleaks detections remain recorded (12); no history rewrite or cleanup of findings.
