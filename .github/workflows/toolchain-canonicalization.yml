@@ -14,11 +14,11 @@ jobs:
         with:
           ref: chore/lumenva-toolchain-canonicalization
           fetch-depth: 0
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24.21.0
       - name: Apply canonical toolchain
         run: node tooling/scripts/canonicalize-toolchain.mjs
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
       - uses: pnpm/action-setup@v6
       - name: Regenerate lockfile and add audit tools
         run: |
