@@ -6,13 +6,13 @@
 **Branch:** `consolidation/lumenva-main-2026-09-27`  
 **Base:** `main` at `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`  
 **Checkpoint evidence:** PR head `878e3019ef28c0b2eff1cfd42ca45a63869a77b1`; required PR checks passed on this head. `gcp-auth` was skipped by workflow conditions.
-**Updated:** 2026-09-29 04:51 Europe/Lisbon
+**Updated:** 2026-09-29 04:55 Europe/Lisbon
 
 ## Progress
 
-- **Completed:** 6/8 — **75%**
-- **Current:** final archive proof and publish closeout.
-- **Next:** refresh and verify the final Git bundle, update/push closeout docs, and confirm final branch/PR state.
+- **Completed:** 7/8 — **88%**
+- **Current:** publish closeout docs and validate checks on the final PR head.
+- **Next:** push the final documentation checkpoint, wait for its required checks, create the post-commit archive bundle, and restore temporary multi-agent access settings.
 
 ## Checklist
 
@@ -22,7 +22,7 @@
 - [x] Get all required PR checks green on the latest candidate commit; heavy validation runs in GitHub Actions only.
 - [x] Complete current-HEAD main-vs-candidate parity on the pinned toolchain.
 - [x] Complete a comparable main-vs-candidate E2E run and classify shared failures versus regressions.
-- [ ] Refresh the final Git archive/bundle and verify preserved refs against the final candidate.
+- [x] Refresh the Git archive/bundle and verify preserved refs against the candidate checkpoint.
 - [ ] Publish final closeout evidence; leave PR #75 open and unmerged; stop without starting another task.
 
 ## Current state
@@ -36,6 +36,7 @@
 - Updated `BRANCH_CONSOLIDATION_REPORT.md` and `IMPLEMENTATION_PLAN.md` with completed current-head parity, paired E2E comparison, voice audit, archive inventory, and remaining closeout steps. Only final archive proof and publication checks remain.
 - The temporary, narrowly scoped `spawn_agent` hook exception remains active for this PR task and must be restored after final closeout.
 - The previous bundle predates current changes. Preserve old bundles and refs; create a uniquely named final archive only after the report/plan closeout commit, then compare exact ref names and SHAs.
+- Archive bundle for candidate `0c7f51d88e5a7d64501b58b777032f110e263365`: `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\repository-branch-consolidation-final-2026-09-29-0c7f51d8.bundle`; `git bundle verify` passed. All 97 live refs are included; 3 additional advertised entries are `HEAD` and the two preserved stale worktree HEADs. Size `81,260,189` bytes; SHA-256 `FA32087B85C2F222A272555F54CE8A35ACED0B964962BB342D113990305E7232`. Regenerate after the final docs commit.
 - The global `C:\Users\David\.codex\ACTIVE_PIPELINE.md` belongs to Nexus Brain. This project-local file is the source for Lumenva unification status and must not overwrite the global file.
 
 ## Guardrails
