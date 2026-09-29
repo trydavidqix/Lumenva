@@ -369,7 +369,7 @@ export async function createVoiceSipWorker(env = process.env) {
       const fromE164 = typeof body?.from_e164 === "string" ? body.from_e164.trim() : "";
       const toE164 = typeof body?.to_e164 === "string" ? body.to_e164.trim() : "";
       const firstMessage = typeof body?.first_message === "string" ? body.first_message.trim().slice(0, 500) : "";
-      const e164 = /^\\+[1-9]\\d{6,14}$/;
+      const e164 = /^\+[1-9]\d{6,14}$/;
 
       if (provider !== "asterisk") return sendJson(res, 422, { error: "unsupported_provider" });
       if (!voiceCallId || !organizationId || !contactId || !agentId || !goal || !connectionId) {
