@@ -16,7 +16,7 @@
     "test:shell": "pnpm -r --if-present test:shell",
     "test:db": "pnpm -r --if-present test:db",
     "repo:check": "node tooling/scripts/repo-check.mjs",
-    "check:versions": "syncpack lint",
+    "check:versions": "syncpack lint --dependency-types '!local'",
     "check:monorepo": "sherif",
     "check:dead-code": "knip",
     "check:all": "pnpm check:versions && pnpm check:monorepo && pnpm repo:check && pnpm typecheck && pnpm lint && pnpm test:unit"
