@@ -26,7 +26,7 @@ Each branch may contain multiple classes. Record decisions at commit/path or cap
 ## Work sequence
 
 1. **Freeze and archive baseline — COMPLETE:** 63 exact refs/SHAs captured. Verified bundle covers all 63 frozen branch tips (0 missing, 0 mismatched); path/hash are in the manifest.
-2. **Parallel branch audit — IN PROGRESS:** four auditors cover disjoint groups (16, 16, 16, 15); independent archaeology reviews cross-branch feature coverage. All are read-only.
+2. **Parallel branch audit — FIRST PASS COMPLETE:** four auditors returned disjoint reports covering 16, 16, 16, and 15 refs; independent archaeology reviewed cross-branch capability coverage. The consolidated provisional findings are in [BRANCH_AUDIT_SUMMARY.md](BRANCH_AUDIT_SUMMARY.md). Root reconciliation remains in progress; no branch disposition is final until its target evidence is checked.
 3. **Build reconciliation matrix — TODO:** merge audit findings; reconcile overlapping/contradictory claims; every decision cites commit and path/diff evidence.
 4. **Port approved work — TODO:** create isolated worktrees for backend/database/security, frontend/Command Center, and voice/providers/infra. Only Orchestrator integrates approved minimal changes to `integration/lumenva-complete`.
 5. **Wave validation — TODO:** GitHub Actions only for repo:check, lint, typecheck, build, unit/invariants/security and E2E parity. Compare to `main`; distinguish preexisting failures from new regressions.
@@ -50,7 +50,8 @@ No agent may create child agents, delete branches, merge a whole branch blindly,
 - New integration branch was created and pushed at the exact PR #75 head, without changing `main` or merging PR #75.
 - No source branch has been integrated or deleted yet.
 - PR #75 remains open. Its latest checks were green before this task.
-- Temporary spawn permission is task-scoped and will be restored after spawning the assigned auditors.
+- The temporary spawn permission has been restored to the original hook policy; the permit marker is absent and the configured hook hash matches its pre-task backup. `config.toml` was not changed.
+- First-pass findings identify candidate CRM voice/notification, WAHA, runtime, MCG workflow, and governance slices; no code has been ported.
 
 ## Preliminary cross-branch archaeology (not a final disposition)
 

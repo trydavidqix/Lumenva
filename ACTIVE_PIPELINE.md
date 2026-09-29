@@ -1,4 +1,42 @@
-# ACTIVE PIPELINE — Lumenva Unification
+# ACTIVE PIPELINE — Lumenva Total Consolidation
+
+> Esta execução substitui como estado ativo o encerramento histórico do PR #75 registrado abaixo. A seção antiga foi mantida como evidência histórica.
+
+**Pipeline:** IN_PROGRESS
+**Scope:** auditar as 63 refs remotas congeladas; fazer `integration/lumenva-complete` preservar todo trabalho útil; validar/archive; parar antes de apagar branches e pedir autorização do Owner.
+**Project:** `trydavidqix/Lumenva`
+**Branch:** `integration/lumenva-complete`
+**Base:** PR #75/consolidation head `f46cdd4ddd2c4edc6ec57f266e97e8cb9f6a83ac`; `origin/main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99` is an ancestor.
+**Updated:** 2026-09-29 06:47 Europe/Lisbon
+
+## Progress
+
+- **Completed:** 1/8 — **13%** (frozen inventory + verified baseline bundle).
+- **Current:** first-pass reports received for 63/63 refs; root is reconciling branch-level evidence and findings before deciding any ports. Integration branch HEAD: `912aa988`.
+- **Next:** reconcile the 63 reports into evidence-backed destinations; then port only approved unique/useful content.
+- **Preservation:** zero source branches deleted; baseline bundle SHA-256 `866652FD4D6BFDDAEEF6E7E5ADC27F6B96E3F98F75A6A63EDAFCF43BF783B447`.
+
+## Current checklist
+
+- [x] Freeze 63 remote branch names/SHAs and verify the baseline Git bundle.
+- [ ] Reconcile 63 branch reports against exact trees, commits, paths, PRs, and shared ancestry.
+- [ ] Port useful partial/experimental/documentation work into the integration branch by isolated scopes.
+- [ ] Validate waves with GitHub Actions; separate preexisting failures from new regressions.
+- [ ] Independently re-audit all 63 frozen SHAs; prove zero useful work is missing.
+- [ ] Create and verify a final archive bundle plus destination manifest for all frozen refs.
+- [ ] Confirm local/remote integration sync and no source-ref movement/loss.
+- [ ] Deliver final evidence report; stop and request Owner approval before branch cleanup.
+
+## Guardrails for this execution
+
+- Keep `main` unchanged; no blind branch merges, force-pushes, or branch/worktree deletion.
+- Preserve `PRODUCTION_READY`, `EXPERIMENTAL`, `PARTIAL`, `DUPLICATE`, `OBSOLETE`, and `NEXUS_OUT_OF_SCOPE` distinctions. Unresolved evidence stays preserved.
+- The baseline bundle is outside Git because it contains historical repository data; commit its manifest and checksum, not the binary.
+- Multi-agent permission has been restored to the original hook policy after the five authorized audit agents were spawned.
+
+---
+
+## Historical pipeline — PR #75 closeout
 
 **Pipeline:** COMPLETE
 **Scope:** Close out the safe consolidation tracked by PR #75. Do not merge the PR or modify `main`.  
