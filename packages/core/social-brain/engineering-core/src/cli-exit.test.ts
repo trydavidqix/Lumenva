@@ -52,13 +52,13 @@ describe('engineering CLI semantic exit codes', { timeout: 60_000 }, () => {
   })
 
   it('fails preflight when Vercel Node drifts from the repository contract', () => {
-    const result = runCli(['preflight'], { VERCEL_NODE: '24.x' })
+    const result = runCli(['preflight'], { VERCEL_NODE: '22.x' })
     expect(result.status).not.toBe(0)
     expect(result.stdout).toContain('"status": "FAIL"')
   })
 
   it('returns success when the repository and Vercel Node contracts are aligned', () => {
-    const result = runCli(['preflight'], { VERCEL_NODE: '22.x' })
+    const result = runCli(['preflight'], { VERCEL_NODE: '24.x' })
     expect(result.status).toBe(0)
     expect(result.stdout).toContain('"status": "PASS"')
   })
@@ -79,7 +79,7 @@ describe('engineering CLI semantic exit codes', { timeout: 60_000 }, () => {
 
   it('denies the removed security gate without spawning a command', () => {
     const root = createIsolatedRepository()
-    const result = runCli(['gate', 'run', '--name', 'security'], { LUMENVA_ENGINEERING_ROOT: root, VERCEL_NODE: '22.x' })
+    const result = runCli(['gate', 'run', '--name', 'security'], { LUMENVA_ENGINEERING_ROOT: root, VERCEL_NODE: '24.x' })
     expect(result.status).not.toBe(0)
     expect(result.stderr).toContain('gate denied: security is not in the canonical allowlist')
     expect(existsSync(join(root, '.lumenva', 'engineering', 'evidence.jsonl'))).toBe(false)
@@ -87,7 +87,7 @@ describe('engineering CLI semantic exit codes', { timeout: 60_000 }, () => {
 
   it('does not let a task requesting security obtain a false pass', () => {
     const root = createIsolatedRepository()
-    const env = { LUMENVA_ENGINEERING_ROOT: root, VERCEL_NODE: '22.x' }
+    const env = { LUMENVA_ENGINEERING_ROOT: root, VERCEL_NODE: '24.x' }
 
     expect(runCli(['task', 'start', '--id', 'SECURITY-001', '--name', 'Reject false security gate', '--gates', 'security'], env).status).toBe(0)
     const gate = runCli(['gate', 'run', '--name', 'security'], env)
@@ -101,7 +101,7 @@ describe('engineering CLI semantic exit codes', { timeout: 60_000 }, () => {
 
   it('clears current_task_id and records the completed task in memory', () => {
     const root = createIsolatedRepository()
-    const env = { LUMENVA_ENGINEERING_ROOT: root, VERCEL_NODE: '22.x' }
+    const env = { LUMENVA_ENGINEERING_ROOT: root, VERCEL_NODE: '24.x' }
 
     expect(runCli(['task', 'start', '--id', 'MEMORY-001', '--name', 'Complete memory task', '--gates', 'unit'], env).status).toBe(0)
     expect(runCli(['gate', 'run', '--name', 'unit'], env).status).toBe(0)
