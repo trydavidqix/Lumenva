@@ -7,13 +7,13 @@
 **Project:** `trydavidqix/Lumenva`
 **Branch:** `integration/lumenva-complete`
 **Base:** PR #75/consolidation head `f46cdd4ddd2c4edc6ec57f266e97e8cb9f6a83ac`; `origin/main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99` is an ancestor.
-**Updated:** 2026-09-29 10:20 Europe/Lisbon
+**Updated:** 2026-09-29 10:22 Europe/Lisbon
 
 ## Progress
 
 - **Completed:** 8/8 — **100%** of consolidation and preservation gates. The separate branch-cleanup action is not included and has not been authorized.
-- **Final state:** 63/63 frozen refs reconciled; independent audit found 0 useful work missing at tested code SHA `db529704`. Standard CI passed. Parity lint/typecheck/build/toolchain passed; unit comparison had 5 shared failures, 0 candidate-only, 47 resolved, 0 timeouts/worker errors, plus one extra candidate skip. Both E2E runs failed: main `36541111186` had 51 failed IDs, candidate `36541115754` had 43; 8 main-only, 0 candidate-only. E2E is NOT green. Report-only security: Semgrep/OSV passed; Gitleaks found 12 historical detections. No branches deleted; `main` unchanged. Current docs commit is `29f6c28ceba93e3e19b25d4b892903d3302cfa46`.
-- **Archive/sync:** final bundle verification and exact frozen-ref comparison passed for commit `29f6c28c`; 105 refs, 63/63 exact frozen SHAs, 0 missing/mismatch. Local and remote candidate match; working tree clean.
+- **Final state:** 63/63 frozen refs reconciled; independent audit found 0 useful work missing at tested code SHA `db529704`. Standard CI passed. Parity lint/typecheck/build/toolchain passed; unit comparison had 5 shared failures, 0 candidate-only, 47 resolved, 0 timeouts/worker errors, plus one extra candidate skip. Both E2E runs failed: main `36541111186` had 51 failed IDs, candidate `36541115754` had 43; 8 main-only, 0 candidate-only. E2E is NOT green. Report-only security: Semgrep/OSV passed; Gitleaks found 12 historical detections. No branches deleted; `main` unchanged.
+- **Archive/sync:** bundle `lumenva-total-consolidation-final-2026-09-29-96c3320a.bundle` verifies; 105 refs, 63/63 exact frozen SHAs, 0 missing/mismatch. Post-publication sync/ref proof and final bundle checksum are in the handoff below.
 - **Next:** report completion and request Owner authorization before any branch cleanup. No cleanup performed.
 - **Preservation:** zero source branches deleted; baseline bundle SHA-256 `866652FD4D6BFDDAEEF6E7E5ADC27F6B96E3F98F75A6A63EDAFCF43BF783B447`.
 - **Validation:** CI passed; parity found 0 new unit failure IDs. Paired E2E is red on both sides with 0 candidate-only failure IDs; never describe it as green. No heavy tests were run locally.
