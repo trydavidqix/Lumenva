@@ -12,26 +12,29 @@ packages:
 
 catalogMode: manual
 catalog:
+  sherif: 1.13.0
+  syncpack: 15.3.3
+  knip: 6.38.0
   '@phosphor-icons/react': ^2.1.10
-  '@playwright/test': ^1.62.1
+  '@playwright/test': 1.63.0
   '@testing-library/jest-dom': ^7.0.1
   '@testing-library/react': ^16.3.2
   '@testing-library/user-event': ^14.6.3
   '@types/node': ^22.20.4
-  '@types/react': ^19.2.18
-  '@types/react-dom': ^19.2.4
+  '@types/react': 19.3.0
+  '@types/react-dom': 19.3.0
   '@types/ws': ^8.18.1
   '@upstash/redis': ^1.38.2
-  eslint: ^9.12.0
-  eslint-config-next: ^16.3.0
+  eslint: 9.39.5
+  eslint-config-next: 16.3.6
   jsdom: ^30.0.1
-  next: 16.3.2
+  next: 16.3.6
   pg: ^8.23.0
-  react: 19.2.8
-  react-dom: 19.2.8
+  react: 19.3.0
+  react-dom: 19.3.0
   resend: ^6.18.1
-  typescript: 5.9.3
-  vitest: 4.1.11
+  typescript: 6.0.3
+  vitest: 5.0.2
   tsx: ^4.23.12
   ws: ^8.18.0
   zod: ^4.4.3
@@ -39,7 +42,7 @@ catalog:
   '@supabase/ssr': 0.12.4
   '@supabase/supabase-js': 2.112.1
   '@types/pg': ^8.20.4
-  '@vitest/coverage-v8': 4.1.11
+  '@vitest/coverage-v8': 5.0.2
   drizzle-orm: ^0.45.2
 
 overrides:
@@ -49,6 +52,10 @@ overrides:
 sharedWorkspaceLockfile: true
 
 allowBuilds:
+  'sharp': true
+  'onnxruntime-node': true
+  'cloudflared': true
+  '@firebase/util': true
   '@sentry/cli': true
   '@swc/core': true
   cbor-extract: true
@@ -56,3 +63,6 @@ allowBuilds:
   protobufjs: true
   tree-sitter: true
   unrs-resolver: true
+
+saveExact: true
+ignoreWorkspaceCycles: true

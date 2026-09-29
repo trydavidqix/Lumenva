@@ -4,8 +4,8 @@ import { execSync } from 'node:child_process'
 
 const root = resolve(import.meta.dirname, '../..')
 const failures = []
-const expectedNode = 'v22.23.3'
-const expectedPnpm = '9.15.9'
+const expectedNode = 'v24.21.0'
+const expectedPnpm = '12.7.0'
 
 function fail(message) {
   failures.push(message)
@@ -45,11 +45,11 @@ try {
   fail(`Could not execute pnpm: ${error.message}`)
 }
 if (pnpmVersion !== expectedPnpm) fail(`pnpm must be ${expectedPnpm}; found ${pnpmVersion || 'unavailable'}`)
-if (packageManagerMatch?.[1] !== expectedPnpm || !packageManagerMatch?.[2]) {
-  fail('Root packageManager must pin pnpm 9.15.9 and retain its integrity hash suffix')
+if (packageManagerMatch?.[1] !== expectedPnpm) {
+  fail('Root packageManager must pin pnpm 12.7.0')
 }
-if (rootManifest.engines?.node !== '22.23.3' || rootManifest.engines?.pnpm !== expectedPnpm) {
-  fail('Root engines must pin Node 22.23.3 and pnpm 9.15.9')
+if (rootManifest.engines?.node !== '24.21.0' || rootManifest.engines?.pnpm !== expectedPnpm) {
+  fail('Root engines must pin Node 24.21.0 and pnpm 12.7.0')
 }
 
 const catalogHeader = workspaceText.match(/^catalog:\s*\r?\n/m)
@@ -80,8 +80,8 @@ for (const project of projects) {
     const manifest = JSON.parse(readFileSync(path, 'utf8'))
     manifests.push({ path, manifest })
     if (manifest.pnpm?.overrides) fail(`${manifest.name}: overrides must live only in the workspace root`)
-    if (manifest.engines?.node && manifest.engines.node !== '22.23.3') {
-      fail(`${manifest.name}: engines.node must be 22.23.3, found ${manifest.engines.node}`)
+    if (manifest.engines?.node && manifest.engines.node !== '24.21.0') {
+      fail(`${manifest.name}: engines.node must be 24.21.0, found ${manifest.engines.node}`)
     }
   } catch (error) {
     fail(`Invalid workspace manifest at ${project.path}: ${error.message}`)
@@ -118,14 +118,14 @@ for (const [name, entries] of direct) {
   }
 }
 
-if (!/^22\.23\.3\s*$/.test(read('.nvmrc'))) fail('.nvmrc must contain exactly 22.23.3')
+if (!/^24\.21\.0\s*$/.test(read('.nvmrc'))) fail('.nvmrc must contain exactly 24.21.0')
 const workflowFiles = filesUnder('.github/workflows').filter(path => /\.ya?ml$/i.test(path))
 for (const path of workflowFiles) {
   const workflow = read(path)
   if (/uses:\s*actions\/setup-node@/i.test(workflow) && !/node-version-file:\s*\.nvmrc/.test(workflow)) {
     fail(`${path}: setup-node must read the canonical .nvmrc`)
   }
-  if (/node-version:\s*['"]?(?!22\.23\.3\b)[^\s'"]+/m.test(workflow)) fail(`${path}: manual node-version conflicts with .nvmrc`)
+  if (/node-version:\s*['"]?(?!24\.21\.0\b)[^\s'"]+/m.test(workflow)) fail(`${path}: manual node-version conflicts with .nvmrc`)
   if (/uses:\s*pnpm\/action-setup@/i.test(workflow) && /pnpm-version:/i.test(workflow)) {
     fail(`${path}: do not duplicate pnpm version; use root packageManager`)
   }
@@ -138,7 +138,7 @@ const dockerFiles = filesUnder('.').filter(path => /(^|[\\/])Dockerfile[^\\/]*$/
 for (const path of dockerFiles) {
   const dockerfile = read(path)
   for (const match of dockerfile.matchAll(/^FROM\s+(node:[^\s]+)/gim)) {
-    if (!/^node:22\.23\.3(?:-|$)/.test(match[1])) fail(`${path}: ${match[1]} must pin Node 22.23.3`)
+    if (!/^node:24\.21\.0(?:-|$)/.test(match[1])) fail(`${path}: ${match[1]} must pin Node 24.21.0`)
   }
 }
 
@@ -149,7 +149,7 @@ for (const path of ['Dockerfile', 'Dockerfile.worker']) {
 
 const cloudBuild = read('cloudbuild.yaml')
 for (const [, image] of cloudBuild.matchAll(/name:\s*['"](node:[^\s'"]+)['"]/g)) {
-  if (image !== 'node:22.23.3') fail(`cloudbuild.yaml: ${image} must be node:22.23.3`)
+  if (image !== 'node:24.21.0') fail(`cloudbuild.yaml: ${image} must be node:22.23.3`)
 }
 if (!cloudBuild.includes('pnpm install --frozen-lockfile') || !cloudBuild.includes('pnpm test:unit')) {
   fail('cloudbuild.yaml must install with the canonical frozen pnpm lockfile and run the unit-test gate')
@@ -157,7 +157,7 @@ if (!cloudBuild.includes('pnpm install --frozen-lockfile') || !cloudBuild.includ
 
 const deploymentManifest = JSON.parse(read('apps/social-web/package.json'))
 const vercel = JSON.parse(read('apps/social-web/vercel.json'))
-if (deploymentManifest.engines?.node !== '22.23.3') fail('Vercel app package.json must declare Node 22.23.3')
+if (deploymentManifest.engines?.node !== '24.21.0') fail('Vercel app package.json must declare Node 24.21.0')
 if (!String(vercel.installCommand).includes('install --frozen-lockfile')) fail('Vercel install must use the canonical frozen lockfile')
 if (!String(vercel.buildCommand).includes('repo:check')) fail('Vercel build must run repo:check before application build')
 

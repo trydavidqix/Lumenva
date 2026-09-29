@@ -3,7 +3,7 @@
 # Build: docker build --build-arg APP_NAME=website -t lumenva-website .
 
 # ---- deps: instala dependências (layer cacheável) ----
-FROM node:22.23.3-alpine AS deps
+FROM node:24.21.0-alpine AS deps
 WORKDIR /app
 RUN corepack enable
 
@@ -17,7 +17,7 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm repo:check
 
 # ---- build: gera .next/standalone ----
-FROM node:22.23.3-alpine AS build
+FROM node:24.21.0-alpine AS build
 ARG APP_NAME=crm
 WORKDIR /app
 RUN corepack enable
@@ -31,7 +31,7 @@ ENV NODE_ENV=production \
 RUN pnpm --filter ${APP_NAME} build
 
 # ---- runner: imagem slim de produção ----
-FROM node:22.23.3-alpine AS runner
+FROM node:24.21.0-alpine AS runner
 ARG APP_NAME=crm
 WORKDIR /app
 
