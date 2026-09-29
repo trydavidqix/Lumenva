@@ -1,43 +1,56 @@
-name: toolchain-canonicalization
+name: toolchain-validation
 on:
   push:
     branches: [chore/lumenva-toolchain-canonicalization]
 concurrency:
-  group: toolchain-canonicalization
+  group: toolchain-validation
   cancel-in-progress: true
 permissions:
   contents: write
 jobs:
-  migrate:
-    if: ${{ !contains(github.event.head_commit.message, '[canonicalized]') }}
+  validate:
+    if: ${{ !contains(github.event.head_commit.message, '[validated]') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
         with:
           ref: chore/lumenva-toolchain-canonicalization
           fetch-depth: 0
-      - name: Apply canonical toolchain
-        run: node tooling/scripts/canonicalize-toolchain.mjs
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
       - uses: pnpm/action-setup@v6
-      - name: Regenerate lockfile and add audit tools
+      - name: Resolve canonical lockfile
         run: pnpm install --no-frozen-lockfile
-      - name: Validate core gates
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm repo:check
-          pnpm typecheck
-          pnpm lint
-          pnpm test:unit
-      - name: Commit validated wave
+      - name: Validate frozen install
+        run: pnpm install --frozen-lockfile
+      - name: Validate dependency versions
+        run: pnpm check:versions
+      - name: Validate monorepo structure
+        run: pnpm check:monorepo
+      - name: Validate repository invariants
+        run: pnpm repo:check
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Lint
+        run: pnpm lint
+      - name: Unit tests
+        run: pnpm test:unit
+      - name: Dead-code audit
+        run: pnpm check:dead-code
+      - name: Build all buildable workspaces
+        run: pnpm -r --if-present build
+      - name: Persist validated lockfile
         if: success()
         run: |
           git config user.name "lumenva-toolchain-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add -A
+          git add pnpm-lock.yaml
+          if git diff --cached --quiet; then
+            echo "Lockfile already canonical."
+            exit 0
+          fi
           git diff --cached --check
-          git commit -m "chore: modernize canonical toolchain [canonicalized]"
+          git commit -m "chore: refresh canonical lockfile [validated]"
           git push origin HEAD:chore/lumenva-toolchain-canonicalization

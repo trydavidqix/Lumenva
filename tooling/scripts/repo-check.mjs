@@ -63,6 +63,9 @@ for (const line of catalogBlock.split(/\r?\n/)) {
   if (match) catalog.set((match[1] ?? match[2]).trim(), match[3].trim())
 }
 if (!catalog.size) fail('Could not read the default dependency catalog in pnpm-workspace.yaml')
+if (/^ignoreWorkspaceCycles:\s*true\s*$/m.test(workspaceText)) {
+  fail('ignoreWorkspaceCycles must not disable workspace cycle validation')
+}
 if (catalog.get('@vitest/coverage-v8') !== catalog.get('vitest')) {
   fail('@vitest/coverage-v8 must use the same canonical version as vitest')
 }
@@ -149,7 +152,7 @@ for (const path of ['Dockerfile', 'Dockerfile.worker']) {
 
 const cloudBuild = read('cloudbuild.yaml')
 for (const [, image] of cloudBuild.matchAll(/name:\s*['"](node:[^\s'"]+)['"]/g)) {
-  if (image !== 'node:24.21.0') fail(`cloudbuild.yaml: ${image} must be node:22.23.3`)
+  if (image !== 'node:24.21.0') fail(`cloudbuild.yaml: ${image} must be node:24.21.0`)
 }
 if (!cloudBuild.includes('pnpm install --frozen-lockfile') || !cloudBuild.includes('pnpm test:unit')) {
   fail('cloudbuild.yaml must install with the canonical frozen pnpm lockfile and run the unit-test gate')
@@ -161,7 +164,7 @@ if (deploymentManifest.engines?.node !== '24.21.0') fail('Vercel app package.jso
 if (!String(vercel.installCommand).includes('install --frozen-lockfile')) fail('Vercel install must use the canonical frozen lockfile')
 if (!String(vercel.buildCommand).includes('repo:check')) fail('Vercel build must run repo:check before application build')
 
-if (!/^lockfileVersion:\s*'9\.0'/m.test(lockText)) fail('pnpm-lock.yaml must use the expected pnpm 9 lockfile format')
+if (!/^lockfileVersion:\s*'9\.0'/m.test(lockText)) fail('pnpm-lock.yaml must use the canonical lockfileVersion 9.0 format')
 try {
   runPnpm(['install', '--frozen-lockfile', '--ignore-scripts'], { stdio: 'pipe', env: process.env })
 } catch (error) {
