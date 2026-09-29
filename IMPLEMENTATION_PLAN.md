@@ -4,6 +4,8 @@
 
 **Status:** IN_PROGRESS. É preservação/sincronização, sem implementação de produto. `main` fica somente leitura. Ordem: (1) publicar e validar hashes das evidências; (2) reconciliar os 37 itens do CRM e 15 worktrees Recovery sujas sem descartar dados sem snapshot; (3) preservar a ponta atual da branch vps em bundle verificado e remover a branch só depois de publicar o manifesto; (4) rodar GitHub Actions no HEAD final; (5) provar apenas duas branches remotas e worktrees sincronizadas/limpas.
 
+Estado executado no HEAD `0f4e0b644693d851cd8bd1be76451d980439b13a`: evidências publicadas, 37 paths CRM reconciliados, 21/21 Recovery worktrees limpas, 65 arquivos locais movidos para holding recuperável, `vps-17455632840955604138` arquivada e removida do remoto, exatamente duas branches remotas, integration local=remote e main inalterada. A segurança Action passou; CI e E2E ainda estavam em execução quando este relatório foi atualizado. Não marque a task completa até seus resultados terminais serem registrados.
+
 O E2E pareado já falhou no baseline e na candidata, sem IDs exclusivos de falha na candidata no SHA de código testado. Preserve esse resultado; não enfraqueça testes nem chame E2E de verde. Suítes pesadas rodam somente no GitHub Actions.
 
 ## Follow-up: publish useful local work — 2026-09-29

@@ -1,5 +1,16 @@
 # Branch Consolidation Report
 
+## Owner final synchronization — 2026-09-29 (current state)
+
+- Integration commit `0f4e0b644693d851cd8bd1be76451d980439b13a` was pushed; local integration equals `origin/integration/lumenva-complete`. `origin/main` remains unchanged at `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`.
+- The 37 CRM-root status paths were accounted for: 25 raw files hash-match the Git archive; modified `AGENTS.md` was archived by exact SHA then restored; 11 cache files match an external recovery copy. The 25 source files plus verified caches were moved out of the working checkout after preservation; CRM status is clean. CRM repo has zero commits absent from its remotes.
+- Fifteen originally dirty Recovery worktrees were reconciled after storing 11 exact tracked-delta patches, six untracked source snapshots, and external cache copies. The four artifact/cache-only worktrees contained only regenerable `tsconfig.tsbuildinfo`/Supabase CLI marker or copied cache data. All 21 Recovery worktrees now report clean status; their branches and worktree registrations remain intact. The other four active local checkouts (CRM root, Codex baseline, temp-cleanup and unified-sync) also report clean status. Target integration's three detached worktrees are retained. Two old TEMP worktree registrations in the integration clone point to absent gitdirs; no prune was run.
+- The current tip of `vps-17455632840955604138` (`c50375bdb0f633142f0136b3a3fe1aa3f7f74fb0`) was archived in a supplemental verified bundle, recorded in `BRANCH_RECONCILIATION_MANIFEST.md`, classified as Nexus-owned/unsafe stubs for CRM, then removed from origin. GitHub now has exactly two branches: `main` and `integration/lumenva-complete`.
+- Updated evidence: [LOCAL_SYNC_FINALIZATION_2026-09-29.md](LOCAL_SYNC_FINALIZATION_2026-09-29.md); local moved-original holding area is `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\local-cleanup-2026-09-29` (65 files, 16,817,338 bytes), with snapshot hash comparison passed for all 25 CRM files and six Recovery raw files.
+- Final-head GitHub checks were dispatched at `0f4e0b644693d851cd8bd1be76451d980439b13a`: CI `36594231222` (in progress at this report edit), security scan `36594232346` (success), E2E `36594231339` (in progress, with failures already recorded in the AI-screen and first test-group steps). Do not call E2E green. Earlier paired main/candidate comparison remains 0 candidate-only failed IDs.
+
+This section supersedes earlier statements below that the CRM checkout was untouched, the VPS branch remained present, or final-head checks had not yet been dispatched. Those statements are retained as time-stamped audit history.
+
 ## Local-work synchronization audit — 2026-09-29 (complete)
 
 - **Scope:** preserve and publish Lumenva-related useful local work to `integration/lumenva-complete`; do not merge or change `main`.

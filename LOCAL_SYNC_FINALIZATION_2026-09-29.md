@@ -55,8 +55,8 @@ The frozen manifest records the original `vps-17455632840955604138` SHA `b43a5e0
 
 ## Completion gates still required
 
-1. Commit/push this report, manifest addendum, and final evidence patches to integration only.
-2. Verify the CRM snapshots and cache recovery copies, then clear only the exact audited local deltas; preserve all commits, recovery refs, and worktree registrations.
-3. Reverify the supplemental bundle and exact VPS remote SHA, delete that one remote branch, and prove GitHub has exactly two heads.
-4. Run available GitHub Actions on final integration HEAD and record each result; retain E2E as failed if still so.
-5. Prove clean integration checkout, no useful local-only data, clean/reconciled recovery worktrees, integration local=remote, and unchanged main.
+1. **Published:** evidence/report/manifest commit `0f4e0b644693d851cd8bd1be76451d980439b13a` is on `origin/integration/lumenva-complete`.
+2. **Reconciled:** all 25 CRM source files hash-match their Git snapshots; `AGENTS.md` is restored after the full changed file was archived. CRM caches were verified against external copies. All 21 Recovery worktrees now have clean Git status; the untracked originals were moved to `C:\Users\David\Documents\Recovery\Lumenva\pre-unification\local-cleanup-2026-09-29` (65 files, 16,817,338 bytes) and hash-compared with raw snapshots where available. No worktree/commit/ref was deleted.
+3. **Branch cleanup:** the exact c503 VPS tip was reverified against its supplemental bundle and then deleted. `git ls-remote --heads origin` now returns exactly `main` and `integration/lumenva-complete`.
+4. **Actions on this SHA:** CI run `36594231222`, security scan `36594232346`, and E2E run `36594231339` were dispatched on HEAD `0f4e0b644693d851cd8bd1be76451d980439b13a`. Security scan completed successfully. CI and E2E were still running at report update; the E2E run had recorded failures in its AI-screen and first test-group steps. Record their terminal conclusions before marking complete. Prior paired baseline/candidate E2E remains failed on both sides with zero candidate-only failed IDs.
+5. **Final proof pending:** record terminal Action results, then confirm clean integration status, no local-only commits, 21/21 clean recovery worktrees, exactly two remote branches, and unchanged `main`.
