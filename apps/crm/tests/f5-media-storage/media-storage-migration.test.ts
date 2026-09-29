@@ -20,8 +20,10 @@ vi.mock('@/lib/auth/server', () => ({
   resolveActiveOrg: vi.fn().mockResolvedValue({ orgId: 'org-123' })
 }));
 
-const mockGcsPut = vi.fn().mockResolvedValue(undefined);
-const mockGcsCreateReadUrl = vi.fn().mockResolvedValue('https://new-gcs-url/');
+const { mockGcsPut, mockGcsCreateReadUrl } = vi.hoisted(() => ({
+  mockGcsPut: vi.fn().mockResolvedValue(undefined),
+  mockGcsCreateReadUrl: vi.fn().mockResolvedValue('https://new-gcs-url/')
+}));
 
 vi.mock('@lumenva/db/storage/gcs', async () => {
   return {
@@ -73,7 +75,7 @@ vi.mock('@/lib/supabase/admin', () => ({
         builder.update.mockImplementation(() => builder as unknown as typeof builder);
       }
       if (table === 'channel_sessions') {
-        builder.maybeSingle.mockResolvedValue({ data: { waha_session_name: 'test-session', provider: 'brightbean' } });
+        builder.maybeSingle.mockResolvedValue({ data: { waha_session_name: 'test-session', provider: 'waha' } });
       }
       return builder;
     }),
@@ -86,21 +88,24 @@ vi.mock('@/lib/supabase/admin', () => ({
   }))
 }));
 
-vi.mock('@/lib/channels', () => ({
-  DEFAULT_CHANNEL_PROVIDER: 'brightbean',
-  getAdapter: vi.fn(() => ({
-    resolveRecipient: vi.fn().mockReturnValue('+5511999999999'),
-    isConfigured: vi.fn().mockReturnValue(true),
-    codes: {
-      notConfigured: 'brightbean_not_configured',
-      sendFailed: 'brightbean_error',
-      unknownError: 'brightbean_unknown'
-    },
-    send: vi.fn().mockResolvedValue({ externalId: 'external-1' }),
-    echoExternalIds: vi.fn().mockReturnValue(['external-1']),
-    fetchProfilePictureUrl: vi.fn().mockResolvedValue('https://fake.url/pic.jpg')
-  }))
-}));
+vi.mock('@/lib/channels', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/channels')>();
+  return {
+    ...actual,
+    getAdapter: vi.fn(() => ({
+      resolveRecipient: vi.fn().mockReturnValue('+5511999999999'),
+      isConfigured: vi.fn().mockReturnValue(true),
+      codes: {
+        notConfigured: 'waha_not_configured',
+        sendFailed: 'waha_error',
+        unknownError: 'waha_unknown'
+      },
+      send: vi.fn().mockResolvedValue({ externalId: 'external-1' }),
+      echoExternalIds: vi.fn().mockReturnValue(['external-1']),
+      fetchProfilePictureUrl: vi.fn().mockResolvedValue('https://fake.url/pic.jpg')
+    }))
+  };
+});
 
 vi.mock('@/lib/auth/cron-secret', () => ({
   cronSecretMatches: vi.fn().mockReturnValue(true)
@@ -208,7 +213,12 @@ describe('Message Handler TDD', () => {
               is_group: false,
               group_chat_id: null,
               contacts: { phone_number: '+5511999999999' },
-              channel_sessions: { status: 'WORKING', provider: 'brightbean' }
+              channel_sessions: {
+                status: 'WORKING',
+                provider: 'waha',
+                waha_session_name: 'test-session',
+                meta_phone_number_id: null
+              }
             }
           });
         }
