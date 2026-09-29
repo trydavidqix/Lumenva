@@ -99,3 +99,15 @@ No content from these preliminary leads has been ported. Do not use this table a
 - All 63 rows are source refs that existed before creating the integration branch.
 - No source ref has been deleted or rewritten.
 - Final bundle and per-branch preservation proof will be appended after integration and before any cleanup request.
+
+## Wave 1 — selected partial/experimental preservation
+
+**Status:** locally integrated; candidate Actions still required. These are content decisions, not final branch dispositions.
+
+| Frozen source(s) | Selected content in `integration/lumenva-complete` | Evidence | Boundary/status |
+|---|---|---|---|
+| `TOKENS` (`3de66946…`), `lumenva-command-center` (`ec8b4e5e…`), `lumenva-command-center-blueprint-v2` (`eb56dcf0…`), `lumenva-local-runtime` (`339a19b4…`) | Lumenva Core and Local Runtime prototypes, tests, READMEs and Command Center plans | `8a4d039844a02cf3c79c2159fe3203b9f810c831`; executable-path allowlist fix `a1b8360e72ae1f94849e0a262a62babdf922f836`; catalog/lockfile fix `fbcf2c2fd426f4c26064c263c78425982f387154` | `EXPERIMENTAL / PARTIAL`; not wired into apps; not a security boundary; all tests await Actions. MCG/Maestri runtime and Nexus-owned pieces remain excluded. |
+| `jules-f7-waha-adapter-7831325555235237843` (`7dd0a9f8…`), `voz` (`c40cc4ec…`) | Standalone WAHA transport adapter and fake-based tests | `3154e781cae1380955964f1b8d9e4ad75349c754`; redirect denial and response-body redaction `eb532b8f36acfd2fbf3d6af33dd5961fd6fa21cb` | `EXPERIMENTAL / PARTIAL`; deliberately not wired as default and does not enable telephony. Existing voice core was already in the starting tree. Tests await Actions. |
+| `lumenva-command-center` (`ec8b4e5e…`) | Exact frozen plan copy retained at `docs/archive/command-center/LUMENVA_COMMAND_CENTER_PLAN_SOURCE_2026-09-29.md` | Source blob `8df2f44512243a86851707b1f068e3e9d57261fa` equals archived file blob; README link added to the planning archive | Preserves omitted historical milestones; planning only, not an approved build specification. |
+
+Baseline evidence: GitHub Actions run `36529426649` for starting candidate `f75d01210047a84f3da6f562cd9f8b5602dab504` completed with `verify=success` and `invariants=success`. This is not validation of Wave 1. No source refs were moved or deleted.

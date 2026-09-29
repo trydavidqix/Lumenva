@@ -1,6 +1,6 @@
 # EXPERIMENTAL / PARTIAL — Lumenva Core
 
-Preserved from frozen source `ec8b4e5e886c06af9d6fd6fa764e57089ea61963`. This package is archival experimental work: it is not production-ready, is not wired into apps or workspace activation, and requires GitHub Actions validation before any adoption. The PTY runtime accepts executable, arguments, working directory, and environment from its caller; treat it as privileged local code and do not expose it to an untrusted renderer. MCG/Maestri gateway integration is out of scope and excluded.
+Preserved from frozen source `ec8b4e5e886c06af9d6fd6fa764e57089ea61963`. This private package is included by the root `packages/*` pnpm workspace glob so its declared checks can run; no app imports or starts it. It is not production-ready and requires GitHub Actions validation before adoption. The PTY runtime accepts executable, arguments, working directory, and environment from its caller; treat it as privileged local code and do not expose it to an untrusted renderer. MCG/Maestri gateway integration is out of scope and excluded.
 
 Runtime local independente da UI. O Core mantém ciclo de vida próprio, Event Bus tipado e agora também o Terminal Runtime PTY real. Desktop e futuras interfaces controlam o Core por contratos tipados; não possuem o processo nem os PTYs.
 

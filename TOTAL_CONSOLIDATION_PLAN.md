@@ -27,9 +27,9 @@ Each branch may contain multiple classes. Record decisions at commit/path or cap
 
 1. **Freeze and archive baseline — COMPLETE:** 63 exact refs/SHAs captured. Verified bundle covers all 63 frozen branch tips (0 missing, 0 mismatched); path/hash are in the manifest.
 2. **Parallel branch audit — FIRST PASS COMPLETE:** four auditors returned disjoint reports covering 16, 16, 16, and 15 refs; independent archaeology reviewed cross-branch capability coverage. The consolidated provisional findings are in [BRANCH_AUDIT_SUMMARY.md](BRANCH_AUDIT_SUMMARY.md). Root reconciliation remains in progress; no branch disposition is final until its target evidence is checked.
-3. **Build reconciliation matrix — TODO:** merge audit findings; reconcile overlapping/contradictory claims; every decision cites commit and path/diff evidence.
-4. **Port approved work — TODO:** create isolated worktrees for backend/database/security, frontend/Command Center, and voice/providers/infra. Only Orchestrator integrates approved minimal changes to `integration/lumenva-complete`.
-5. **Wave validation — TODO:** GitHub Actions only for repo:check, lint, typecheck, build, unit/invariants/security and E2E parity. Compare to `main`; distinguish preexisting failures from new regressions.
+3. **Build reconciliation matrix — IN PROGRESS:** four branch auditors and code archaeology returned first-pass reports. Root is reconciling overlapping claims, tree moves, PR evidence, and source-only deltas; every final decision must cite commit and path/diff evidence.
+4. **Port approved work — IN PROGRESS:** Agents 6–8 reviewed backend/security, Command Center/runtime, and voice/infra in isolated worktrees. Root integrated only the selected experimental runtime/Command Center files and non-wired WAHA adapter (five commits, current local candidate `eb532b8f`). The backend review found no clearly missing permitted slice. More candidate documentation/config deltas remain under review.
+5. **Wave validation — IN PROGRESS:** baseline run `36529426649` on starting candidate `f75d0121` passed `verify` and `invariants`. This does not validate the newer wave. After pushing the reviewed candidate, run repo:check, lint, typecheck, build, unit/invariants/security and E2E parity through GitHub Actions only; classify preexisting versus candidate-only failures.
 6. **Independent final audit — TODO:** re-check all 63 frozen tips against final integration. Require 63/63 dispositions and zero useful work missing.
 7. **Preservation gate — TODO:** final bundle verified; manifest includes original SHA, class, decision, preserved destination commit/path; integration remote sync verified.
 8. **Owner review — WAITING FOR FINAL REPORT:** present complete report and request explicit authorization before deleting any branch. No branch deletion is authorized before that approval.
@@ -39,9 +39,9 @@ Each branch may contain multiple classes. Record decisions at commit/path or cap
 - **Agent 0 — Orchestrator:** root session; owns inventory, matrix, conflicts, integration branch, validation coordination, final report.
 - **Agents 1–4 — Branch auditors:** disjoint frozen inventory groups, read-only.
 - **Agent 5 — Code archaeology:** cross-branch capability gaps, read-only.
-- **Agents 6–8 — Integrators:** not started; wait for approved audit findings and use isolated worktrees with disjoint scopes.
-- **Agent 9 — Validation:** not started; runs remote Actions after each integration wave.
-- **Agent 10 — Final audit:** not started; independent review after all approved work is ported.
+- **Agents 6–8 — Integrators:** completed the first selected wave in three isolated worktrees; only Root integrated their scoped commits. Backend found no missing slice; Command Center/runtime remains experimental and awaits Actions; WAHA remains experimental, unconfigured and awaits Actions.
+- **Agent 9 — Validation:** pending candidate push; runs remote Actions after integration wave.
+- **Agent 10 — Final audit:** pending after all approved work is ported; independently verifies 63/63 destinations and zero useful work missing.
 
 No agent may create child agents, delete branches, merge a whole branch blindly, or push to `main`. Only the Orchestrator integrates into `integration/lumenva-complete`.
 

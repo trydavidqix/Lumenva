@@ -3,6 +3,8 @@
 
 > **EXPERIMENTAL / PARTIAL — planning archive.** Preserved from frozen source `ec8b4e5e886c06af9d6fd6fa764e57089ea61963` for reference only. This plan is not an approved implementation specification. Runtime integrations, MCG/Maestri gateway work, and workspace activation are outside this preservation scope; do not use this document to wire those paths into production. Validate any future adoption through GitHub Actions.
 
+> Exact frozen source copy: [LUMENVA_COMMAND_CENTER_PLAN_SOURCE_2026-09-29.md](archive/command-center/LUMENVA_COMMAND_CENTER_PLAN_SOURCE_2026-09-29.md). This copy preserves source-only sections that are not all represented in Blueprint V2.
+
 ## Visão
 
 O Lumenva Command Center será o ambiente desktop próprio da Lumenva para operar, observar e coordenar agentes de IA locais e remotos.

@@ -7,14 +7,15 @@
 **Project:** `trydavidqix/Lumenva`
 **Branch:** `integration/lumenva-complete`
 **Base:** PR #75/consolidation head `f46cdd4ddd2c4edc6ec57f266e97e8cb9f6a83ac`; `origin/main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99` is an ancestor.
-**Updated:** 2026-09-29 06:47 Europe/Lisbon
+**Updated:** 2026-09-29 07:31 Europe/Lisbon
 
 ## Progress
 
 - **Completed:** 1/8 — **13%** (frozen inventory + verified baseline bundle).
-- **Current:** first-pass reports received for 63/63 refs; root is reconciling branch-level evidence and findings before deciding any ports. Integration branch HEAD: `912aa988`.
-- **Next:** reconcile the 63 reports into evidence-backed destinations; then port only approved unique/useful content.
+- **Current:** first-pass reports received for 63/63 refs; root reconciliation is in progress. A selected experimental runtime/Command Center slice and standalone WAHA adapter are now locally integrated (5 commits) with explicit non-production boundaries. Integration candidate HEAD: `eb532b8f` plus an uncommitted exact-source documentation archive copy.
+- **Next:** finish branch-by-branch evidence reconciliation, push the reviewed wave/docs, then run candidate validation in GitHub Actions.
 - **Preservation:** zero source branches deleted; baseline bundle SHA-256 `866652FD4D6BFDDAEEF6E7E5ADC27F6B96E3F98F75A6A63EDAFCF43BF783B447`.
+- **Validation:** baseline Actions run `36529426649` at `f75d0121` passed `verify` and `invariants`; it does not validate the newer candidate. No tests were run locally.
 
 ## Current checklist
 
@@ -32,7 +33,8 @@
 - Keep `main` unchanged; no blind branch merges, force-pushes, or branch/worktree deletion.
 - Preserve `PRODUCTION_READY`, `EXPERIMENTAL`, `PARTIAL`, `DUPLICATE`, `OBSOLETE`, and `NEXUS_OUT_OF_SCOPE` distinctions. Unresolved evidence stays preserved.
 - The baseline bundle is outside Git because it contains historical repository data; commit its manifest and checksum, not the binary.
-- Multi-agent permission has been restored to the original hook policy after the five authorized audit agents were spawned.
+- Authorized agents 1–5 completed first-pass audits. Integrators 6–8 completed a selected experimental/WAHA wave; root is reviewing and integrating. Agents 9–10 remain for validation/final independent audit.
+- Temporary multi-agent permission was restored to the original hook policy after delegation; no temporary permit is active.
 
 ---
 
