@@ -1,5 +1,13 @@
 # Frozen branch audit — first-pass reconciliation
 
+## Final audit and validation checkpoint — 2026-09-29
+
+- Independent audit reconciled all 63 frozen refs; no useful work is missing from `integration/lumenva-complete` or its preserved source/archive evidence. Tested code SHA: `db52970416dbc0118c51d8964e6c0ca9a93d8b43`; documentation tip at this checkpoint: `c2023b3bbeaa6ca287ac5581c1c8afd60c1c6730`.
+- Actions standard CI `36541103963` passed. Parity `36541107625`: lint/typecheck/build/toolchain passed. Unit results: main `5,487 passed / 88 failed / 10 skipped`; candidate `5,629 / 7 / 11`; 5 shared failure IDs, 0 candidate-only, 47 resolved, 0 timeouts/worker errors. Candidate has one extra skip.
+- Paired E2E runs [main `36541111186`](https://github.com/trydavidqix/Lumenva/actions/runs/36541111186) and [candidate `36541115754`](https://github.com/trydavidqix/Lumenva/actions/runs/36541115754) both failed. Normalized IDs: main 51, candidate 43, 8 main-only, 0 candidate-only. E2E is not green; comparison found no candidate-only failed ID.
+- Report-only security run `36541133755`: Semgrep/OSV passed; Gitleaks reported 12 historical detections, none introduced by tested code SHA. No heavy tests ran locally.
+- Original CRM checkout was only inspected read-only. It remains untouched; last observed branch `chore/orchestration-gate`, HEAD `cec5d7656fd341d29dfdf9de911cd2bb5564c6fd`, 27 pre-existing dirty entries.
+
 Captured 2026-09-29. Every branch name and frozen SHA is in `BRANCH_RECONCILIATION_MANIFEST.md`. Findings below combine first-pass read-only audits and current root verification. A `PRESERVE/UNRESOLVED` decision is not permission to discard. Current integration HEAD: `db52970416dbc0118c51d8964e6c0ca9a93d8b43`; the CRM-owned WAHA adapter was selectively ported (`3154e781`, `eb532b8f`), and selected experimental Twilio outbound examples/voice docs are preserved. An earlier Nexus-owned Command Center/Local Runtime port was reversed in `675a2a00`. No whole source branch was merged. Independent final audit confirmed 63/63 refs reconciled and 0 unique useful work missing.
 
 ## Root verification checkpoint — current candidate `db529704`
@@ -34,6 +42,8 @@ Frozen source SHA `d6f36b074b94d10238d106ed26591b54212178b3` was compared with c
 This is a static Git comparison; no tests were run. Source SHA remains preserved in the frozen refs and archive.
 
 ## Corrected-head CI status — candidate `db529704`
+
+> Historical detail below is superseded for E2E completion by “Final audit and validation checkpoint” above.
 
 GitHub Actions CI run `36538511186` on the previous candidate `c1f9c2d` failed six WAHA adapter unit cases. The shared cause was test setup attempting `Object.assign` to read-only `baseUrl` and `apiKey` getters; adapter behavior was not exercised. A test-only fixture fix now mocks `@/lib/env` without changing production code/assertions. Corrected-head CI `36541103963` passed, including unit tests and invariants. Branch parity `36541107625` passed lint, typecheck, build, toolchain, and its unit comparison: main `5,487/88/10` versus candidate `5,629/7/11` (passed/failed/skipped), 5 shared failed IDs, 0 candidate-only, 47 resolved, 0 timeouts/worker errors; candidate has one additional skipped test. Candidate E2E `36541115754` completed with 42 failures/8 passes in part 2; main E2E `36541111186` is still running part 2. Both sides failed the same two initial stages, but final E2E classification awaits main completion and artifact comparison. Report-only security run `36541133755` completed: Semgrep and OSV passed; Gitleaks reported 12 detections in older commits/test fixtures, none introduced by `db529704`; no secret values are reproduced here. WAHA remains experimental until parity evidence is complete.
 

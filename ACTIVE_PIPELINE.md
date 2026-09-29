@@ -2,27 +2,27 @@
 
 > Esta execução substitui como estado ativo o encerramento histórico do PR #75 registrado abaixo. A seção antiga foi mantida como evidência histórica.
 
-**Pipeline:** IN_PROGRESS
+**Pipeline:** IN_PROGRESS — preservation gates complete; owner cleanup authorization pending
 **Scope:** auditar as 63 refs remotas congeladas; fazer `integration/lumenva-complete` preservar todo trabalho útil; validar/archive; parar antes de apagar branches e pedir autorização do Owner.
 **Project:** `trydavidqix/Lumenva`
 **Branch:** `integration/lumenva-complete`
 **Base:** PR #75/consolidation head `f46cdd4ddd2c4edc6ec57f266e97e8cb9f6a83ac`; `origin/main` `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99` is an ancestor.
-**Updated:** 2026-09-29 09:46 Europe/Lisbon
+**Updated:** 2026-09-29 10:16 Europe/Lisbon
 
 ## Progress
 
-- **Completed:** 4/8 — **50%** (frozen inventory/archive; 63-ref evidence matrix; selected useful partial/experimental content preserved; independent zero-missing-work audit).
-- **Current:** final auditor confirmed 63/63 refs reconciled and no useful work missing at code SHA `db529704`; current branch HEAD is `506e290a` after documentation-only commits. Two disabled outbound Twilio templates and the historical plan/runbook are preserved as experimental/archive content. Corrected-head CI `36541103963` passed, including unit tests and invariants. Parity `36541107625` passed: lint/typecheck/build/toolchain passed; unit comparison found 5 shared failures, 0 candidate-only failures, 47 resolved IDs, 0 timeouts/worker errors, and one additional skipped test on the candidate. Candidate E2E `36541115754` ended failed (42 failed/8 passed in part 2); main E2E `36541111186` still runs part 2. Both sides failed the same two initial stages; final E2E classification awaits main completion and artifact comparison. Security report-only `36541133755` completed: Semgrep/OSV passed; Gitleaks reported 12 detections in older history/test fixtures, none from `db529704`; workflow is report-only. Local and remote integration point to `506e290a`; no branches deleted.
-- **Next:** finish main E2E and compare artifacts, then create/verify the final bundle for the resulting documentation HEAD. Checkpoint bundle for `6633bb47` is already verified and preserved.
+- **Completed:** 5/8 — **63%** (frozen inventory/archive; 63-ref evidence matrix; selected useful partial/experimental content preserved; independent zero-missing-work audit; current Actions comparison and failure classification).
+- **Current:** 63/63 refs reconciled and independent audit found no useful work missing at code SHA `db529704`. Current documentation HEAD is `c2023b3bbeaa6ca287ac5581c1c8afd60c1c6730`. Corrected-head CI `36541103963` passed. Parity `36541107625`: lint/typecheck/build/toolchain passed; unit failures: 5 shared, 0 candidate-only, 47 resolved; 0 timeouts/worker errors; candidate has one extra skip. E2E runs both ended failed: main `36541111186` had 51 failed IDs, candidate `36541115754` had 43; 8 main-only, 0 candidate-only. E2E is NOT green. Security report-only `36541133755`: Semgrep/OSV passed; Gitleaks found 12 historical detections, none introduced by `db529704`. No branches deleted; `main` unchanged.
+- **Next:** publish corrected status docs, create/verify final bundle for resulting HEAD, then prove exact ref preservation and stop for Owner cleanup authorization.
 - **Preservation:** zero source branches deleted; baseline bundle SHA-256 `866652FD4D6BFDDAEEF6E7E5ADC27F6B96E3F98F75A6A63EDAFCF43BF783B447`.
-- **Validation:** CI `36541103963` passed. Parity `36541107625` passed; it found 0 candidate-only unit failure IDs (5 shared, 47 resolved), 0 timeouts/worker errors, and one extra skipped test on candidate. Candidate E2E `36541115754` failed with 42 failures/8 passes in part 2; main E2E `36541111186` remains active on part 2. Report-only security `36541133755` completed with Semgrep/OSV passed and historical Gitleaks findings. No heavy tests were run locally.
+- **Validation:** CI passed; parity found 0 new unit failure IDs. Paired E2E is red on both sides with 0 candidate-only failure IDs; never describe it as green. No heavy tests were run locally.
 
 ## Current checklist
 
 - [x] Freeze 63 remote branch names/SHAs and verify the baseline Git bundle.
 - [x] Complete independent second-pass audit of all 63 dispositions and close the Asterisk operations question.
 - [x] Port useful partial/experimental/documentation work into the integration branch by isolated scopes; preserve unsafe or non-production pieces without activating them.
-- [ ] Validate waves with GitHub Actions; separate preexisting failures from new regressions.
+- [x] Validate waves with GitHub Actions; separate preexisting failures from new regressions (E2E remains failing on both sides, with 0 candidate-only failure IDs).
 - [x] Independently re-audit all 63 frozen SHAs; prove zero useful work is missing.
 - [ ] Create and verify a final archive bundle plus destination manifest for all frozen refs.
 - [ ] Confirm local/remote integration sync and no source-ref movement/loss.
