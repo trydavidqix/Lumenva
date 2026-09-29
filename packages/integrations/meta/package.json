@@ -6,7 +6,6 @@
   "scripts": {
     "test:unit": "vitest run"
   },
-  "dependencies": {},
   "devDependencies": {
     "typescript": "catalog:"
   }
