@@ -64,6 +64,9 @@ function makePoolStub(options: {
     if (sql.includes("from cron_jobs")) {
       return { rows: options.existingJob ? [options.existingJob] : [] };
     }
+    if (sql.trim().startsWith("update notification_delivery_attempts")) {
+      return { rows: [] };
+    }
     if (sql.trim().startsWith("insert into voice_call_events")) {
       return { rows: [] };
     }
