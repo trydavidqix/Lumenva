@@ -1,6 +1,7 @@
 $ knip
-Unlisted binaries (1)
-playwright  .github/workflows/e2e.yml
+Unlisted binaries (2)
+tsx         .github/workflows/isolated-authenticated-crm-e2e.yml
+playwright  .github/workflows/isolated-authenticated-crm-e2e.yml
 Unused exports (425)
 OnboardingError                                                   apps/crm/app/actions/onboarding/skipWhatsapp.ts:63:10 
 AuditTrailSkeleton                                      function  …rm/app/app/privacy/requests/[id]/AuditTrail.tsx:47:17
