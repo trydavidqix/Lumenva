@@ -8,6 +8,7 @@ on:
     paths:
       - 'apps/crm/**'
       - 'tooling/scripts/package-native-crm.sh'
+      - 'tooling/scripts/native-release.mjs'
       - '.github/workflows/publish-image.yml'
       - 'pnpm-lock.yaml'
   workflow_dispatch:
@@ -39,6 +40,19 @@ jobs:
           NEXT_PUBLIC_SITE_URL: https://lumenva-ci.invalid
           SENTRY_DSN: 'off'
         run: bash tooling/scripts/package-native-crm.sh
+      - name: Native release activation, server smoke and rollback
+        env:
+          NATIVE_RELEASE_ROOT: ${{ runner.temp }}/lumenva-release-simulation
+        run: |
+          NATIVE_RELEASE_VERSION=baseline node tooling/scripts/native-release.mjs stage "$NATIVE_RELEASE_ROOT" "${RUNNER_TEMP}/lumenva-native-crm.tar.gz"
+          node tooling/scripts/native-release.mjs activate "$NATIVE_RELEASE_ROOT" baseline
+          node tooling/scripts/native-release.mjs smoke "$NATIVE_RELEASE_ROOT"
+          NATIVE_RELEASE_VERSION=candidate node tooling/scripts/native-release.mjs stage "$NATIVE_RELEASE_ROOT" "${RUNNER_TEMP}/lumenva-native-crm.tar.gz"
+          node tooling/scripts/native-release.mjs activate "$NATIVE_RELEASE_ROOT" candidate
+          node tooling/scripts/native-release.mjs smoke "$NATIVE_RELEASE_ROOT"
+          node tooling/scripts/native-release.mjs rollback "$NATIVE_RELEASE_ROOT"
+          node tooling/scripts/native-release.mjs smoke "$NATIVE_RELEASE_ROOT"
+          test "$(node tooling/scripts/native-release.mjs status "$NATIVE_RELEASE_ROOT")" = '{"active":"baseline","previous":"candidate"}'
       - name: Upload test artifact (not a production deployment)
         uses: actions/upload-artifact@v4
         with:
