@@ -55,7 +55,7 @@ jobs:
       - name: Unit tests
         run: pnpm test:unit
       - name: Build all buildable workspaces
-        run: pnpm -r --if-present build
+        run: pnpm -r --if-present run build
       - name: Persist validated lockfile
         if: success()
         run: |
