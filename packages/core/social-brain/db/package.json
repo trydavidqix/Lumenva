@@ -43,11 +43,11 @@
     "@supabase/supabase-js": "catalog:"
   },
   "devDependencies": {
-    "@google-cloud/storage": "^8.2.0",
+    "@google-cloud/storage": "8.2.0",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
     "drizzle-orm": "catalog:",
-    "firebase-admin": "^14.4.0",
+    "firebase-admin": "14.4.0",
     "pg": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

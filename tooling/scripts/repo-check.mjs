@@ -63,6 +63,26 @@ for (const line of catalogBlock.split(/\r?\n/)) {
   if (match) catalog.set((match[1] ?? match[2]).trim(), match[3].trim())
 }
 if (!catalog.size) fail('Could not read the default dependency catalog in pnpm-workspace.yaml')
+const exactSemver = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/
+for (const [name, specifier] of catalog) {
+  if (!exactSemver.test(specifier)) fail(`${name}: catalog version must be exact, found ${specifier}`)
+}
+const overridesHeader = workspaceText.match(/^overrides:\s*\r?\n/m)
+if (overridesHeader) {
+  const offset = overridesHeader.index + overridesHeader[0].length
+  const tail = workspaceText.slice(offset)
+  const nextRoot = /^\S[^\r\n]*:/m.exec(tail)
+  const block = nextRoot ? tail.slice(0, nextRoot.index) : tail
+  for (const line of block.split(/\r?\n/)) {
+    const match = /^  (?:'([^']+)'|([^:#]+)):\s*(\S.*?)\s*$/.exec(line)
+    if (match) {
+      const name = (match[1] ?? match[2]).trim()
+      const specifier = match[3].trim()
+      if (!exactSemver.test(specifier)) fail(`${name}: override version must be exact, found ${specifier}`)
+    }
+  }
+}
+if (!/^saveExact:\s*true\s*$/m.test(workspaceText)) fail('pnpm-workspace.yaml must keep saveExact: true')
 if (/^ignoreWorkspaceCycles:\s*true\s*$/m.test(workspaceText)) {
   fail('ignoreWorkspaceCycles must not disable workspace cycle validation')
 }
@@ -95,6 +115,13 @@ const direct = new Map()
 for (const { manifest, path } of manifests) {
   for (const section of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies']) {
     for (const [name, specifier] of Object.entries(manifest[section] ?? {})) {
+      if (section !== 'peerDependencies' &&
+          !specifier.startsWith('catalog:') &&
+          !specifier.startsWith('workspace:') &&
+          !/^(?:file:|link:|git\+|github:|https?:|npm:)/.test(specifier) &&
+          !exactSemver.test(specifier)) {
+        fail(`${manifest.name ?? path}: ${section}.${name} must use an exact version, found ${specifier}`)
+      }
       if (specifier.startsWith('catalog:')) {
         const catalogName = specifier === 'catalog:' ? name : specifier.slice('catalog:'.length)
         if (!catalog.has(catalogName)) fail(`${manifest.name}: ${name} refers to missing catalog entry ${catalogName}`)

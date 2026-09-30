@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "cross-env": "^10.1.0",
+    "cross-env": "10.1.0",
     "js-yaml": "catalog:",
     "knip": "catalog:",
     "prettier-plugin-tailwindcss": "catalog:",
