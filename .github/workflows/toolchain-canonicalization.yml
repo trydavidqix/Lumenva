@@ -53,7 +53,9 @@ jobs:
       - name: Lint
         run: pnpm lint
       - name: Build all buildable workspaces
-        run: pnpm -r --if-present run build
+        env:
+          NEXT_PUBLIC_SITE_URL: https://lumenva-ci.invalid
+        run: pnpm -r --workspace-concurrency=1 --if-present run build
       - name: Unit tests
         run: pnpm test:unit
       - name: Persist validated lockfile
