@@ -59,9 +59,9 @@ jobs:
       - name: Build browser and server against preview
         run: pnpm --dir apps/crm run e2e:build
       - name: Seed preview identity, org and real TOTP
-        run: pnpm --dir apps/crm exec tsx scripts/seed-e2e-credentials.ts
+        run: pnpm --dir apps/crm run test:e2e:seed
       - name: Real login, RBAC, MFA and viewer authorization E2E
-        run: pnpm --dir apps/crm exec playwright test auth.spec.ts rbac-roles.spec.ts --workers=1
+        run: pnpm --dir apps/crm run test:e2e:authenticated
       - name: Upload browser failure traces without fixture credentials
         if: failure()
         uses: actions/upload-artifact@v4

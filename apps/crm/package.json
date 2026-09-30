@@ -49,7 +49,9 @@
     "test:waha-contract": "cd ../.. && node apps/crm/node_modules/vitest/vitest.mjs run --config apps/crm/vitest.config.ts apps/crm/lib/waha/retry.test.ts apps/crm/lib/waha/webhook-auth.test.ts",
     "release:migrations:dry-run": "node scripts/migrate-dry-run.mjs",
     "cli:lumenva": "node --experimental-default-type=module --import tsx/esm scripts/lumenva.ts",
-    "test:e2e:install": "playwright install --with-deps chromium"
+    "test:e2e:install": "playwright install --with-deps chromium",
+    "test:e2e:seed": "tsx scripts/seed-e2e-credentials.ts",
+    "test:e2e:authenticated": "playwright test auth.spec.ts rbac-roles.spec.ts --workers=1"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.49",
