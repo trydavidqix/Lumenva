@@ -40,7 +40,7 @@ jobs:
       - name: Canonical repository gate
         run: pnpm repo:check
       - name: Install Playwright Chromium directly on runner
-        run: pnpm --dir apps/website exec playwright install --with-deps chromium
+        run: pnpm --dir apps/website run test:e2e:install
       - name: Run public website browser E2E
         run: pnpm --dir apps/website run test:e2e
       - name: Attach browser traces on failure

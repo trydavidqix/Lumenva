@@ -15,7 +15,8 @@
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "analyze": "ANALYZE=true next build",
-    "knip": "knip"
+    "knip": "knip",
+    "test:e2e:install": "playwright install --with-deps chromium"
   },
   "dependencies": {
     "@phosphor-icons/react": "catalog:",

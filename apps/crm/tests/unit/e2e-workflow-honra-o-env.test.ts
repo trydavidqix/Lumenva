@@ -17,7 +17,8 @@ const websitePkg = JSON.parse(fs.readFileSync(path.join(root, "apps/website/pack
 
 describe("native E2E boundary", () => {
   it("executes actual public browser specs, not a green placeholder", () => {
-    expect(workflow).toMatch(/playwright install --with-deps chromium/);
+    expect(workflow).toMatch(/pnpm --dir apps\/website run test:e2e:install/);
+    expect(websitePkg.scripts["test:e2e:install"]).toMatch(/playwright install --with-deps chromium/);
     expect(workflow).toMatch(/pnpm --dir apps\/website run test:e2e/);
     expect(websitePkg.scripts["test:e2e"]).toMatch(/playwright test/);
     expect(workflow).toMatch(/pnpm install --frozen-lockfile/);
