@@ -31,7 +31,10 @@
         "workers/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
         "proxy.ts",
         "instrumentation.ts"
-      ]
+      ],
+      "playwright": {
+        "config": []
+      }
     }
   }
 }
