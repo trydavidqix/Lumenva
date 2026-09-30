@@ -28,7 +28,8 @@
         "tests/{capture-*,prova-*,ataque-*}.ts",
         "tests/{sonda-*,vigia-*,compose-*}.ts",
         "tests/journeys/auth.setup.ts",
-        "workers/**/*.smoke.mjs"
+        "workers/**/*.smoke.mjs",
+        "lib/agent-engine/product-agents/index.ts"
       ],
       "project": [
         "app/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
