@@ -1,0 +1,37 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": [
+        "tests/**/*.{test,spec}.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
+        "tooling/scripts/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}"
+      ],
+      "project": [
+        "tests/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
+        "tooling/scripts/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}"
+      ]
+    },
+    "apps/crm": {
+      "entry": [
+        "app/**/{page,layout,route,loading,error,not-found,template,default,global-error}.{ts,tsx}",
+        "proxy.ts",
+        "instrumentation.ts",
+        "scripts/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
+        "workers/**/main.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
+        "tests/**/*.{test,spec}.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
+        "tests/{capture-*,prova-*,ataque-*}.ts"
+      ],
+      "project": [
+        "app/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
+        "components/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
+        "hooks/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
+        "lib/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
+        "scripts/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
+        "tests/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
+        "workers/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
+        "proxy.ts",
+        "instrumentation.ts"
+      ]
+    }
+  }
+}
