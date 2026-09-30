@@ -38,7 +38,12 @@ describe("native E2E boundary", () => {
     expect(workflow).not.toMatch(/pnpm --dir apps\/crm run test:e2e/);
     expect(crmConfig).toMatch(/\.env\.e2e/);
     expect(crmConfig).toMatch(/throw new Error/);
-    expect(crmConfig).toMatch(/http:\/\/127\.0\.0\.1/);
+    expect(crmConfig).toContain("127\\.0\\.0\\.1|localhost");
+    expect(crmConfig).toContain('E2E_TARGET_KIND !== "isolated-preview"');
+    expect(crmConfig).toContain('E2E_TARGET_ACK !== "isolated-empty-preview-only"');
+    expect(crmConfig).toContain("E2E_PRODUCTION_REF");
+    expect(crmConfig).toContain("ref === production");
+    expect(crmConfig).toContain("url !== `https://${ref}.supabase.co`");
     expect(crmEnvGenerator).toMatch(/RECUSADO: o stack local respondeu com uma URL que não é local/);
   });
 });

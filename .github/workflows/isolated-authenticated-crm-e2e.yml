@@ -11,6 +11,7 @@ on:
       - 'apps/crm/scripts/verify-isolated-preview-e2e.mjs'
       - 'apps/crm/scripts/start-firebase-e2e.sh'
       - 'apps/crm/playwright.config.ts'
+      - 'apps/crm/tests/unit/e2e-workflow-honra-o-env.test.ts'
       - 'apps/crm/tests/e2e/auth.spec.ts'
       - 'apps/crm/tests/e2e/rbac-roles.spec.ts'
       - 'apps/crm/scripts/seed-e2e-credentials.ts'

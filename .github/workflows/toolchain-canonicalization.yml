@@ -9,13 +9,12 @@ permissions:
   contents: write
 jobs:
   validate:
-    if: ${{ !contains(github.event.head_commit.message, '[validated]') && !contains(github.event.head_commit.message, '[knip-report]') }}
+    if: ${{ !contains(github.event.head_commit.message, '[knip-report]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: chore/lumenva-toolchain-canonicalization
           fetch-depth: 0
       - name: Diagnose CRM workspace link at checkout
         run: |
@@ -81,7 +80,7 @@ jobs:
         run: |
           git config user.name "lumenva-toolchain-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add pnpm-lock.yaml
+          git add -A pnpm-lock.yaml .knip-report.txt
           if git diff --cached --quiet; then
             echo "Lockfile already canonical."
             exit 0

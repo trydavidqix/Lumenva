@@ -86,3 +86,41 @@ para acompanhar o aviso emitido no build. Nenhum teste isolado gera eventos
 na organização real. O arquivo histórico de documentação Cloud Run foi
 substituído por instruções explícitas para pacote nativo e pré-requisitos de
 produção ainda não homologados.
+
+
+## Auditoria de legado — 2026-09-30
+
+A inspeção do HEAD da canonicalização confirma que os workflows ativos de
+validação/release não executam Docker, Compose, `services:` nem
+`supabase start`; `repo:check` aplica essa proibição como contrato.
+
+Artefatos ainda presentes foram classificados e **não devem ser apagados sem
+paridade operacional comprovada**:
+
+- `Dockerfile`, `Dockerfile.worker`, `docker-compose*.yml` e os espelhos
+  `apps/crm/docker-compose*.yml`: legado do runtime CRM + WAHA/Redis/SRH/
+  Mem0/Postgres/Neo4j/Graphiti/Caddy. O pacote nativo já cobre o CRM
+  `.next/standalone`, mas não substitui ainda todos esses consumidores.
+- `apps/voice-worker/Dockerfile`: testes nativos existem, porém supervisão,
+  healthcheck e instalação nativa de produção ainda não têm prova equivalente.
+- `infra/deployment/n8n/docker-compose.yml`: stack opcional e separada; não
+  pertence ao runtime crítico do CRM, mas ainda não tem substituto nativo
+  homologado.
+- `infra/docker/**`: auxiliares Mem0/Graphiti preservados até existir
+  substituição/consumer audit equivalente.
+
+Portanto, a limpeza segura está concluída **como auditoria**, não como remoção:
+`cloudbuild.yaml` e pipelines ativos baseados em imagem já foram retirados;
+os artefatos restantes ficam preservados por ausência de paridade, conforme
+PRESERVE FIRST → PROVE SECOND → CHANGE LAST.
+
+### Knip e Sentry
+
+Knip mantém `exports`/`types` como avisos deliberados; no gate atual não há
+arquivos/dependências não usados bloqueantes. O relatório versionado de falha é
+evidência transitória e deve ser removido automaticamente após validação verde.
+
+O dry-run nativo compila com Sentry sem `authToken`; isso apenas impede upload
+de source maps no ambiente isolado e não invalida o smoke. Produção continua
+dependente de configuração real de observabilidade/secrets e não é autorizada
+por este plano.
