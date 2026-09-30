@@ -9,7 +9,7 @@ permissions:
   contents: write
 jobs:
   validate:
-    if: ${{ !contains(github.event.head_commit.message, '[validated]') }}
+    if: ${{ !contains(github.event.head_commit.message, '[validated]') && !contains(github.event.head_commit.message, '[knip-report]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -38,7 +38,22 @@ jobs:
       - name: Unit tests
         run: pnpm test:unit
       - name: Dead-code audit
-        run: pnpm check:dead-code
+        run: |
+          set +e
+          pnpm check:dead-code 2>&1 | tee .knip-report.txt
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            git config user.name "lumenva-toolchain-bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add .knip-report.txt
+            if ! git diff --cached --quiet; then
+              git commit -m "chore: capture Knip report [knip-report]"
+              git push origin HEAD:chore/lumenva-toolchain-canonicalization
+            fi
+            exit "$status"
+          fi
+          rm -f .knip-report.txt
       - name: Build all buildable workspaces
         run: pnpm -r --if-present build
       - name: Persist validated lockfile
