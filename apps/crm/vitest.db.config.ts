@@ -3,16 +3,16 @@ import path from "node:path";
 
 // Config dedicada da suíte de invariantes de banco (tests/invariants/**).
 // Roda SÓ via `pnpm test:db` (scripts/test-db.sh), que sobe o Postgres efêmero
-// e exporta TEST_DB_CONTAINER. Não faz parte do `pnpm test:unit`.
+// e exporta TEST_DB_CONTAINER=native:<porta> por compatibilidade. Não faz parte do `pnpm test:unit`.
 export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/invariants/**/*.test.ts"],
     globals: false,
-    // Seed + queries via docker exec são lentos o suficiente pro default de 5s.
+    // Seed + queries no PostgreSQL nativo são mais lentos que o default de 5s.
     testTimeout: 30_000,
     hookTimeout: 60_000,
-    // Todos os arquivos batem no MESMO container Postgres efêmero, com estado
+    // Todos os arquivos batem no MESMO PostgreSQL nativo efêmero, com estado
     // GLOBAL compartilhado entre arquivos: helpers de contagem não-escopada
     // (ex.: automation-engine.test.ts's runsCount() sobre automation_rule_runs)
     // E o ponteiro platform do playbook (playbook-seed deleta/recria;

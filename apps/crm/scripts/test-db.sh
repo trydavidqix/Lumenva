@@ -1,20 +1,13 @@
 #!/usr/bin/env bash
 # gov-loop G1-02 — baseline install+update gate + RLS isolation invariants.
-#
-# Sobe um Postgres 17 efêmero (Docker quando disponível, nativo via
-# initdb/pg_ctl caso contrário — ver detecção de ENGINE abaixo), aplica
-# infra/supabase/baseline.sql em modo install (ON_ERROR_STOP=1 — qualquer statement
-# falhando derruba o run), re-aplica em modo update (sem a flag — idempotência)
-# e roda a suíte vitest de invariantes (tests/invariants/**). O Postgres é
-# SEMPRE derrubado no EXIT (sucesso ou falha), nos dois engines.
+# PostgreSQL 17 + pgvector run as an ephemeral NATIVE process. No container daemon.
+# Applies infra/supabase/baseline.sql in strict install mode and the documented
+# tolerant update mode; always stops and removes the test cluster on EXIT.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 BASELINE="$ROOT/infra/supabase/baseline.sql"
 
-# Direct invocation must fail before starting Postgres when the test runner is
-# unavailable. Otherwise a shell-level `vitest: command not found` can get
-# buried after a successful baseline setup and look like a green DB run.
 if ! command -v vitest >/dev/null 2>&1; then
   echo "ERRO: vitest não está no PATH — a suíte de invariantes não rodaria." >&2
   echo "      Use pnpm test:db para incluir node_modules/.bin no PATH." >&2
@@ -22,92 +15,64 @@ if ! command -v vitest >/dev/null 2>&1; then
 fi
 
 PORT="${TEST_DB_PORT:-54329}"
-CONTAINER="deskcomm-test-db-$$"
-IMAGE="pgvector/pgvector:pg17"
-
+ENGINE="${TEST_DB_ENGINE:-native}"
+[ "$ENGINE" = native ] || {
+  echo "FATAL: somente TEST_DB_ENGINE=native é suportado (recebido: $ENGINE)." >&2
+  exit 1
+}
 [ -f "$BASELINE" ] || { echo "FATAL: $BASELINE não encontrado" >&2; exit 1; }
 
-# ---------------------------------------------------------------------------
-# Engine: docker (padrão quando o daemon responde) ou native (Postgres local
-# via Homebrew, sem depender do Docker CLI). Force com TEST_DB_ENGINE=docker|native.
-# ---------------------------------------------------------------------------
-ENGINE="${TEST_DB_ENGINE:-auto}"
-if [ "$ENGINE" = auto ]; then
-  if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-    ENGINE=docker
-  else
-    ENGINE=native
-  fi
-fi
-echo "==> engine: $ENGINE"
-
 PG_BIN=""
-PGDATA=""
-if [ "$ENGINE" = native ]; then
-  if command -v initdb >/dev/null 2>&1; then
-    PG_BIN="$(dirname "$(command -v initdb)")"
-  else
-    for cand in /opt/homebrew/opt/postgresql@17/bin /usr/local/opt/postgresql@17/bin; do
-      [ -x "$cand/initdb" ] && { PG_BIN="$cand"; break; }
-    done
-  fi
-  [ -n "$PG_BIN" ] || {
-    echo "FATAL: modo native precisa de postgresql@17 (initdb/pg_ctl/psql) no PATH." >&2
-    echo "       brew install postgresql@17 pgvector" >&2
-    exit 1
-  }
-  SHAREDIR="$("$PG_BIN/pg_config" --sharedir 2>/dev/null || true)"
-  if [ -z "$SHAREDIR" ] || [ ! -f "$SHAREDIR/extension/vector.control" ]; then
-    echo "FATAL: extensão pgvector não encontrada para este postgresql@17." >&2
-    echo "       brew install pgvector (garanta que aponta pro mesmo postgresql@17)" >&2
-    exit 1
-  fi
+if command -v initdb >/dev/null 2>&1; then
+  PG_BIN="$(dirname "$(command -v initdb)")"
+else
+  for cand in /usr/lib/postgresql/17/bin /opt/homebrew/opt/postgresql@17/bin /usr/local/opt/postgresql@17/bin; do
+    [ -x "$cand/initdb" ] && { PG_BIN="$cand"; break; }
+  done
 fi
+[ -n "$PG_BIN" ] && [ -x "$PG_BIN/pg_ctl" ] && [ -x "$PG_BIN/psql" ] || {
+  echo "FATAL: PostgreSQL 17 nativo (initdb, pg_ctl, psql) é obrigatório." >&2
+  echo "       Linux/CI: postgresql-17 + postgresql-17-pgvector; macOS: brew install postgresql@17 pgvector." >&2
+  exit 1
+}
+export PATH="$PG_BIN:$PATH"
+PG_MAJOR="$("$PG_BIN/postgres" --version | sed -E 's/^.* ([0-9]+)\..*$/\1/')"
+[ "$PG_MAJOR" = 17 ] || {
+  echo "FATAL: PostgreSQL 17 exigido; encontrado major=$PG_MAJOR ($PG_BIN)." >&2
+  exit 1
+}
+if [ -x "$PG_BIN/pg_config" ]; then
+  SHAREDIR="$("$PG_BIN/pg_config" --sharedir)"
+else
+  SHAREDIR="/usr/share/postgresql/17"
+fi
+[ -f "$SHAREDIR/extension/vector.control" ] || {
+  echo "FATAL: pgvector não encontrado para PostgreSQL 17 ($SHAREDIR)." >&2
+  exit 1
+}
 
+PGDATA=""
 cleanup() {
-  if [ "$ENGINE" = docker ]; then
-    echo "==> teardown: removendo container $CONTAINER"
-    # pgvector declares an anonymous data volume; -v prevents every run from
-    # leaving that volume behind after the container is removed.
-    docker rm -fv "$CONTAINER" >/dev/null 2>&1 || true
-  elif [ -n "$PGDATA" ]; then
-    echo "==> teardown: parando postgres nativo e removendo $PGDATA"
+  if [ -n "$PGDATA" ]; then
     "$PG_BIN/pg_ctl" -D "$PGDATA" -m immediate stop >/dev/null 2>&1 || true
     rm -rf "$PGDATA"
   fi
 }
 trap cleanup EXIT
 
-if [ "$ENGINE" = docker ]; then
-  echo "==> subindo $IMAGE como $CONTAINER (porta local $PORT)"
-  docker run -d --rm --name "$CONTAINER" \
-    -p "127.0.0.1:${PORT}:5432" \
-    -e POSTGRES_PASSWORD=postgres \
-    -e POSTGRES_DB=postgres \
-    "$IMAGE" >/dev/null
-  run_psql() { docker exec -i "$CONTAINER" psql -U postgres -d postgres "$@"; }
-else
-  # LC_ALL=C evita "postmaster became multithreaded during startup" no macOS
-  # (Homebrew's own install caveat recomenda isso — CoreFoundation vira
-  # multithread ao resolver locale de sistema durante o bootstrap do postgres).
-  export LC_ALL=C
-  PGDATA="$(mktemp -d "${TMPDIR:-/tmp}/deskcomm-test-pgdata.XXXXXX")"
-  echo "==> subindo postgres nativo ($PG_BIN) em $PGDATA (porta local $PORT)"
-  "$PG_BIN/initdb" -D "$PGDATA" -U postgres -A trust --locale=C -E UTF8 -N >/dev/null
-  {
-    echo "listen_addresses = '127.0.0.1'"
-    echo "port = $PORT"
-    # UTC pra bater com o container Docker (a imagem pgvector roda em UTC por
-    # default) — sem isso, timestamptz sai com o offset do sistema local
-    # (ex.: +01 em Lisboa no horário de verão) e testes que comparam a saída
-    # crua do psql contra "+00" quebram sem nenhuma relação com o schema.
-    echo "timezone = 'UTC'"
-  } >> "$PGDATA/postgresql.conf"
-  "$PG_BIN/pg_ctl" -D "$PGDATA" -l "$PGDATA/server.log" -w start >/dev/null
-  run_psql() {
-    PGPASSWORD=postgres "$PG_BIN/psql" -h 127.0.0.1 -p "$PORT" -U postgres -d postgres "$@"
-  }
-fi
+export LC_ALL=C
+PGDATA="$(mktemp -d "${TMPDIR:-/tmp}/lumenva-test-pgdata.XXXXXX")"
+echo "==> PostgreSQL 17 nativo ($PG_BIN), porta 127.0.0.1:$PORT"
+"$PG_BIN/initdb" -D "$PGDATA" -U postgres -A trust --locale=C -E UTF8 -N >/dev/null
+{
+  echo "listen_addresses = '127.0.0.1'"
+  echo "port = $PORT"
+  echo "timezone = 'UTC'"
+} >> "$PGDATA/postgresql.conf"
+"$PG_BIN/pg_ctl" -D "$PGDATA" -l "$PGDATA/server.log" -w start >/dev/null
+run_psql() {
+  PGPASSWORD=postgres "$PG_BIN/psql" -h 127.0.0.1 -p "$PORT" -U postgres -d postgres "$@"
+}
 
 # Espera o servidor DEFINITIVO (o initdb sobe um temporário só em socket;
 # testar via TCP 127.0.0.1 evita o falso-ready da fase de init).
@@ -207,12 +172,9 @@ run_psql -q -f - < "$BASELINE" >/dev/null
 echo "    ✓ update ok (re-apply terminou; erros tolerados por contrato)"
 
 echo "==> invariantes: vitest (tests/invariants)"
-if [ "$ENGINE" = docker ]; then
-  export TEST_DB_CONTAINER="$CONTAINER"
-else
-  export TEST_DB_CONTAINER="native:$PORT"
-fi
-export TEST_DB_ENGINE="$ENGINE"
+# Compatibility marker consumed by existing SQL invariants; never a container.
+export TEST_DB_CONTAINER="native:$PORT"
+export TEST_DB_ENGINE="native"
 export TEST_DB_PORT="$PORT"
 vitest run --config vitest.db.config.ts "$@"
 
