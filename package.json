@@ -22,13 +22,15 @@
     "check:all": "pnpm check:versions && pnpm check:monorepo && pnpm repo:check && pnpm typecheck && pnpm lint && pnpm test:unit"
   },
   "devDependencies": {
-    "@sentry/types": "catalog:",
     "@types/node": "catalog:",
     "cross-env": "^10.1.0",
     "knip": "catalog:",
     "sherif": "catalog:",
     "syncpack": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "js-yaml": "catalog:",
+    "prettier-plugin-tailwindcss": "catalog:",
+    "stripe": "catalog:"
   }
 }
