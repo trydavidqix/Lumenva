@@ -9,17 +9,22 @@
       "project": [
         "tests/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
         "tooling/scripts/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}"
+      ],
+      "ignore": [
+        "docs/archive/**",
+        "docs/recovery-snapshots/**"
       ]
     },
     "apps/crm": {
       "entry": [
         "app/**/{page,layout,route,loading,error,not-found,template,default,global-error}.{ts,tsx}",
-        "proxy.ts",
-        "instrumentation.ts",
         "scripts/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
         "workers/**/main.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
         "tests/**/*.{test,spec}.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
-        "tests/{capture-*,prova-*,ataque-*}.ts"
+        "tests/{capture-*,prova-*,ataque-*}.ts",
+        "tests/{sonda-*,vigia-*,compose-*}.ts",
+        "tests/journeys/auth.setup.ts",
+        "workers/**/*.smoke.mjs"
       ],
       "project": [
         "app/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
@@ -29,8 +34,7 @@
         "scripts/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
         "tests/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
         "workers/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
-        "proxy.ts",
-        "instrumentation.ts"
+        "app/**/*.css"
       ],
       "playwright": {
         "config": []
