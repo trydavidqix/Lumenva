@@ -7,7 +7,7 @@
     "test:unit": "vitest run"
   },
   "dependencies": {
-    "stripe": "^14.18.0"
+    "stripe": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
