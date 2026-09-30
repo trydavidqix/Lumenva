@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs'
+import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { execSync } from 'node:child_process'
 
@@ -135,27 +135,26 @@ for (const path of workflowFiles) {
   if (/pnpm install --frozen-lockfile/.test(workflow) && !/pnpm repo:check/.test(workflow)) {
     fail(`${path}: frozen CI install must be followed by the canonical repo:check gate`)
   }
-}
-
-const dockerFiles = filesUnder('.').filter(path => /(^|[\\/])Dockerfile[^\\/]*$/i.test(path))
-for (const path of dockerFiles) {
-  const dockerfile = read(path)
-  for (const match of dockerfile.matchAll(/^FROM\s+(node:[^\s]+)/gim)) {
-    if (!/^node:24\.21\.0(?:-|$)/.test(match[1])) fail(`${path}: ${match[1]} must pin Node 24.21.0`)
+  // Only executable CI directives matter; historical comments remain searchable.
+  const executable = workflow.split(/\r?\n/).filter(line => !/^\s*#/.test(line)).join('\n')
+  if (/^\s*services\s*:/m.test(executable) ||
+      /uses:\s*docker\//i.test(executable) ||
+      /\bdocker\s+(?:build|run|exec|compose|push|pull|login|rm|info)\b/i.test(executable) ||
+      /\bsupabase\s+start\b/i.test(executable)) {
+    fail(`${path}: native CI policy forbids container services, Docker actions/commands and Supabase CLI start`)
   }
 }
 
-for (const path of ['Dockerfile', 'Dockerfile.worker']) {
-  if (!read(path).includes('corepack enable')) fail(`${path}: Corepack must be enabled to honor root packageManager`)
-  if (/corepack prepare pnpm@/i.test(read(path))) fail(`${path}: pnpm version must come from root packageManager`)
+// Old image-based build config is retired, not silently exercised by validation.
+if (existsSync(join(root, 'cloudbuild.yaml'))) fail('cloudbuild.yaml must stay retired: Cloud Build image deployment conflicts with native-only runtime')
+const nativePackage = read('tooling/scripts/package-native-crm.sh')
+if (!nativePackage.includes('pnpm --dir apps/crm run build') ||
+    !nativePackage.includes('tar -C "$OUT" -czf "$OUT.tar.gz" .')) {
+  fail('native package must build CRM standalone and verify an archive without publishing')
 }
-
-const cloudBuild = read('cloudbuild.yaml')
-for (const [, image] of cloudBuild.matchAll(/name:\s*['"](node:[^\s'"]+)['"]/g)) {
-  if (image !== 'node:24.21.0') fail(`cloudbuild.yaml: ${image} must be node:24.21.0`)
-}
-if (!cloudBuild.includes('pnpm install --frozen-lockfile') || !cloudBuild.includes('pnpm test:unit')) {
-  fail('cloudbuild.yaml must install with the canonical frozen pnpm lockfile and run the unit-test gate')
+const nativeDb = read('apps/crm/scripts/test-db.sh')
+if (!nativeDb.includes('TEST_DB_ENGINE:-native') || /docker\s+(run|exec|info|rm)/i.test(nativeDb)) {
+  fail('RLS gate must use ephemeral native PostgreSQL, not Docker')
 }
 
 const deploymentManifest = JSON.parse(read('apps/social-web/package.json'))
@@ -176,5 +175,5 @@ if (failures.length) {
   for (const failure of failures) console.error(`- ${failure}`)
   process.exitCode = 1
 } else {
-  console.log(`repo:check passed — Node ${process.version.slice(1)}, pnpm ${pnpmVersion}, ${manifests.length} workspace manifests, catalog/CI/Docker/deploy/lockfile aligned.`)
+  console.log(`repo:check passed — Node ${process.version.slice(1)}, pnpm ${pnpmVersion}, ${manifests.length} workspace manifests, catalog/native-CI/deploy/lockfile aligned.`)
 }

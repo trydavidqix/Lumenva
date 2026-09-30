@@ -1,6 +1,6 @@
 # Lumenva repository layout
 
-Status: canonical layout for the `refactor/lumenva-clean-architecture` migration.
+Status: canonical repository ownership; the container-era compatibility layout is historical.
 
 ## Ownership
 
@@ -8,7 +8,7 @@ Status: canonical layout for the `refactor/lumenva-clean-architecture` migration
 |---|---|
 | `apps/` | Deployable applications and workers: CRM, website, social surfaces, voice worker, and video-composer documentation. |
 | `packages/` | Shared/importable code, grouped by core, integrations, platform, observability, UI, and config. |
-| `infra/` | Supabase schema/config, Docker assets, and deployment stacks such as n8n and Asterisk. |
+| `infra/` | Supabase schema/config and deployment integration. Docker assets, while still present, are retired legacy material. |
 | `knowledge/` | Lumenva business knowledge and its Obsidian vault configuration. |
 | `docs/` | Human-readable product, engineering, architecture, audit, research, and historical material. |
 | `evidence/` | Release, migration, security, test, and incident evidence. |
@@ -22,10 +22,12 @@ names remain stable while their directories move under `packages/core/`.
 
 ## Compatibility exceptions
 
-- Root Dockerfiles, Compose manifests, `cloudbuild.yaml`, and `.dockerignore`
-  remain at the repository root because their current build/deploy entry points
-  use the repository root as Docker context. The former root `docker/` directory
-  now lives at `infra/docker/`.
+- The active deployment pipeline is native Node.js packaging in
+  `tooling/scripts/package-native-crm.sh`. The old `cloudbuild.yaml` was
+  retired to prevent image-based rollout; historical Dockerfiles and Compose
+  assets are not active CI/deployment entrypoints and will be removed after
+  runtime/rollback parity is proven. The former root `docker/` lives at
+  `infra/docker/` as legacy material.
 - Root `.obsidian/` is retained as the repository-level vault configuration.
   The business knowledge vault and its separate configuration now live in
   `knowledge/.obsidian/`; neither configuration is overwritten or merged.

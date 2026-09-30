@@ -74,3 +74,15 @@ Este documento não equivale a afirmar a migração integral concluída.
   seguem nativos no gate separado. A limpeza posterior de Dockerfiles, Compose
   e self-host só é permitida depois da paridade de runtime, supervisão, secrets
   e recuperação, não apenas depois do tarball.
+
+## Cloud Build e política permanente (fase nativa)
+
+O `cloudbuild.yaml` antigo executava build/push de imagem e deploy de Cloud Run,
+que exigem contêiner. Foi retirado da branch ativa: Cloud Run não é um alvo
+nativo de Node. O `repo:check` passa a recusar qualquer novo workflow ativo
+com `services:`, actions Docker, comandos Docker ou `supabase start`.
+O import Sentry de `withSentryConfig` passou ao subpath `@sentry/nextjs/config`
+para acompanhar o aviso emitido no build. Nenhum teste isolado gera eventos
+na organização real. O arquivo histórico de documentação Cloud Run foi
+substituído por instruções explícitas para pacote nativo e pré-requisitos de
+produção ainda não homologados.
