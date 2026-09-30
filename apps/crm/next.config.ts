@@ -2,7 +2,10 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 import { fileURLToPath } from "node:url";
 
-const workspaceRoot = fileURLToPath(new URL("../..", import.meta.url));
+// Next loads a file URL; Vitest uses a virtual module URL for this config.
+const workspaceRoot = import.meta.url.startsWith("file:")
+  ? fileURLToPath(new URL("../..", import.meta.url))
+  : process.cwd();
 
 /** Performance budget (EPIC-12 §S-12.05):
  *  - LCP < 2.5s p75

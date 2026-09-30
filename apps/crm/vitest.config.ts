@@ -51,6 +51,9 @@ export default defineConfig({
       "docs/archive/scratchpads/**",
       "apps/website/**",
       "apps/voice-worker/**",
+      // The CRM link exposes the independent Node-test runner's files here, too.
+      // Run that worker's own tests via its native check script instead.
+      "**/workers/voice-worker/**",
       "scripts/*.test.mjs",
       "apps/crm/scripts/*.test.mjs",
       "**/*.integration.test.ts",

@@ -70,6 +70,10 @@ jobs:
         env:
           NEXT_PUBLIC_SITE_URL: https://lumenva-ci.invalid
         run: pnpm -r --workspace-concurrency=1 --if-present run build
+      - name: CRM Next config regression
+        run: node apps/crm/node_modules/vitest/vitest.mjs run --config apps/crm/vitest.config.ts apps/crm/tests/unit/next-config-output.test.ts
+      - name: Native voice worker tests
+        run: pnpm --dir apps/voice-worker run check
       - name: Unit tests
         run: pnpm test:unit
       - name: Persist validated lockfile
