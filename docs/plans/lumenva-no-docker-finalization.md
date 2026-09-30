@@ -60,3 +60,17 @@ bootstrap PGDG nos jobs RLS de CI. Os
 workflows e recursos de deploy/E2E historicamente baseados em contêineres
 continuam inventariados até existir substituição com paridade e prova.
 Este documento não equivale a afirmar a migração integral concluída.
+
+## Migração adicional — browser e artefatos
+
+- `.github/workflows/e2e.yml` executa agora exclusivamente Playwright real
+  no website público em Ubuntu nativo, sem `services`/daemon/segredos. Isto
+  **não substitui** a cobertura autenticada do CRM: os specs permanecem no
+  repositório, com a proteção `.env.e2e` local, e exigem um ambiente
+  descartável isolado antes de serem promovidos ao CI.
+- O antigo `.github/workflows/publish-image.yml` virou pacote tarball
+  `.next/standalone` de validação, sem push/registry/deploy.
+- O job GCP de imagem/container virou dry-run do pacote Node. Os testes RLS
+  seguem nativos no gate separado. A limpeza posterior de Dockerfiles, Compose
+  e self-host só é permitida depois da paridade de runtime, supervisão, secrets
+  e recuperação, não apenas depois do tarball.

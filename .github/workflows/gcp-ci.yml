@@ -37,53 +37,25 @@ jobs:
       - name: Unit tests
         run: pnpm test:unit
 
-  # Restrinja também as claims do WIF no GCP a este repositório e às refs autorizadas (F8-H1).
-  gcp-auth:
-    if: ${{ github.event_name != 'pull_request' && vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
-    permissions:
-      contents: read
-      id-token: write
-    runs-on: ubuntu-latest
+  # No image build / registry authentication. Production packaging belongs to
+  # the independent native-release dry-run; no cloud credentials in validation.
+  native-release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
-      - name: Authenticate to Google Cloud (OIDC)
-        if: ${{ github.event_name != 'pull_request' && vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
-        uses: google-github-actions/auth@v2
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
-          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
-
-      - name: Set up Cloud SDK
-        if: ${{ github.event_name != 'pull_request' && vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Configure Docker for GCP Artifact Registry
-        if: ${{ github.event_name != 'pull_request' && vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
-
-      - name: Docker metadata (tags/labels)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          # Fallback para ghcr.io se GCP_ARTIFACT_REGISTRY não estiver definido para evitar falha no workflow
-          images: ${{ vars.GCP_ARTIFACT_REGISTRY || 'ghcr.io' }}/${{ github.repository }}
-          tags: |
-            type=ref,event=branch
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v4
-
-      # Dry-run: Apenas faz o build, NÃO publica. A publicação real pertence ao H1 (manual owner).
-      - name: Build and push (Dry Run)
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: linux/amd64
-          push: false # Isto garante o dry-run, sem deploy ou publicação real
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm repo:check
+      - name: Build native CRM artifact without publishing
+        env:
+          NEXT_PUBLIC_SITE_URL: https://lumenva-ci.invalid
+          SENTRY_DSN: 'off'
+        run: bash tooling/scripts/package-native-crm.sh
 
   # Gate de banco de dados, em job separado conforme a doutrina de testes original, adaptado para este CI.
   invariants:

@@ -1,62 +1,48 @@
-name: Publicar imagem Docker (Artifact Registry)
+name: native-release-dry-run
 
+# Historical image-publishing action retired. This gate only checks packaging
+# into a native Node.js tarball; it never signs into a registry or deploys.
 on:
   push:
-    tags: ["v*"]
-    branches: ["main"]
-  release:
-    types: [published]
-  workflow_dispatch: {}
+    branches: [chore/lumenva-toolchain-canonicalization]
+    paths:
+      - 'apps/crm/**'
+      - 'tooling/scripts/package-native-crm.sh'
+      - '.github/workflows/publish-image.yml'
+      - 'pnpm-lock.yaml'
+  workflow_dispatch:
 
-env:
-  REGISTRY: us-east1-docker.pkg.dev
-  IMAGE_NAME: ${{ github.repository }}
+permissions:
+  contents: read
+
+concurrency:
+  group: native-release-dry-run-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write # Required for Google WIF
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
-
-      - id: auth
-        name: Autenticar via Google WIF
-        uses: google-github-actions/auth@v2
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
-          workload_identity_provider: "projects/PLACEHOLDER/locations/global/workloadIdentityPools/github/providers/github-provider"
-          service_account: "ci-publisher@placeholder-project.iam.gserviceaccount.com"
-          token_format: "access_token"
-
-      - name: Log in to Artifact Registry
-        uses: docker/login-action@v3
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+      - name: Repository gate
+        run: pnpm repo:check
+      - name: Native CRM standalone package
+        env:
+          NEXT_PUBLIC_SITE_URL: https://lumenva-ci.invalid
+          SENTRY_DSN: 'off'
+        run: bash tooling/scripts/package-native-crm.sh
+      - name: Upload test artifact (not a production deployment)
+        uses: actions/upload-artifact@v4
         with:
-          registry: ${{ env.REGISTRY }}
-          username: "oauth2accesstoken"
-          password: ${{ steps.auth.outputs.access_token }}
-
-      - name: Docker metadata (tags/labels)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/PLACEHOLDER_PROJECT/placeholder-repo/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=sha,format=long
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build e push (dry-run para F8-C0)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          platforms: linux/amd64
-          push: false # F8-C0 exige dry-run, sem push de imagem real
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          name: native-crm-dry-run
+          path: ${{ runner.temp }}/lumenva-native-crm.tar.gz
+          if-no-files-found: error
+          retention-days: 3
