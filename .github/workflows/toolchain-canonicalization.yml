@@ -3,7 +3,7 @@ on:
   push:
     branches: [chore/lumenva-toolchain-canonicalization]
 concurrency:
-  group: toolchain-validation
+  group: toolchain-validation-v2
   cancel-in-progress: true
 permissions:
   contents: write
