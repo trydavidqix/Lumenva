@@ -1,0 +1,74 @@
+name: isolated-authenticated-crm-e2e
+
+# REAL preview Supabase Auth + Firebase DEMO emulator. Never production.
+# A missing isolated preview MUST fail BLOCKED, not pass via mocks or skipped work.
+on:
+  push:
+    branches: [chore/lumenva-toolchain-canonicalization]
+    paths:
+      - '.github/workflows/isolated-authenticated-crm-e2e.yml'
+      - 'apps/crm/scripts/prepare-isolated-preview-e2e.mjs'
+      - 'apps/crm/scripts/verify-isolated-preview-e2e.mjs'
+      - 'apps/crm/scripts/start-firebase-e2e.sh'
+      - 'apps/crm/playwright.config.ts'
+      - 'apps/crm/tests/e2e/auth.spec.ts'
+      - 'apps/crm/tests/e2e/rbac-roles.spec.ts'
+      - 'apps/crm/scripts/seed-e2e-credentials.ts'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: isolated-authenticated-e2e-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  authenticated-crm:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    env:
+      CI: 'true'
+      E2E_TARGET_ACK: isolated-empty-preview-only
+      E2E_PREVIEW_REF: ${{ vars.E2E_PREVIEW_REF }}
+      E2E_PRODUCTION_REF: ${{ vars.E2E_PRODUCTION_REF }}
+      E2E_PREVIEW_URL: ${{ vars.E2E_PREVIEW_URL }}
+      E2E_PREVIEW_ANON_KEY: ${{ secrets.E2E_PREVIEW_ANON_KEY }}
+      E2E_PREVIEW_SERVICE_ROLE_KEY: ${{ secrets.E2E_PREVIEW_SERVICE_ROLE_KEY }}
+      E2E_PREVIEW_DB_URL: ${{ secrets.E2E_PREVIEW_DB_URL }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+      - name: Repository gate
+        run: pnpm repo:check
+      - name: Fail closed unless a distinct preview and REAL keys exist
+        run: node apps/crm/scripts/prepare-isolated-preview-e2e.mjs
+      - name: Verify real preview Auth and schema before fixtures
+        run: node apps/crm/scripts/verify-isolated-preview-e2e.mjs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Start local Firebase DEMO Auth emulator
+        run: bash apps/crm/scripts/start-firebase-e2e.sh
+      - name: Install browser
+        run: pnpm --dir apps/crm run test:e2e:install
+      - name: Build browser and server against preview
+        run: pnpm --dir apps/crm run e2e:build
+      - name: Seed preview identity, org and real TOTP
+        run: pnpm --dir apps/crm exec tsx scripts/seed-e2e-credentials.ts
+      - name: Real login, RBAC, MFA and viewer authorization E2E
+        run: pnpm --dir apps/crm exec playwright test auth.spec.ts rbac-roles.spec.ts --workers=1
+      - name: Upload browser failure traces without fixture credentials
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-crm-e2e-results
+          path: |
+            apps/crm/test-results/
+            apps/crm/playwright-report/
+          if-no-files-found: ignore
+          retention-days: 5

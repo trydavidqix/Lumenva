@@ -31,8 +31,16 @@ function envDoE2E(): Record<string, string> {
   const url = env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   // Um `.env.e2e` apontando para fora do localhost é pior que nenhum, porque
   // parece seguro.
-  if (!url.startsWith("http://127.0.0.1") && !url.startsWith("http://localhost")) {
-    throw new Error(`.env.e2e aponta para um Supabase que não é local (${url}) — recusado.`);
+  const local = /^http:\/\/(?:127\.0\.0\.1|localhost)(?::[0-9]+)?(?:\/|$)/.test(url);
+  if (!local) {
+    const ref = env.E2E_PREVIEW_REF ?? "";
+    const production = env.E2E_PRODUCTION_REF ?? "";
+    if (env.E2E_TARGET_KIND !== "isolated-preview" ||
+        env.E2E_TARGET_ACK !== "isolated-empty-preview-only" ||
+        !/^[a-z0-9]{20}$/.test(ref) || !/^[a-z0-9]{20}$/.test(production) ||
+        ref === production || url !== `https://${ref}.supabase.co`) {
+      throw new Error("E2E remoto RECUSADO: preview isolado sem confirmação inequívoca.");
+    }
   }
   return env;
 }
