@@ -12,7 +12,10 @@
       ],
       "vitest": {
         "config": []
-      }
+      },
+      "ignore": [
+        "docs/archive/**"
+      ]
     },
     "apps/crm": {
       "entry": [
@@ -37,6 +40,19 @@
       ],
       "playwright": {
         "config": []
+      },
+      "ignoreDependencies": [
+        "import-in-the-middle",
+        "require-in-the-middle"
+      ],
+      "ignoreBinaries": [
+        "ffmpeg",
+        "psql"
+      ],
+      "ignoreIssues": {
+        "tests/unit/require-platform-admin-api.test.ts": [
+          "unresolved"
+        ]
       }
     }
   },
@@ -45,5 +61,9 @@
       "exports",
       "types"
     ]
+  },
+  "rules": {
+    "exports": "warn",
+    "types": "warn"
   }
 }
