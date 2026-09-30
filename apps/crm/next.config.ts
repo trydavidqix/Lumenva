@@ -1,5 +1,8 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
+import { fileURLToPath } from "node:url";
+
+const workspaceRoot = fileURLToPath(new URL("../..", import.meta.url));
 
 /** Performance budget (EPIC-12 §S-12.05):
  *  - LCP < 2.5s p75
@@ -10,6 +13,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Self-host: gera .next/standalone pro container Docker (node server.js).
   output: process.env.VERCEL ? undefined : "standalone",
+  // Include workspace-level resources (e.g. the crm/supabase symlink) in standalone traces.
+  outputFileTracingRoot: workspaceRoot,
   reactStrictMode: true,
   poweredByHeader: false,
   // typedRoutes moved out of experimental in Next 15.5+

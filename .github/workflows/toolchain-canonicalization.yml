@@ -52,6 +52,11 @@ jobs:
         run: pnpm typecheck
       - name: Lint
         run: pnpm lint
+      - name: Verify CRM workspace links
+        run: |
+          test -L apps/crm/supabase
+          test -d apps/crm/supabase
+          stat -L apps/crm/supabase infra/supabase
       - name: Build all buildable workspaces
         env:
           NEXT_PUBLIC_SITE_URL: https://lumenva-ci.invalid
