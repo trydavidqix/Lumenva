@@ -1,0 +1,43 @@
+name: native-postgres-rls-validation
+on:
+  push:
+    branches: [chore/lumenva-toolchain-canonicalization]
+    paths:
+      - 'apps/crm/scripts/test-db.sh'
+      - 'apps/crm/tests/invariants/**'
+      - 'apps/crm/vitest.db.config.ts'
+      - 'tooling/scripts/setup-native-postgres17.sh'
+      - '.github/workflows/native-db-validation.yml'
+      - 'pnpm-lock.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: native-postgres-rls-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  invariants:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Validate native scripts
+        run: bash -n apps/crm/scripts/test-db.sh tooling/scripts/setup-native-postgres17.sh
+      - name: Install dependencies from committed lockfile
+        run: pnpm install --frozen-lockfile
+      - name: Install PostgreSQL 17 and pgvector without containers
+        run: bash tooling/scripts/setup-native-postgres17.sh
+      - name: PostgreSQL baseline, RLS and ACL invariants
+        env:
+          TEST_DB_ENGINE: native
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:1
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: test-placeholder-not-for-real-auth
+          SUPABASE_SERVICE_ROLE_KEY: test-placeholder-not-for-real-auth
+        run: pnpm test:db
