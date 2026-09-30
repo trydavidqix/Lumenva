@@ -31,12 +31,6 @@ jobs:
         run: pnpm check:monorepo
       - name: Validate repository invariants
         run: pnpm repo:check
-      - name: Typecheck
-        run: pnpm typecheck
-      - name: Lint
-        run: pnpm lint
-      - name: Unit tests
-        run: pnpm test:unit
       - name: Dead-code audit
         run: |
           set +e
@@ -54,6 +48,12 @@ jobs:
             exit "$status"
           fi
           rm -f .knip-report.txt
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Lint
+        run: pnpm lint
+      - name: Unit tests
+        run: pnpm test:unit
       - name: Build all buildable workspaces
         run: pnpm -r --if-present build
       - name: Persist validated lockfile
