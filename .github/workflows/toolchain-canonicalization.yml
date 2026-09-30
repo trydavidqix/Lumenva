@@ -17,6 +17,13 @@ jobs:
         with:
           ref: chore/lumenva-toolchain-canonicalization
           fetch-depth: 0
+      - name: Diagnose CRM workspace link at checkout
+        run: |
+          git ls-files -s apps/crm/supabase
+          ls -ld apps/crm/supabase infra/supabase || true
+          readlink apps/crm/supabase || true
+          test -L apps/crm/supabase
+          test -d apps/crm/supabase
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
@@ -25,6 +32,13 @@ jobs:
         run: pnpm install --no-frozen-lockfile
       - name: Validate frozen install
         run: pnpm install --frozen-lockfile
+      - name: Verify CRM workspace link after install
+        run: |
+          git ls-files -s apps/crm/supabase
+          ls -ld apps/crm/supabase infra/supabase || true
+          readlink apps/crm/supabase || true
+          test -L apps/crm/supabase
+          test -d apps/crm/supabase
       - name: Validate dependency versions
         run: pnpm check:versions
       - name: Validate monorepo structure
@@ -52,11 +66,6 @@ jobs:
         run: pnpm typecheck
       - name: Lint
         run: pnpm lint
-      - name: Verify CRM workspace links
-        run: |
-          test -L apps/crm/supabase
-          test -d apps/crm/supabase
-          stat -L apps/crm/supabase infra/supabase
       - name: Build all buildable workspaces
         env:
           NEXT_PUBLIC_SITE_URL: https://lumenva-ci.invalid
