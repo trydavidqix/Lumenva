@@ -7,7 +7,7 @@ import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
 import { registerContentAsset, ContentAssetValidationError } from "@/lib/content-os/creative/asset-service";
 import { assetProvenanceSchema } from "@/lib/content-os/creative/asset-provenance";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 import { getGcsBucket } from "@lumenva/db/gcp/cloud-storage";
 import { createGcsObjectStore } from "@lumenva/db/storage/gcs";
@@ -17,7 +17,7 @@ const schema = z.object({ asset_type: z.string().trim().min(1).max(80), mime_typ
 
 export async function GET(): Promise<Response> {
   const requestId = randomUUID(); const authz = await requireRole("manager", { requestId, resource: "content_os_assets" }); if (!authz.ok) return authz.response;
-  const db = await createClient(); const { data, error } = await db.from("content_assets").select("id,organization_id,content_item_id,asset_type,storage_bucket,storage_path,mime_type,byte_size,checksum,origin_provider,license,provenance,metadata,created_at,updated_at").eq("organization_id", authz.org.orgId).order("created_at", { ascending: false }).limit(100);
+  const db = createAdminClient(); const { data, error } = await db.from("content_assets").select("id,organization_id,content_item_id,asset_type,storage_bucket,storage_path,mime_type,byte_size,checksum,origin_provider,license,provenance,metadata,created_at,updated_at").eq("organization_id", authz.org.orgId).order("created_at", { ascending: false }).limit(100);
   if (error) return fail("internal_error", "Não foi possível listar os assets.", 500, { requestId }); return ok(data ?? [], { requestId });
 }
 
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   let raw: unknown; try { raw = await request.json(); } catch { return fail("invalid_request", "JSON inválido.", 400, { requestId }); }
   const parsed = schema.safeParse(raw); if (!parsed.success) return fail("invalid_request", "Dados inválidos.", 400, { requestId, details: parsed.error.flatten() });
   try {
-    const bytes = Uint8Array.from(Buffer.from(parsed.data.data_base64, "base64")); const db = await createClient();
+    const bytes = Uint8Array.from(Buffer.from(parsed.data.data_base64, "base64")); const db = createAdminClient();
     const asset = await registerContentAsset({ async create(input) {
       const store = createGcsObjectStore(getGcsBucket());
       await store.put({ provider: "gcs", bucket: "content-assets", key: String(input.storage_path) }, bytes, String(input.mime_type));
