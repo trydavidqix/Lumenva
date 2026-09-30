@@ -1,11 +1,10 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
-import { fileURLToPath } from "node:url";
+import { basename, resolve } from "node:path";
 
-// Next loads a file URL; Vitest uses a virtual module URL for this config.
-const workspaceRoot = import.meta.url.startsWith("file:")
-  ? fileURLToPath(new URL("../..", import.meta.url))
-  : process.cwd();
+// The Next build runs from apps/crm; tests may import this config from the repository root.
+// Avoid import.meta.url here: Vitest rewrites new URL() when loading virtual config modules.
+const workspaceRoot = resolve(process.cwd(), basename(process.cwd()) === "crm" ? "../.." : ".");
 
 /** Performance budget (EPIC-12 §S-12.05):
  *  - LCP < 2.5s p75
