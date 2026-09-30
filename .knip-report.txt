@@ -69,12 +69,30 @@ prettier-plugin-tailwindcss     apps/crm/package.json:145:6
 @lumenva/provider-moneyprinter  apps/social-web/package.json:30:6
 @lumenva/worker                 apps/social-web/package.json:31:6
 @sentry/types                   package.json:25:6                
-Unlisted dependencies (5)
-postcss-load-config  apps/crm/postcss.config.mjs:1:10                                           
-pg                   packages/core/operating-core/src/event-log-adapter.integration.test.ts:2:16
-pg                   packages/core/operating-core/src/receipt-store.integration.test.ts:6:22    
-stripe               tests/invariants/f7-adapter-matrix.test.ts:5:20                            
-js-yaml              tests/unit/f8-j3/publish-contract.test.ts:4:23                             
+Unlisted dependencies (23)
+pg       docs/archive/scratchpads/wave1/consent-registry.integration.test.ts:4:22                
+pg       docs/archive/scratchpads/wave1/job-receipt-store-rls.integration.test.ts:3:22           
+pg       docs/archive/scratchpads/wave1/job-receipt-store.integration.test.ts:2:22               
+pg       docs/archive/scratchpads/wave1/overview-state-real.integration.test.ts:4:22             
+pg       docs/archive/scratchpads/wave1/postgres-memory-gateway.integration.test.ts:4:22         
+pg       docs/archive/scratchpads/wave1/postgres-no-progress-watchdog.integration.test.ts:4:22   
+pg       docs/archive/scratchpads/wave1/postgres-watchdog-authorization.integration.test.ts:4:22 
+pg       docs/archive/scratchpads/wave1/resource-router-rls.integration.test.ts:11:13            
+pg       docs/archive/scratchpads/wave1/route-receipt.integration.test.ts:3:22                   
+pg       docs/archive/scratchpads/wave13/source-registry-rls.integration.test.ts:3:22            
+pg       docs/archive/scratchpads/wave13/source-registry.test.ts:37:13                           
+pg       docs/archive/scratchpads/wave15/resource-router-persistence.integration.test.ts:2:22    
+pg       docs/archive/scratchpads/wave5/overview-costs-approvals.integration.test.ts:4:22        
+pg       docs/archive/scratchpads/wave5/overview-state-persistence.integration.test.ts:4:22      
+pg       docs/archive/scratchpads/wave7/studio-editor-concurrency.integration.test.ts:2:22       
+pg       docs/archive/scratchpads/wave7/studio-editor-evals-variants.integration.test.ts:2:22    
+pg       docs/archive/scratchpads/wave7/studio-editor-rls.integration.test.ts:3:22               
+pg       docs/archive/scratchpads/wave7/studio-reviewer-approval.service.integration.test.ts:3:22
+pg       docs/archive/scratchpads/wave7/studio-reviewer-registry.integration.test.ts:3:22        
+pg       packages/core/operating-core/src/event-log-adapter.integration.test.ts:2:16             
+pg       packages/core/operating-core/src/receipt-store.integration.test.ts:6:22                 
+stripe   tests/invariants/f7-adapter-matrix.test.ts:5:20                                         
+js-yaml  tests/unit/f8-j3/publish-contract.test.ts:4:23                                          
 Unlisted binaries (6)
 build     .github/workflows/implementacao-tokens-ci.yml   
 build     .github/workflows/toolchain-canonicalization.yml
@@ -82,7 +100,32 @@ ffmpeg    apps/crm/lib/messaging/media/video-derive.ts
 supabase  apps/crm/package.json                           
 psql      apps/crm/tests/sonda-dossie-d20-d21.ts          
 psql      apps/crm/tests/sonda-timeline-ao-vivo.ts        
-Unused exports (431)
+Unresolved imports (24)
+../../lib/auth/requirePlatformAdmin                        …/apps/crm/tests/unit/require-platform-admin-api.test.ts:4:65
+@/lib/event-log/dispatcher                                 …k6-final/apps/crm/lib/realtime/event-visibility.test.ts:3:31
+../apps/crm/lib/integrations/consent-registry              …/scratchpads/wave1/consent-registry.integration.test.ts:5:41
+@/lib/mcp/auth                                             …/archive/scratchpads/wave1/mcp-route-execution.test.ts:14:54
+@/app/api/v1/mcp/tools/route                               …/archive/scratchpads/wave1/mcp-route-execution.test.ts:22:22
+@/lib/cli/lumenva                                          …/archive/scratchpads/wave1/mcp-route-execution.test.ts:23:63
+@/lib/mcp/tools/evolucao                                   …/archive/scratchpads/wave1/mcp-route-execution.test.ts:24:45
+../apps/crm/lib/command-center/overview-state-persistence  …ratchpads/wave1/overview-state-real.integration.test.ts:5:44
+../apps/crm/lib/memory/gateway-projection                  …hpads/wave1/postgres-memory-gateway.integration.test.ts:5:64
+../apps/crm/lib/psycheos/no-progress-watchdog              …ve1/postgres-watchdog-authorization.integration.test.ts:5:36
+@/lib/mcp/auth                                             docs/archive/scratchpads/wave1/route-execution.test.ts:14:54 
+@/app/api/v1/mcp/tools/route                               docs/archive/scratchpads/wave1/route-execution.test.ts:22:22 
+@/lib/cli/lumenva                                          docs/archive/scratchpads/wave1/route-execution.test.ts:23:63 
+@/lib/mcp/tools/evolucao                                   docs/archive/scratchpads/wave1/route-execution.test.ts:24:45 
+@/lib/mcp/auth                                             …ve/scratchpads/wave1/route-receipt.integration.test.ts:23:54
+@/app/api/v1/mcp/tools/route                               …ve/scratchpads/wave1/route-receipt.integration.test.ts:30:22
+@/lib/mcp/http-execution-receipt-store                     …ve/scratchpads/wave1/route-receipt.integration.test.ts:31:48
+../apps/crm/lib/memory/source-registry                     …atchpads/wave13/source-registry-rls.integration.test.ts:4:64
+../apps/crm/lib/memory/source-registry                     docs/archive/scratchpads/wave13/source-registry.test.ts:3:81 
+../apps/crm/lib/agent-engine/evals/contracts               docs/archive/scratchpads/wave14/metrics.test.ts:3:38         
+../apps/crm/lib/command-center/overview-state-persistence  …pads/wave5/overview-costs-approvals.integration.test.ts:5:65
+../apps/crm/lib/command-center/overview-state-persistence  …ds/wave5/overview-state-persistence.integration.test.ts:5:65
+../apps/crm/lib/studio/context-pack                        docs/archive/scratchpads/wave7/studio-editor.test.ts:2:35    
+../apps/crm/lib/studio/context-pack                        …e7/studio-reviewer-approval.service.integration.test.ts:4:35
+Unused exports (429)
 OnboardingError                                                   apps/crm/app/actions/onboarding/skipWhatsapp.ts:63:10 
 AuditTrailSkeleton                                      function  …rm/app/app/privacy/requests/[id]/AuditTrail.tsx:47:17
 bricolage                                                         apps/crm/app/design/lib/fonts.ts:15:14                
@@ -244,7 +287,6 @@ REVERSIBLE_CRM_OPERATIONS                                         …/lib/agent-
 CONTROL_AGENT_DEFINITIONS                                         …/lib/agent-engine/product-agents/definitions.ts:23:14
 claimActiveSession                                                …crm/lib/agent-engine/session/dispatch-router.ts:95:10
 SessionSupersessionError                                          …crm/lib/agent-engine/session/dispatch-router.ts:95:30
-memoryGate                                                        apps/crm/lib/agent-engine/session/memory-gate.ts:7:14 
 SessionSupersessionError                                class     …-engine/session/postgres-session-supersession.ts:3:14
 claimActiveSession                                                …rm/lib/agent-engine/session/session-service.ts:378:10
 SessionSupersessionError                                          …rm/lib/agent-engine/session/session-service.ts:378:30
@@ -347,7 +389,6 @@ VideoComposerClientError                                class     …ib/content-
 getVideoComposerClientFromEnv                           function  …b/content-os/providers/video-composer/client.ts:60:17
 LumenvaVideoComposer                                    class     …content-os/providers/video-composer/provider.ts:20:14
 pipelineFieldDefinitionSchema                                     apps/crm/lib/custom-fields/schema.ts:7:14             
-Constants                                                         apps/crm/lib/database.types.ts:8071:14                
 isEcommerceProviderV1Enabled                            function  apps/crm/lib/ecommerce/feature-flag.ts:7:17           
 createNuvemshopProvider                                 function  apps/crm/lib/ecommerce/feature-flag.ts:11:17          
 MODULE_RISK_TIERS                                                 apps/crm/lib/entitlements/authorize-module.ts:1:14    
@@ -514,7 +555,7 @@ EngagementCardSchema                                              …ocial-brain
 PostMetricTileSchema                                              …ocial-brain/providers/brightbean/src/schemas.ts:51:14
 PlatformPostAnalyticsSchema                                       …ocial-brain/providers/brightbean/src/schemas.ts:60:14
 PlatformPostSummarySchema                                         …ocial-brain/providers/brightbean/src/schemas.ts:81:14
-Unused exported types (437)
+Unused exported types (432)
 WorkflowType                     type       apps/crm/app/api/v1/workflows/_shared.ts:22:13                        
 StateColors                      type       apps/crm/app/design/lib/tokens.ts:15:13                               
 HealthCardDetail                 interface  apps/crm/components/admin/tenants/HealthCard.tsx:10:18                
@@ -789,11 +830,6 @@ EditorialStageResult             type       apps/crm/lib/content-os/orchestrator
 ChangeDetectionSourceDefinition  type       apps/crm/lib/content-os/providers/changedetection/provider.ts:13:13   
 RssHubSourceDefinition           type       apps/crm/lib/content-os/providers/rsshub/provider.ts:13:13            
 VideoComposerClientErrorCode     type       apps/crm/lib/content-os/providers/video-composer/client.ts:3:13       
-Tables                           type       apps/crm/lib/database.types.ts:7958:13                                
-TablesInsert                     type       apps/crm/lib/database.types.ts:7987:13                                
-TablesUpdate                     type       apps/crm/lib/database.types.ts:8012:13                                
-Enums                            type       apps/crm/lib/database.types.ts:8037:13                                
-CompositeTypes                   type       apps/crm/lib/database.types.ts:8054:13                                
 NuvemshopWebhookInput            interface  apps/crm/lib/ecommerce/nuvemshop-hardening.ts:1:18                    
 AuthorizationDenyReason          type       apps/crm/lib/entitlements/authorize-module.ts:4:13                    
 TenantAuthorizationContext       interface  apps/crm/lib/entitlements/authorize-module.ts:28:18                   
@@ -952,9 +988,4 @@ CloudJob                         interface  packages/core/operating-core/src/clo
 ExecutionTarget                  interface  packages/core/operating-core/src/cloud-fabric/resource-router.ts:7:18 
 TaskRequirements                 interface  packages/core/operating-core/src/cloud-fabric/resource-router.ts:14:18
 BrightBeanMediaAssetResponse     type       packages/core/social-brain/providers/brightbean/src/schemas.ts:138:13 
-Duplicate exports (2)
-evaluateMemoryGate|memoryGate  apps/crm/lib/agent-engine/session/memory-gate.ts
-HUMAN_ROLES|PAPEIS_HUMANOS     apps/crm/lib/auth/types.ts                      
-Configuration hints (1)
-docs/recovery-snapshots/**    knip.json  Remove from ignore
 [ELIFECYCLE] Command failed with exit code 1.
