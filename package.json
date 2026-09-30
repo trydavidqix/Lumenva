@@ -24,13 +24,13 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "cross-env": "^10.1.0",
+    "js-yaml": "catalog:",
     "knip": "catalog:",
+    "prettier-plugin-tailwindcss": "catalog:",
     "sherif": "catalog:",
+    "stripe": "catalog:",
     "syncpack": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "js-yaml": "catalog:",
-    "prettier-plugin-tailwindcss": "catalog:",
-    "stripe": "catalog:"
+    "vitest": "catalog:"
   }
 }
