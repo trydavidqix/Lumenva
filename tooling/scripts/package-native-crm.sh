@@ -16,11 +16,11 @@ export NEXT_PUBLIC_SITE_URL SENTRY_DSN
 pnpm --dir apps/crm run build
 
 STANDALONE="$ROOT/apps/crm/.next/standalone"
-test -d "$STANDAL"
+test -d "$STANDALONE"
 test -d "$ROOT/apps/crm/.next/static"
 test -d "$ROOT/apps/crm/public"
 mkdir -p "$OUT"
-cp -a "$STANDAL"/. "$OUT"/
+cp -a "$STANDALONE"/. "$OUT"/
 # outputFileTracingRoot is the workspace root; server.js is in apps/crm.
 if [ -f "$OUT/apps/crm/server.js" ]; then
   APP="$OUT/apps/crm"
