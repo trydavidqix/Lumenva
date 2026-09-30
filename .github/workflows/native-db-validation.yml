@@ -32,6 +32,8 @@ jobs:
         run: bash -n apps/crm/scripts/test-db.sh tooling/scripts/setup-native-postgres17.sh
       - name: Install dependencies from committed lockfile
         run: pnpm install --frozen-lockfile
+      - name: Validate repository invariants
+        run: pnpm repo:check
       - name: Install PostgreSQL 17 and pgvector without containers
         run: bash tooling/scripts/setup-native-postgres17.sh
       - name: PostgreSQL baseline, RLS and ACL invariants
