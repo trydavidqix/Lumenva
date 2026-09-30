@@ -66,10 +66,15 @@ echo "==> PostgreSQL 17 nativo ($PG_BIN), porta 127.0.0.1:$PORT"
 "$PG_BIN/initdb" -D "$PGDATA" -U postgres -A trust --locale=C -E UTF8 -N >/dev/null
 {
   echo "listen_addresses = '127.0.0.1'"
+  echo "unix_socket_directories = '$PGDATA'"
   echo "port = $PORT"
   echo "timezone = 'UTC'"
 } >> "$PGDATA/postgresql.conf"
-"$PG_BIN/pg_ctl" -D "$PGDATA" -l "$PGDATA/server.log" -w start >/dev/null
+if ! "$PG_BIN/pg_ctl" -D "$PGDATA" -l "$PGDATA/server.log" -w start >/dev/null; then
+  echo "FATAL: PostgreSQL nativo não iniciou; log do cluster efêmero:" >&2
+  cat "$PGDATA/server.log" >&2 || true
+  exit 1
+fi
 run_psql() {
   PGPASSWORD=postgres "$PG_BIN/psql" -h 127.0.0.1 -p "$PORT" -U postgres -d postgres "$@"
 }
