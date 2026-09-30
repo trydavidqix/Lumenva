@@ -136,6 +136,20 @@ if (action === "smoke") {
       NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:1",
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "isolated-runtime-placeholder",
       SUPABASE_SERVICE_ROLE_KEY: "isolated-runtime-placeholder",
+      INTERNAL_SECRET: "isolated-runtime-placeholder",
+      MCP_RELAY_OAUTH_APPROVAL_SECRET: "isolated-runtime-placeholder",
+      CPF_ENCRYPTION_KEY: "isolated-runtime-placeholder",
+      WAHA_BYO_ENCRYPTION_KEY: "isolated-runtime-placeholder",
+      AI_CRED_AES_KEY: "isolated-runtime-placeholder",
+      SUPABASE_DB_URL: "postgresql://postgres:placeholder@127.0.0.1:1/postgres",
+      WAHA_API_BASE_URL: "http://127.0.0.1:3999",
+      WAHA_API_KEY: "isolated-runtime-placeholder",
+      WAHA_WEBHOOK_BASE_URL: "http://127.0.0.1:3999",
+      UPSTASH_REDIS_REST_URL: "http://127.0.0.1:3998",
+      UPSTASH_REDIS_REST_TOKEN: "isolated-runtime-placeholder",
+      NEXT_PUBLIC_FIREBASE_API_KEY: "demo-firebase-emulator-only",
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: "demo-lumenva-e2e.firebaseapp.com",
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: "demo-lumenva-e2e",
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -150,9 +164,9 @@ if (action === "smoke") {
         const result = await fetch("http://127.0.0.1:" + port + "/login", { signal: AbortSignal.timeout(2500), redirect: "manual" });
         const body = await result.text();
         if (result.status === 200 && /<html/i.test(body)) { ok = true; break; }
-        if (result.status >= 500) throw new Error("Server returned " + result.status);
+        if (result.status >= 500) throw new Error("Native server returned " + result.status + ": " + body.slice(0, 500) + " LOG: " + output.slice(-4000));
       } catch (error) {
-        if (/Server returned/.test(String(error))) throw error;
+        if (/Native server returned/.test(String(error))) throw error;
       }
       await new Promise(done => setTimeout(done, 400));
     }
