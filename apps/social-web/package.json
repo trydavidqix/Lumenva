@@ -27,8 +27,6 @@
     "@lumenva/core": "workspace:*",
     "@lumenva/db": "workspace:*",
     "@lumenva/provider-brightbean": "workspace:*",
-    "@lumenva/provider-moneyprinter": "workspace:*",
-    "@lumenva/worker": "workspace:*",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",

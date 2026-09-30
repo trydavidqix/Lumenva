@@ -50,6 +50,10 @@ catalog:
   '@types/pg': ^8.20.4
   '@vitest/coverage-v8': 5.0.2
   drizzle-orm: ^0.45.2
+  js-yaml: 4.1.0
+  prettier-plugin-tailwindcss: ^0.8.1
+  stripe: ^14.18.0
+  supabase: 2.117.0
 
 overrides:
   postcss: ^8.5.26
