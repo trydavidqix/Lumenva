@@ -4,11 +4,13 @@
     ".": {
       "entry": [
         "tests/**/*.{test,spec}.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
-        "tooling/scripts/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}"
+        "tooling/scripts/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
+        "prettier.config.mjs"
       ],
       "project": [
         "tests/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
-        "tooling/scripts/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}"
+        "tooling/scripts/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
+        "prettier.config.mjs"
       ],
       "vitest": {
         "config": []
