@@ -13,7 +13,7 @@ const workspaceRoot = resolve(process.cwd(), basename(process.cwd()) === "crm" ?
  *  - Initial bundle /app/inbox < 250KB gzipped
  */
 const nextConfig: NextConfig = {
-  // Self-host: gera .next/standalone pro container Docker (node server.js).
+  // Self-host nativo: gera .next/standalone para executar via node server.js.
   output: process.env.VERCEL ? undefined : "standalone",
   // Include workspace-level resources (e.g. the crm/supabase symlink) in standalone traces.
   outputFileTracingRoot: workspaceRoot,

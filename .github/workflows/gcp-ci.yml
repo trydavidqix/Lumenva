@@ -104,5 +104,10 @@ jobs:
       - name: Verify canonical toolchain
         run: pnpm repo:check
 
-      - name: RLS isolation + governance invariants
+      - name: Install native PostgreSQL 17 + pgvector
+        run: bash tooling/scripts/setup-native-postgres17.sh
+
+      - name: RLS isolation + governance invariants (native PostgreSQL)
+        env:
+          TEST_DB_ENGINE: native
         run: pnpm test:db

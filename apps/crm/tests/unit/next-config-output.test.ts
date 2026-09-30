@@ -21,7 +21,7 @@ describe("next.config output", () => {
     vi.unstubAllEnvs();
   });
 
-  it("uses standalone output outside Vercel for Docker deployments", async () => {
+  it("uses standalone output outside Vercel for native Node deployments", async () => {
     const config = await loadNextConfig();
 
     expect(config.output).toBe("standalone");

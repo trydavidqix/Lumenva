@@ -53,7 +53,7 @@ por mock sem declarar que é mock).
 
 ## Situação do legado
 
-O `test-db.sh` foi convertido para execução exclusivamente nativa. Os
+O `test-db.sh` foi convertido para execução exclusivamente nativa. A prova\nindependente inicial passou em GitHub Actions run 36719306436 (PostgreSQL 17,\npgvector, baseline e invariantes sem contêiner), seguida pela integração do\nbootstrap PGDG nos jobs RLS de CI. Os
 workflows e recursos de deploy/E2E historicamente baseados em contêineres
 continuam inventariados até existir substituição com paridade e prova.
 Este documento não equivale a afirmar a migração integral concluída.

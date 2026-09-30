@@ -58,7 +58,7 @@ jobs:
   # Gate de isolamento multi-tenant + invariantes de governança.
   # Job separado de propósito: roda em paralelo ao verify (não atrasa o feedback
   # rápido) e vira um check nomeado, que é o que a doutrina de RLS exige provar.
-  # apps/crm/scripts/test-db.sh sobe pgvector/pgvector:pg17, aplica infra/supabase/baseline.sql
+  # apps/crm/scripts/test-db.sh sobe PostgreSQL 17 nativo + pgvector, aplica infra/supabase/baseline.sql
   # em modo install (ON_ERROR_STOP=1) e update (idempotência), e roda
   # tests/invariants/** contra ele. Invocar via `pnpm test:db` é o que põe
   # node_modules/.bin no PATH que o script herda para chamar `vitest`.
@@ -78,5 +78,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm repo:check
 
-      - name: RLS isolation + governance invariants
+      - name: Install native PostgreSQL 17 + pgvector
+        run: bash tooling/scripts/setup-native-postgres17.sh
+
+      - name: RLS isolation + governance invariants (native PostgreSQL)
+        env:
+          TEST_DB_ENGINE: native
         run: pnpm test:db
