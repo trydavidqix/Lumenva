@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Pool } from "../../../../apps/crm/node_modules/pg"
+import { Pool } from "pg";
 import { createPostgresExecutionReceiptStore } from "./receipt-store.js";
 import type { ReceiptInput } from "./receipt-store.js";
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import pg from "../../../../apps/crm/node_modules/pg"
+import pg from "pg";
 import { createPostgresJobEventLogAdapter } from "./event-log-adapter";
 const databaseUrl = process.env.DATABASE_URL;
 describe.skipIf(!databaseUrl)("event_log adapter PostgreSQL real", () => {

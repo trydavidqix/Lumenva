@@ -42,4 +42,4 @@ jobs:
         run: pnpm test:unit
 
       - name: Production build
-        run: pnpm build
+        run: pnpm -r --if-present build
