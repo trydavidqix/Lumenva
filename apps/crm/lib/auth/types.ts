@@ -44,7 +44,10 @@ export const ROLE_RANK: Record<ActorRole, number> = {
   admin: 5,
 };
 
-/** Papéis que uma PESSOA pode ter. Espelha `user_organizations_role_check`. */
+/**
+ * Papéis que uma PESSOA pode ter. Espelha `user_organizations_role_check`.
+ * @alias
+ */
 export const PAPEIS_HUMANOS: ReadonlyArray<HumanRole> = HUMAN_ROLES;
 
 /** Rótulo pt-BR para quem configura. `ai_operator` nunca aparece em seletor de time. */

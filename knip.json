@@ -10,10 +10,9 @@
         "tests/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}",
         "tooling/scripts/**/*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}"
       ],
-      "ignore": [
-        "docs/archive/**",
-        "docs/recovery-snapshots/**"
-      ]
+      "vitest": {
+        "config": []
+      }
     },
     "apps/crm": {
       "entry": [
@@ -40,5 +39,11 @@
         "config": []
       }
     }
+  },
+  "ignoreIssues": {
+    "apps/crm/lib/database.types.ts": [
+      "exports",
+      "types"
+    ]
   }
 }

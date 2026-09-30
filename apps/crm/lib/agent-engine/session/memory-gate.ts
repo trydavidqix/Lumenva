@@ -4,4 +4,5 @@ export function evaluateMemoryGate(write:MemoryWrite,policy:MemoryGatePolicy):Me
 export type AuthenticatedMemoryWrite=MemoryWrite&{organization_id:string;actor_id:string}; export type AuthenticatedMemoryPolicy=MemoryGatePolicy&{organization_id:string;actor_id:string;capability:string}; export type MemoryRequester={organization_id:string;actor_id:string;capabilities:readonly string[]};
 /** Boundary variant: identity and capability are resolved outside the model payload. */
 export function evaluateAuthenticatedMemoryGate(write:AuthenticatedMemoryWrite,policy:AuthenticatedMemoryPolicy,requester:MemoryRequester|null|undefined):MemoryGateDecision{if(!requester||!requester.organization_id||!requester.actor_id||!Array.isArray(requester.capabilities))return"DENY";if(write?.organization_id!==policy?.organization_id||write?.actor_id!==policy?.actor_id||requester.organization_id!==write.organization_id||requester.actor_id!==write.actor_id||!requester.capabilities.includes(policy.capability))return"DENY";return evaluateMemoryGate(write,policy);}
+/** @alias */
 export const memoryGate=evaluateMemoryGate;
