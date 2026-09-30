@@ -9,13 +9,13 @@ const playwright = readFileSync(path.join(root, "apps/crm/playwright.config.ts")
 describe("isolated authenticated browser safety contract", () => {
   it("fails closed when preview credentials are missing", () => {
     const r = spawnSync(process.execPath, [script], { cwd: root, encoding: "utf8",
-      env: { PATH: process.env.PATH ?? "", E2E_PREVIEW_REF: "", E2E_PRODUCTION_REF: "", E2E_TARGET_ACK: "isolated-empty-preview-only" } });
+      env: { PATH: process.env.PATH ?? "", NODE_ENV: "test", E2E_PREVIEW_REF: "", E2E_PRODUCTION_REF: "", E2E_TARGET_ACK: "isolated-empty-preview-only" } });
     expect(r.status).not.toBe(0);
     expect(r.stderr).toContain("BLOCKED");
   });
   it("rejects identical production and preview refs before any side effects", () => {
     const r = spawnSync(process.execPath, [script], { cwd: root, encoding: "utf8",
-      env: { PATH: process.env.PATH ?? "", E2E_PREVIEW_REF: "aaaaaaaaaaaaaaaaaaaa",
+      env: { PATH: process.env.PATH ?? "", NODE_ENV: "test", E2E_PREVIEW_REF: "aaaaaaaaaaaaaaaaaaaa",
         E2E_PRODUCTION_REF: "aaaaaaaaaaaaaaaaaaaa", E2E_TARGET_ACK: "isolated-empty-preview-only" } });
     expect(r.status).not.toBe(0);
     expect(r.stderr).toContain("BLOCKED");
