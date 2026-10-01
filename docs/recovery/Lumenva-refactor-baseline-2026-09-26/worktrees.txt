@@ -1,0 +1,88 @@
+worktree C:/Users/David/Desktop/Projetos/Lumenva
+HEAD 9a25cac79b3e79528f8793203eed9a9951e0854f
+branch refs/heads/refactor/lumenva-clean-architecture
+
+worktree C:/Users/David/Desktop/Projetos/_RECOVERY_LUMENVA_2026-09-26/worktrees/lumenva-f1-identity-mapping-v2
+HEAD 97fec93f01d7826f1233a711ea402c69ec90589e
+branch refs/heads/recovery/lumenva-f1-identity-mapping-v2-20260926
+
+worktree C:/Users/David/Desktop/Projetos/_RECOVERY_LUMENVA_2026-09-26/worktrees/lumenva-f3-rbac
+HEAD 97fec93f01d7826f1233a711ea402c69ec90589e
+branch refs/heads/recovery/lumenva-f3-rbac-20260926
+
+worktree C:/Users/David/Desktop/Projetos/_RECOVERY_LUMENVA_2026-09-26/worktrees/lumenva-f3-task1-lint
+HEAD 97fec93f01d7826f1233a711ea402c69ec90589e
+branch refs/heads/recovery/lumenva-f3-task1-lint-20260926
+
+worktree C:/Users/David/Desktop/Projetos/_RECOVERY_LUMENVA_2026-09-26/worktrees/lumenva-f3-task3-lint
+HEAD 3c2e7d0e96f901928b955c46020248c286646f08
+branch refs/heads/recovery/lumenva-f3-task3-lint-20260926
+
+worktree C:/Users/David/Desktop/Projetos/_RECOVERY_LUMENVA_2026-09-26/worktrees/lumenva-f3-task4
+HEAD a9bc8f0b95a3debe20b314ab13379e62275e1efc
+branch refs/heads/recovery/lumenva-f3-task4-20260926
+
+worktree C:/Users/David/Desktop/Projetos/_RECOVERY_LUMENVA_2026-09-26/worktrees/lumenva-f3-task6
+HEAD 12a78eb59849446e3377aa600cf80381ebc510b5
+branch refs/heads/recovery/lumenva-f3-task6-20260926
+
+worktree C:/Users/David/Desktop/Projetos/_RECOVERY_LUMENVA_2026-09-26/worktrees/lumenva-f4-auth-fix
+HEAD 0606b36b69c8c64f3ba97331e22a8fd83f6a0d15
+branch refs/heads/recovery/lumenva-f4-auth-fix-20260926
+
+worktree C:/Users/David/Desktop/Projetos/_RECOVERY_LUMENVA_2026-09-26/worktrees/lumenva-f4-j1-lint
+HEAD 2c52eb5e7fb988b5126cb7ff1a611e7e9db3b514
+branch refs/heads/recovery/lumenva-f4-j1-lint-20260926
+
+worktree C:/Users/David/Desktop/Projetos/_RECOVERY_LUMENVA_2026-09-26/worktrees/lumenva-f4-j2-lint
+HEAD e66b72a74a76cae3356ee744c3ae66ba0cedcc13
+branch refs/heads/recovery/lumenva-f4-j2-lint-20260926
+
+worktree C:/Users/David/Desktop/Projetos/_RECOVERY_LUMENVA_2026-09-26/worktrees/lumenva-f4-j4-ci
+HEAD 2e7379313f2debf33b3750b51f97b2a3e484e335
+branch refs/heads/recovery/lumenva-f4-j4-ci-20260926
+
+worktree C:/Users/David/Desktop/Projetos/_RECOVERY_LUMENVA_2026-09-26/worktrees/lumenva-f4-j4-lint
+HEAD 2e7379313f2debf33b3750b51f97b2a3e484e335
+branch refs/heads/recovery/lumenva-f4-j4-lint-20260926
+
+worktree C:/Users/David/Desktop/Projetos/_RECOVERY_LUMENVA_2026-09-26/worktrees/lumenva-f4-j5-ci
+HEAD 2977ea18fec99e4cf40e27ab81549c0e8961e752
+branch refs/heads/recovery/lumenva-f4-j5-ci-20260926
+
+worktree C:/Users/David/Desktop/Projetos/_RECOVERY_LUMENVA_2026-09-26/worktrees/lumenva-f4-mfa
+HEAD 12a78eb59849446e3377aa600cf80381ebc510b5
+branch refs/heads/recovery/lumenva-f4-mfa-20260926
+
+worktree C:/Users/David/Desktop/Projetos/_RECOVERY_LUMENVA_2026-09-26/worktrees/lumenva-f4-task6-review
+HEAD 0606b36b69c8c64f3ba97331e22a8fd83f6a0d15
+branch refs/heads/recovery/lumenva-f4-task6-review-20260926
+
+worktree C:/Users/David/Desktop/Projetos/_RECOVERY_LUMENVA_2026-09-26/worktrees/lumenva-f5-task2-fix
+HEAD 1b93a359683ed84c6808e5371244e3dd0a56b786
+branch refs/heads/recovery/lumenva-f5-task2-fix-20260926
+
+worktree C:/Users/David/Desktop/Projetos/_RECOVERY_LUMENVA_2026-09-26/worktrees/lumenva-f5-task3-fix
+HEAD 5cc7250a272c4aae2a3f2fc2c9e8bab61590b31b
+branch refs/heads/recovery/lumenva-f5-task3-fix-20260926
+
+worktree C:/Users/David/Desktop/Projetos/_RECOVERY_LUMENVA_2026-09-26/worktrees/lumenva-f5-task4-test-fix
+HEAD 6799470d1cdb44ca09a0d45cae5f18be66e7debe
+branch refs/heads/recovery/lumenva-f5-task4-test-fix-20260926
+
+worktree C:/Users/David/Desktop/Projetos/_RECOVERY_LUMENVA_2026-09-26/worktrees/lumenva-f5-task5-fix
+HEAD 1dc7a3e9a804aec18d1198ce30e270369ed02538
+branch refs/heads/recovery/lumenva-f5-task5-fix-20260926
+
+worktree C:/Users/David/Desktop/Projetos/_RECOVERY_LUMENVA_2026-09-26/worktrees/lumenva-f5-task5-sidebar
+HEAD 1dc7a3e9a804aec18d1198ce30e270369ed02538
+branch refs/heads/recovery/lumenva-f5-task5-sidebar-20260926
+
+worktree C:/Users/David/Desktop/Projetos/_RECOVERY_LUMENVA_2026-09-26/worktrees/lumenva-f5-task6-final
+HEAD edac195b5385d7e3d11e6d6d960b0266278686d5
+branch refs/heads/recovery/lumenva-f5-task6-final-20260926
+
+worktree C:/Users/David/Desktop/Projetos/_RECOVERY_LUMENVA_2026-09-26/worktrees/lumenva-f7-j5-sentry-ratelimit
+HEAD 543b42df969df72731de9490fcb4b1478dd41854
+branch refs/heads/recovery/lumenva-f7-j5-sentry-ratelimit-20260926
+
