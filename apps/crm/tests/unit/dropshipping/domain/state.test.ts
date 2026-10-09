@@ -29,11 +29,43 @@ describe('Dropshipping Domain State Machine', () => {
       expect(() => validateMarket(validMarket)).not.toThrow();
     });
 
-    test('fails if one required field is missing', () => {
+    test('fails if a cents field is missing or not a number', () => {
       const invalidMarket = { ...validMarket } as Record<string, unknown>;
       delete invalidMarket.tax_cents;
       expect(() => validateMarket(invalidMarket)).toThrow(InvalidMarketError);
-      expect(() => validateMarket(invalidMarket)).toThrow('Market config missing tax_cents');
+      expect(() => validateMarket(invalidMarket)).toThrow('Market config invalid tax_cents');
+
+      const invalidMarket2 = { ...validMarket, shipping_cents: '100' } as Record<string, unknown>;
+      expect(() => validateMarket(invalidMarket2)).toThrow(InvalidMarketError);
+    });
+
+    test('fails if currency is missing or empty string', () => {
+      const invalidMarket = { ...validMarket, currency: '' } as Record<string, unknown>;
+      expect(() => validateMarket(invalidMarket)).toThrow(InvalidMarketError);
+      expect(() => validateMarket(invalidMarket)).toThrow('Market config missing currency or currency is empty');
+
+      const invalidMarket2 = { ...validMarket } as Record<string, unknown>;
+      delete invalidMarket2.currency;
+      expect(() => validateMarket(invalidMarket2)).toThrow(InvalidMarketError);
+    });
+
+    test('fails if cents are negative', () => {
+      const invalidMarket = { ...validMarket, cost_cents: -10 } as Record<string, unknown>;
+      expect(() => validateMarket(invalidMarket)).toThrow(InvalidMarketError);
+      expect(() => validateMarket(invalidMarket)).toThrow('Market config invalid cost_cents: must be a finite nonnegative integer');
+    });
+
+    test('fails if cents are fractional', () => {
+      const invalidMarket = { ...validMarket, cost_cents: 10.5 } as Record<string, unknown>;
+      expect(() => validateMarket(invalidMarket)).toThrow(InvalidMarketError);
+      expect(() => validateMarket(invalidMarket)).toThrow('Market config invalid cost_cents: must be a finite nonnegative integer');
+    });
+
+    test('fails if cents are infinity or NaN', () => {
+      const invalidMarket = { ...validMarket, margin_cents: NaN } as Record<string, unknown>;
+      expect(() => validateMarket(invalidMarket)).toThrow(InvalidMarketError);
+      const invalidMarket2 = { ...validMarket, margin_cents: Infinity } as Record<string, unknown>;
+      expect(() => validateMarket(invalidMarket2)).toThrow(InvalidMarketError);
     });
   });
 

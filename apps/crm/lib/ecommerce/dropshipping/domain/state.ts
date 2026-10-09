@@ -16,11 +16,18 @@ const VALID_TRANSITIONS: Record<DropshippingState, DropshippingState[]> = {
 
 export function validateMarket(market: unknown) {
   if (!market || typeof market !== 'object') throw new InvalidMarketError('Market config is required');
-  const requiredKeys = ['currency', 'tax_cents', 'margin_cents', 'shipping_cents', 'cost_cents', 'price_cents'];
-  for (const key of requiredKeys) {
-    const m = market as Record<string, unknown>;
-    if (m[key] === undefined || m[key] === null) {
-      throw new InvalidMarketError(`Market config missing ${key}`);
+
+  const m = market as Record<string, unknown>;
+
+  if (typeof m.currency !== 'string' || m.currency.trim() === '') {
+    throw new InvalidMarketError('Market config missing currency or currency is empty');
+  }
+
+  const centsKeys = ['tax_cents', 'margin_cents', 'shipping_cents', 'cost_cents', 'price_cents'];
+  for (const key of centsKeys) {
+    const val = m[key];
+    if (typeof val !== 'number' || !Number.isInteger(val) || val < 0) {
+      throw new InvalidMarketError(`Market config invalid ${key}: must be a finite nonnegative integer`);
     }
   }
 }
@@ -46,7 +53,6 @@ export function transitionState(
   }
 
   // Validate Executor lock First
-  // "unknown/timeout não autoriza retry nem troca de executor"
   if (order.state === 'unknown') {
     throw new IllegalExecutorError('Cannot change executor or retry when in unknown state');
   }
