@@ -229,7 +229,7 @@ function buildWindow(
     baseline: compareMetricRows(currentMetricRows, previousMetricRows),
     availabilityNotes: METRIC_KEYS
       .filter((key) => metrics[key].sampleSize === 0)
-      .map((key) => `${key} unavailable in ${label} analytics`),
+      .map((key) => `${key} unavailable in ${label} analytics (captured at: ${new Date(asOfMs).toISOString()}, source preserved)`),
     evidenceSnapshotIds: [...new Set([...currentMetricRows, ...latestPosts].map((row) => row.id))],
     baselineEvidenceSnapshotIds: previousMetricRows.map((row) => row.id),
   }

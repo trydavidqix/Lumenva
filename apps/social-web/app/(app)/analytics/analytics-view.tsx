@@ -13,6 +13,15 @@ export function AnalyticsView({ model }: { model: AnalyticsDashboardViewModel })
     <main style={{ fontFamily: 'sans-serif', maxWidth: 1180, margin: '40px auto', padding: 24 }}>
       <p style={{ textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: 12 }}>Analytics V1.1</p>
       <h1>Desempenho e melhores horários</h1>
+      {model.availabilityNotes.includes('NOT_CONNECTED') ? (
+        <div style={{ background: '#fff3cd', color: '#856404', padding: '12px 16px', borderRadius: 8, marginBottom: 24, border: '1px solid #ffeeba' }}>
+          <strong>Modo de Demonstração / Desconectado:</strong> Os dados exibidos abaixo são exemplos visuais (fixtures) e não correspondem a uma conta real conectada.
+        </div>
+      ) : (
+        <div style={{ background: '#d4edda', color: '#155724', padding: '12px 16px', borderRadius: 8, marginBottom: 24, border: '1px solid #c3e6cb' }}>
+          <strong>Conta Conectada:</strong> Exibindo dados de analytics reais validados.
+        </div>
+      )}
       <p>
         Período analisado em <strong>{model.timeZone}</strong>. Hipóteses são apresentadas separadamente dos fatos.
       </p>
