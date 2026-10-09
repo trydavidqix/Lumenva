@@ -9,7 +9,7 @@ import type { NextConfig } from "next";
  */
 const nextConfig: NextConfig = {
   // Self-host: gera .next/standalone pro container Docker (node server.js).
-  output: "standalone",
+  output: process.env.VERCEL ? undefined : "standalone",
   reactStrictMode: true,
   poweredByHeader: false,
   // typedRoutes moved out of experimental in Next 15.5+

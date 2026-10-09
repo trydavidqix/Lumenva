@@ -25,20 +25,22 @@ describe("ProjectSpec Studio Commercial", () => {
     const variants = createStudioVariants(project, { A: "Direção A", B: "Direção B", C: "Direção C" });
     expect(variants.map((v) => v.label)).toEqual(["A", "B", "C"]); expect(new Set(variants.map((v) => v.variant_id)).size).toBe(3); expect(variants.every((v) => v.project_id === project.project_id && v.status === "DRAFT")).toBe(true);
   });
+  const validFutureDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
   it("emite token opaco e persiste apenas hash", () => {
-    const issued = issueClientPortalToken({ project, scope: "APPROVE", expires_at: "2026-10-01T00:00:00.000Z", created_by: "owner-1" });
+    const issued = issueClientPortalToken({ project, scope: "APPROVE", expires_at: validFutureDate, created_by: "owner-1" });
     expect(issued.token).toMatch(/^[A-Za-z0-9_-]{43}$/); expect(issued.record.token_hash).toBe(createHash("sha256").update(issued.token).digest("hex")); expect(JSON.stringify(issued.record)).not.toContain(issued.token);
-    expect(canUseClientPortalToken(issued.record, issued.token, { project_id: project.project_id, organization_id: project.organization_id, required_scope: "APPROVE", now: "2026-09-12T00:00:00.000Z" })).toBe(true);
+    expect(canUseClientPortalToken(issued.record, issued.token, { project_id: project.project_id, organization_id: project.organization_id, required_scope: "APPROVE", now: new Date().toISOString() })).toBe(true);
   });
   it("recusa token expirado, revogado, cross-project e scope maior", () => {
-    const issued = issueClientPortalToken({ project, scope: "VIEW", expires_at: "2026-10-01T00:00:00.000Z", created_by: "owner-1" });
-    const base = { project_id: project.project_id, organization_id: project.organization_id, required_scope: "VIEW" as const, now: "2026-10-02T00:00:00.000Z" };
+    const issued = issueClientPortalToken({ project, scope: "VIEW", expires_at: validFutureDate, created_by: "owner-1" });
+    const expiredNow = new Date(Date.parse(validFutureDate) + 1000).toISOString();
+    const base = { project_id: project.project_id, organization_id: project.organization_id, required_scope: "VIEW" as const, now: expiredNow };
     expect(canUseClientPortalToken(issued.record, issued.token, base)).toBe(false);
-    expect(canUseClientPortalToken({ ...issued.record, revoked_at: "2026-09-10T00:00:00.000Z" }, issued.token, { ...base, now: "2026-09-12T00:00:00.000Z" })).toBe(false);
-    expect(canUseClientPortalToken(issued.record, issued.token, { ...base, project_id: "project-2", now: "2026-09-12T00:00:00.000Z" })).toBe(false);
-    expect(canUseClientPortalToken(issued.record, issued.token, { ...base, required_scope: "APPROVE", now: "2026-09-12T00:00:00.000Z" })).toBe(false);
+    expect(canUseClientPortalToken({ ...issued.record, revoked_at: new Date().toISOString() }, issued.token, { ...base, now: new Date().toISOString() })).toBe(false);
+    expect(canUseClientPortalToken(issued.record, issued.token, { ...base, project_id: "project-2", now: new Date().toISOString() })).toBe(false);
+    expect(canUseClientPortalToken(issued.record, issued.token, { ...base, required_scope: "APPROVE", now: new Date().toISOString() })).toBe(false);
   });
-  it("rejeita datas invalidas fail-closed", () => { expect(() => issueClientPortalToken({ project, scope: "VIEW", expires_at: "not-a-date", created_by: "owner-1" })).toThrow(); const issued = issueClientPortalToken({ project, scope: "VIEW", expires_at: "2026-10-01T00:00:00.000Z", created_by: "owner-1" }); expect(canUseClientPortalToken({ ...issued.record, expires_at: "not-a-date" }, issued.token, { project_id: project.project_id, organization_id: project.organization_id, required_scope: "VIEW", now: "2026-09-12T00:00:00.000Z" })).toBe(false); });
-  it("invalida token single_use apos primeiro uso", () => { const issued = issueClientPortalToken({ project, scope: "VIEW", expires_at: "2026-10-01T00:00:00.000Z", created_by: "owner-1", single_use: true }); const request = { project_id: project.project_id, organization_id: project.organization_id, required_scope: "VIEW" as const, now: "2026-09-12T00:00:00.000Z" }; expect(canUseClientPortalToken(issued.record, issued.token, request)).toBe(true); expect(canUseClientPortalToken(issued.record, issued.token, request)).toBe(false); });
-  it("exige owner não vazio ao emitir token do portal", () => { expect(() => issueClientPortalToken({ project, scope: "VIEW", expires_at: "2026-10-01T00:00:00.000Z", created_by: "   " })).toThrow("created_by"); });
+  it("rejeita datas invalidas fail-closed", () => { expect(() => issueClientPortalToken({ project, scope: "VIEW", expires_at: "not-a-date", created_by: "owner-1" })).toThrow(); const issued = issueClientPortalToken({ project, scope: "VIEW", expires_at: validFutureDate, created_by: "owner-1" }); expect(canUseClientPortalToken({ ...issued.record, expires_at: "not-a-date" }, issued.token, { project_id: project.project_id, organization_id: project.organization_id, required_scope: "VIEW", now: new Date().toISOString() })).toBe(false); });
+  it("invalida token single_use apos primeiro uso", () => { const issued = issueClientPortalToken({ project, scope: "VIEW", expires_at: validFutureDate, created_by: "owner-1", single_use: true }); const request = { project_id: project.project_id, organization_id: project.organization_id, required_scope: "VIEW" as const, now: new Date().toISOString() }; expect(canUseClientPortalToken(issued.record, issued.token, request)).toBe(true); expect(canUseClientPortalToken(issued.record, issued.token, request)).toBe(false); });
+  it("exige owner não vazio ao emitir token do portal", () => { expect(() => issueClientPortalToken({ project, scope: "VIEW", expires_at: validFutureDate, created_by: "   " })).toThrow("created_by"); });
 });

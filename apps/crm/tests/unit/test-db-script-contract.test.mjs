@@ -1,13 +1,21 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { describe, it } from "vitest";
 
-const scriptPath = new URL("../../scripts/test-db.sh", import.meta.url);
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
-const script = await readFile(scriptPath, "utf8");
-const guard = script.indexOf("command -v vitest");
-const dockerStart = script.indexOf("docker run");
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const scriptPath = join(__dirname, "../../scripts/test-db.sh");
 
-assert.notEqual(guard, -1);
-assert.ok(guard < dockerStart);
-assert.match(script, /docker rm -fv \"\$CONTAINER\"/);
-console.log("PASS test-db vitest guard contract");
+describe("test-db vitest guard contract", () => {
+  it("includes vitest check before docker run", async () => {
+    const script = await readFile(scriptPath, "utf8");
+    const guard = script.indexOf("command -v vitest");
+    const dockerStart = script.indexOf("docker run");
+
+    assert.notEqual(guard, -1);
+    assert.ok(guard < dockerStart);
+    assert.match(script, /docker rm -fv \"\$CONTAINER\"/);
+  });
+});

@@ -52,13 +52,12 @@ describe("signInWithPassword — teto de tentativas", () => {
       resultados.push(await signInWithPassword(input));
     }
 
-    // AUTH_LIMITS.login.id = 5 → as 5 primeiras passam do teto e falham no
-    // provedor; a 6ª nem chega lá.
-    expect(resultados.slice(0, 5).map((r) => r.error)).toEqual(
-      Array(5).fill("invalid_credentials"),
+    // Legacy behavior expected rate limits and invalid credentials.
+    // In F4, the action immediately rejects with use_firebase_client.
+    expect(resultados.map((r) => r.error)).toEqual(
+      Array(6).fill("use_firebase_client"),
     );
-    expect(resultados[5]?.error).toBe("rate_limited");
-    expect(signIn).toHaveBeenCalledTimes(5);
+    expect(signIn).not.toHaveBeenCalled();
   });
 
   it("acertar a senha não gasta o orçamento de bloqueio da conta", async () => {
@@ -79,6 +78,7 @@ describe("signInWithPassword — teto de tentativas", () => {
 
     // Nenhuma das dez foi barrada: se o sucesso contasse, a 6ª seria.
     expect(resultados.filter((r) => r?.error === "rate_limited")).toHaveLength(0);
-    expect(signIn).toHaveBeenCalledTimes(10);
+    expect(resultados.every(r => r.error === "use_firebase_client")).toBe(true);
+    expect(signIn).not.toHaveBeenCalled();
   });
 });

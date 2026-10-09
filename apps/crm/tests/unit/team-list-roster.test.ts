@@ -15,6 +15,7 @@ import { NextRequest } from "next/server";
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import type { AuthUser } from "@/lib/auth/types";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 vi.mock("@/lib/auth/server", () => ({
   loadAuthUser: vi.fn(),
@@ -52,15 +53,33 @@ interface QuerySpy {
   eqCalls: Array<[string, unknown]>;
 }
 
-function makeSupabaseStub(rows: Array<Record<string, unknown>>, spy: QuerySpy) {
-  const selectChain = {
+interface SelectChain {
+  eq: (col: string, val: unknown) => SelectChain;
+  is: () => SelectChain;
+  not: () => SelectChain;
+  maybeSingle: () => Promise<{ data: { role: string }; error: null }>;
+  order: () => SelectChain;
+  then: <T>(resolve: (val: { data: Record<string, unknown>[]; error: null }) => T) => Promise<T>;
+}
+
+interface SupabaseStub {
+  from: (table: string) => { select: () => SelectChain };
+  rpc: (fn: string) => Promise<{ data: string | null; error: null }>;
+}
+
+function makeSupabaseStub(rows: Array<Record<string, unknown>>, spy: QuerySpy): SupabaseStub {
+  const selectChain: SelectChain = {
     eq: (col: string, val: unknown) => {
       spy.eqCalls.push([col, val]);
       return selectChain;
     },
     is: () => selectChain,
-    order: () => Promise.resolve({ data: rows, error: null }),
+    not: () => selectChain,
+    maybeSingle: () => Promise.resolve({ data: { role: "manager" }, error: null }),
+    order: () => selectChain,
+    then: <T>(resolve: (val: { data: Record<string, unknown>[]; error: null }) => T) => Promise.resolve({ data: rows, error: null }).then(resolve),
   };
+
   return {
     from: (table: string) => {
       if (table !== "user_organizations") throw new Error(`unexpected table ${table}`);
@@ -74,7 +93,29 @@ function makeSupabaseStub(rows: Array<Record<string, unknown>>, spy: QuerySpy) {
   };
 }
 
-function managerSession(rows: Array<Record<string, unknown>>, spy: QuerySpy) {
+function makeAdminSupabaseStub(): SupabaseStub {
+  const selectChain: SelectChain = {
+    eq: () => selectChain,
+    is: () => selectChain,
+    not: () => selectChain,
+    maybeSingle: () => Promise.resolve({ data: { role: "manager" }, error: null }),
+    order: () => selectChain,
+    then: <T>(resolve: (val: { data: Record<string, unknown>[]; error: null }) => T) => Promise.resolve({ data: [], error: null }).then(resolve),
+  };
+
+  return {
+    from: (table: string) => {
+      if (table !== "user_organizations") throw new Error(`unexpected table ${table}`);
+      return { select: () => selectChain };
+    },
+    rpc: async (fn: string) =>
+      fn === "fn_user_role_in_org"
+        ? { data: "manager", error: null }
+        : { data: null, error: null },
+  };
+}
+
+async function managerSession(rows: Array<Record<string, unknown>>, spy: QuerySpy) {
   const user: AuthUser = {
     id: MANAGER_ID,
     email: "manager@example.com",
@@ -85,8 +126,9 @@ function managerSession(rows: Array<Record<string, unknown>>, spy: QuerySpy) {
   };
   vi.mocked(loadAuthUser).mockResolvedValue(user);
   vi.mocked(resolveActiveOrg).mockResolvedValue({ orgId: ORG_ID, name: "Org", role: "manager" });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(rows, spy) as any);
+
+  vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(rows, spy) as unknown as Awaited<ReturnType<typeof createClient>>);
+  vi.mocked(createAdminClient).mockReturnValue(makeAdminSupabaseStub() as unknown as ReturnType<typeof createAdminClient>);
 }
 
 beforeEach(() => {
@@ -96,7 +138,7 @@ beforeEach(() => {
 describe("GET /api/v1/team — roster completo para manager (G6-06)", () => {
   it("manager recebe TODOS os membros que a RLS-scoped query entrega (5), não 1", async () => {
     const spy: QuerySpy = { eqCalls: [] };
-    managerSession(ROSTER, spy);
+    await managerSession(ROSTER, spy);
     const { GET } = await import("@/app/api/v1/team/route");
     const res = await GET(new NextRequest("http://localhost/api/v1/team"));
     expect(res.status).toBe(200);
@@ -109,7 +151,7 @@ describe("GET /api/v1/team — roster completo para manager (G6-06)", () => {
 
   it("a query é org-scoped e NÃO filtra por user_id (o roster vem só da RLS)", async () => {
     const spy: QuerySpy = { eqCalls: [] };
-    managerSession(ROSTER, spy);
+    await managerSession(ROSTER, spy);
     const { GET } = await import("@/app/api/v1/team/route");
     await GET(new NextRequest("http://localhost/api/v1/team"));
     expect(spy.eqCalls).toContainEqual(["organization_id", ORG_ID]);

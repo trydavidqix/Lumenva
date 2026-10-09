@@ -22,7 +22,7 @@ const consultas: { platformAdmins: unknown; memberships: unknown } = {
   memberships: { data: [], error: null },
 };
 
-vi.mock("next/headers", () => ({ cookies: async () => ({ getAll: () => [], set: () => {} }) }));
+vi.mock("next/headers", () => ({ cookies: async () => ({ getAll: () => [], set: () => {}, get: () => undefined }) }));
 vi.mock("next/navigation", () => ({ redirect: () => { throw new Error("redirect"); } }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -33,18 +33,43 @@ vi.mock("@/lib/supabase/server", () => ({
         error: null,
       }),
     },
+  }),
+}));
+
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => ({
     from: (tabela: string) => {
       const alvo = tabela === "platform_admins" ? "platformAdmins" : "memberships";
       const resultado = () => consultas[alvo as keyof typeof consultas];
       const chain = {
         select: () => chain,
         eq: () => chain,
-        is: () => (alvo === "platformAdmins" ? { maybeSingle: async () => resultado() } : resultado()),
+        not: () => chain,
+        is: () => {
+          if (alvo === "platformAdmins") return { maybeSingle: async () => resultado() };
+          const membChain = {
+            not: () => membChain,
+            then: (r: (v: unknown) => unknown) => Promise.resolve(resultado()).then(r),
+          };
+          return membChain;
+        },
         maybeSingle: async () => resultado(),
         then: (r: (v: unknown) => unknown) => Promise.resolve(resultado()).then(r),
       };
       return chain;
     },
+  }),
+}));
+
+vi.mock("@/lib/auth/firebase-identity", () => ({
+  resolveFirebaseIdentity: async () => ({
+    firebaseUid: "f1",
+    userId: "u1",
+    email: "a@b.c",
+    fullName: null,
+    avatarUrl: null,
+    userMetadata: {},
+    appMetadata: {},
   }),
 }));
 

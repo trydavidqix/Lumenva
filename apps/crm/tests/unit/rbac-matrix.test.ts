@@ -1,13 +1,13 @@
 /**
- * G2-01 — matriz role×endpoint aplicada server-side (spec 13 §4).
+ * Testes baseados na matriz de permissões do AGENTS.md (spec 13 §4).
+ * Prova, contra os Route Handlers reais, as guardrails unificadas via `requireRole`.
  *
- * Por grupo de rota: prova o 403 para role insuficiente e o 200 para o role
- * mínimo da matriz, exercitando os Route Handlers REAIS (auth e Supabase
- * mockados; a decisão de autorização é a de produção via requireRole).
+ * (Leads: update board = viewer read-only/write agent+). Inbox (conversations:
+ * assign/read/write agent+). Team: (read manager+/write admin). Audit (read
+ * manager+). Settings/Tokens: (read/write admin). Channels: (read/write admin
+ * - não existe rota pública hoje).
  *
- * Grupos cobertos: settings/api-tokens (admin), team (read manager+/write
- * admin), audit (manager+), inbox/conversations (read viewer+/write agent+),
- * leads (read viewer+/write agent+). Billing: nenhuma rota existe hoje —
+ * Contacts (read viewer/write agent+). Billing: nenhuma rota existe hoje —
  * célula admin-only da matriz fica coberta quando a rota nascer.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -18,6 +18,7 @@ import { resolvePlatformAdmin } from "@/lib/auth/requirePlatformAdmin";
 import { audit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
 import type { AuthUser, Role } from "@/lib/auth/types";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 vi.mock("@/lib/auth/server", () => ({
   loadAuthUser: vi.fn(),
@@ -35,30 +36,63 @@ vi.mock("@/lib/audit", () => ({
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const ORG_ID = "22222222-2222-4222-8222-222222222222";
 
+interface SupabaseStubResult {
+  data: unknown;
+  error: null;
+  count: number;
+}
+
+interface SupabaseStubChain {
+  select: () => SupabaseStubChain;
+  eq: () => SupabaseStubChain;
+  is: () => SupabaseStubChain;
+  not: () => SupabaseStubChain;
+  neq: () => SupabaseStubChain;
+  in: () => SupabaseStubChain;
+  order: () => SupabaseStubChain;
+  limit: () => SupabaseStubChain;
+  insert: () => SupabaseStubChain;
+  update: () => SupabaseStubChain;
+  maybeSingle: () => Promise<SupabaseStubResult>;
+  then: <T>(resolve: (val: SupabaseStubResult) => T, reject: (err: unknown) => T) => Promise<T>;
+}
+
+interface SupabaseStub {
+  auth: {
+    getUser: () => Promise<{ data: { user: { id: string } | null }, error: null }>;
+  };
+  from: (table: string) => SupabaseStubChain;
+  rpc: (fn: string) => Promise<{ data: Role | null, error: null }>;
+}
+
 /**
  * Stub PostgREST: qualquer cadeia .from(t).select()...  resolve com o valor
  * configurado em `tables[t]` (default: lista vazia). `rpc` devolve o role
  * efetivo (fn_user_role_in_org) usado pelo requireRole.
  */
-function makeSupabaseStub(role: Role | null, tables: Record<string, unknown> = {}) {
-  const chainFor = (table: string) => {
-    const result = {
+function makeSupabaseStub(role: Role | null, tables: Record<string, unknown> = {}): SupabaseStub {
+  const chainFor = (table: string): SupabaseStubChain => {
+    const result: SupabaseStubResult = {
       data: table in tables ? tables[table] : [],
       error: null,
       count: 0,
     };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const proxy: any = new Proxy(() => proxy, {
-      get(_t, prop) {
-        if (prop === "then") {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          return (resolve: any, reject: any) => Promise.resolve(result).then(resolve, reject);
-        }
-        return () => proxy;
-      },
-      apply: () => proxy,
-    });
-    return proxy;
+    // mock is/not chaining as required by modern code
+    const chainObj: SupabaseStubChain = {
+      select: () => chainObj,
+      eq: () => chainObj,
+      is: () => chainObj,
+      not: () => chainObj,
+      neq: () => chainObj,
+      in: () => chainObj,
+      order: () => chainObj,
+      limit: () => chainObj,
+      insert: () => chainObj,
+      update: () => chainObj,
+      maybeSingle: () => Promise.resolve(result),
+      then: <T>(resolve: (val: SupabaseStubResult) => T, reject: (err: unknown) => T) => Promise.resolve(result).then(resolve, reject),
+    };
+    return chainObj;
   };
   return {
     auth: {
@@ -73,7 +107,40 @@ function makeSupabaseStub(role: Role | null, tables: Record<string, unknown> = {
   };
 }
 
-function session(role: Role | null, tables: Record<string, unknown> = {}) {
+/** Stub PostgREST para o createAdminClient (verificando o ADMIN caller role na table user_organizations) */
+function makeAdminSupabaseStub(role: Role | null): SupabaseStub {
+  return {
+    auth: {
+      getUser: async () =>
+        role
+          ? { data: { user: { id: USER_ID } }, error: null }
+          : { data: { user: null }, error: null },
+    },
+    from: (table: string): SupabaseStubChain => {
+      const chainObj: SupabaseStubChain = {
+        select: () => chainObj,
+        eq: () => chainObj,
+        is: () => chainObj,
+        not: () => chainObj,
+        neq: () => chainObj,
+        in: () => chainObj,
+        order: () => chainObj,
+        limit: () => chainObj,
+        insert: () => chainObj,
+        update: () => chainObj,
+        maybeSingle: () => Promise.resolve({ data: { role }, error: null, count: 0 }),
+        then: <T>(resolve: (val: SupabaseStubResult) => T, reject: (err: unknown) => T) => Promise.resolve({ data: { role }, error: null, count: 0 }).then(resolve, reject),
+      };
+      return chainObj;
+    },
+    rpc: async (fn: string) =>
+      fn === "fn_user_role_in_org"
+        ? { data: role, error: null }
+        : { data: null, error: null },
+  };
+}
+
+async function session(role: Role | null, tables: Record<string, unknown> = {}) {
   const user: AuthUser | null = role
     ? {
         id: USER_ID,
@@ -89,8 +156,9 @@ function session(role: Role | null, tables: Record<string, unknown> = {}) {
     role ? { orgId: ORG_ID, name: "Org", role } : null,
   );
   vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: false, reason: "forbidden" });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(role, tables) as any);
+
+  vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(role, tables) as unknown as Awaited<ReturnType<typeof createClient>>);
+  vi.mocked(createAdminClient).mockReturnValue(makeAdminSupabaseStub(role) as unknown as ReturnType<typeof createAdminClient>);
 }
 
 async function errorCode(res: Response): Promise<string> {
@@ -111,7 +179,7 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 describe("grupo settings/api-tokens (admin)", () => {
   it("GET nega 403 para manager", async () => {
-    session("manager");
+    await session("manager");
     const { GET } = await import("@/app/api/v1/settings/api-tokens/route");
     const res = await GET(req("/api/v1/settings/api-tokens"));
     expect(res.status).toBe(403);
@@ -119,7 +187,7 @@ describe("grupo settings/api-tokens (admin)", () => {
   });
 
   it("GET permite 200 para admin", async () => {
-    session("admin");
+    await session("admin");
     const { GET } = await import("@/app/api/v1/settings/api-tokens/route");
     const res = await GET(req("/api/v1/settings/api-tokens"));
     expect(res.status).toBe(200);
@@ -131,7 +199,7 @@ describe("grupo settings/api-tokens (admin)", () => {
 // ---------------------------------------------------------------------------
 describe("grupo team (read manager+, write admin)", () => {
   it("GET /team nega 403 para agent", async () => {
-    session("agent");
+    await session("agent");
     const { GET } = await import("@/app/api/v1/team/route");
     const res = await GET(req("/api/v1/team"));
     expect(res.status).toBe(403);
@@ -139,14 +207,14 @@ describe("grupo team (read manager+, write admin)", () => {
   });
 
   it("GET /team permite 200 para manager", async () => {
-    session("manager");
+    await session("manager");
     const { GET } = await import("@/app/api/v1/team/route");
     const res = await GET(req("/api/v1/team"));
     expect(res.status).toBe(200);
   });
 
   it("PATCH /team/[user_id]/role nega 403 para manager + audita authz.denied", async () => {
-    session("manager");
+    await session("manager");
     const { PATCH } = await import("@/app/api/v1/team/[user_id]/role/route");
     const res = await PATCH(
       req("/api/v1/team/x/role", { method: "PATCH", body: JSON.stringify({ role: "admin" }) }),
@@ -163,7 +231,7 @@ describe("grupo team (read manager+, write admin)", () => {
 // ---------------------------------------------------------------------------
 describe("grupo audit (manager+)", () => {
   it("GET /audit nega 403 para agent", async () => {
-    session("agent");
+    await session("agent");
     const { GET } = await import("@/app/api/v1/audit/route");
     const res = await GET(req("/api/v1/audit"));
     expect(res.status).toBe(403);
@@ -171,7 +239,7 @@ describe("grupo audit (manager+)", () => {
   });
 
   it("GET /audit/export nega 403 para agent", async () => {
-    session("agent");
+    await session("agent");
     const { GET } = await import("@/app/api/v1/audit/export/route");
     const res = await GET(req("/api/v1/audit/export"));
     expect(res.status).toBe(403);
@@ -184,14 +252,14 @@ describe("grupo audit (manager+)", () => {
 // ---------------------------------------------------------------------------
 describe("grupo inbox/conversations (read agent 200, write viewer 403)", () => {
   it("GET /conversations permite 200 para agent", async () => {
-    session("agent");
+    await session("agent");
     const { GET } = await import("@/app/api/v1/conversations/route");
     const res = await GET(req("/api/v1/conversations"));
     expect(res.status).toBe(200);
   });
 
   it("POST /conversations/[id]/claim nega 403 para viewer", async () => {
-    session("viewer");
+    await session("viewer");
     const { POST } = await import("@/app/api/v1/conversations/[id]/claim/route");
     const res = await POST(
       req("/api/v1/conversations/c1/claim", { method: "POST", body: "{}" }),
@@ -202,7 +270,7 @@ describe("grupo inbox/conversations (read agent 200, write viewer 403)", () => {
   });
 
   it("PATCH /conversations/[id] nega 403 para viewer", async () => {
-    session("viewer");
+    await session("viewer");
     const { PATCH } = await import("@/app/api/v1/conversations/[id]/route");
     const res = await PATCH(
       req("/api/v1/conversations/c1", { method: "PATCH", body: JSON.stringify({ status: "closed" }) }),
@@ -218,7 +286,7 @@ describe("grupo inbox/conversations (read agent 200, write viewer 403)", () => {
 // ---------------------------------------------------------------------------
 describe("grupo leads (read agent 200, write viewer 403)", () => {
   it("GET /pipelines/[id]/board permite 200 para agent", async () => {
-    session("agent", {
+    await session("agent", {
       crm_pipelines: { id: "p1", name: "Pipeline", settings: {} },
       crm_stages: [],
       crm_leads: [],
@@ -229,7 +297,7 @@ describe("grupo leads (read agent 200, write viewer 403)", () => {
   });
 
   it("POST /leads nega 403 para viewer + audita authz.denied", async () => {
-    session("viewer");
+    await session("viewer");
     const { POST } = await import("@/app/api/v1/leads/route");
     const res = await POST(
       req("/api/v1/leads", { method: "POST", body: JSON.stringify({ name: "X" }) }),
@@ -240,7 +308,7 @@ describe("grupo leads (read agent 200, write viewer 403)", () => {
   });
 
   it("POST /leads/[id]/move nega 403 para viewer", async () => {
-    session("viewer");
+    await session("viewer");
     const { POST } = await import("@/app/api/v1/leads/[id]/move/route");
     const res = await POST(
       req("/api/v1/leads/l1/move", { method: "POST", body: JSON.stringify({ stage_id: "s1" }) }),

@@ -22,6 +22,15 @@ vi.mock("@/lib/audit", () => ({
   isServiceRoleConfigured: () => false,
 }));
 
+vi.mock("@lumenva/db/gcp/firebase-auth", () => ({
+  initFirebaseAuth: vi.fn(() => ({
+    getUser: (id: string) =>
+      Promise.resolve(
+        id in USER_NAMES ? { displayName: USER_NAMES[id] } : { displayName: null },
+      ),
+  })),
+}));
+
 import {
   crmListConversations,
   crmGetConversation,
