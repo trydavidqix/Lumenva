@@ -6,7 +6,7 @@
  * Do not implement ephemeral in-memory state or modify the schema.
  * This workflow currently provides read-only views mapped to existing statuses.
  */
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type DropshippingOrderSummary = {
   id: string;
@@ -22,7 +22,7 @@ export async function getDropshippingOrders(
   organizationId: string,
   limit: number = 50
 ): Promise<DropshippingOrderSummary[]> {
-  const supabase = createSupabaseServerClient();
+  const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("orders")
     .select("id, external_id, external_provider, status, total_cents, currency, ordered_at")
@@ -34,7 +34,18 @@ export async function getDropshippingOrders(
     throw new Error(`Failed to fetch orders: ${error.message}`);
   }
 
-  return data.map((row) => ({
+  // Ensure data is typed correctly before mapping to avoid any implicitly having 'any' type.
+  const rows = data as Array<{
+    id: string;
+    external_id: string;
+    external_provider: string;
+    status: string;
+    total_cents: number;
+    currency: string;
+    ordered_at: string;
+  }>;
+
+  return rows.map((row) => ({
     id: row.id,
     externalId: row.external_id,
     provider: row.external_provider,

@@ -23,8 +23,8 @@ const mockSupabase = {
   })
 };
 
-vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseServerClient: () => mockSupabase
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => mockSupabase
 }));
 
 describe("Dropshipping Workflow", () => {

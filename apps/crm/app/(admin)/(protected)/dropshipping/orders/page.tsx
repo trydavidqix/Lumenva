@@ -3,15 +3,26 @@ import { getDropshippingOrders } from "@/lib/ecommerce/dropshipping/workflow";
 
 export default async function DropshippingOrdersPage() {
   // Derive tenant from server-side CRM session
-  const { org } = await requireRole(["admin", "manager"]);
+  // `requireRole` takes a minimum HumanRole, e.g. "manager"
+  const check = await requireRole("manager");
 
-  let orders = [];
+  if (!check.ok) {
+    return <div className="p-8 text-red-500">Acesso negado ou organização não encontrada.</div>;
+  }
+
+  const orgId = check.org.orgId;
+
+  let orders;
   let errorMsg = null;
 
   try {
-    orders = await getDropshippingOrders(org.orgId, 50);
-  } catch (error: any) {
-    errorMsg = error.message;
+    orders = await getDropshippingOrders(orgId, 50);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      errorMsg = error.message;
+    } else {
+      errorMsg = "An unknown error occurred.";
+    }
   }
 
   if (errorMsg) {
