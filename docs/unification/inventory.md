@@ -9,10 +9,10 @@ Conforme o catálogo da API Jules e sessões de auditoria reportadas (read-only)
 | Repositório | SHA Observado (`main`) no plano | Acesso e Evidência | Disposition Inicial |
 | --- | --- | --- | --- |
 | `trydavidqix/Lumenva` (Destino) | `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99` | **OK** | Já contém CRM, Content OS, social web/worker/mcp e social-brain. |
-| `trydavidqix/Lumenva-Legacy` | `6e9dbbd901445cfbec53955981a7dab6d644b9da` | **Lido (Sessão `14851053568012610551`)** | `PORT_DELTA`: CRM legados com teste sem regressão. |
-| `trydavidqix/lumenva-social` | `54c3b32c934462277320874fc3630882d2855f39` | **Lido (Sessão `12310966753527398928`)** | `ADAPT`/`DEFER` parcial. Adaptação de single-user para modelo do destino. |
-| `trydavidqix/lumenva-social-brain` | `80a877bde72bd6a27a5d20ff2f6231a7e0f72995` | **Lido (Sessão `1837988116472469594`)** | `RECONCILE/KEEP_DESTINATION`: reconciliar apps existentes sem duplicar. |
-| `trydavidqix/Drop` | `9259af5f4ec49cbc58f2d0f9b1e2776c8c07deec` | **Lido (Sessão `2938439532013398920`)** | `IMPLEMENT`: usar contratos, estado read-only inicial, ausência de runtime. |
+| `trydavidqix/Lumenva-Legacy` | `6e9dbbd901445cfbec53955981a7dab6d644b9da` | **Lido; SHA confirmado em checkout Jules dedicado** | `PORT_DELTA`: CRM legados com teste sem regressão. |
+| `trydavidqix/lumenva-social` | `54c3b32c934462277320874fc3630882d2855f39` | **Lido; SHA confirmado em checkout Jules dedicado** | `ADAPT`/`DEFER` parcial. Adaptação de single-user para modelo do destino. |
+| `trydavidqix/lumenva-social-brain` | `80a877bde72bd6a27a5d20ff2f6231a7e0f72995` | **Lido; SHA confirmado em checkout Jules dedicado** | `RECONCILE/KEEP_DESTINATION`: reconciliar apps existentes sem duplicar. |
+| `trydavidqix/Drop` | `9259af5f4ec49cbc58f2d0f9b1e2776c8c07deec` | **Lido; SHA confirmado em checkout Jules dedicado** | `IMPLEMENT`: usar contratos, estado read-only inicial, ausência de runtime. |
 
 ### Detalhes da Auditoria por Fonte
 
@@ -48,16 +48,10 @@ Conforme o catálogo da API Jules e sessões de auditoria reportadas (read-only)
 ---
 
 ## Checks do GitHub Actions
-As validações configuradas na branch base (`.github/workflows/ci.yml`) são as únicas observadas, e espelham a última run reportada pelo sistema. Validações não devem ser rodadas via máquina local VM Jules.
 
-**Run `36399564348`, Branch `main`, SHA `3fbe74a...`:**
+Baseline observado no run [36399564348](https://github.com/trydavidqix/Lumenva/actions/runs/36399564348), branch `main`, SHA `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`:
 
-- **Job `verify`:**
-  - `pnpm typecheck`: **FAIL** herdado (Erro `TS2345` em `apps/website/next.config.ts(66,29)` devido a mismatch de tipos Next 16.3.5 vs 16.3.2). Dependências / toolchain *não devem ser alteradas* nesta Task 01.
-  - `pnpm lint`: Executado no CI
-  - `pnpm lint:channels`: Executado no CI
-  - `pnpm test:harness && pnpm harness:check`: Executado no CI
-  - `pnpm test:unit`: Executado no CI
-  - `pnpm test:shell`: Executado no CI
-- **Job `invariants`:**
-  - `pnpm test:db`: Executado no CI com ambiente efêmero para DB isolado.
+- Job `verify`: **FAIL** em `Typecheck`, com `TS2345` em `apps/website/next.config.ts(66,29)` por incompatibilidade entre tipos Next 16.3.5 e 16.3.2.
+- Depois da falha, `Lint`, `Channel provider leak`, `Harness consistency`, `Unit tests` e `Kit self-host (bash)` foram **SKIPPED**; esse run não comprova a execução desses gates.
+- Job `invariants`: **PASS**; a etapa `RLS isolation + governance invariants` concluiu com sucesso.
+- Nenhum teste ou build foi executado no Windows. Runs de PR posteriores são evidência separada e não alteram o resultado desse baseline.
