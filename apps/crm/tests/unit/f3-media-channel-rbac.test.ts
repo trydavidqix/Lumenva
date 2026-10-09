@@ -21,7 +21,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({
-  createAdminClient: vi.fn(),
+  createAdminClient: vi.fn(() => ({ from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ is: () => ({ not: () => ({ maybeSingle: () => Promise.resolve({ data: { role: "admin" }, error: null }) }) }) }) }) }) }) })),
 }));
 
 const { mockGcsPut } = vi.hoisted(() => ({
