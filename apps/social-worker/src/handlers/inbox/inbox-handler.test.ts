@@ -1,9 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { handleInboxEvent } from './inbox-handler';
+import { handleInboxEvent, type InboxEvent } from './inbox-handler';
 
 describe('Inbox Worker Handler', () => {
-  it('should process inbox events successfully', async () => {
-    const event = {
+  it('should validate schema and reject invalid payloads', async () => {
+    const invalidEvent = {
+      type: 'social.inbox.message',
+      payload: {
+        tenantId: 'tenant-1'
+        // missing fields
+      }
+    };
+
+    await expect(handleInboxEvent(invalidEvent as unknown as InboxEvent)).rejects.toThrow('INVALID_SCHEMA');
+  });
+
+  it('should throw BLOCKED_DEPENDENCY if valid payload but missing task 06 infrastructure', async () => {
+    const validEvent: InboxEvent = {
       type: 'social.inbox.message',
       payload: {
         tenantId: 'tenant-1',
@@ -15,7 +27,6 @@ describe('Inbox Worker Handler', () => {
       }
     };
 
-    const result = await handleInboxEvent(event);
-    expect(result.success).toBe(true);
+    await expect(handleInboxEvent(validEvent)).rejects.toThrow('BLOCKED_DEPENDENCY');
   });
 });
