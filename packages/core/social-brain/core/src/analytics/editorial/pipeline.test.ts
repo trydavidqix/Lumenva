@@ -37,4 +37,12 @@ describe('Editorial Analytics Pipeline', () => {
     expect(() => evaluateEditorialRecommendation({ ...baseInput, accountId: '' })).toThrow('Invalid tenant/account/post context')
     expect(() => evaluateEditorialRecommendation({ ...baseInput, postId: '' })).toThrow('Invalid tenant/account/post context')
   })
+
+  it('returns unavailable for synthetic or missing provider case specifically', () => {
+    expect(evaluateEditorialRecommendation({
+      ...baseInput,
+      hasProvenance: false,
+      isProviderAvailable: false
+    })).toBe('unavailable')
+  })
 })

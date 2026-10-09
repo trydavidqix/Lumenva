@@ -236,8 +236,8 @@ function buildWindow(
          const status = evaluateEditorialRecommendation({
            sampleSize: currentMetricRows.length,
            isStale: false, // Simplification for context snapshot
-           hasProvenance: !!row.externalPostId,
-           isProviderAvailable: !!row.platform,
+           hasProvenance: false, // Analytics scope cannot verify real provenance
+           isProviderAvailable: false, // Analytics scope cannot verify active provider connection
            tenantId: row.workspaceId,
            accountId: row.socialAccountId,
            postId: row.contentVariantId || 'account-level'
