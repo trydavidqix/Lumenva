@@ -1,6 +1,7 @@
 import type {
   SocialIdentity,
   UpsertIdentityInput,
+  ServerTenantContext,
   ContactRegistry,
   SocialIdentityRepository,
 } from './types';
@@ -15,8 +16,8 @@ export class SocialIdentityAdapter {
    * Processa uma identidade externa, ligando a um contato canônico no CRM,
    * respeitando as regras de idempotência, não-colisão multi-tenant, e deduplicação.
    */
-  async upsertIdentity(input: UpsertIdentityInput): Promise<SocialIdentity> {
-    const orgId = (input.organizationId || '').trim();
+  async upsertIdentity(context: ServerTenantContext, input: UpsertIdentityInput): Promise<SocialIdentity> {
+    const orgId = (context.organizationId || '').trim();
     if (!orgId) {
       throw new Error('organizationId is required and must be provided by a trusted server context');
     }
