@@ -13,6 +13,9 @@ export function AnalyticsView({ model }: { model: AnalyticsDashboardViewModel })
     <main style={{ fontFamily: 'sans-serif', maxWidth: 1180, margin: '40px auto', padding: 24 }}>
       <p style={{ textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: 12 }}>Analytics V1.1</p>
       <h1>Desempenho e melhores horários</h1>
+      <div style={{ background: '#fff3cd', color: '#856404', padding: '12px 16px', borderRadius: 8, marginBottom: 24, border: '1px solid #ffeeba' }}>
+        <strong>Conexão não verificada:</strong> Os dados de analytics exibidos não possuem metadados que comprovem proveniência real (prováveis fixtures ou modo leitura/offline).
+      </div>
       <p>
         Período analisado em <strong>{model.timeZone}</strong>. Hipóteses são apresentadas separadamente dos fatos.
       </p>
