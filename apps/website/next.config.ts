@@ -63,4 +63,4 @@ const nextConfig: NextConfig = {
 };
 
 const withAnalyzer = withBundleAnalyzer({ enabled: process.env.ANALYZE === "true" });
-export default withAnalyzer(nextConfig);
+export default nextConfig;
