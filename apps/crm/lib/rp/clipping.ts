@@ -1,5 +1,5 @@
-import { RPMoment } from './moments';
-import { RPSession } from './sessions';
+import type { RPMoment } from './moments';
+import type { RPSession } from './sessions';
 
 export interface RPClipCandidate {
   id: string;

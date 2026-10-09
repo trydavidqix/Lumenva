@@ -44,8 +44,7 @@ export class DropshippingStoreAdapter {
     this.expectedStoreId = expectedStoreId;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private handleError(error: unknown): DropshippingResult<any> {
+  private handleError<T>(error: unknown): DropshippingResult<T> {
     if (error instanceof NuvemshopApiError) {
       if (error.status === 401 || error.status === 403) {
         return { ok: false, error: { status: "EXTERNAL_VALIDATION_PENDING", reason: "Unauthorized or insufficient permissions" } };
@@ -132,7 +131,7 @@ export class DropshippingStoreAdapter {
         }
       };
     } catch (error) {
-      return this.handleError(error);
+      return this.handleError<DropshippingProduct>(error);
     }
   }
 
@@ -178,7 +177,7 @@ export class DropshippingStoreAdapter {
         }
       };
     } catch (error) {
-      return this.handleError(error);
+      return this.handleError<EcommerceOrder>(error);
     }
   }
 }

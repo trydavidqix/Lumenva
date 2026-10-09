@@ -54,7 +54,7 @@ export function validateDeliveryPlan(
   return { valid: errors.length === 0, errors };
 }
 
-import { BuildPlanStateStore } from "./build-plan-state-store";
+import type { BuildPlanStateStore } from "./build-plan-state-store";
 
 export async function validateDeliveryPlanWithState(
   plan: DeliveryPlan,
