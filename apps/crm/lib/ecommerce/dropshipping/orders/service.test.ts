@@ -149,6 +149,31 @@ describe('processDropshippingOrderTransition', () => {
     ).rejects.toThrow('Invalid transition from failed to submitted');
   });
 
+  it('fails to transition to approved if snapshot is not provided', async () => {
+     const existingOrder = {
+      id: 'order-1',
+      organization_id: 'org-123',
+      payload: {
+        dropshipping_v1: {
+          state: 'reviewed',
+          approval_snapshot: { version: 1 }
+        }
+      },
+      updated_at: '2023-01-01T00:00:00Z',
+    };
+    mockSupabase.single.mockResolvedValueOnce({ data: existingOrder, error: null });
+
+    await expect(
+      processDropshippingOrderTransition({
+        orderId: 'order-1',
+        expectedState: 'reviewed',
+        nextState: 'approved',
+        expectedUpdatedAt: '2023-01-01T00:00:00Z',
+        // snapshot is missing
+      })
+    ).rejects.toThrow('Cannot approve without providing an approval snapshot.');
+  });
+
   it('fails to transition to approved if snapshot does not match stored snapshot', async () => {
      const existingOrder = {
       id: 'order-1',
@@ -195,7 +220,7 @@ describe('processDropshippingOrderTransition', () => {
         nextState: 'submitted',
         expectedUpdatedAt: '2023-01-01T00:00:00Z',
       })
-    ).rejects.toThrow('Cannot transition to submitted without a valid approval snapshot.');
+    ).rejects.toThrow('Cannot transition beyond approved without a valid approval snapshot on the server.');
   });
 
   it('fails CAS at update time if row was modified', async () => {

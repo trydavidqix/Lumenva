@@ -30,7 +30,7 @@ export async function processDropshippingOrderTransition(input: TransitionOrderI
     .select('id, organization_id, payload, updated_at, external_provider')
     .eq('id', input.orderId)
     .eq('organization_id', organizationId)
-    .in('external_provider', ['nuvemshop', 'vtex', 'shopify']) // Ensure isolation from standard CRM orders
+    .in('external_provider', ['nuvemshop']) // Ensure isolation from standard CRM orders
     .single();
 
   if (fetchError || !order) {
@@ -57,20 +57,19 @@ export async function processDropshippingOrderTransition(input: TransitionOrderI
   }
 
   // Validate snapshot constraints for specific transitions
-  if (['approved', 'submitted', 'confirmed'].includes(input.nextState)) {
-    // If moving TO approved, or further along, ensure the snapshot is valid.
-    // When transitioning from reviewed -> approved, the user provides the snapshot they are approving.
-    // If they provided one, it MUST match what's on the server to prevent approving a stale state.
-    if (input.snapshot) {
-       const serverSnapshot = currentDropshipping?.approval_snapshot;
-       if (JSON.stringify(input.snapshot) !== JSON.stringify(serverSnapshot)) {
-          throw new Error('Stale snapshot: Provided snapshot does not match the currently stored snapshot.');
-       }
-    } else {
-       // If no snapshot provided in input, ensure there's one on the server if we're moving past approved
-       if (input.nextState === 'submitted' && !currentDropshipping?.approval_snapshot) {
-          throw new Error('Cannot transition to submitted without a valid approval snapshot.');
-       }
+  if (input.nextState === 'approved') {
+    // Transitioning TO approved STRICTLY requires the snapshot to be present and match
+    if (!input.snapshot) {
+      throw new Error('Cannot approve without providing an approval snapshot.');
+    }
+    const serverSnapshot = currentDropshipping?.approval_snapshot;
+    if (JSON.stringify(input.snapshot) !== JSON.stringify(serverSnapshot)) {
+      throw new Error('Stale snapshot: Provided snapshot does not match the currently stored snapshot.');
+    }
+  } else if (['submitted', 'confirmed'].includes(input.nextState)) {
+    // If moving PAST approved, ensure there's a valid snapshot on the server
+    if (!currentDropshipping?.approval_snapshot) {
+      throw new Error('Cannot transition beyond approved without a valid approval snapshot on the server.');
     }
   }
 
@@ -116,7 +115,7 @@ export async function processDropshippingOrderTransition(input: TransitionOrderI
     .eq('id', input.orderId)
     .eq('updated_at', input.expectedUpdatedAt)
     .eq('organization_id', organizationId)
-    .in('external_provider', ['nuvemshop', 'vtex', 'shopify'])
+    .in('external_provider', ['nuvemshop'])
     .select('id')
     .maybeSingle();
 
