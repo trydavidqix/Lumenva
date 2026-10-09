@@ -14,6 +14,7 @@ import { NextRequest } from "next/server";
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import { audit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { AuthUser } from "@/lib/auth/types";
 
 vi.mock("@/lib/auth/server", () => ({
@@ -39,33 +40,86 @@ interface StubState {
   updates: Array<Record<string, unknown>>;
 }
 
-/** Stub PostgREST cobrindo as 3 queries da rota (fetch, count de admins, update). */
-function makeSupabaseStub(state: StubState) {
+interface CountChain {
+  eq: () => CountChain;
+  is: () => Promise<{ count: number; error: null }>;
+}
+
+interface SelectChain {
+  eq: () => SelectChain;
+  is: () => SelectChain;
+  not: () => SelectChain;
+  maybeSingle: () => Promise<{ data: Record<string, unknown> | null; error: null }>;
+}
+
+interface UpdateChain {
+  eq: () => Promise<{ error: null }>;
+}
+
+interface FromChain {
+  select: (cols: string, opts?: { count?: string; head?: boolean }) => CountChain | SelectChain;
+  update: (values: Record<string, unknown>) => UpdateChain;
+}
+
+interface SupabaseStub {
+  from: (table: string) => FromChain;
+  rpc: (fn: string) => Promise<{ data: string | null; error: null }>;
+}
+
+/** Stub PostgREST cobrindo as queries da rota para o user. */
+function makeSupabaseStub(state: StubState): SupabaseStub {
   return {
-    from: (table: string) => {
+    from: (table: string): FromChain => {
       if (table !== "user_organizations") throw new Error(`unexpected table ${table}`);
       return {
         select: (_cols: string, opts?: { count?: string; head?: boolean }) => {
           if (opts?.count) {
-            const chain = {
-              eq: () => chain,
+            const countChain: CountChain = {
+              eq: () => countChain,
               is: () => Promise.resolve({ count: state.adminCount, error: null }),
             };
-            return chain;
+            return countChain;
           }
-          const chain = {
-            eq: () => chain,
-            is: () => chain,
-            not: () => chain,
+          const selectChain: SelectChain = {
+            eq: () => selectChain,
+            is: () => selectChain,
+            not: () => selectChain,
             maybeSingle: () => Promise.resolve({ data: state.target, error: null }),
           };
-          return chain;
+          return selectChain;
         },
-        update: (values: Record<string, unknown>) => ({
+        update: (values: Record<string, unknown>): UpdateChain => ({
           eq: () => {
             state.updates.push(values);
             return Promise.resolve({ error: null });
           },
+        }),
+      };
+    },
+    rpc: async (fn: string) =>
+      fn === "fn_user_role_in_org"
+        ? { data: "admin", error: null }
+        : { data: null, error: null },
+  };
+}
+
+/** Stub PostgREST para o createAdminClient (verificando o ADMIN caller) */
+function makeAdminSupabaseStub(): SupabaseStub {
+  return {
+    from: (table: string): FromChain => {
+      if (table !== "user_organizations") throw new Error(`unexpected table ${table}`);
+      return {
+        select: (_cols: string, _opts?: { count?: string; head?: boolean }) => {
+          const selectChain: SelectChain = {
+            eq: () => selectChain,
+            is: () => selectChain,
+            not: () => selectChain,
+            maybeSingle: () => Promise.resolve({ data: { role: "admin" }, error: null }),
+          };
+          return selectChain;
+        },
+        update: (_values: Record<string, unknown>): UpdateChain => ({
+          eq: () => Promise.resolve({ error: null }),
         }),
       };
     },
@@ -87,11 +141,9 @@ async function adminSession(state: StubState) {
   };
   vi.mocked(loadAuthUser).mockResolvedValue(user);
   vi.mocked(resolveActiveOrg).mockResolvedValue({ orgId: ORG_ID, name: "Org", role: "admin" });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(state) as any);
 
-  const { createAdminClient } = await import("@/lib/supabase/admin");
-  vi.mocked(createAdminClient).mockReturnValue(makeSupabaseStub(state) as any);
+  vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(state) as unknown as ReturnType<typeof createClient>);
+  vi.mocked(createAdminClient).mockReturnValue(makeAdminSupabaseStub() as unknown as ReturnType<typeof createAdminClient>);
 }
 
 function patchReq(role: string) {
