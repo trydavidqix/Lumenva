@@ -2,7 +2,7 @@
 
 **Status:** BLOCKED_SCOPE
 
-**Motivo:** Acesso à fonte verificado via sessão de leitura remota (Jules) na origem Legacy SHA `6e9dbbd901445cfbec53955981a7dab6d644b9da` contra o destino `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`. As divergências foram contadas com base na API do GitHub, contradizendo a contagem do documento de plano. Apesar de acesso verificado (via evidência na API), os 218 arquivos divergentes não foram individualmente avaliados.
+**Motivo:** As divergências foram verificadas com base na API do GitHub na origem Legacy SHA `6e9dbbd901445cfbec53955981a7dab6d644b9da` contra o destino `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`. A contagem aponta uma discrepância em relação ao plano, identificando 218 arquivos diferentes em `apps/crm`. Apesar dos snapshots terem sido integralmente consultados via API, os 218 arquivos divergentes não foram individualmente revisados ou avaliados.
 
 De acordo com o Owner: "The remaining 218 differences have not been individually reviewed; do not call Task 04 complete or import broadly... report BLOCKED_SCOPE for the unreviewed set... with exact remaining work."
 
@@ -25,16 +25,15 @@ De acordo com o Owner: "The remaining 218 differences have not been individually
 Os seguintes caminhos, embora listados como únicos ou deltas pela auditoria da fonte, são de fato byte-a-byte idênticos ao destino e devem manter sua implementação atual.
 **Ação:** `KEEP_DESTINATION`
 
-- `apps/crm/channels/adapters/meta-cloud.ts`
-- `apps/crm/channels/meta/webhook.ts`
-- `apps/crm/nuvemshop/api-client.ts`
-- `apps/crm/ecommerce/types.ts`
+- `apps/crm/lib/channels/adapters/meta-cloud.ts`
+- `apps/crm/lib/channels/meta/webhook.ts`
+- `apps/crm/lib/nuvemshop/api-client.ts`
+- `apps/crm/lib/ecommerce/types.ts`
 - (e os três testes unitários citados correspondentes a esses módulos)
 
 ### Trabalho Restante (BLOCKED_SCOPE)
-A tarefa foi suspensa por limitação de escopo e não acessibilidade local à fonte para extrair as implementações. Para concluir a Task 04:
-1. Obter o acesso da árvore para iterar sobre os 218 caminhos diferentes restantes.
-2. Analisar individualmente os 218 paths.
-3. Classificar cada path em `PORT_DELTA`, `ADAPT`, `DEFER` ou `REJECT`.
-4. Se o delta contiver mudanças de comportamento válidas, implementar na allowlist aprovada (preservando tenancy, auth, RLS) em uma PR isolada.
-5. Criar testes TDD (RED→GREEN) focados nas capacidades migradas do Legacy no contexto atual.
+A tarefa foi suspensa por limitação de escopo; o lote de 218 arquivos diferentes ainda não foi inspecionado individualmente, mesmo com acesso garantido à API. Para concluir a Task 04:
+1. Analisar individualmente as diferenças dos 218 paths.
+2. Classificar cada path em `PORT_DELTA`, `ADAPT`, `DEFER` ou `REJECT`.
+3. Se o delta contiver mudanças de comportamento válidas, implementar na allowlist aprovada (preservando tenancy, auth, RLS) em uma PR isolada.
+4. Criar testes TDD (RED→GREEN) focados nas capacidades migradas do Legacy no contexto atual.
