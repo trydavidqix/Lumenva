@@ -27,9 +27,10 @@ export async function processDropshippingOrderTransition(input: TransitionOrderI
   // 1. Fetch current order to check state, concurrent modifications, and payload
   const { data: order, error: fetchError } = await supabase
     .from('orders')
-    .select('id, organization_id, payload, updated_at')
+    .select('id, organization_id, payload, updated_at, external_provider')
     .eq('id', input.orderId)
     .eq('organization_id', organizationId)
+    .in('external_provider', ['nuvemshop', 'vtex', 'shopify']) // Ensure isolation from standard CRM orders
     .single();
 
   if (fetchError || !order) {
@@ -115,6 +116,7 @@ export async function processDropshippingOrderTransition(input: TransitionOrderI
     .eq('id', input.orderId)
     .eq('updated_at', input.expectedUpdatedAt)
     .eq('organization_id', organizationId)
+    .in('external_provider', ['nuvemshop', 'vtex', 'shopify'])
     .select('id')
     .maybeSingle();
 

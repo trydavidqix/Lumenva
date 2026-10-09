@@ -17,6 +17,7 @@ describe('processDropshippingOrderTransition', () => {
     from: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
+    in: vi.fn().mockReturnThis(),
     single: vi.fn().mockReturnThis(),
     update: vi.fn().mockReturnThis(),
     maybeSingle: vi.fn().mockReturnThis(),
@@ -211,8 +212,10 @@ describe('processDropshippingOrderTransition', () => {
       eq: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
-             select: vi.fn().mockReturnValue({
-                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
+             in: vi.fn().mockReturnValue({
+               select: vi.fn().mockReturnValue({
+                  maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
+               })
              })
           })
         })
@@ -245,8 +248,10 @@ describe('processDropshippingOrderTransition', () => {
       eq: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
-             select: vi.fn().mockReturnValue({
-                maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'order-1' }, error: null })
+             in: vi.fn().mockReturnValue({
+               select: vi.fn().mockReturnValue({
+                  maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'order-1' }, error: null })
+               })
              })
           })
         })
