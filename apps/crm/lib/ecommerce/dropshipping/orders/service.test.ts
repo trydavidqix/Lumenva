@@ -28,6 +28,11 @@ describe('processDropshippingOrderTransition', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+    mockSupabase.from.mockReturnValue(mockSupabase);
+    mockSupabase.select.mockReturnValue(mockSupabase);
+    mockSupabase.eq.mockReturnValue(mockSupabase);
+    mockSupabase.in.mockReturnValue(mockSupabase);
+    mockSupabase.update.mockReturnValue(mockSupabase);
     mockCreateAdminClient.mockReturnValue(mockSupabase as unknown as ReturnType<typeof createAdminClient>);
     mockRequireRole.mockResolvedValue({
       ok: true,
@@ -233,19 +238,7 @@ describe('processDropshippingOrderTransition', () => {
     mockSupabase.single.mockResolvedValueOnce({ data: existingOrder, error: null });
 
     // Simulate zero rows returned from the CAS update
-    mockSupabase.update.mockReturnValue({
-      eq: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-             in: vi.fn().mockReturnValue({
-               select: vi.fn().mockReturnValue({
-                  maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
-               })
-             })
-          })
-        })
-      })
-    });
+    mockSupabase.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
 
     await expect(
       processDropshippingOrderTransition({
@@ -257,7 +250,7 @@ describe('processDropshippingOrderTransition', () => {
     ).rejects.toThrow('Concurrency conflict: Order was updated by another process (CAS failed)');
   });
 
-  it('successfully transitions state and preserves other payload data, only setting approved_at on approve', async () => {
+  it('fails to persist client-supplied snapshot on review due to missing server-side contract', async () => {
     const existingOrder = {
       id: 'order-1',
       organization_id: 'org-123',
@@ -269,43 +262,66 @@ describe('processDropshippingOrderTransition', () => {
     };
     mockSupabase.single.mockResolvedValueOnce({ data: existingOrder, error: null });
 
-    mockSupabase.update.mockReturnValue({
-      eq: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-             in: vi.fn().mockReturnValue({
-               select: vi.fn().mockReturnValue({
-                  maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'order-1' }, error: null })
-               })
-             })
-          })
-        })
-      })
-    });
-
     const snapshot = { items: [{ id: 'item-1', price: 100 }] };
 
-    await processDropshippingOrderTransition({
-      orderId: 'order-1',
-      expectedState: 'received',
-      nextState: 'reviewed', // Not approve, so approved_at should be undefined
-      expectedUpdatedAt: '2023-01-01T00:00:00Z',
-      snapshot,
-      notes: 'Looks good',
-    });
-
-    expect(mockSupabase.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        payload: {
-          other_data: true,
-          dropshipping_v1: {
-            state: 'reviewed',
-            actor_id: 'user-456',
-            approval_snapshot: snapshot,
-            notes: 'Looks good',
-          } // No approved_at
-        }
+    await expect(
+      processDropshippingOrderTransition({
+        orderId: 'order-1',
+        expectedState: 'received',
+        nextState: 'reviewed',
+        expectedUpdatedAt: '2023-01-01T00:00:00Z',
+        snapshot, // Client trying to persist snapshot
+        notes: 'Looks good',
       })
-    );
+    ).rejects.toThrow('BLOCKED: Cannot persist client-supplied snapshot on review');
+  });
+
+  it('fails to transition to confirmed from agent role', async () => {
+    const existingOrder = {
+      id: 'order-1',
+      organization_id: 'org-123',
+      payload: {
+        dropshipping_v1: {
+          state: 'submitted',
+          approval_snapshot: { version: 1 }
+        }
+      },
+      updated_at: '2023-01-01T00:00:00Z',
+    };
+    mockSupabase.single.mockResolvedValueOnce({ data: existingOrder, error: null });
+
+    await expect(
+      processDropshippingOrderTransition({
+        orderId: 'order-1',
+        expectedState: 'submitted',
+        nextState: 'confirmed',
+        expectedUpdatedAt: '2023-01-01T00:00:00Z',
+      })
+    ).rejects.toThrow('BLOCKED: confirmed transitions must be driven by verified provider webhooks');
+  });
+
+  it('fails to transition to approved if server lacks snapshot', async () => {
+     const existingOrder = {
+      id: 'order-1',
+      organization_id: 'org-123',
+      payload: {
+        dropshipping_v1: {
+          state: 'reviewed',
+          // approval_snapshot missing from server payload
+        }
+      },
+      updated_at: '2023-01-01T00:00:00Z',
+    };
+    mockSupabase.single.mockResolvedValueOnce({ data: existingOrder, error: null });
+
+    await expect(
+      processDropshippingOrderTransition({
+        orderId: 'order-1',
+        expectedState: 'reviewed',
+        nextState: 'approved',
+        expectedUpdatedAt: '2023-01-01T00:00:00Z',
+        snapshot: { version: 1 },
+      })
+    ).rejects.toThrow('BLOCKED: Cannot approve order. A canonical server-side snapshot builder/contract is missing from dropshipping domain, meaning there is no trusted server snapshot to verify against.');
   });
 });

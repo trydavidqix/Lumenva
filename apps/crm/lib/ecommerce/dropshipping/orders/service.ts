@@ -56,6 +56,12 @@ export async function processDropshippingOrderTransition(input: TransitionOrderI
     throw new Error(`Invalid transition from ${currentState} to ${input.nextState}`);
   }
 
+  // Additional constraint: confirmed transitions must come from a verified provider callback/webhook,
+  // not via the human agent requireRole boundary.
+  if (input.nextState === 'confirmed') {
+    throw new Error('BLOCKED: confirmed transitions must be driven by verified provider webhooks, not agent operations.');
+  }
+
   // Validate snapshot constraints for specific transitions
   if (input.nextState === 'approved') {
     // Transitioning TO approved STRICTLY requires the snapshot to be present and match
@@ -63,6 +69,9 @@ export async function processDropshippingOrderTransition(input: TransitionOrderI
       throw new Error('Cannot approve without providing an approval snapshot.');
     }
     const serverSnapshot = currentDropshipping?.approval_snapshot;
+    if (!serverSnapshot) {
+      throw new Error('BLOCKED: Cannot approve order. A canonical server-side snapshot builder/contract is missing from dropshipping domain, meaning there is no trusted server snapshot to verify against.');
+    }
     if (JSON.stringify(input.snapshot) !== JSON.stringify(serverSnapshot)) {
       throw new Error('Stale snapshot: Provided snapshot does not match the currently stored snapshot.');
     }
@@ -71,6 +80,12 @@ export async function processDropshippingOrderTransition(input: TransitionOrderI
     if (!currentDropshipping?.approval_snapshot) {
       throw new Error('Cannot transition beyond approved without a valid approval snapshot on the server.');
     }
+  } else if (input.nextState === 'reviewed') {
+     // A reviewed transition CANNOT persist a client-supplied snapshot as authoritative.
+     // It must rely on a canonical server-side builder, which is missing.
+     if (input.snapshot !== undefined) {
+         throw new Error('BLOCKED: Cannot persist client-supplied snapshot on review. A canonical server-side snapshot builder is required but missing.');
+     }
   }
 
   // 4. Update the payload preserving existing structure
@@ -84,9 +99,6 @@ export async function processDropshippingOrderTransition(input: TransitionOrderI
     dsPayload.approved_at = new Date().toISOString();
   }
 
-  if (input.snapshot !== undefined) {
-    dsPayload.approval_snapshot = input.snapshot;
-  }
   if (input.supplierId !== undefined) {
     dsPayload.supplier_id = input.supplierId;
   }
