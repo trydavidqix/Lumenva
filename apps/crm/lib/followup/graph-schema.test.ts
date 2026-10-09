@@ -1,11 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import type {
-  NodeType,
-  FlowGraph,
-  FlowNode,
-  FlowEdge} from './graph-schema';
 import {
   NODE_TYPES,
+  NodeType,
   waitConfigSchema,
   aiClassifyConfigSchema,
   actionConfigSchema,
@@ -13,7 +9,10 @@ import {
   endConfigSchema,
   flowNodeSchema,
   flowEdgeSchema,
-  flowGraphSchema
+  flowGraphSchema,
+  FlowGraph,
+  FlowNode,
+  FlowEdge,
 } from './graph-schema';
 
 describe('graph-schema', () => {

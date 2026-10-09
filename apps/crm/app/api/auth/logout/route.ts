@@ -1,5 +1,4 @@
-import type { NextRequest} from "next/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession, revokeRefreshTokens, FIREBASE_SESSION_COOKIE } from "@/lib/firebase/server";
 import { cookies } from "next/headers";
 

@@ -1,9 +1,8 @@
-import type {
-  FirebaseOptions} from "firebase/app";
 import {
   initializeApp,
   getApps,
-  getApp
+  getApp,
+  FirebaseOptions,
 } from "firebase/app";
 import {
   getAuth,

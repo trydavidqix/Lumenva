@@ -1,8 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
-import type {
-  ExternalGuardrailRequest,
-  ExternalGuardrailResult} from "./port";
 import {
+  ExternalGuardrailRequest,
+  ExternalGuardrailResult,
   NoopExternalGuardrailPort,
 } from "./port";
 
