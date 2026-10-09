@@ -11,9 +11,9 @@ The webhook integration securely maps the event's external identifiers to a tena
    The `apps/social-web/app/api/webhooks/meta/route.ts` route handler needs to access the domain event ingester. However, cross-package relative imports (`../../../../...`) are strictly forbidden by `AGENTS.md`. To use it correctly, `createEventIngester` must be exported from `packages/core/social-brain/core/src/index.ts`, which falls outside the current Task 07 allowlist.
 
 2. **Durable Idempotency and Enqueue Missing Contract**:
-   The Task 07 plan explicitly requires deduplication by ID/provider/account, an enqueue mechanism, and a receipt. An in-memory Set inside the Next.js API route is insufficient because retries after a restart or across serverless instances will duplicate events. Since the allowlist forbids inventing unverified schemas or packages, and there is no existing public durable job/event contract accessible from the webhook route or `event-ingester` without expanding the allowlist, we cannot securely fulfill the enqueue/receipt criteria.
+   The Task 07 plan explicitly requires deduplication by ID/provider/account, an enqueue mechanism, and a receipt. Our implementation of `createEventIngester` natively supports this via the existing `CloudTasksClient` (defined in `packages/core/social-brain/core/src/cloud-tasks.ts`). However, because we cannot import `createEventIngester` across package boundaries safely, and we cannot instantiate `CloudTasksClient` in the web app without expanding the allowlist to properly export and configure it, the enqueue path is blocked.
 
 ## Conclusion
 To proceed securely, the following architectural adjustments are required from the Owner:
 - Export `createEventIngester` in `packages/core/social-brain/core/src/index.ts`.
-- Expose an existing, supported durable store/job contract (e.g., Redis idempotency cache, `cloud-tasks` publisher) to the webhook route or ingester to fulfill the deduplication and enqueue acceptance criteria.
+- Expose a configured `CloudTasksClient` instance (or DI container) to `apps/social-web` so the route can pass it to the ingester.

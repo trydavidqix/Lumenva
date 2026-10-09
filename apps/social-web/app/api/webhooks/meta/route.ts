@@ -5,7 +5,8 @@ import { createSupabaseServiceRoleClient } from "../../../../lib/supabase/servic
 
 // BLOCKED_SCOPE: We cannot import createEventIngester because cross-package relative
 // imports are forbidden by AGENTS.md, and we cannot modify the `packages/core/.../index.ts`
-// export manifest as it falls outside the Task 07 allowlist.
+// export manifest as it falls outside the Task 07 allowlist. We also cannot securely instantiate
+// the CloudTasks client locally without duplicating config.
 
 const META_APP_SECRET = process.env.META_APP_SECRET ?? "";
 const META_WEBHOOK_VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN ?? "";
@@ -90,13 +91,15 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      const matchedAccount = accounts[0];
-
       // BLOCKED_SCOPE:
       // Durable deduplication, enqueue, and receipt cannot be reliably implemented
       // because we cannot access the ingester (cross-package import restriction)
-      // and there is no accessible durable idempotency/queue contract exposed
-      // in the allowlist.
+      // and we cannot safely instantiate CloudTasksClient globally in this route
+      // without modifying shared infrastructure files outside the allowlist.
+      //
+      // DEPENDENCY NEEDED:
+      // 1. `packages/core/social-brain/core/src/index.ts` must export `createEventIngester`.
+      // 2. `apps/social-web` requires a dependency injected or exported `CloudTasksClient` instance.
       //
       // TODO: Call ingester once it's exported via `@lumenva/social-brain`.
 
