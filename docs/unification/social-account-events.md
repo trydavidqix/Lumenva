@@ -1,19 +1,19 @@
-# Social Account Events - Task 07 Status: BLOCKED
+# Social Account Events - Task 07 Status: BLOCKED_SCOPE
 
 ## Summary
-Task 07 code implementation is complete, including server-side DB lookups, safe fallback handling, cross-request deduplication via compound keys, and all tests passing within the allowlist (`packages/core/social-brain/core/src/social/ingest/` and `apps/social-web/app/api/webhooks/meta/route.ts`).
+Task 07 execution was partially finalized but remains `BLOCKED_SCOPE` due to structural integration constraints outside the allowlist.
 
-However, the CI pipeline verification is blocked due to pre-existing breakage in an entirely different part of the monorepo (`apps/crm` test suite).
+The webhook integration securely maps the event's external identifiers to a tenant (`workspace_id`) by querying the `social_accounts` table directly from the route handler using the `ServiceRole` client. Events fail closed on absent or ambiguous mappings, returning `200 OK` for terminal invalid states and `500` for transient DB errors (allowing provider retries). Identifiers (tenant, account, event ID) are scrubbed from logs to prevent data leakage.
 
 ## Evidence & Blockers
 
-1. **Pre-existing Main Breakage in `apps/crm`**:
-   The GitHub Actions check suite fails on `apps/crm test:unit`. Examples of failing tests include:
-   - `tests/unit/team-list-roster.test.ts`: `TypeError: Cannot read properties of undefined (reading 'from')` at `lib/auth/require-role.ts:99:64`.
-   - `tests/unit/auth-falha-alto.test.ts`: `cookieStore.get is not a function`.
+1. **Cross-Package Import Restriction**:
+   The `apps/social-web/app/api/webhooks/meta/route.ts` route handler needs to access the domain event ingester. However, cross-package relative imports (`../../../../...`) are strictly forbidden by `AGENTS.md`. To use it correctly, `createEventIngester` must be exported from `packages/core/social-brain/core/src/index.ts`, which falls outside the current Task 07 allowlist.
 
-2. **Strict Allowlist Constraints**:
-   The `apps/crm` directory is outside the strict allowlist for Task 07. As per the instructions to "Continue only this assigned task on its own branch and allowlist; do not expand paths," it is impossible to fix the `apps/crm` tests or mocks without violating constraints.
+2. **Durable Idempotency and Enqueue Missing Contract**:
+   The Task 07 plan explicitly requires deduplication by ID/provider/account, an enqueue mechanism, and a receipt. An in-memory Set inside the Next.js API route is insufficient because retries after a restart or across serverless instances will duplicate events. Since the allowlist forbids inventing unverified schemas or packages, and there is no existing public durable job/event contract accessible from the webhook route or `event-ingester` without expanding the allowlist, we cannot securely fulfill the enqueue/receipt criteria.
 
 ## Conclusion
-Task 07 implementation is fully finalized and ready, but cannot pass CI verifications until the broader `main` branch or the `apps/crm` test suite mocks are fixed by the relevant owners.
+To proceed securely, the following architectural adjustments are required from the Owner:
+- Export `createEventIngester` in `packages/core/social-brain/core/src/index.ts`.
+- Expose an existing, supported durable store/job contract (e.g., Redis idempotency cache, `cloud-tasks` publisher) to the webhook route or ingester to fulfill the deduplication and enqueue acceptance criteria.

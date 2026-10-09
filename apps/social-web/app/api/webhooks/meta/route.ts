@@ -3,16 +3,12 @@ import { verifySignature, verifyChallenge } from "@lumenva/integration-meta";
 import { normalizeMetaPayload } from "@lumenva/integration-meta";
 import { createSupabaseServiceRoleClient } from "../../../../lib/supabase/service-role";
 
-// Note: we can't use an index.ts export because the allowlist restricts us,
-// so we import directly. (6 levels up to root)
-import { createEventIngester } from "../../../../../../packages/core/social-brain/core/src/social/ingest/event-ingester";
+// BLOCKED_SCOPE: We cannot import createEventIngester because cross-package relative
+// imports are forbidden by AGENTS.md, and we cannot modify the `packages/core/.../index.ts`
+// export manifest as it falls outside the Task 07 allowlist.
 
 const META_APP_SECRET = process.env.META_APP_SECRET ?? "";
 const META_WEBHOOK_VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN ?? "";
-const META_PROVIDER_ENABLED = process.env.SOCIAL_META_ENABLED !== "false";
-
-// Instantiate the ingester at the module level so the in-memory cache persists across requests
-const ingester = createEventIngester({ metaEnabled: META_PROVIDER_ENABLED });
 
 // GET: Meta hub verification challenge
 export async function GET(req: NextRequest) {
@@ -30,7 +26,6 @@ export async function GET(req: NextRequest) {
 
 // POST: Meta event delivery
 export async function POST(req: NextRequest) {
-  // Always respond 200 to prevent Meta from suspending the webhook
   try {
     const rawBody = await req.text();
     const signature = req.headers.get("x-hub-signature-256");
@@ -59,18 +54,19 @@ export async function POST(req: NextRequest) {
     try {
       supabase = createSupabaseServiceRoleClient();
     } catch (err) {
-      console.error("[meta-webhook] Could not init supabase service role client", err);
-      return NextResponse.json({ ok: false }, { status: 200 });
+      console.error("[meta-webhook] Could not init supabase service role client");
+      // Return 500 so the provider can retry this transient failure
+      return new NextResponse("Internal Server Error", { status: 500 });
     }
 
     for (const event of events) {
       if (!event.accountExternalId) {
-        console.warn(`[meta-webhook] Missing accountExternalId on event: ${event.externalEventId}`);
+        console.warn(`[meta-webhook] Missing account identifier on event`);
         continue;
       }
 
       // 1. Resolve Tenant & Account matching
-      // This mapping fails closed if absent or disabled.
+      // This mapping fails closed if absent or disabled (200 OK so provider drops it).
       const { data: accounts, error: accountErr } = await supabase
         .from('social_accounts')
         .select('id, workspace_id, status')
@@ -78,58 +74,43 @@ export async function POST(req: NextRequest) {
         .eq('platform', event.platform)
         .eq('status', 'active');
 
-      if (accountErr || !accounts || accounts.length === 0) {
-        console.warn(`[meta-webhook] Event rejected: Account absent or inactive`, {
-          externalEventId: event.externalEventId,
-          accountExternalId: event.accountExternalId,
-        });
+      if (accountErr) {
+        console.error(`[meta-webhook] Database error querying accounts`);
+        // Return 500 so the provider can retry
+        return new NextResponse("Internal Server Error", { status: 500 });
+      }
+
+      if (!accounts || accounts.length === 0) {
+        console.warn(`[meta-webhook] Event rejected: Account absent or inactive`);
         continue;
       }
 
       if (accounts.length > 1) {
-         console.warn(`[meta-webhook] Event rejected: Ambiguous account mapping`, {
-          externalEventId: event.externalEventId,
-          accountExternalId: event.accountExternalId,
-        });
+         console.warn(`[meta-webhook] Event rejected: Ambiguous account mapping`);
         continue;
       }
 
       const matchedAccount = accounts[0];
 
-      // 2. Ingest
-      const result = ingester.ingest(
-        {
-          platform: event.platform,
-          eventType: event.eventType,
-          externalEventId: event.externalEventId,
-          accountExternalId: event.accountExternalId,
-          payload: event.payload
-        },
-        matchedAccount.workspace_id,
-        matchedAccount.id
-      );
-
-      if (!result.ok) {
-        console.warn(`[meta-webhook] Event rejected: ${result.error}`, {
-          externalEventId: event.externalEventId,
-          accountExternalId: event.accountExternalId,
-        });
-        continue;
-      }
+      // BLOCKED_SCOPE:
+      // Durable deduplication, enqueue, and receipt cannot be reliably implemented
+      // because we cannot access the ingester (cross-package import restriction)
+      // and there is no accessible durable idempotency/queue contract exposed
+      // in the allowlist.
+      //
+      // TODO: Call ingester once it's exported via `@lumenva/social-brain`.
 
       console.info(`[meta-webhook] social.webhook.received`, {
         platform: event.platform,
         eventType: event.eventType,
-        externalEventId: event.externalEventId,
-        accountExternalId: event.accountExternalId,
-        workspaceId: matchedAccount.workspace_id,
-        receipt: result.receipt,
+        // Removed tenant, account, and event IDs to prevent identifier leakage
       });
     }
   } catch (err) {
-    console.error("[meta-webhook] Unexpected error", err);
+    console.error("[meta-webhook] Unexpected error");
+    return new NextResponse("Internal Server Error", { status: 500 });
   }
 
-  // Always return 200 to Meta
+  // Always return 200 to Meta on terminal completion or valid rejection
   return NextResponse.json({ ok: true }, { status: 200 });
 }
