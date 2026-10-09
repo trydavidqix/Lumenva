@@ -1,26 +1,28 @@
-# Lumenva Unified Architecture
+# Arquitetura de domínio da Lumenva
 
-## 1. Auth/RBAC (Lumenva)
-- **Authority**: Firebase Auth session via `loadAuthUser()` and server-side verification (`verifySessionCookie()`).
-- **RBAC**: Implemented in `apps/crm/lib/auth/require-role.ts`. Evaluates roles `viewer`, `agent`, `ai_operator`, `manager`, `admin` from `user_organizations` table via `resolveActiveOrg()`.
-- **Tenant Scope**: Strict boundaries enforced per `organization_id` derived from verified sessions.
+## Estado existente
 
-## 2. Jobs & Events (Lumenva)
-- **Job Authority**: Events are processed via queueing and robust retries to prevent duplication.
-- **Paths**: e.g., `webhook-sources/[id]/events/route.ts`, Content OS events.
+- **CRM:** `apps/crm` é a entrada central do produto e continua dono dos contactos/leads, identidade autenticada, organização, RBAC e fluxos CRM existentes. O tenant é derivado de sessão validada no servidor; um `organizationId` vindo do browser não é autoridade.
+- **Jobs e eventos:** reutilizar os contratos existentes em `packages/core/operating-core` e os workers consumidores. Não criar outro scheduler ou engine durante a unificação.
+- **Social:** o Social Brain já está incorporado no destino. Reconciliar suas capacidades e deltas com os módulos atuais em `packages/core/social-brain`, `apps/social-web`, `apps/social-worker` e `apps/social-mcp`; igualdade de arquivos ou nomes de diretório não prova equivalência funcional.
+- **Drop:** `trydavidqix/Drop` é fonte de contratos e decisões para o domínio de dropshipping. Sua documentação/contratos não significam que runtime, loja, sourcing ou operação comercial já existam no Lumenva.
+- **Infraestrutura:** preservar autenticação, banco, storage e providers atualmente ativos. A consolidação não autoriza migração geral nem cópia de tokens entre apps.
 
-## 3. Social Brain Boundaries
-- **Ownership**: Adapters/Ingestion map incoming identities without blindly duplicating a CRM DB.
-- **Capabilities**: Normalizes accounts, events, channels, and content (publishing/analytics) without acting outside explicit approvals.
-- **Tenant Handling**: Identifiers are logically segregated by `organization_id` + `social_account`.
+## Fronteiras de domínio
 
-## 4. Dropshipping Contracts
-- **Scope**: Focused on orders, markets, and events configuration mapped originally in `trydavidqix/Drop` (`src/contracts/events.ts`, `orders.ts`, `markets.ts`).
-- **Implementation Status**: Handled strictly via simulation or `read_only` in development unless `approved_write` is engaged.
-- **Idempotency**: All execution states (`not_started`, `submitted`, `confirmed`, `failed`, `unknown`) require specific transitions. No blind retries on `unknown` state.
+- Adaptar contratos existentes na fronteira de cada módulo. Não criar envelope, registry, pacote genérico ou segundo núcleo quando os contratos atuais atendem.
+- CRM continua o cadastro canônico de contacto/lead. Social identities e conversas devem ligar-se ao CRM por adapters e regras verificáveis; não fazer merge por nome ou email sem identidade confirmada.
+- Conteúdo, aprovação, publicação, analytics e mídia reutilizam os donos já existentes do Social Brain. Uma capacidade só é declarada pronta quando código e evidência no destino a comprovarem.
+- A plataforma de loja conectada continua autoridade de catálogo e do pedido comercial. A Lumenva pode guardar snapshots, vínculo, aprovação, estado de workflow e receipts necessários ao seu processo; não substituir o banco da loja.
+- Dropshipping permanece read-only/simulado neste plano. Escrita externa só pode entrar em etapa futura com capability autorizada, aprovação humana no momento da ação, idempotência, reconciliação e ambiente/credenciais aprovados.
 
-## 5. Architectural Invariants
-- **Approval Snapshots**: Approvals are bound strictly to specific snapshots of content or orders. Any alterations invalidate the snapshot.
-- **Unknown State Handling**: If a process times out or stalls (`unknown`), automatic retry or provider switching is forbidden to avoid side effects.
-- **Idempotency**: Essential across jobs and incoming webhooks to avoid duplicates. Replayed IDs are dropped gracefully.
-- **Concurrent PR Locks**: Path prefixes like `apps/crm/lib/auth/`, shared schema (`migrations`), and core config MUST NOT be altered in parallel PRs.
+## Invariantes compartilhadas
+
+- Approval está ligado ao snapshot do conteúdo, destinatário ou pedido. Mudança relevante invalida a aprovação.
+- `unknown`, timeout ou resposta atrasada não significa sucesso e não autoriza retry cego, troca de provider ou novo efeito externo; reconciliar antes.
+- Eventos/webhooks repetidos precisam de idempotência por domínio e tenant.
+- A Task 01 mantém o mapa exato de allowlists e writers. Paths compartilhados, migrations, manifests, exports e workflows têm um único escritor por vez; paths conceituais ou propostos não são ownership confirmado.
+
+## Fora do desenho
+
+Não adicionar autenticação paralela, migração geral de banco/storage, executor arbitrário, scheduler duplicado, loja pronta, checkout ou escrita real em provider. Pacotes e caminhos novos só entram quando uma task demonstrar a lacuna e respeitar a allowlist aprovada.
