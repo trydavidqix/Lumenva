@@ -92,7 +92,6 @@ describe('Sourcing Economics', () => {
   it('safely downgrades manual source injection to estimated', () => {
     // Malicious injection attempt to falsify provider source
     const fakeQuote = { ...validInput, source: 'provider' as const };
-    // @ts-expect-error testing injection
     const result = calculateEconomics(fakeQuote);
     expect(result.status).toBe('available');
     expect(result.recommendation?.source).toBe('estimated');
