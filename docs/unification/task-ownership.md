@@ -33,3 +33,26 @@ A lista abaixo reflete **exatamente** os limites de paths definidos na documenta
 | **Task 13 — Sourcing, custo e margem sem checkout** | Subpath próprio de sourcing e serviço puro de unit economics no pacote dono, testes e `docs/unification/sourcing-economics.md`. | Pode iniciar após conferência de ownership/path |
 | **Task 14 — Operação de pedidos, aprovações e interface Lumenva** | Subpaths próprios de workflow/order approval e rota UI dedicada sob `apps/crm/app/(admin)/(protected)/dropshipping/`, testes e `docs/unification/dropshipping-runbook.md`. | Pode iniciar após conferência de ownership/path |
 | **Task 15 — Aceitação integrada, recuperação e prontidão** | `docs/unification/release-readiness.md`, `rollback.md`, `runbook.md` e `source-closure.md`. (Mais fixtures E2E existentes) | Aguardando integração das Tasks 04–14 |
+
+## Allowlist exata para sessões paralelas (09/10/2026)
+
+Alocações fechadas para evitar colisão entre Tasks 04–14. Os diretórios novos abaixo ficam reservados à tarefa indicada. Cada worker deve tratar a lista da sua tarefa como allowlist completa, não como sugestão.
+
+| Task | Paths exclusivos |
+|---|---|
+| 04 | `docs/unification/legacy-deltas.md` somente nesta etapa de triagem; candidato de código fica documentado para follow-up com allowlist aprovada. |
+| 05 | `docs/unification/social-brain-deltas.md` somente; mudanças de produto são propriedade de Tasks 06–10. |
+| 06 | `packages/core/social-brain/core/src/social/identity/**`; testes sob esse subpath; `docs/unification/social-data-map.md`. |
+| 07 | `packages/core/social-brain/core/src/social/accounts/**`; `packages/core/social-brain/core/src/social/ingest/**`; `apps/social-web/app/api/webhooks/meta/route.ts`; testes adjacentes; `docs/unification/social-account-events.md`. |
+| 08 | `packages/core/social-brain/core/src/content/**`, `src/approval/**`, `src/publishing/**`, `src/scheduling/**`; `apps/social-web/app/(app)/publishing/**`, `app/(app)/approvals/**`, `app/api/approvals/**`, `app/api/publishing/**`; `apps/social-worker/src/handlers/publish-post.ts`, `publish-post.test.ts`, `publication-types.ts`, `reconcile-publication.ts`, `reconcile-publication.test.ts`; testes adjacentes; `docs/unification/social-workflow.md`. |
+| 09 | `packages/core/social-brain/core/src/inbox/**`, `src/automations/**`; `apps/social-web/app/(app)/inbox/**`, `apps/social-web/app/api/inbox/**`; `apps/social-worker/src/handlers/inbox/**`; testes adjacentes; `docs/unification/social-inbox.md`. |
+| 10 | `packages/core/social-brain/core/src/analytics/**`; `apps/social-web/app/(app)/analytics/**`; testes adjacentes; `docs/unification/social-analytics.md`. |
+| 11 | `apps/crm/lib/ecommerce/dropshipping/domain/**`; `apps/crm/tests/unit/dropshipping/domain/**`; `docs/unification/dropshipping-domain.md`. |
+| 12 | `packages/integrations/nuvemshop/src/dropshipping-read/**`; novo teste `packages/integrations/nuvemshop/tests/dropshipping-read.test.ts`; `apps/crm/lib/ecommerce/dropshipping/store/**`; testes sob `apps/crm/tests/unit/dropshipping/store/**`; `docs/unification/store-adapter.md`. |
+| 13 | `apps/crm/lib/ecommerce/dropshipping/sourcing/**`; `apps/crm/tests/unit/dropshipping/sourcing/**`; `docs/unification/sourcing-economics.md`. |
+| 14 | `apps/crm/lib/ecommerce/dropshipping/orders/**`; `apps/crm/tests/unit/dropshipping/orders/**`; rota nova em `apps/crm/app/admin/(protected)/dropshipping/**` (caminho real da árvore atual); `docs/unification/dropshipping-runbook.md`. |
+| 15 | `docs/unification/release-readiness.md`, `rollback.md`, `runbook.md`, `source-closure.md`; fixtures apenas se já pertencem a workflow existente e sem editar código de tarefa anterior. |
+
+Paths compartilhados sem owner dedicado (migrations/schema/baseline, `package.json`, lockfile/workspace, `.env.example`, exports centrais como `packages/core/social-brain/core/src/index.ts`, navegação global e workflows) permanecem bloqueados para todas as sessões paralelas. Necessidade comprovada exige autorização/allowlist separada antes da edição. Task 14 não pode usar migration ou navegação como exceção implícita; wiring global pertence à integração Task 15, com PR e gate próprios.
+
+O roteamento de sessão usa apenas o branch `main` atual e a URL do plano aprovado. Como Tasks 01–03 ainda estão em PRs draft, os prompts Jules incluem estes paths e contratos; nenhum worker deve presumir que esses documentos já estão em `main`.
