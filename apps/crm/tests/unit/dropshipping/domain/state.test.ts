@@ -29,8 +29,8 @@ describe('Dropshipping Domain State Machine', () => {
       expect(() => validateMarket(validMarket)).not.toThrow();
     });
 
-    test('fails if any required field is missing', () => {
-      const invalidMarket = { ...validMarket } as any;
+    test('fails if one required field is missing', () => {
+      const invalidMarket = { ...validMarket } as Record<string, unknown>;
       delete invalidMarket.tax_cents;
       expect(() => validateMarket(invalidMarket)).toThrow(InvalidMarketError);
       expect(() => validateMarket(invalidMarket)).toThrow('Market config missing tax_cents');

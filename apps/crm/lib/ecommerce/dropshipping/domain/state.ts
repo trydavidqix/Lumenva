@@ -14,11 +14,12 @@ const VALID_TRANSITIONS: Record<DropshippingState, DropshippingState[]> = {
   unknown: [], // Terminal, requires manual intervention or specific resolution out of band
 };
 
-export function validateMarket(market: any) {
+export function validateMarket(market: unknown) {
   if (!market || typeof market !== 'object') throw new InvalidMarketError('Market config is required');
   const requiredKeys = ['currency', 'tax_cents', 'margin_cents', 'shipping_cents', 'cost_cents', 'price_cents'];
   for (const key of requiredKeys) {
-    if (market[key] === undefined || market[key] === null) {
+    const m = market as Record<string, unknown>;
+    if (m[key] === undefined || m[key] === null) {
       throw new InvalidMarketError(`Market config missing ${key}`);
     }
   }
