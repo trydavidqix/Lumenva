@@ -1,3 +1,4 @@
+import { evaluateEditorialRecommendation } from './editorial/pipeline'
 import type { AnalyticsWindow, NormalizedMetrics } from './types'
 import type { SocialPlatform } from '../social/types'
 import { engagementActions, percentDelta, summarizeNumbers, type NumericSummary } from './statistics'
@@ -227,9 +228,23 @@ function buildWindow(
     perPlatform,
     topPosts,
     baseline: compareMetricRows(currentMetricRows, previousMetricRows),
-    availabilityNotes: METRIC_KEYS
-      .filter((key) => metrics[key].sampleSize === 0)
-      .map((key) => `${key} unavailable in ${label} analytics (captured at: ${new Date(asOfMs).toISOString()}, source preserved)`),
+    availabilityNotes: [
+      ...METRIC_KEYS
+        .filter((key) => metrics[key].sampleSize === 0)
+        .map((key) => `${key} unavailable in ${label} analytics (captured at: ${new Date(asOfMs).toISOString()}, source preserved)`),
+      ...currentMetricRows.map((row) => {
+         const status = evaluateEditorialRecommendation({
+           sampleSize: currentMetricRows.length,
+           isStale: false, // Simplification for context snapshot
+           hasProvenance: !!row.externalPostId,
+           isProviderAvailable: !!row.platform,
+           tenantId: row.workspaceId,
+           accountId: row.socialAccountId,
+           postId: row.contentVariantId || 'account-level'
+         })
+         return status !== 'available' ? `Snapshot ${row.id} ${status}` : null
+      }).filter((val): val is string => val !== null)
+    ],
     evidenceSnapshotIds: [...new Set([...currentMetricRows, ...latestPosts].map((row) => row.id))],
     baselineEvidenceSnapshotIds: previousMetricRows.map((row) => row.id),
   }
