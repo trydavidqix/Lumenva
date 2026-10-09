@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest} from "next/server";
+import { NextResponse } from "next/server";
 import { initFirebaseAuth } from "@lumenva/db/gcp/firebase-auth";
 import { createSessionCookie, FIREBASE_SESSION_COOKIE, SESSION_EXPIRATION_MS } from "@/lib/firebase/server";
 import { cookies } from "next/headers";

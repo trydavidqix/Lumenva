@@ -1,4 +1,4 @@
-import { RPTranscriptSegment } from './sessions';
+import type { RPTranscriptSegment } from './sessions';
 
 export type RPMomentType = 'humor' | 'conflict' | 'police' | 'action' | 'other';
 

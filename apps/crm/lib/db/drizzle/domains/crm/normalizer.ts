@@ -1,4 +1,4 @@
-import { CrmLead } from './types';
+import type { CrmLead } from './types';
 
 // Canonical version we can compare against the Supabase legacy response.
 // We keep fields in snake_case and dates in ISO format.
