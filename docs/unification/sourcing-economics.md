@@ -10,7 +10,7 @@ Este documento detalha o funcionamento do cálculo de *unit economics* para drop
 4.  **Validade da Cotação**: Cotações expiram em 24 horas e datas futuras são bloqueadas. Se o timestamp da cotação for mais antigo ou se a data for não convertivel ou proferir o tempo de *now*, o resultado é `unknown`.
 5.  **Adapters Pendentes**: As integrações com AutoDS e DSers estão definidas como interfaces. Suas implementações reais dependem de validação externa (`EXTERNAL_VALIDATION_PENDING`), garantindo que não haja chamadas não autorizadas ou código proprietário em uso durante o desenvolvimento.
 6.  **Validacao das Entradas**: Margens negativas, zeros e `>= 100` são devolvidos com erro *unknown*. Mesma resposta dada às custas contendo instabilidades NaN, strings, ou infinitos. Fornecedores em branco invalidam também.
-7.  **Fonte dos Dados (Source / Provenance)**: Dados não podem presumir e estampar provenância fixada em "provider" quando vindas de interações mockadas/manuais (sintéticas). Para que o output reflita *'provider'*, é exigido contratualmente o objeto validado de evidência da integração real (`evidence: { _type: 'VerifiedProviderQuote' }`). Qualquer input manual ou falsificado fará downgrade para *'estimated'*.
+7.  **Fonte dos Dados (Source / Provenance)**: Dados não podem presumir e estampar provenância fixada em "provider" quando vindas de interações mockadas/manuais (sintéticas). Visto que as validações reais criptográficas dos providers (`AutoDS`, `DSers`) estão com integrações reais pendentes, todo output é **forçadamente rebaixado para `'estimated'`**. Qualquer input manual ou evidência estrutural falsificada manterá a classificação `'estimated'`.
 
 ## Adapters
 

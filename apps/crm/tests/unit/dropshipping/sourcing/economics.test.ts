@@ -92,29 +92,19 @@ describe('Sourcing Economics', () => {
   it('safely downgrades manual source injection to estimated', () => {
     // Malicious injection attempt to falsify provider source
     const fakeQuote = { ...validInput, source: 'provider' as const };
+    // @ts-expect-error testing injection
     const result = calculateEconomics(fakeQuote);
     expect(result.status).toBe('available');
     expect(result.recommendation?.source).toBe('estimated');
   });
 
-  it('emits provider source ONLY when verified evidence is supplied', () => {
-    const verifiedQuote = {
+  it('forces downgrade to estimated even if a caller fabricates a structural evidence quote', () => {
+    const forgedQuote = {
       ...validInput,
-      evidence: { _type: 'VerifiedProviderQuote' as const, provider: 'AutoDS' }
+      evidence: { _type: 'VerifiedProviderQuote' as const, provider: 'AutoDS', signature: 'forged' }
     };
-    const result = calculateEconomics(verifiedQuote);
+    const result = calculateEconomics(forgedQuote);
     expect(result.status).toBe('available');
-    expect(result.recommendation?.source).toBe('provider');
-  });
-
-  it('downgrades to estimated if evidence provider mismatches input provider', () => {
-    const mismatchQuote = {
-      ...validInput,
-      provider: 'DSers',
-      evidence: { _type: 'VerifiedProviderQuote' as const, provider: 'AutoDS' }
-    };
-    const result = calculateEconomics(mismatchQuote);
-    expect(result.status).toBe('available');
-    expect(result.recommendation?.source).toBe('estimated');
+    expect(result.recommendation?.source).toBe('estimated'); // Proof that it's unconditionally downgraded
   });
 });

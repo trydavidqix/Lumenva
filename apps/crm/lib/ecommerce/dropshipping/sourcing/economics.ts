@@ -102,17 +102,9 @@ export function calculateEconomics(input: Partial<SourcingInput>): SourcingOutpu
   const recommendedPrice = Math.ceil(totalCost / (1 - (input.margin / 100)));
   const expectedProfit = recommendedPrice - totalCost;
 
-  // Determine Source (Provenance): only validate 'provider' if a concrete evidence contract is passed
-  let finalSource: SourcingSource = 'estimated';
-  if (
-    input.evidence !== undefined &&
-    input.evidence !== null &&
-    typeof input.evidence === 'object' &&
-    input.evidence._type === 'VerifiedProviderQuote' &&
-    input.evidence.provider === input.provider
-  ) {
-    finalSource = 'provider';
-  }
+  // Determine Source (Provenance): All sources are estimated until proper cryptographic or trusted boundary
+  // validation is implemented. EXTERNAL_VALIDATION_PENDING.
+  const finalSource: SourcingSource = 'estimated';
 
   return {
     status: 'available',
