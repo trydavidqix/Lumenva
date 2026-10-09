@@ -59,8 +59,12 @@ function makeSupabaseStub(rows: Array<Record<string, unknown>>, spy: QuerySpy) {
       return selectChain;
     },
     is: () => selectChain,
-    order: () => Promise.resolve({ data: rows, error: null }),
+    not: () => selectChain,
+    maybeSingle: () => Promise.resolve({ data: { role: "manager" }, error: null }),
+    order: () => selectChain,
+    then: (res: any) => Promise.resolve({ data: rows, error: null }).then(res),
   };
+
   return {
     from: (table: string) => {
       if (table !== "user_organizations") throw new Error(`unexpected table ${table}`);
@@ -74,7 +78,7 @@ function makeSupabaseStub(rows: Array<Record<string, unknown>>, spy: QuerySpy) {
   };
 }
 
-function managerSession(rows: Array<Record<string, unknown>>, spy: QuerySpy) {
+async function managerSession(rows: Array<Record<string, unknown>>, spy: QuerySpy) {
   const user: AuthUser = {
     id: MANAGER_ID,
     email: "manager@example.com",
@@ -87,6 +91,9 @@ function managerSession(rows: Array<Record<string, unknown>>, spy: QuerySpy) {
   vi.mocked(resolveActiveOrg).mockResolvedValue({ orgId: ORG_ID, name: "Org", role: "manager" });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(rows, spy) as any);
+
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  vi.mocked(createAdminClient).mockReturnValue(makeSupabaseStub(rows, spy) as any);
 }
 
 beforeEach(() => {
@@ -96,7 +103,7 @@ beforeEach(() => {
 describe("GET /api/v1/team — roster completo para manager (G6-06)", () => {
   it("manager recebe TODOS os membros que a RLS-scoped query entrega (5), não 1", async () => {
     const spy: QuerySpy = { eqCalls: [] };
-    managerSession(ROSTER, spy);
+    await managerSession(ROSTER, spy);
     const { GET } = await import("@/app/api/v1/team/route");
     const res = await GET(new NextRequest("http://localhost/api/v1/team"));
     expect(res.status).toBe(200);
@@ -109,7 +116,7 @@ describe("GET /api/v1/team — roster completo para manager (G6-06)", () => {
 
   it("a query é org-scoped e NÃO filtra por user_id (o roster vem só da RLS)", async () => {
     const spy: QuerySpy = { eqCalls: [] };
-    managerSession(ROSTER, spy);
+    await managerSession(ROSTER, spy);
     const { GET } = await import("@/app/api/v1/team/route");
     await GET(new NextRequest("http://localhost/api/v1/team"));
     expect(spy.eqCalls).toContainEqual(["organization_id", ORG_ID]);

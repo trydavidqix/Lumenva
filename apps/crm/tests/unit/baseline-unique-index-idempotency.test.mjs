@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const baseline = await readFile(
-  new URL("../../../../infra/supabase/baseline.sql", import.meta.url),
-  "utf8",
-);
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const baselinePath = join(__dirname, "../../../../infra/supabase/baseline.sql");
+
+const baseline = await readFile(baselinePath, "utf8");
 
 const missingGuard = [];
 for (const match of baseline.matchAll(

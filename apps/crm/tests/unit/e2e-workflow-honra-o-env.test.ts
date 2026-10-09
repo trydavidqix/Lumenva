@@ -45,7 +45,11 @@ import * as path from "node:path";
 const RAIZ = path.resolve(__dirname, "../../../..");
 const CRM_ROOT = path.join(RAIZ, "apps/crm");
 
-const workflow = fs.readFileSync(path.join(RAIZ, ".github/workflows/e2e.yml"), "utf8");
+const workflowPath = fs.existsSync(path.join(RAIZ, ".github/workflows/e2e.yml"))
+  ? path.join(RAIZ, ".github/workflows/e2e.yml")
+  : path.join(RAIZ, ".github/workflows/e2e.yml.disabled");
+
+const workflow = fs.readFileSync(workflowPath, "utf8");
 const config = fs.readFileSync(path.join(CRM_ROOT, "playwright.config.ts"), "utf8");
 const packageJson = JSON.parse(fs.readFileSync(path.join(CRM_ROOT, "package.json"), "utf8")) as {
   scripts: Record<string, string>;

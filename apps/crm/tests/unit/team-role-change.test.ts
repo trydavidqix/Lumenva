@@ -21,6 +21,7 @@ vi.mock("@/lib/auth/server", () => ({
   resolveActiveOrg: vi.fn(),
 }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
 vi.mock("@/lib/audit", () => ({
   audit: vi.fn(async () => undefined),
   isServiceRoleConfigured: () => false,
@@ -54,6 +55,8 @@ function makeSupabaseStub(state: StubState) {
           }
           const chain = {
             eq: () => chain,
+            is: () => chain,
+            not: () => chain,
             maybeSingle: () => Promise.resolve({ data: state.target, error: null }),
           };
           return chain;
@@ -73,7 +76,7 @@ function makeSupabaseStub(state: StubState) {
   };
 }
 
-function adminSession(state: StubState) {
+async function adminSession(state: StubState) {
   const user: AuthUser = {
     id: ADMIN_ID,
     email: "admin@example.com",
@@ -86,6 +89,9 @@ function adminSession(state: StubState) {
   vi.mocked(resolveActiveOrg).mockResolvedValue({ orgId: ORG_ID, name: "Org", role: "admin" });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(state) as any);
+
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  vi.mocked(createAdminClient).mockReturnValue(makeSupabaseStub(state) as any);
 }
 
 function patchReq(role: string) {
@@ -112,7 +118,7 @@ beforeEach(() => {
 describe("PATCH /api/v1/team/[user_id] — guard de último admin", () => {
   it("rebaixar o último admin → 409 state_conflict, sem write e sem audit de mudança", async () => {
     const state = stubState({ adminCount: 1 });
-    adminSession(state);
+    await adminSession(state);
     const { PATCH } = await import("@/app/api/v1/team/[user_id]/route");
     const res = await PATCH(patchReq("agent"), params);
     expect(res.status).toBe(409);
@@ -126,7 +132,7 @@ describe("PATCH /api/v1/team/[user_id] — guard de último admin", () => {
 
   it("rebaixar admin com 2 admins ativos → 200 e write efetuado", async () => {
     const state = stubState({ adminCount: 2 });
-    adminSession(state);
+    await adminSession(state);
     const { PATCH } = await import("@/app/api/v1/team/[user_id]/route");
     const res = await PATCH(patchReq("manager"), params);
     expect(res.status).toBe(200);
@@ -142,7 +148,7 @@ describe("PATCH /api/v1/team/[user_id] — audit member.role_changed", () => {
     const state = stubState({
       target: { id: MEMBERSHIP_ID, user_id: TARGET_ID, role: "agent", revoked_at: null },
     });
-    adminSession(state);
+    await adminSession(state);
     const { PATCH } = await import("@/app/api/v1/team/[user_id]/route");
     const res = await PATCH(patchReq("manager"), params);
     expect(res.status).toBe(200);
@@ -169,7 +175,7 @@ describe("PATCH /api/v1/team/[user_id] — audit member.role_changed", () => {
 describe("PATCH /api/v1/team/[user_id] — validação Zod", () => {
   it("role fora do enum → 422 validation_error, sem write", async () => {
     const state = stubState();
-    adminSession(state);
+    await adminSession(state);
     const { PATCH } = await import("@/app/api/v1/team/[user_id]/route");
     const res = await PATCH(patchReq("superuser"), params);
     expect(res.status).toBe(422);
@@ -182,7 +188,7 @@ describe("PATCH /api/v1/team/[user_id] — validação Zod", () => {
 describe("PATCH /api/v1/team/[user_id]/role — alias compartilha a mesma lógica", () => {
   it("último admin também é protegido via alias /role", async () => {
     const state = stubState({ adminCount: 1 });
-    adminSession(state);
+    await adminSession(state);
     const { PATCH } = await import("@/app/api/v1/team/[user_id]/role/route");
     const res = await PATCH(patchReq("viewer"), params);
     expect(res.status).toBe(409);

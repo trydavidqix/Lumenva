@@ -100,6 +100,7 @@ describe("F3 Task 3 - Mutation Gates RBAC", () => {
         eq: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValueOnce({ data: { id: "123" }, error: null }),
       };
+      (createAdminClient as unknown as Mock).mockReturnValue(mockSupabase);
       (createClient as unknown as Mock).mockResolvedValue(mockSupabase);
 
       const ctx = { params: Promise.resolve({ id: "123" }) };

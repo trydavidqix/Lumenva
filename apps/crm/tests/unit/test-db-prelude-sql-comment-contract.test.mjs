@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const script = await readFile(new URL("../../scripts/test-db.sh", import.meta.url), "utf8");
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const scriptPath = join(__dirname, "../../scripts/test-db.sh");
+const script = await readFile(scriptPath, "utf8");
 const sqlPrelude = script.match(/psql_install <<'SQL'\r?\n([\s\S]*?)\r?\nSQL/);
 
 assert.ok(sqlPrelude, "test-db.sh must contain SQL heredoc");

@@ -47,18 +47,22 @@ function makeSupabaseStub(role: Role | null, tables: Record<string, unknown> = {
       error: null,
       count: 0,
     };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const proxy: any = new Proxy(() => proxy, {
-      get(_t, prop) {
-        if (prop === "then") {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          return (resolve: any, reject: any) => Promise.resolve(result).then(resolve, reject);
-        }
-        return () => proxy;
-      },
-      apply: () => proxy,
-    });
-    return proxy;
+    // mock is/not chaining as required by modern code
+    const chainObj: any = {
+      select: () => chainObj,
+      eq: () => chainObj,
+      is: () => chainObj,
+      not: () => chainObj,
+      neq: () => chainObj,
+      in: () => chainObj,
+      order: () => chainObj,
+      limit: () => chainObj,
+      insert: () => chainObj,
+      update: () => chainObj,
+      maybeSingle: () => Promise.resolve(result),
+      then: (resolve: any, reject: any) => Promise.resolve(result).then(resolve, reject),
+    };
+    return chainObj;
   };
   return {
     auth: {
@@ -73,7 +77,7 @@ function makeSupabaseStub(role: Role | null, tables: Record<string, unknown> = {
   };
 }
 
-function session(role: Role | null, tables: Record<string, unknown> = {}) {
+async function session(role: Role | null, tables: Record<string, unknown> = {}) {
   const user: AuthUser | null = role
     ? {
         id: USER_ID,
@@ -91,6 +95,9 @@ function session(role: Role | null, tables: Record<string, unknown> = {}) {
   vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: false, reason: "forbidden" });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(role, tables) as any);
+
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  vi.mocked(createAdminClient).mockReturnValue(makeSupabaseStub(role, tables) as any);
 }
 
 async function errorCode(res: Response): Promise<string> {
@@ -111,7 +118,7 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 describe("grupo settings/api-tokens (admin)", () => {
   it("GET nega 403 para manager", async () => {
-    session("manager");
+    await session("manager");
     const { GET } = await import("@/app/api/v1/settings/api-tokens/route");
     const res = await GET(req("/api/v1/settings/api-tokens"));
     expect(res.status).toBe(403);
@@ -119,7 +126,7 @@ describe("grupo settings/api-tokens (admin)", () => {
   });
 
   it("GET permite 200 para admin", async () => {
-    session("admin");
+    await session("admin");
     const { GET } = await import("@/app/api/v1/settings/api-tokens/route");
     const res = await GET(req("/api/v1/settings/api-tokens"));
     expect(res.status).toBe(200);
@@ -131,7 +138,7 @@ describe("grupo settings/api-tokens (admin)", () => {
 // ---------------------------------------------------------------------------
 describe("grupo team (read manager+, write admin)", () => {
   it("GET /team nega 403 para agent", async () => {
-    session("agent");
+    await session("agent");
     const { GET } = await import("@/app/api/v1/team/route");
     const res = await GET(req("/api/v1/team"));
     expect(res.status).toBe(403);
@@ -139,14 +146,14 @@ describe("grupo team (read manager+, write admin)", () => {
   });
 
   it("GET /team permite 200 para manager", async () => {
-    session("manager");
+    await session("manager");
     const { GET } = await import("@/app/api/v1/team/route");
     const res = await GET(req("/api/v1/team"));
     expect(res.status).toBe(200);
   });
 
   it("PATCH /team/[user_id]/role nega 403 para manager + audita authz.denied", async () => {
-    session("manager");
+    await session("manager");
     const { PATCH } = await import("@/app/api/v1/team/[user_id]/role/route");
     const res = await PATCH(
       req("/api/v1/team/x/role", { method: "PATCH", body: JSON.stringify({ role: "admin" }) }),
@@ -163,7 +170,7 @@ describe("grupo team (read manager+, write admin)", () => {
 // ---------------------------------------------------------------------------
 describe("grupo audit (manager+)", () => {
   it("GET /audit nega 403 para agent", async () => {
-    session("agent");
+    await session("agent");
     const { GET } = await import("@/app/api/v1/audit/route");
     const res = await GET(req("/api/v1/audit"));
     expect(res.status).toBe(403);
@@ -171,7 +178,7 @@ describe("grupo audit (manager+)", () => {
   });
 
   it("GET /audit/export nega 403 para agent", async () => {
-    session("agent");
+    await session("agent");
     const { GET } = await import("@/app/api/v1/audit/export/route");
     const res = await GET(req("/api/v1/audit/export"));
     expect(res.status).toBe(403);
@@ -184,14 +191,14 @@ describe("grupo audit (manager+)", () => {
 // ---------------------------------------------------------------------------
 describe("grupo inbox/conversations (read agent 200, write viewer 403)", () => {
   it("GET /conversations permite 200 para agent", async () => {
-    session("agent");
+    await session("agent");
     const { GET } = await import("@/app/api/v1/conversations/route");
     const res = await GET(req("/api/v1/conversations"));
     expect(res.status).toBe(200);
   });
 
   it("POST /conversations/[id]/claim nega 403 para viewer", async () => {
-    session("viewer");
+    await session("viewer");
     const { POST } = await import("@/app/api/v1/conversations/[id]/claim/route");
     const res = await POST(
       req("/api/v1/conversations/c1/claim", { method: "POST", body: "{}" }),
@@ -202,7 +209,7 @@ describe("grupo inbox/conversations (read agent 200, write viewer 403)", () => {
   });
 
   it("PATCH /conversations/[id] nega 403 para viewer", async () => {
-    session("viewer");
+    await session("viewer");
     const { PATCH } = await import("@/app/api/v1/conversations/[id]/route");
     const res = await PATCH(
       req("/api/v1/conversations/c1", { method: "PATCH", body: JSON.stringify({ status: "closed" }) }),
@@ -218,7 +225,7 @@ describe("grupo inbox/conversations (read agent 200, write viewer 403)", () => {
 // ---------------------------------------------------------------------------
 describe("grupo leads (read agent 200, write viewer 403)", () => {
   it("GET /pipelines/[id]/board permite 200 para agent", async () => {
-    session("agent", {
+    await session("agent", {
       crm_pipelines: { id: "p1", name: "Pipeline", settings: {} },
       crm_stages: [],
       crm_leads: [],
@@ -229,7 +236,7 @@ describe("grupo leads (read agent 200, write viewer 403)", () => {
   });
 
   it("POST /leads nega 403 para viewer + audita authz.denied", async () => {
-    session("viewer");
+    await session("viewer");
     const { POST } = await import("@/app/api/v1/leads/route");
     const res = await POST(
       req("/api/v1/leads", { method: "POST", body: JSON.stringify({ name: "X" }) }),
@@ -240,7 +247,7 @@ describe("grupo leads (read agent 200, write viewer 403)", () => {
   });
 
   it("POST /leads/[id]/move nega 403 para viewer", async () => {
-    session("viewer");
+    await session("viewer");
     const { POST } = await import("@/app/api/v1/leads/[id]/move/route");
     const res = await POST(
       req("/api/v1/leads/l1/move", { method: "POST", body: JSON.stringify({ stage_id: "s1" }) }),
