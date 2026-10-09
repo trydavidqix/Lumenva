@@ -7,7 +7,9 @@ export type CreateContentItemInput = ContentPlanInput & {
   status: Extract<ContentStatus, 'DRAFT'>
 }
 
-export type UpdateContentItemInput = ContentPlanInput
+export type UpdateContentItemInput = ContentPlanInput & {
+  status?: Extract<ContentStatus, 'DRAFT'>
+}
 
 export type ContentRepository = {
   createContentItem(input: CreateContentItemInput): Promise<ContentItem>
@@ -17,7 +19,7 @@ export type ContentRepository = {
 
 export type ContentService = {
   createContentPlan(workspaceId: string, input: ContentPlanInput): Promise<ContentItem>
-  updateDraftContent(id: string, input: ContentPlanInput): Promise<ContentItem>
+  updateContent(id: string, input: ContentPlanInput): Promise<ContentItem>
   getContentItem(id: string): Promise<ContentItem | null>
 }
 
@@ -42,17 +44,17 @@ export function createContentService(repository: ContentRepository): ContentServ
       })
     },
 
-    async updateDraftContent(id, input) {
+    async updateContent(id, input) {
       const current = await repository.getContentItem(id)
       if (!current) {
         throw new ContentServiceError('content_not_found', 'Content item not found')
       }
-      if (current.status !== 'DRAFT') {
-        throw new ContentServiceError('content_not_editable', 'Only draft content can be edited')
-      }
 
       const plan = ContentPlanSchema.parse(input)
-      return repository.updateContentItem(id, plan)
+      return repository.updateContentItem(id, {
+        ...plan,
+        status: 'DRAFT',
+      })
     },
 
     getContentItem(id) {
