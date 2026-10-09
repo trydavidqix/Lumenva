@@ -1,4 +1,4 @@
-export type Currency = 'USD' | 'EUR' | 'BRL';
+export type SourcingSource = 'estimated' | 'provider';
 
 export interface SourcingInput {
   cost: number;
@@ -7,10 +7,11 @@ export interface SourcingInput {
   taxes: number;
   cac: number;
   margin: number;
-  currency: Currency;
-  marketCurrency: Currency;
+  currency: string;
+  marketCurrency: string;
   provider: string;
   timestamp: string;
+  source: SourcingSource;
 }
 
 export interface SourcingOutput {
@@ -19,12 +20,15 @@ export interface SourcingOutput {
     totalCost: number;
     recommendedPrice: number;
     expectedProfit: number;
-    currency: Currency;
+    currency: string;
     provider: string;
     timestamp: string;
-    source: 'estimated' | 'provider';
+    source: SourcingSource;
   };
 }
+
+const isValidCurrency = (curr: unknown): boolean => typeof curr === 'string' && /^[A-Z]{3}$/.test(curr);
+const isValidAmount = (val: unknown): boolean => typeof val === 'number' && Number.isFinite(val) && !Number.isNaN(val) && val >= 0;
 
 export function calculateEconomics(input: Partial<SourcingInput>): SourcingOutput {
   if (
@@ -37,19 +41,54 @@ export function calculateEconomics(input: Partial<SourcingInput>): SourcingOutpu
     input.currency === undefined ||
     input.marketCurrency === undefined ||
     input.provider === undefined ||
-    input.timestamp === undefined
+    input.timestamp === undefined ||
+    input.source === undefined
   ) {
     return { status: 'unknown' };
   }
 
+  // Validate negative, NaN, Infinity inputs
+  if (
+    !isValidAmount(input.cost) ||
+    !isValidAmount(input.shipping) ||
+    !isValidAmount(input.fees) ||
+    !isValidAmount(input.taxes) ||
+    !isValidAmount(input.cac)
+  ) {
+    return { status: 'unknown' };
+  }
+
+  // Validate margin bounds (exclusive 0 and 100)
+  if (typeof input.margin !== 'number' || Number.isNaN(input.margin) || !Number.isFinite(input.margin) || input.margin <= 0 || input.margin >= 100) {
+    return { status: 'unknown' };
+  }
+
+  // Validate provider
+  if (typeof input.provider !== 'string' || input.provider.trim() === '') {
+     return { status: 'unknown' };
+  }
+
+  // Currency configurable and validation
+  if (!isValidCurrency(input.currency) || !isValidCurrency(input.marketCurrency)) {
+     return { status: 'unknown' };
+  }
   if (input.currency !== input.marketCurrency) {
      return { status: 'unavailable' };
   }
 
-  const now = new Date().getTime();
-  const inputTime = new Date(input.timestamp).getTime();
+  // Parse Timestamp and Validate Date correctness and staleness
+  const inputTime = Date.parse(input.timestamp);
+  if (Number.isNaN(inputTime)) {
+    return { status: 'unknown' };
+  }
 
-  if (now - inputTime > 1000 * 60 * 60 * 24) { // 24 hours
+  const now = new Date().getTime();
+
+  if (inputTime > now) {
+     return { status: 'unknown' }; // Future timestamp is invalid
+  }
+
+  if (now - inputTime > 1000 * 60 * 60 * 24) { // 24 hours stale check
      return { status: 'unknown' };
   }
 
@@ -67,7 +106,7 @@ export function calculateEconomics(input: Partial<SourcingInput>): SourcingOutpu
       currency: input.currency,
       provider: input.provider,
       timestamp: input.timestamp,
-      source: 'provider',
+      source: input.source,
     },
   };
 }

@@ -23,14 +23,11 @@ describe('Sourcing Economics', () => {
     marketCurrency: 'USD',
     provider: 'AutoDS',
     timestamp: '2026-10-09T09:00:00Z',
+    source: 'estimated', // Ensure manual input is not labelled as real provider
   };
 
   it('calculates economics correctly with valid inputs', () => {
     const result = calculateEconomics(validInput);
-
-    // totalCost: 1000 + 500 + 100 + 200 + 1500 = 3300
-    // recommendedPrice: 3300 / (1 - 0.2) = 4125
-    // expectedProfit: 4125 - 3300 = 825
 
     expect(result.status).toBe('available');
     expect(result.recommendation).toBeDefined();
@@ -39,7 +36,7 @@ describe('Sourcing Economics', () => {
     expect(result.recommendation?.expectedProfit).toBe(825);
     expect(result.recommendation?.currency).toBe('USD');
     expect(result.recommendation?.provider).toBe('AutoDS');
-    expect(result.recommendation?.source).toBe('provider');
+    expect(result.recommendation?.source).toBe('estimated');
   });
 
   it('returns unknown if any input is missing', () => {
@@ -55,12 +52,48 @@ describe('Sourcing Economics', () => {
   });
 
   it('returns unavailable if currency and marketCurrency mismatch', () => {
-    const mismatchedInput = { ...validInput, marketCurrency: 'EUR' as const };
+    const mismatchedInput = { ...validInput, currency: 'GBP', marketCurrency: 'EUR' };
     expect(calculateEconomics(mismatchedInput).status).toBe('unavailable');
   });
 
   it('returns unknown if quote is stale (older than 24h)', () => {
     const staleInput = { ...validInput, timestamp: '2026-10-08T09:00:00Z' }; // 25 hours old
     expect(calculateEconomics(staleInput).status).toBe('unknown');
+  });
+
+  it('returns unknown for invalid numeric amounts (negative, NaN, Infinity)', () => {
+    expect(calculateEconomics({ ...validInput, cost: -100 }).status).toBe('unknown');
+    expect(calculateEconomics({ ...validInput, shipping: NaN }).status).toBe('unknown');
+    expect(calculateEconomics({ ...validInput, fees: Infinity }).status).toBe('unknown');
+  });
+
+  it('returns unknown for invalid margins (<= 0 or >= 100)', () => {
+    expect(calculateEconomics({ ...validInput, margin: 0 }).status).toBe('unknown');
+    expect(calculateEconomics({ ...validInput, margin: -10 }).status).toBe('unknown');
+    expect(calculateEconomics({ ...validInput, margin: 100 }).status).toBe('unknown');
+    expect(calculateEconomics({ ...validInput, margin: 150 }).status).toBe('unknown');
+  });
+
+  it('returns unknown for empty or whitespace provider', () => {
+    expect(calculateEconomics({ ...validInput, provider: '' }).status).toBe('unknown');
+    expect(calculateEconomics({ ...validInput, provider: '   ' }).status).toBe('unknown');
+  });
+
+  it('returns unknown for invalid ISO currency format', () => {
+    expect(calculateEconomics({ ...validInput, currency: 'US', marketCurrency: 'US' }).status).toBe('unknown');
+    expect(calculateEconomics({ ...validInput, currency: 'EURO', marketCurrency: 'EURO' }).status).toBe('unknown');
+    expect(calculateEconomics({ ...validInput, currency: 'usd', marketCurrency: 'usd' }).status).toBe('unknown');
+  });
+
+  it('returns unknown for invalid or future timestamps', () => {
+    expect(calculateEconomics({ ...validInput, timestamp: 'invalid-date' }).status).toBe('unknown');
+    expect(calculateEconomics({ ...validInput, timestamp: '2026-10-10T10:00:00Z' }).status).toBe('unknown'); // Future
+  });
+
+  it('preserves the provided source explicitly', () => {
+    const realQuote = { ...validInput, source: 'provider' as const };
+    const result = calculateEconomics(realQuote);
+    expect(result.status).toBe('available');
+    expect(result.recommendation?.source).toBe('provider');
   });
 });
