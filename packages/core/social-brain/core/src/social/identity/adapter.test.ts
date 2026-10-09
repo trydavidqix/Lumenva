@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { SocialIdentityAdapter } from './adapter';
-import type { ContactRegistry, SocialIdentityRepository, SocialIdentity, UpsertIdentityInput } from './types';
+import type { ContactRegistry, SocialIdentityRepository, SocialIdentity, UpsertIdentityInput, ServerTenantContext } from './types';
 
 class FakeSocialIdentityRepository implements SocialIdentityRepository {
   private data: SocialIdentity[] = [];
@@ -88,15 +88,15 @@ describe('SocialIdentityAdapter', () => {
   });
 
   it('creates a new identity and links it to a new contact when unseen', async () => {
+    const context: ServerTenantContext = { organizationId: 'org-1' };
     const input: UpsertIdentityInput = {
-      organizationId: 'org-1',
       provider: 'instagram',
       providerAccountId: 'acc-1',
       externalId: 'ext-123',
       unverifiedName: 'Jane Doe',
     };
 
-    const result = await adapter.upsertIdentity(input);
+    const result = await adapter.upsertIdentity(context, input);
 
     expect(result.organizationId).toBe('org-1');
     expect(result.contactId).toBe('contact-1');
@@ -105,15 +105,15 @@ describe('SocialIdentityAdapter', () => {
   });
 
   it('replay of event is idempotent (does not duplicate identity or contact)', async () => {
+    const context: ServerTenantContext = { organizationId: 'org-1' };
     const input: UpsertIdentityInput = {
-      organizationId: 'org-1',
       provider: 'instagram',
       providerAccountId: 'acc-1',
       externalId: 'ext-123',
     };
 
-    const r1 = await adapter.upsertIdentity(input);
-    const r2 = await adapter.upsertIdentity(input);
+    const r1 = await adapter.upsertIdentity(context, input);
+    const r2 = await adapter.upsertIdentity(context, input);
 
     expect(r1.id).toBe(r2.id);
     expect(r1.contactId).toBe(r2.contactId);
@@ -121,22 +121,16 @@ describe('SocialIdentityAdapter', () => {
   });
 
   it('same person in different tenants/organizations do not collide', async () => {
-    const input1: UpsertIdentityInput = {
-      organizationId: 'org-A',
+    const ctx1: ServerTenantContext = { organizationId: 'org-A' };
+    const ctx2: ServerTenantContext = { organizationId: 'org-B' };
+    const input: UpsertIdentityInput = {
       provider: 'instagram',
       providerAccountId: 'acc-1',
       externalId: 'ext-123',
     };
 
-    const input2: UpsertIdentityInput = {
-      organizationId: 'org-B',
-      provider: 'instagram',
-      providerAccountId: 'acc-2',
-      externalId: 'ext-123',
-    };
-
-    const r1 = await adapter.upsertIdentity(input1);
-    const r2 = await adapter.upsertIdentity(input2);
+    const r1 = await adapter.upsertIdentity(ctx1, input);
+    const r2 = await adapter.upsertIdentity(ctx2, input);
 
     expect(r1.id).not.toBe(r2.id);
     expect(r1.contactId).not.toBe(r2.contactId);
@@ -144,22 +138,21 @@ describe('SocialIdentityAdapter', () => {
   });
 
   it('different provider accounts in same tenant do not collide by default', async () => {
+    const context: ServerTenantContext = { organizationId: 'org-1' };
     const input1: UpsertIdentityInput = {
-      organizationId: 'org-1',
       provider: 'instagram',
       providerAccountId: 'brand-A',
       externalId: 'ext-123',
     };
 
     const input2: UpsertIdentityInput = {
-      organizationId: 'org-1',
       provider: 'instagram',
       providerAccountId: 'brand-B',
       externalId: 'ext-123',
     };
 
-    const r1 = await adapter.upsertIdentity(input1);
-    const r2 = await adapter.upsertIdentity(input2);
+    const r1 = await adapter.upsertIdentity(context, input1);
+    const r2 = await adapter.upsertIdentity(context, input2);
 
     expect(r1.id).not.toBe(r2.id);
     expect(r1.contactId).not.toBe(r2.contactId);
@@ -167,20 +160,20 @@ describe('SocialIdentityAdapter', () => {
   });
 
   it('rejects input with empty or missing organizationId indicating an invalid server context', async () => {
+    const context: ServerTenantContext = { organizationId: '   ' };
     const input: UpsertIdentityInput = {
-      organizationId: '   ',
       provider: 'instagram',
       providerAccountId: 'acc-1',
       externalId: 'ext-123',
     };
 
-    await expect(adapter.upsertIdentity(input)).rejects.toThrow('organizationId is required and must be provided by a trusted server context');
+    await expect(adapter.upsertIdentity(context, input)).rejects.toThrow('organizationId is required and must be provided by a trusted server context');
     expect(registry.createdCount).toBe(0);
   });
 
   it('replay of event concurrently is idempotent (Promise.all)', async () => {
+    const context: ServerTenantContext = { organizationId: 'org-1' };
     const input: UpsertIdentityInput = {
-      organizationId: 'org-1',
       provider: 'instagram',
       providerAccountId: 'acc-1',
       externalId: 'ext-123',
@@ -189,9 +182,9 @@ describe('SocialIdentityAdapter', () => {
 
     // calls upsertIdentity 3 times simultaneously
     const results = await Promise.all([
-      adapter.upsertIdentity(input),
-      adapter.upsertIdentity(input),
-      adapter.upsertIdentity(input),
+      adapter.upsertIdentity(context, input),
+      adapter.upsertIdentity(context, input),
+      adapter.upsertIdentity(context, input),
     ]);
 
     expect(results[0].id).toBe(results[1].id);

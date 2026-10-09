@@ -28,12 +28,18 @@ export interface SocialIdentity {
 }
 
 /**
+ * Contexto isolado do servidor. Deve ser derivado exclusivamente da sessão/rota segura.
+ */
+export interface ServerTenantContext {
+  organizationId: string;
+}
+
+/**
  * Payload de entrada para upsert de uma SocialIdentity e/ou criação de Contato.
- * IMPORTANTE: `organizationId` deve sempre vir do contexto autenticado server-side (CRM).
- * O adapter confia que esse valor já foi validado e que o actor pertence a este tenant.
+ * IMPORTANTE: não contém o tenant; o tenant deve ser injetado via ServerTenantContext
+ * pelo chamador autorizado (e.g. rota webhook) para evitar IDOR via payload de terceiros.
  */
 export interface UpsertIdentityInput {
-  organizationId: string;
   provider: string;
   providerAccountId: string;
   externalId: string;
