@@ -96,7 +96,8 @@ export async function requireRole(min: HumanRole, opts: RequireRoleOpts = {}): P
   // which is a Supabase principal and cannot represent the Firebase session
   // cookie. Keep this service-role lookup narrow and require both trusted
   // identity and trusted organization predicates.
-  const { data: membership, error } = await createAdminClient()
+  const adminClient = createAdminClient();
+  const { data: membership, error } = await adminClient
     .from("user_organizations")
     .select("role")
     .eq("user_id", user.id)

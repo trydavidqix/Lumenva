@@ -25,7 +25,7 @@ vi.mock("@/lib/auth/server", () => ({
 }));
 vi.mock("@/lib/auth/requirePlatformAdmin", () => ({ resolvePlatformAdmin: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
-vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn(() => ({ from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ is: () => ({ not: () => ({ maybeSingle: () => Promise.resolve({ data: { role: "manager" }, error: null }) }) }) }) }) }) }) })) }));
 vi.mock("@/lib/audit", () => ({
   audit: vi.fn(async () => undefined),
   isServiceRoleConfigured: () => false,

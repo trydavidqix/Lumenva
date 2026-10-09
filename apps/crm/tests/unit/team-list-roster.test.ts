@@ -23,7 +23,7 @@ vi.mock("@/lib/auth/server", () => ({
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 // admin.ts valida env no load; a rota só o chama quando isServiceRoleConfigured()
 // (mockado false) — mock evita a validação de env no import.
-vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn(() => ({ from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ is: () => ({ not: () => ({ maybeSingle: () => Promise.resolve({ data: { role: "manager" }, error: null }) }) }) }) }) }) }) })) }));
 vi.mock("@/lib/audit", () => ({
   audit: vi.fn(async () => undefined),
   isServiceRoleConfigured: () => false,
