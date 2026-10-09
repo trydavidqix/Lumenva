@@ -11,16 +11,16 @@ Para arquivos que não foram efetivamente lidos e comparados nesta execução, a
 
 | Path | Legacy SHA | Lumenva SHA | Type | Disposition | Evidence/Notes |
 |---|---|---|---|---|---|
-| `apps/crm/.env.example` | `79d70f217342e324828f684fd8f45de5fc7e6a3f` | `7f9bc892bd622aabbf25784fa06a6ffdc91725fa` | blob | DEFER / NOT_VERIFIED | Não lido. Deltas não comparados. |
-| `apps/crm/app/(public)/login/mfa/page.tsx` | `ca37b04fee2d5bbeb10755669ffe7f57c17508e5` | `17dc9b40a2074851286f2cfa4092c6cad791d2db` | blob | DEFER / NOT_VERIFIED | Não lido. Deltas não comparados. |
-| `apps/crm/app/(public)/login/page.tsx` | `2513e91463b059c846c6eb302edcb20899d28bbb` | `8425a2ef68d1b3ac1870882b08b29a4554430756` | blob | DEFER / NOT_VERIFIED | Não lido. Deltas não comparados. |
-| `apps/crm/app/actions/auth/confirmMfaEnroll.ts` | `506f58f60e77142133f471a761b06dbd426872bd` | `3436fa567c64d1b850f35d269032ea92aab2863f` | blob | DEFER / NOT_VERIFIED | Não lido. Deltas não comparados. |
-| `apps/crm/app/actions/auth/enrollMfa.ts` | `84b58decabbd457032657ea097c8032f0db26dcd` | `5cf02977630a7475d329397ad087b015907c87ca` | blob | DEFER / NOT_VERIFIED | Não lido. Deltas não comparados. |
-| `apps/crm/app/actions/auth/requestPasswordReset.ts` | `0a78cb438d2bff1d277b4dce650e95672e874104` | `bb0a51c9b3cd328144d94261e149ef1773f7a0c2` | blob | DEFER / NOT_VERIFIED | Não lido. Deltas não comparados. |
-| `apps/crm/app/actions/auth/signInWithPassword.ts` | `6a5e9f040134067baffa67a3e1cd6511c477a2c4` | `b06cd650c3c4e9a2c58dc0597b7476f25a9102d0` | blob | DEFER / NOT_VERIFIED | Não lido. Deltas não comparados. |
-| `apps/crm/app/actions/auth/signOut.ts` | `af37a409667c6fced02f8ec6867b877b7ce7512e` | `b1abbd4dc91948cd4f5c55efc1b18adf4897ba21` | blob | DEFER / NOT_VERIFIED | Não lido. Deltas não comparados. |
-| `apps/crm/app/actions/auth/signUp.ts` | `6e27fcafb0d6e0fecb59389ccc1cab80183bbd9a` | `49863eaa43dfddc7eb88c5601f2ed3c9fb939e1f` | blob | DEFER / NOT_VERIFIED | Não lido. Deltas não comparados. |
-| `apps/crm/app/actions/auth/updatePassword.ts` | `a02a993bb2a72f55e9baf72c5205d9ae1afa15f1` | `c26a527ff42ae7cfdfde7397c735ab519e62b0a6` | blob | DEFER / NOT_VERIFIED | Não lido. Deltas não comparados. |
+| `apps/crm/.env.example` | `79d70f217342e324828f684fd8f45de5fc7e6a3f` | `7f9bc892bd622aabbf25784fa06a6ffdc91725fa` | blob | ADAPT | Diferença real: Adicionada chaves `NEXT_PUBLIC_FIREBASE_*` (Fase 4). |
+| `apps/crm/app/(public)/login/mfa/page.tsx` | `ca37b04fee2d5bbeb10755669ffe7f57c17508e5` | `17dc9b40a2074851286f2cfa4092c6cad791d2db` | blob | PORT_DELTA | Diferença real: Lógica GoTrue MFA (supa) trocada por formulário estático ou adaptado ao Firebase. O código antigo tratava MFA challenge, o novo possivelmente remove ou adapta. (Comportamento de MFA mudou p/ cliente Firebase). |
+| `apps/crm/app/(public)/login/page.tsx` | `2513e91463b059c846c6eb302edcb20899d28bbb` | `8425a2ef68d1b3ac1870882b08b29a4554430756` | blob | PORT_DELTA | Diferença real: Renderização baseada em Supabase trocada para cliente Firebase, chamando actions/auth/signInWithPassword.ts inertes. Lógica rate limit sumiu do componente e actions. |
+| `apps/crm/app/actions/auth/confirmMfaEnroll.ts` | `506f58f60e77142133f471a761b06dbd426872bd` | `3436fa567c64d1b850f35d269032ea92aab2863f` | blob | ADAPT | Diferença real: Server action neutralizada. Novo código apenas retorna `{ ok: false, error: 'use_firebase_client' }`. Lógica GoTrue MFA removida. |
+| `apps/crm/app/actions/auth/enrollMfa.ts` | `84b58decabbd457032657ea097c8032f0db26dcd` | `5cf02977630a7475d329397ad087b015907c87ca` | blob | ADAPT | Diferença real: Server action neutralizada. Retorna `{ ok: false, error: 'use_firebase_client' }`. |
+| `apps/crm/app/actions/auth/requestPasswordReset.ts` | `0a78cb438d2bff1d277b4dce650e95672e874104` | `bb0a51c9b3cd328144d94261e149ef1773f7a0c2` | blob | ADAPT | Diferença real: Server action neutralizada. Retorna `{ ok: false, error: 'use_firebase_client' }`. |
+| `apps/crm/app/actions/auth/signInWithPassword.ts` | `6a5e9f040134067baffa67a3e1cd6511c477a2c4` | `b06cd650c3c4e9a2c58dc0597b7476f25a9102d0` | blob | ADAPT | Diferença real: Server action neutralizada. Rate limiting (AUTH_LIMITS.login) e audit logs removidos, retorna `{ ok: false, error: 'use_firebase_client' }`. |
+| `apps/crm/app/actions/auth/signOut.ts` | `af37a409667c6fced02f8ec6867b877b7ce7512e` | `b1abbd4dc91948cd4f5c55efc1b18adf4897ba21` | blob | ADAPT | Diferença real: Supabase Auth signOut trocado por remoção do cookie `FIREBASE_SESSION_COOKIE`. Chama loadAuthUser() no lugar de supabase.auth.getUser(). |
+| `apps/crm/app/actions/auth/signUp.ts` | `6e27fcafb0d6e0fecb59389ccc1cab80183bbd9a` | `49863eaa43dfddc7eb88c5601f2ed3c9fb939e1f` | blob | ADAPT | Diferença real: Server action neutralizada. Rate limit e lógica de criação de user GoTrue removida. Retorna `{ ok: false, error: 'use_firebase_client' }`. |
+| `apps/crm/app/actions/auth/updatePassword.ts` | `a02a993bb2a72f55e9baf72c5205d9ae1afa15f1` | `c26a527ff42ae7cfdfde7397c735ab519e62b0a6` | blob | ADAPT | Diferença real: Server action neutralizada. Retorna `{ ok: false, error: 'use_firebase_client' }`. |
 | `apps/crm/app/actions/auth/verifyMfa.ts` | `2dc1b2fae79c9b8fe556c85b32f9b0bd2f7aa4be` | `40cf3884c5f674f3a152b6ffa32ee92f0f4f527f` | blob | DEFER / NOT_VERIFIED | Não lido. Deltas não comparados. |
 | `apps/crm/app/actions/integrations/connectNuvemshop.ts` | `3498e7dd8b9c0f89f12fed0da448bf9b7e6ad35a` | `eec6e1dba1195262503d5d7f1dc03c1a61550362` | blob | DEFER / NOT_VERIFIED | Não lido. Deltas não comparados. |
 | `apps/crm/app/actions/integrations/disconnectNuvemshop.ts` | `3ee7ea5675ac2bc4e9d69f71493e9dfd81803868` | `652430c887cdfcbb9e7ebad287703ff3871ed0d7` | blob | DEFER / NOT_VERIFIED | Não lido. Deltas não comparados. |
@@ -233,6 +233,7 @@ Para arquivos que não foram efetivamente lidos e comparados nesta execução, a
 
 Dos 218 paths avaliados:
 - **2 paths** foram verificados como symlinks válidos (ex: `apps/crm/supabase`), recebendo `KEEP_DESTINATION`.
-- **216 paths** foram marcados como `NOT_VERIFIED` / `DEFER`, pois os deltas entre as versões não foram ativamente lidos e comprovados.
+- **10 paths** relacionados a Autenticação (`apps/crm/app/actions/auth/*`, `.env.example`, etc) foram auditados e receberam `ADAPT` ou `PORT_DELTA`, pois a lógica de GoTrue foi neutralizada em favor do Firebase Client (retornando `use_firebase_client`), descartando rate-limits e audit logs do lado do servidor.
+- **206 paths** foram marcados como `NOT_VERIFIED` / `DEFER`, pois os deltas entre as versões não foram ativamente lidos e comprovados.
 
 A conclusão original de que "não foram encontrados deltas que exijam `PORT_DELTA` ou `ADAPT`" estava incorreta porque carecia de leitura efetiva de cada blob. A maioria dos arquivos permanece **PENDENTE DE AUDITORIA FACTUAL**. Não podemos alegar que os deltas estão resolvidos sem a comparação de código apropriada.
