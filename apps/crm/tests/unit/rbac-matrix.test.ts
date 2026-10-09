@@ -107,6 +107,39 @@ function makeSupabaseStub(role: Role | null, tables: Record<string, unknown> = {
   };
 }
 
+/** Stub PostgREST para o createAdminClient (verificando o ADMIN caller role na table user_organizations) */
+function makeAdminSupabaseStub(role: Role | null): SupabaseStub {
+  return {
+    auth: {
+      getUser: async () =>
+        role
+          ? { data: { user: { id: USER_ID } }, error: null }
+          : { data: { user: null }, error: null },
+    },
+    from: (table: string): SupabaseStubChain => {
+      const chainObj: SupabaseStubChain = {
+        select: () => chainObj,
+        eq: () => chainObj,
+        is: () => chainObj,
+        not: () => chainObj,
+        neq: () => chainObj,
+        in: () => chainObj,
+        order: () => chainObj,
+        limit: () => chainObj,
+        insert: () => chainObj,
+        update: () => chainObj,
+        maybeSingle: () => Promise.resolve({ data: { role }, error: null, count: 0 }),
+        then: <T>(resolve: (val: SupabaseStubResult) => T, reject: (err: unknown) => T) => Promise.resolve({ data: { role }, error: null, count: 0 }).then(resolve, reject),
+      };
+      return chainObj;
+    },
+    rpc: async (fn: string) =>
+      fn === "fn_user_role_in_org"
+        ? { data: role, error: null }
+        : { data: null, error: null },
+  };
+}
+
 async function session(role: Role | null, tables: Record<string, unknown> = {}) {
   const user: AuthUser | null = role
     ? {
@@ -125,7 +158,7 @@ async function session(role: Role | null, tables: Record<string, unknown> = {}) 
   vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: false, reason: "forbidden" });
 
   vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(role, tables) as unknown as Awaited<ReturnType<typeof createClient>>);
-  vi.mocked(createAdminClient).mockReturnValue(makeSupabaseStub(role, tables) as unknown as ReturnType<typeof createAdminClient>);
+  vi.mocked(createAdminClient).mockReturnValue(makeAdminSupabaseStub(role) as unknown as ReturnType<typeof createAdminClient>);
 }
 
 async function errorCode(res: Response): Promise<string> {

@@ -36,11 +36,38 @@ interface UpdateChain {
 }
 
 interface SupabaseStub {
-  from: () => {
+  from: (table: string) => {
     select: (c: string, opts?: { count?: string }) => CountChain | SelectChain;
     update: (values: Record<string, unknown>) => UpdateChain;
   };
   rpc: () => Promise<{ data: string; error: null }>;
+}
+
+function makeAdminSupabaseStub(): SupabaseStub {
+  const selectChain: SelectChain = {
+    eq: () => selectChain,
+    is: () => selectChain,
+    not: () => selectChain,
+    maybeSingle: () => Promise.resolve({ data: { role: "admin" }, error: null }),
+  };
+
+  const countChain: CountChain = {
+    eq: () => countChain,
+    is: () => countChain,
+    not: () => countChain,
+    then: <T>(resolve: (val: { count: number; error: null }) => T) => Promise.resolve({ count: 2, error: null }).then(resolve),
+  };
+
+  return {
+    from: () => ({
+      select: (_c: string, opts?: { count?: string }) => {
+        if (opts?.count) return countChain;
+        return selectChain;
+      },
+      update: () => ({ eq: () => Promise.resolve({ error: null }) }),
+    }),
+    rpc: async () => ({ data: "admin", error: null }),
+  };
 }
 
 async function setup(target: { id: string; user_id: string; role: string; revoked_at: string | null } | null, adminCount = 2) {
@@ -67,24 +94,20 @@ async function setup(target: { id: string; user_id: string; role: string; revoke
     organizations: [{ organization_id: ORG_ID, organization_name: "Org", role: "admin" }],
   } as AuthUser);
   vi.mocked(resolveActiveOrg).mockResolvedValue({ orgId: ORG_ID, name: "Org", role: "admin" });
+
   const supabaseStub: SupabaseStub = {
     from: () => ({
       select: (_c: string, opts?: { count?: string }) => {
         if (opts?.count) return countChain;
-        const chainCopy: SelectChain = {
-          eq: () => chainCopy,
-          is: () => chainCopy,
-          not: () => chainCopy,
-          maybeSingle: () => Promise.resolve({ data: target, error: null }),
-        };
-        return chainCopy;
+        return chain;
       },
       update: (values: Record<string, unknown>) => ({ eq: () => { updates.push(values); return Promise.resolve({ error: null }); } }),
     }),
     rpc: async () => ({ data: "admin", error: null }),
   };
+
   vi.mocked(createClient).mockResolvedValue(supabaseStub as unknown as Awaited<ReturnType<typeof createClient>>);
-  vi.mocked(createAdminClient).mockReturnValue(supabaseStub as unknown as ReturnType<typeof createAdminClient>);
+  vi.mocked(createAdminClient).mockReturnValue(makeAdminSupabaseStub() as unknown as ReturnType<typeof createAdminClient>);
 
   return updates;
 }
