@@ -23,10 +23,9 @@ describe('Sourcing Economics', () => {
     marketCurrency: 'USD',
     provider: 'AutoDS',
     timestamp: '2026-10-09T09:00:00Z',
-    source: 'estimated', // Ensure manual input is not labelled as real provider
   };
 
-  it('calculates economics correctly with valid inputs', () => {
+  it('calculates economics correctly with valid inputs and defaults to estimated', () => {
     const result = calculateEconomics(validInput);
 
     expect(result.status).toBe('available');
@@ -90,10 +89,32 @@ describe('Sourcing Economics', () => {
     expect(calculateEconomics({ ...validInput, timestamp: '2026-10-10T10:00:00Z' }).status).toBe('unknown'); // Future
   });
 
-  it('preserves the provided source explicitly', () => {
-    const realQuote = { ...validInput, source: 'provider' as const };
-    const result = calculateEconomics(realQuote);
+  it('safely downgrades manual source injection to estimated', () => {
+    // Malicious injection attempt to falsify provider source
+    const fakeQuote = { ...validInput, source: 'provider' as const };
+    const result = calculateEconomics(fakeQuote);
+    expect(result.status).toBe('available');
+    expect(result.recommendation?.source).toBe('estimated');
+  });
+
+  it('emits provider source ONLY when verified evidence is supplied', () => {
+    const verifiedQuote = {
+      ...validInput,
+      evidence: { _type: 'VerifiedProviderQuote' as const, provider: 'AutoDS' }
+    };
+    const result = calculateEconomics(verifiedQuote);
     expect(result.status).toBe('available');
     expect(result.recommendation?.source).toBe('provider');
+  });
+
+  it('downgrades to estimated if evidence provider mismatches input provider', () => {
+    const mismatchQuote = {
+      ...validInput,
+      provider: 'DSers',
+      evidence: { _type: 'VerifiedProviderQuote' as const, provider: 'AutoDS' }
+    };
+    const result = calculateEconomics(mismatchQuote);
+    expect(result.status).toBe('available');
+    expect(result.recommendation?.source).toBe('estimated');
   });
 });

@@ -1,5 +1,11 @@
 export type SourcingSource = 'estimated' | 'provider';
 
+export interface VerifiedQuoteEvidence {
+  _type: 'VerifiedProviderQuote';
+  provider: string;
+  signature?: string;
+}
+
 export interface SourcingInput {
   cost: number;
   shipping: number;
@@ -11,7 +17,7 @@ export interface SourcingInput {
   marketCurrency: string;
   provider: string;
   timestamp: string;
-  source: SourcingSource;
+  evidence?: VerifiedQuoteEvidence;
 }
 
 export interface SourcingOutput {
@@ -41,8 +47,7 @@ export function calculateEconomics(input: Partial<SourcingInput>): SourcingOutpu
     input.currency === undefined ||
     input.marketCurrency === undefined ||
     input.provider === undefined ||
-    input.timestamp === undefined ||
-    input.source === undefined
+    input.timestamp === undefined
   ) {
     return { status: 'unknown' };
   }
@@ -97,6 +102,18 @@ export function calculateEconomics(input: Partial<SourcingInput>): SourcingOutpu
   const recommendedPrice = Math.ceil(totalCost / (1 - (input.margin / 100)));
   const expectedProfit = recommendedPrice - totalCost;
 
+  // Determine Source (Provenance): only validate 'provider' if a concrete evidence contract is passed
+  let finalSource: SourcingSource = 'estimated';
+  if (
+    input.evidence !== undefined &&
+    input.evidence !== null &&
+    typeof input.evidence === 'object' &&
+    input.evidence._type === 'VerifiedProviderQuote' &&
+    input.evidence.provider === input.provider
+  ) {
+    finalSource = 'provider';
+  }
+
   return {
     status: 'available',
     recommendation: {
@@ -106,7 +123,7 @@ export function calculateEconomics(input: Partial<SourcingInput>): SourcingOutpu
       currency: input.currency,
       provider: input.provider,
       timestamp: input.timestamp,
-      source: input.source,
+      source: finalSource,
     },
   };
 }
