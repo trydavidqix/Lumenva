@@ -15,6 +15,7 @@ import { NextRequest } from "next/server";
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import type { AuthUser } from "@/lib/auth/types";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 vi.mock("@/lib/auth/server", () => ({
   loadAuthUser: vi.fn(),
@@ -52,8 +53,22 @@ interface QuerySpy {
   eqCalls: Array<[string, unknown]>;
 }
 
-function makeSupabaseStub(rows: Array<Record<string, unknown>>, spy: QuerySpy) {
-  const selectChain = {
+interface SelectChain {
+  eq: (col: string, val: unknown) => SelectChain;
+  is: () => SelectChain;
+  not: () => SelectChain;
+  maybeSingle: () => Promise<{ data: { role: string }; error: null }>;
+  order: () => SelectChain;
+  then: <T>(resolve: (val: { data: Record<string, unknown>[]; error: null }) => T) => Promise<T>;
+}
+
+interface SupabaseStub {
+  from: (table: string) => { select: () => SelectChain };
+  rpc: (fn: string) => Promise<{ data: string | null; error: null }>;
+}
+
+function makeSupabaseStub(rows: Array<Record<string, unknown>>, spy: QuerySpy): SupabaseStub {
+  const selectChain: SelectChain = {
     eq: (col: string, val: unknown) => {
       spy.eqCalls.push([col, val]);
       return selectChain;
@@ -62,7 +77,7 @@ function makeSupabaseStub(rows: Array<Record<string, unknown>>, spy: QuerySpy) {
     not: () => selectChain,
     maybeSingle: () => Promise.resolve({ data: { role: "manager" }, error: null }),
     order: () => selectChain,
-    then: (res: any) => Promise.resolve({ data: rows, error: null }).then(res),
+    then: <T>(resolve: (val: { data: Record<string, unknown>[]; error: null }) => T) => Promise.resolve({ data: rows, error: null }).then(resolve),
   };
 
   return {
@@ -71,6 +86,28 @@ function makeSupabaseStub(rows: Array<Record<string, unknown>>, spy: QuerySpy) {
       return { select: () => selectChain };
     },
     // requireRole resolve o role efetivo do banco.
+    rpc: async (fn: string) =>
+      fn === "fn_user_role_in_org"
+        ? { data: "manager", error: null }
+        : { data: null, error: null },
+  };
+}
+
+function makeAdminSupabaseStub(): SupabaseStub {
+  const selectChain: SelectChain = {
+    eq: () => selectChain,
+    is: () => selectChain,
+    not: () => selectChain,
+    maybeSingle: () => Promise.resolve({ data: { role: "manager" }, error: null }),
+    order: () => selectChain,
+    then: <T>(resolve: (val: { data: Record<string, unknown>[]; error: null }) => T) => Promise.resolve({ data: [], error: null }).then(resolve),
+  };
+
+  return {
+    from: (table: string) => {
+      if (table !== "user_organizations") throw new Error(`unexpected table ${table}`);
+      return { select: () => selectChain };
+    },
     rpc: async (fn: string) =>
       fn === "fn_user_role_in_org"
         ? { data: "manager", error: null }
@@ -89,11 +126,9 @@ async function managerSession(rows: Array<Record<string, unknown>>, spy: QuerySp
   };
   vi.mocked(loadAuthUser).mockResolvedValue(user);
   vi.mocked(resolveActiveOrg).mockResolvedValue({ orgId: ORG_ID, name: "Org", role: "manager" });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(rows, spy) as any);
 
-  const { createAdminClient } = await import("@/lib/supabase/admin");
-  vi.mocked(createAdminClient).mockReturnValue(makeSupabaseStub(rows, spy) as any);
+  vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(rows, spy) as unknown as Awaited<ReturnType<typeof createClient>>);
+  vi.mocked(createAdminClient).mockReturnValue(makeAdminSupabaseStub() as unknown as ReturnType<typeof createAdminClient>);
 }
 
 beforeEach(() => {

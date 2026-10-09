@@ -1,13 +1,13 @@
 /**
- * G2-01 — matriz role×endpoint aplicada server-side (spec 13 §4).
+ * Testes baseados na matriz de permissões do AGENTS.md (spec 13 §4).
+ * Prova, contra os Route Handlers reais, as guardrails unificadas via `requireRole`.
  *
- * Por grupo de rota: prova o 403 para role insuficiente e o 200 para o role
- * mínimo da matriz, exercitando os Route Handlers REAIS (auth e Supabase
- * mockados; a decisão de autorização é a de produção via requireRole).
+ * (Leads: update board = viewer read-only/write agent+). Inbox (conversations:
+ * assign/read/write agent+). Team: (read manager+/write admin). Audit (read
+ * manager+). Settings/Tokens: (read/write admin). Channels: (read/write admin
+ * - não existe rota pública hoje).
  *
- * Grupos cobertos: settings/api-tokens (admin), team (read manager+/write
- * admin), audit (manager+), inbox/conversations (read viewer+/write agent+),
- * leads (read viewer+/write agent+). Billing: nenhuma rota existe hoje —
+ * Contacts (read viewer/write agent+). Billing: nenhuma rota existe hoje —
  * célula admin-only da matriz fica coberta quando a rota nascer.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -18,6 +18,7 @@ import { resolvePlatformAdmin } from "@/lib/auth/requirePlatformAdmin";
 import { audit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
 import type { AuthUser, Role } from "@/lib/auth/types";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 vi.mock("@/lib/auth/server", () => ({
   loadAuthUser: vi.fn(),
@@ -35,20 +36,49 @@ vi.mock("@/lib/audit", () => ({
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const ORG_ID = "22222222-2222-4222-8222-222222222222";
 
+interface SupabaseStubResult {
+  data: unknown;
+  error: null;
+  count: number;
+}
+
+interface SupabaseStubChain {
+  select: () => SupabaseStubChain;
+  eq: () => SupabaseStubChain;
+  is: () => SupabaseStubChain;
+  not: () => SupabaseStubChain;
+  neq: () => SupabaseStubChain;
+  in: () => SupabaseStubChain;
+  order: () => SupabaseStubChain;
+  limit: () => SupabaseStubChain;
+  insert: () => SupabaseStubChain;
+  update: () => SupabaseStubChain;
+  maybeSingle: () => Promise<SupabaseStubResult>;
+  then: <T>(resolve: (val: SupabaseStubResult) => T, reject: (err: unknown) => T) => Promise<T>;
+}
+
+interface SupabaseStub {
+  auth: {
+    getUser: () => Promise<{ data: { user: { id: string } | null }, error: null }>;
+  };
+  from: (table: string) => SupabaseStubChain;
+  rpc: (fn: string) => Promise<{ data: Role | null, error: null }>;
+}
+
 /**
  * Stub PostgREST: qualquer cadeia .from(t).select()...  resolve com o valor
  * configurado em `tables[t]` (default: lista vazia). `rpc` devolve o role
  * efetivo (fn_user_role_in_org) usado pelo requireRole.
  */
-function makeSupabaseStub(role: Role | null, tables: Record<string, unknown> = {}) {
-  const chainFor = (table: string) => {
-    const result = {
+function makeSupabaseStub(role: Role | null, tables: Record<string, unknown> = {}): SupabaseStub {
+  const chainFor = (table: string): SupabaseStubChain => {
+    const result: SupabaseStubResult = {
       data: table in tables ? tables[table] : [],
       error: null,
       count: 0,
     };
     // mock is/not chaining as required by modern code
-    const chainObj: any = {
+    const chainObj: SupabaseStubChain = {
       select: () => chainObj,
       eq: () => chainObj,
       is: () => chainObj,
@@ -60,7 +90,7 @@ function makeSupabaseStub(role: Role | null, tables: Record<string, unknown> = {
       insert: () => chainObj,
       update: () => chainObj,
       maybeSingle: () => Promise.resolve(result),
-      then: (resolve: any, reject: any) => Promise.resolve(result).then(resolve, reject),
+      then: <T>(resolve: (val: SupabaseStubResult) => T, reject: (err: unknown) => T) => Promise.resolve(result).then(resolve, reject),
     };
     return chainObj;
   };
@@ -74,6 +104,39 @@ function makeSupabaseStub(role: Role | null, tables: Record<string, unknown> = {
     from: (table: string) => chainFor(table),
     rpc: async (fn: string) =>
       fn === "fn_user_role_in_org" ? { data: role, error: null } : { data: null, error: null },
+  };
+}
+
+/** Stub PostgREST para o createAdminClient (verificando o ADMIN caller role na table user_organizations) */
+function makeAdminSupabaseStub(role: Role | null): SupabaseStub {
+  return {
+    auth: {
+      getUser: async () =>
+        role
+          ? { data: { user: { id: USER_ID } }, error: null }
+          : { data: { user: null }, error: null },
+    },
+    from: (table: string): SupabaseStubChain => {
+      const chainObj: SupabaseStubChain = {
+        select: () => chainObj,
+        eq: () => chainObj,
+        is: () => chainObj,
+        not: () => chainObj,
+        neq: () => chainObj,
+        in: () => chainObj,
+        order: () => chainObj,
+        limit: () => chainObj,
+        insert: () => chainObj,
+        update: () => chainObj,
+        maybeSingle: () => Promise.resolve({ data: { role }, error: null, count: 0 }),
+        then: <T>(resolve: (val: SupabaseStubResult) => T, reject: (err: unknown) => T) => Promise.resolve({ data: { role }, error: null, count: 0 }).then(resolve, reject),
+      };
+      return chainObj;
+    },
+    rpc: async (fn: string) =>
+      fn === "fn_user_role_in_org"
+        ? { data: role, error: null }
+        : { data: null, error: null },
   };
 }
 
@@ -93,11 +156,9 @@ async function session(role: Role | null, tables: Record<string, unknown> = {}) 
     role ? { orgId: ORG_ID, name: "Org", role } : null,
   );
   vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: false, reason: "forbidden" });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(role, tables) as any);
 
-  const { createAdminClient } = await import("@/lib/supabase/admin");
-  vi.mocked(createAdminClient).mockReturnValue(makeSupabaseStub(role, tables) as any);
+  vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(role, tables) as unknown as Awaited<ReturnType<typeof createClient>>);
+  vi.mocked(createAdminClient).mockReturnValue(makeAdminSupabaseStub(role) as unknown as ReturnType<typeof createAdminClient>);
 }
 
 async function errorCode(res: Response): Promise<string> {

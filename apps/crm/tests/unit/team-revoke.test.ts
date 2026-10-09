@@ -5,6 +5,7 @@ import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import { audit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
 import type { AuthUser } from "@/lib/auth/types";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 vi.mock("@/lib/auth/server", () => ({ loadAuthUser: vi.fn(), resolveActiveOrg: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
@@ -16,19 +17,72 @@ const TARGET_ID = "33333333-3333-4333-8333-333333333333";
 const MEMBERSHIP_ID = "44444444-4444-4444-8444-444444444444";
 const ORG_ID = "22222222-2222-4222-8222-222222222222";
 
+interface CountChain {
+  eq: () => CountChain;
+  is: () => CountChain;
+  not: () => CountChain;
+  then: <T>(resolve: (val: { count: number; error: null }) => T) => Promise<T>;
+}
+
+interface SelectChain {
+  eq: () => SelectChain;
+  is: () => SelectChain;
+  not: () => SelectChain;
+  maybeSingle: () => Promise<{ data: Record<string, unknown> | null; error: null }>;
+}
+
+interface UpdateChain {
+  eq: () => Promise<{ error: null }>;
+}
+
+interface SupabaseStub {
+  from: (table: string) => {
+    select: (c: string, opts?: { count?: string }) => CountChain | SelectChain;
+    update: (values: Record<string, unknown>) => UpdateChain;
+  };
+  rpc: () => Promise<{ data: string; error: null }>;
+}
+
+function makeAdminSupabaseStub(): SupabaseStub {
+  const selectChain: SelectChain = {
+    eq: () => selectChain,
+    is: () => selectChain,
+    not: () => selectChain,
+    maybeSingle: () => Promise.resolve({ data: { role: "admin" }, error: null }),
+  };
+
+  const countChain: CountChain = {
+    eq: () => countChain,
+    is: () => countChain,
+    not: () => countChain,
+    then: <T>(resolve: (val: { count: number; error: null }) => T) => Promise.resolve({ count: 2, error: null }).then(resolve),
+  };
+
+  return {
+    from: () => ({
+      select: (_c: string, opts?: { count?: string }) => {
+        if (opts?.count) return countChain;
+        return selectChain;
+      },
+      update: () => ({ eq: () => Promise.resolve({ error: null }) }),
+    }),
+    rpc: async () => ({ data: "admin", error: null }),
+  };
+}
+
 async function setup(target: { id: string; user_id: string; role: string; revoked_at: string | null } | null, adminCount = 2) {
   const updates: Array<Record<string, unknown>> = [];
-  const chain = {
+  const chain: SelectChain = {
     eq: () => chain,
     is: () => chain,
     not: () => chain,
     maybeSingle: () => Promise.resolve({ data: target, error: null }),
   };
-  const countChain = {
+  const countChain: CountChain = {
     eq: () => countChain,
     is: () => countChain,
     not: () => countChain,
-    then: (res: any) => Promise.resolve({ count: adminCount, error: null }).then(res),
+    then: <T>(resolve: (val: { count: number; error: null }) => T) => Promise.resolve({ count: adminCount, error: null }).then(resolve),
   };
 
   vi.mocked(loadAuthUser).mockResolvedValue({
@@ -40,26 +94,20 @@ async function setup(target: { id: string; user_id: string; role: string; revoke
     organizations: [{ organization_id: ORG_ID, organization_name: "Org", role: "admin" }],
   } as AuthUser);
   vi.mocked(resolveActiveOrg).mockResolvedValue({ orgId: ORG_ID, name: "Org", role: "admin" });
-  const supabaseStub = {
+
+  const supabaseStub: SupabaseStub = {
     from: () => ({
       select: (_c: string, opts?: { count?: string }) => {
         if (opts?.count) return countChain;
-        const chainCopy = {
-          eq: () => chainCopy,
-          is: () => chainCopy,
-          not: () => chainCopy,
-          maybeSingle: () => Promise.resolve({ data: target, error: null }),
-        };
-        return chainCopy;
+        return chain;
       },
       update: (values: Record<string, unknown>) => ({ eq: () => { updates.push(values); return Promise.resolve({ error: null }); } }),
     }),
     rpc: async () => ({ data: "admin", error: null }),
-  } as never;
-  vi.mocked(createClient).mockResolvedValue(supabaseStub);
+  };
 
-  const { createAdminClient } = await import("@/lib/supabase/admin");
-  vi.mocked(createAdminClient).mockReturnValue(supabaseStub);
+  vi.mocked(createClient).mockResolvedValue(supabaseStub as unknown as Awaited<ReturnType<typeof createClient>>);
+  vi.mocked(createAdminClient).mockReturnValue(makeAdminSupabaseStub() as unknown as ReturnType<typeof createAdminClient>);
 
   return updates;
 }
