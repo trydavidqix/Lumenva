@@ -9,6 +9,7 @@ export type VariantRepository = {
   saveVariants(contentItemId: string, variants: ContentVariantInput[]): Promise<ContentVariant[]>
   updateVariant(contentItemId: string, variant: ContentVariantInput): Promise<ContentVariant>
   listVariants(contentItemId: string): Promise<ContentVariant[]>
+  markContentDraft(contentItemId: string): Promise<void>
 }
 
 export type VariantService = {
@@ -31,14 +32,18 @@ export function createVariantService(repository: VariantRepository): VariantServ
     async savePlatformVariants(contentItemId, variants) {
       const parsed = variants.map((variant) => ContentVariantInputSchema.parse(variant))
       assertCompleteVariantSet(parsed)
-      return repository.saveVariants(contentItemId, parsed)
+      const saved = await repository.saveVariants(contentItemId, parsed)
+      await repository.markContentDraft(contentItemId)
+      return saved
     },
 
     async updatePlatformVariant(contentItemId, variant) {
-      return repository.updateVariant(
+      const updated = await repository.updateVariant(
         contentItemId,
         ContentVariantInputSchema.parse(variant),
       )
+      await repository.markContentDraft(contentItemId)
+      return updated
     },
 
     listPlatformVariants(contentItemId) {

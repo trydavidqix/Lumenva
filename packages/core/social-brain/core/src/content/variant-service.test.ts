@@ -19,11 +19,13 @@ describe('platform variant service', () => {
       saveVariants: vi.fn(async () => [] as ContentVariant[]),
       updateVariant: vi.fn(async () => variants[0] as ContentVariant),
       listVariants: vi.fn(async () => [] as ContentVariant[]),
+      markContentDraft: vi.fn(async () => undefined),
     }
     const service = mod.createVariantService(repository)
 
     await service.savePlatformVariants('content-1', variants)
     expect(repository.saveVariants).toHaveBeenCalledTimes(1)
+    expect(repository.markContentDraft).toHaveBeenCalledWith('content-1')
 
     await expect(service.savePlatformVariants('content-1', variants.slice(0, 3))).rejects.toMatchObject({
       code: 'invalid_variant_set',
@@ -47,6 +49,7 @@ describe('platform variant service', () => {
       saveVariants: vi.fn(async () => [] as ContentVariant[]),
       updateVariant: vi.fn(async () => variants[0] as ContentVariant),
       listVariants: vi.fn(async () => [] as ContentVariant[]),
+      markContentDraft: vi.fn(async () => undefined),
     })
 
     await expect(
@@ -84,6 +87,7 @@ describe('platform variant service', () => {
         return updated
       }),
       listVariants: vi.fn(async () => [...stored.values()]),
+      markContentDraft: vi.fn(async () => undefined),
     }
     const service = mod.createVariantService(repository)
     const facebookBefore = structuredClone(stored.get('facebook'))
@@ -94,6 +98,7 @@ describe('platform variant service', () => {
     })
 
     expect(repository.updateVariant).toHaveBeenCalledTimes(1)
+    expect(repository.markContentDraft).toHaveBeenCalledWith('content-1')
     expect(stored.get('instagram')?.caption).toBe('Changed only Instagram')
     expect(stored.get('facebook')).toEqual(facebookBefore)
   })

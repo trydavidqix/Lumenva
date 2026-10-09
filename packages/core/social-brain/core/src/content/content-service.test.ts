@@ -91,7 +91,7 @@ describe('content plan and service', () => {
     })
   })
 
-  it('updates only DRAFT content and re-validates the full plan', async () => {
+  it('updates content and transitions it back to DRAFT', async () => {
     const mod = await import('./content-service').catch(() => null)
     expect(mod, 'content service module must exist').not.toBeNull()
     if (!mod) return
@@ -100,14 +100,14 @@ describe('content plan and service', () => {
       id: 'content-1',
       workspaceId: 'workspace-1',
       ...validPlan,
-      status: 'DRAFT',
+      status: 'APPROVED',
       createdAt: '2026-08-17T15:20:00.000Z',
     }
     const repository = {
       createContentItem: vi.fn(async (_input: CreateContentItemInput): Promise<ContentItem> => current),
       updateContentItem: vi.fn(
         async (_id: string, input: UpdateContentItemInput): Promise<ContentItem> => {
-          current = { ...current, ...input }
+          current = { ...current, ...input, status: input.status ?? current.status }
           return current
         },
       ),
@@ -115,20 +115,15 @@ describe('content plan and service', () => {
     }
     const service = mod.createContentService(repository)
 
-    const updated = await service.updateDraftContent('content-1', {
+    const updated = await service.updateContent('content-1', {
       ...validPlan,
       hook: 'A stronger hook.',
     })
     expect(updated.hook).toBe('A stronger hook.')
+    expect(updated.status).toBe('DRAFT')
 
-    current = { ...current, status: 'READY_FOR_REVIEW' }
-    await expect(service.updateDraftContent('content-1', validPlan)).rejects.toMatchObject({
-      code: 'content_not_editable',
-    })
-
-    current = { ...current, status: 'DRAFT' }
     await expect(
-      service.updateDraftContent('content-1', {
+      service.updateContent('content-1', {
         ...validPlan,
         script: '',
       }),
