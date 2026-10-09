@@ -19,13 +19,17 @@ Tests and builds for this project run **exclusively** on GitHub Actions. Windows
     *   **GCP Auth:** Authenticates via OIDC only outside of pull requests (`github.event_name != 'pull_request'`) and only when required variables (`GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT`) are configured.
     *   **Docker Build:** Performs a dry-run Docker build (`push: false`). It does not perform an actual push or publish.
 
-## Tracking Pull Requests
+## Monitoring without a browser
 
-Pull requests (PRs) created by Jules are reviewed by the Owner. To track the progress and status of PRs:
-1. Navigate to the `Pull requests` tab on the GitHub repository.
-2. Select the PR associated with the specific task.
-3. Review the code changes and check the status of the GitHub Actions in the `Checks` tab at the bottom of the PR. Wait for all checks to complete before considering the PR ready for merge.
+Use Jules CLI/API and GitHub CLI for status checks:
 
+- Jules CLI: `jules remote list --session` lists sessions; `jules remote list --repo` lists connected repositories. The installed CLI help has no watch or notification command.
+- Jules API: `GET /v1alpha/sessions`, `GET /v1alpha/sessions/{id}`, and `GET /v1alpha/sessions/{id}/activities` expose session and activity state.
+- GitHub: `gh pr view <number> --json state,isDraft,mergeStateStatus,statusCheckRollup` and `gh pr checks <number>` show PR and Actions status.
+
+## Jules notifications
+
+The official Jules v1alpha API discovery exposes session operations but no notification-preference resource or method. The installed CLI exposes no notifications command. Therefore, account-level Jules alerts cannot be enabled through API or CLI; do not claim that polling or this runbook configured a push alert. The notification preference is available only in the Jules web interface. When browser use is prohibited, leave alerts explicitly **NOT CONFIGURED**.
 ## Jules API Session Creation
 
 **Note:** The installed CLI on this machine failed to authenticate due to network/proxy issues and an OAuth client error. Therefore, the CLI is not considered functional. Sessions must be created via the API.
