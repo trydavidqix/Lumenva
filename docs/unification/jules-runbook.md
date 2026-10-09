@@ -6,12 +6,18 @@ This document outlines the GitHub Actions checks and the procedure for creating 
 
 Tests and builds for this project run **exclusively** on GitHub Actions. Windows does not execute local validations. The current CI checks include:
 
-*   **Typecheck:** `pnpm typecheck`
-*   **Linting:** `pnpm lint`, `pnpm lint:channels`
-*   **Unit Tests:** `pnpm test:unit`
-*   **Database Invariants (RLS/Governance):** `pnpm test:db` (Runs in a separate job against a dedicated pgvector/pg17 database).
-*   **Harness Consistency:** `pnpm test:harness && pnpm harness:check`
-*   **GCP CI (F8):** Dry-run build and push using Workload Identity Federation (F8 F7 rules apply, no real deploy or push in CI).
+*   **`ci.yml` (verify & invariants jobs):**
+    *   **Typecheck:** `pnpm typecheck`
+    *   **Linting:** `pnpm lint`
+    *   **Channel Provider Leak:** `pnpm lint:channels`
+    *   **Harness Consistency:** `pnpm test:harness && pnpm harness:check`
+    *   **Unit Tests:** `pnpm test:unit`
+    *   **Kit self-host (bash):** `pnpm test:shell`
+    *   **RLS/governance invariants:** `pnpm test:db` (Runs in a separate job against a pgvector/pg17 database).
+*   **`gcp-ci.yml` (verify-and-build & invariants jobs):**
+    *   Repeats typecheck, lint, and unit tests.
+    *   **GCP Auth:** Authenticates via OIDC only outside of pull requests (`github.event_name != 'pull_request'`) and only when required variables (`GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT`) are configured.
+    *   **Docker Build:** Performs a dry-run Docker build (`push: false`). It does not perform an actual push or publish.
 
 ## Tracking Pull Requests
 
@@ -30,8 +36,8 @@ To create an individual session for Jules, use the following API flow. **Do not 
 `POST https://jules.googleapis.com/v1alpha/sessions`
 
 **Request Payload Configuration:**
-*   **`sourceContext`**: Must be set to the GitHub source branch for the specific task.
-*   **Prompt**: The prompt should clearly specify the task ID, base SHA, and the exact allowlist of files to be modified.
+*   **`sourceContext`**: Must use the official schema to define the source and starting branch.
+*   **`prompt`** and **`title`**: Must clearly outline the task ID, base SHA, and precise files to modify. Use `AUTO_CREATE_PR` mode to create PRs automatically (this mode creates PRs, but does not auto-merge).
 
 **Example Request (Conceptual):**
 ```http
@@ -40,12 +46,14 @@ Content-Type: application/json
 
 {
   "sourceContext": {
-    "git": {
-      "repository": "trydavidqix/Lumenva",
-      "branch": "main"
+    "source": "sources/github/trydavidqix/Lumenva",
+    "githubRepoContext": {
+      "startingBranch": "main"
     }
   },
-  "prompt": "Execute Task NN. Use the provided SHA as a base. Modify only the allowed files..."
+  "title": "Task NN",
+  "prompt": "Execute Task NN. Use the provided SHA as a base. Modify only the allowed files...",
+  "mode": "AUTO_CREATE_PR"
 }
 ```
 
