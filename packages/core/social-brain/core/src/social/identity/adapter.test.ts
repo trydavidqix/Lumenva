@@ -31,6 +31,31 @@ class FakeSocialIdentityRepository implements SocialIdentityRepository {
     }
     return identity;
   }
+
+  // Mutex simple para simular transação atômica em memória durante testes de concorrência
+  private mutex = false;
+
+  async upsertAtomic(
+    key: { organizationId: string; provider: string; providerAccountId: string; externalId: string },
+    factory: () => Promise<SocialIdentity>
+  ): Promise<SocialIdentity> {
+    // Simula espera ativa do banco para locks (bem simples)
+    while (this.mutex) {
+      await new Promise(r => setTimeout(r, 1));
+    }
+    this.mutex = true;
+    try {
+      let existing = await this.findByKey(key.organizationId, key.provider, key.providerAccountId, key.externalId);
+      if (existing) {
+        return existing;
+      }
+      const newIdentity = await factory();
+      this.data.push(newIdentity);
+      return newIdentity;
+    } finally {
+      this.mutex = false;
+    }
+  }
 }
 
 class FakeContactRegistry implements ContactRegistry {
@@ -139,5 +164,38 @@ describe('SocialIdentityAdapter', () => {
     expect(r1.id).not.toBe(r2.id);
     expect(r1.contactId).not.toBe(r2.contactId);
     expect(registry.createdCount).toBe(2);
+  });
+
+  it('rejects input with empty or missing organizationId indicating an invalid server context', async () => {
+    const input: UpsertIdentityInput = {
+      organizationId: '   ',
+      provider: 'instagram',
+      providerAccountId: 'acc-1',
+      externalId: 'ext-123',
+    };
+
+    await expect(adapter.upsertIdentity(input)).rejects.toThrow('organizationId is required and must be provided by a trusted server context');
+    expect(registry.createdCount).toBe(0);
+  });
+
+  it('replay of event concurrently is idempotent (Promise.all)', async () => {
+    const input: UpsertIdentityInput = {
+      organizationId: 'org-1',
+      provider: 'instagram',
+      providerAccountId: 'acc-1',
+      externalId: 'ext-123',
+      unverifiedName: 'Concurrent User',
+    };
+
+    // calls upsertIdentity 3 times simultaneously
+    const results = await Promise.all([
+      adapter.upsertIdentity(input),
+      adapter.upsertIdentity(input),
+      adapter.upsertIdentity(input),
+    ]);
+
+    expect(results[0].id).toBe(results[1].id);
+    expect(results[1].id).toBe(results[2].id);
+    expect(registry.createdCount).toBe(1);
   });
 });

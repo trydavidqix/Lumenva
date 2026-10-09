@@ -29,6 +29,8 @@ export interface SocialIdentity {
 
 /**
  * Payload de entrada para upsert de uma SocialIdentity e/ou criação de Contato.
+ * IMPORTANTE: `organizationId` deve sempre vir do contexto autenticado server-side (CRM).
+ * O adapter confia que esse valor já foi validado e que o actor pertence a este tenant.
  */
 export interface UpsertIdentityInput {
   organizationId: string;
@@ -72,4 +74,14 @@ export interface SocialIdentityRepository {
   ): Promise<SocialIdentity | null>;
 
   save(identity: SocialIdentity): Promise<SocialIdentity>;
+
+  /**
+   * Resolve a idempotência em caso de concorrência.
+   * Tenta encontrar e, se não encontrar, chama o fallback de criação atômica.
+   * Deve ser encapsulado no banco (ex: ON CONFLICT DO NOTHING RETURNING).
+   */
+  upsertAtomic(
+    key: { organizationId: string; provider: string; providerAccountId: string; externalId: string },
+    factory: () => Promise<SocialIdentity>
+  ): Promise<SocialIdentity>;
 }
