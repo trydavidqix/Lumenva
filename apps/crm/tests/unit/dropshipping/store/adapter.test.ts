@@ -71,7 +71,7 @@ describe("DropshippingStoreAdapter", () => {
     if (result.ok) {
       // The `raw` property in EcommerceOrder from `types.ts` is required, but it should be an empty object
       expect(result.snapshot.data[0]?.raw).toEqual({});
-      expect((result.snapshot.data[0] as Record<string, unknown>).rawPII).toBeUndefined();
+      expect((result.snapshot.data[0] as unknown as Record<string, unknown>).rawPII).toBeUndefined();
     }
   });
 

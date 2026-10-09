@@ -162,7 +162,7 @@ export class DropshippingStoreAdapter {
           currency: String(record.currency || record.currency_code || "Unknown"),
           totalCents: Math.round(numTotal * 100),
           createdAt: String(record.created_at),
-          raw: {}, // Redacted to prevent PII leak
+          raw: {} as Record<string, unknown>, // Redacted to prevent PII leak, cast properly for the interface
         });
       }
 
