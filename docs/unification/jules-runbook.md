@@ -53,7 +53,7 @@ Content-Type: application/json
   },
   "title": "Task NN",
   "prompt": "Execute Task NN. Use the provided SHA as a base. Modify only the allowed files...",
-  "mode": "AUTO_CREATE_PR"
+  "automationMode": "AUTO_CREATE_PR"
 }
 ```
 
