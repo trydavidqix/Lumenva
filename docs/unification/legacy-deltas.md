@@ -1,15 +1,40 @@
 # Task 04 — Reconciliar CRM Legacy sem regressão
 
-**Status:** BLOCKED_SOURCE_ACCESS
+**Status:** BLOCKED_SCOPE
 
-**Motivo:** A tarefa exige a comparação e conciliação de 218 arquivos diferentes em `apps/crm` entre a base `trydavidqix/Lumenva` (destino) e o repositório `trydavidqix/Lumenva-Legacy` (origem, SHA `6e9dbbd901445cfbec53955981a7dab6d644b9da`). No entanto, o acesso ao repositório `trydavidqix/Lumenva-Legacy` foi negado (acesso a repositório privado bloqueado na sandbox Jules).
+**Motivo:** Acesso à fonte verificado via sessão de leitura remota (Jules) na origem Legacy SHA `6e9dbbd901445cfbec53955981a7dab6d644b9da` contra o destino `3fbe74a3ff7b7a99538d1e53aa55688294b7ba99`. As divergências foram contadas com base na API do GitHub, contradizendo a contagem do documento de plano. Apesar de acesso verificado (via evidência na API), os 218 arquivos divergentes não foram individualmente avaliados.
 
-Conforme as restrições globais do plano ("Confira SHAs, acesso, branches/PRs, LICENSE/notices e paths das cinco fontes. Fonte privada sem acesso fica `BLOCKED_SOURCE_ACCESS`" e "Se fonte privada sem acesso, a tarefa de importação retorna `BLOCKED_SOURCE_ACCESS` e não inventa código"), não é possível continuar sem acesso à fonte da verdade do Legacy para extrair as evidências e deltas.
+De acordo com o Owner: "The remaining 218 differences have not been individually reviewed; do not call Task 04 complete or import broadly... report BLOCKED_SCOPE for the unreviewed set... with exact remaining work."
 
-**Evidência:**
-Tentativa de git fetch / clone retorna:
-```
-fatal: could not read Username for 'https://github.com': terminal prompts disabled
-```
+### Estatísticas e Discrepância
 
-Nenhum arquivo de código foi alterado, nem dependência instalada localmente, de acordo com as restrições do Owner (nenhum teste ou alteração local feita pela Jules na VM).
+| Métrica | Contagem |
+| --- | --- |
+| Legacy (fonte) blobs em `apps/crm` | 2540 |
+| Destino blobs em `apps/crm` | 2690 |
+| Em comum | 2540 |
+| Idênticos byte-a-byte | 2322 |
+| **Diferentes** | **218** |
+| Apenas na Fonte | 0 |
+| Apenas no Destino | 150 |
+
+*Discrepância:* O documento do plano original (PR #79) afirmava 397 caminhos diferentes. A contagem verificada agora é de **218** arquivos diferentes.
+
+### Classificação Inicial
+
+Os seguintes caminhos, embora listados como únicos ou deltas pela auditoria da fonte, são de fato byte-a-byte idênticos ao destino e devem manter sua implementação atual.
+**Ação:** `KEEP_DESTINATION`
+
+- `apps/crm/channels/adapters/meta-cloud.ts`
+- `apps/crm/channels/meta/webhook.ts`
+- `apps/crm/nuvemshop/api-client.ts`
+- `apps/crm/ecommerce/types.ts`
+- (e os três testes unitários citados correspondentes a esses módulos)
+
+### Trabalho Restante (BLOCKED_SCOPE)
+A tarefa foi suspensa por limitação de escopo e não acessibilidade local à fonte para extrair as implementações. Para concluir a Task 04:
+1. Obter o acesso da árvore para iterar sobre os 218 caminhos diferentes restantes.
+2. Analisar individualmente os 218 paths.
+3. Classificar cada path em `PORT_DELTA`, `ADAPT`, `DEFER` ou `REJECT`.
+4. Se o delta contiver mudanças de comportamento válidas, implementar na allowlist aprovada (preservando tenancy, auth, RLS) em uma PR isolada.
+5. Criar testes TDD (RED→GREEN) focados nas capacidades migradas do Legacy no contexto atual.
