@@ -83,7 +83,7 @@ async function setup(target: { id: string; user_id: string; role: string; revoke
     }),
     rpc: async () => ({ data: "admin", error: null }),
   };
-  vi.mocked(createClient).mockResolvedValue(supabaseStub as unknown as ReturnType<typeof createClient>);
+  vi.mocked(createClient).mockResolvedValue(supabaseStub as unknown as Awaited<ReturnType<typeof createClient>>);
   vi.mocked(createAdminClient).mockReturnValue(supabaseStub as unknown as ReturnType<typeof createAdminClient>);
 
   return updates;

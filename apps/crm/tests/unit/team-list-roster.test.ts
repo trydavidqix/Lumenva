@@ -105,7 +105,7 @@ async function managerSession(rows: Array<Record<string, unknown>>, spy: QuerySp
   vi.mocked(loadAuthUser).mockResolvedValue(user);
   vi.mocked(resolveActiveOrg).mockResolvedValue({ orgId: ORG_ID, name: "Org", role: "manager" });
 
-  vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(rows, spy) as unknown as ReturnType<typeof createClient>);
+  vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(rows, spy) as unknown as Awaited<ReturnType<typeof createClient>>);
   vi.mocked(createAdminClient).mockReturnValue(makeSupabaseStub(rows, spy) as unknown as ReturnType<typeof createAdminClient>);
 }
 

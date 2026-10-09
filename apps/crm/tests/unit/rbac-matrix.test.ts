@@ -124,7 +124,7 @@ async function session(role: Role | null, tables: Record<string, unknown> = {}) 
   );
   vi.mocked(resolvePlatformAdmin).mockResolvedValue({ ok: false, reason: "forbidden" });
 
-  vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(role, tables) as unknown as ReturnType<typeof createClient>);
+  vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(role, tables) as unknown as Awaited<ReturnType<typeof createClient>>);
   vi.mocked(createAdminClient).mockReturnValue(makeSupabaseStub(role, tables) as unknown as ReturnType<typeof createAdminClient>);
 }
 

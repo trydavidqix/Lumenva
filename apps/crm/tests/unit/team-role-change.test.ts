@@ -142,7 +142,7 @@ async function adminSession(state: StubState) {
   vi.mocked(loadAuthUser).mockResolvedValue(user);
   vi.mocked(resolveActiveOrg).mockResolvedValue({ orgId: ORG_ID, name: "Org", role: "admin" });
 
-  vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(state) as unknown as ReturnType<typeof createClient>);
+  vi.mocked(createClient).mockResolvedValue(makeSupabaseStub(state) as unknown as Awaited<ReturnType<typeof createClient>>);
   vi.mocked(createAdminClient).mockReturnValue(makeAdminSupabaseStub() as unknown as ReturnType<typeof createAdminClient>);
 }
 
